@@ -30,6 +30,18 @@
         "Greek"
       ],
       "default": "English"
+    },
+    "reminder_offsets": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notif_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }

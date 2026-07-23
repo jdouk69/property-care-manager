@@ -11,6 +11,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { createNotification } from "@/lib/notifications";
 
 export default function Reports() {
   const [propId, setPropId] = useState("");
@@ -68,6 +69,14 @@ export default function Reports() {
       });
 
       doc.save(`report-${propName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+      createNotification({
+        title: "Report ready",
+        message: `Property report — ${propName}`,
+        type: "System",
+        priority: "Low",
+        related_path: "/reports",
+        dedup_key: `report_ready:${propId || "all"}:${new Date().toISOString().slice(0, 10)}`,
+      });
       setGenerating(false);
     }, 400);
   };

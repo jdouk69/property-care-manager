@@ -11,11 +11,10 @@
     "type": {
       "type": "string",
       "enum": [
-        "Inspection",
         "Task",
+        "Inspection",
         "Maintenance",
         "Contractor",
-        "Delivery",
         "System"
       ],
       "default": "System"
@@ -34,9 +33,27 @@
       "type": "string",
       "format": "date"
     },
+    "time": {
+      "type": "string"
+    },
     "read": {
       "type": "boolean",
       "default": false
+    },
+    "dedup_key": {
+      "type": "string"
+    },
+    "related_entity": {
+      "type": "string"
+    },
+    "related_record_id": {
+      "type": "string"
+    },
+    "related_property_id": {
+      "type": "string"
+    },
+    "related_path": {
+      "type": "string"
     }
   },
   "required": [

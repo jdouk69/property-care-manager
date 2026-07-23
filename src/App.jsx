@@ -26,6 +26,7 @@ import Calendar from '@/pages/Calendar';
 import Reports from '@/pages/Reports';
 import Search from '@/pages/Search';
 import Settings from '@/pages/Settings';
+import AutomationLog from '@/pages/AutomationLog';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -72,6 +73,7 @@ const AuthenticatedApp = () => {
         <Route path="/reports" element={<Reports />} />
         <Route path="/search" element={<Search />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/automation" element={<AutomationLog />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

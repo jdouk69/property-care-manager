@@ -26,6 +26,29 @@
     "summary_notes": {
       "type": "string"
     },
+    "is_recurring": {
+      "type": "boolean",
+      "default": false
+    },
+    "recurrence_id": {
+      "type": "string"
+    },
+    "occurrence_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "recurrence_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "skipped",
+        "ended"
+      ],
+      "default": "active"
+    },
+    "repeat_label": {
+      "type": "string"
+    },
     "checklist": {
       "type": "array",
       "items": {

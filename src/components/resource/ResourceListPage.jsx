@@ -49,6 +49,7 @@ function badgeTone(value) {
 export default function ResourceListPage({
   entityName, title, subtitle, icon: Icon, fields, columns, searchKeys = [],
   addItemLabel = "Add", renderSummary, defaultValues = {}, cardExtra,
+  onCreated, onUpdated, extraDrawerContent,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +114,7 @@ export default function ResourceListPage({
         await base44.entities[entityName].update(editing.id, values);
         setItems((arr) => arr.map((it) => (it.id === editing.id ? { ...it, ...values } : it)));
         setSaving(false); setSaved(true); setDirty(false);
+        if (onUpdated) onUpdated(editing, values);
       } catch (e) { setSaving(false); }
     }, 1000);
     return () => clearTimeout(debounceRef.current);
@@ -122,8 +124,13 @@ export default function ResourceListPage({
     setSaving(true);
     try {
       const created = await base44.entities[entityName].create(values);
-      setItems((arr) => [created, ...arr]);
-      setEditing(created);
+      let next = created;
+      if (onCreated) {
+        const patch = await onCreated(values, created);
+        if (patch) next = { ...created, ...patch };
+      }
+      setItems((arr) => [next, ...arr]);
+      setEditing(next);
       setSaving(false); setSaved(true); setDirty(false);
     } catch (e) { setSaving(false); }
   };
@@ -219,6 +226,23 @@ export default function ResourceListPage({
             </div>
           </div>
         );
+      case "multiselect":
+        return (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {(f.options || []).map((o) => {
+              const arr = val || [];
+              const on = arr.includes(o);
+              return (
+                <button key={o} type="button" onClick={() => setField(f.name, on ? arr.filter((x) => x !== o) : [...arr, o])}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "bg-primary/10 text-primary border-primary/30" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                  {o}
+                </button>
+              );
+            })}
+          </div>
+        );
+      case "custom":
+        return f.render ? f.render(values, setField) : null;
       default:
         return <Input value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} />;
     }
@@ -308,12 +332,16 @@ export default function ResourceListPage({
           </SheetHeader>
 
           <div className="flex-1 px-1 py-4 space-y-4">
-            {fields.map((f) => (
-              <div key={f.name}>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>
-                {renderField(f)}
-              </div>
-            ))}
+            {fields.map((f) => {
+              if (f.showIf && !f.showIf(values)) return null;
+              return (
+                <div key={f.name}>
+                  {f.label && <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
+                  {renderField(f)}
+                </div>
+              );
+            })}
+            {extraDrawerContent && editing && extraDrawerContent(editing, { reload: load, setValues })}
           </div>
 
           <SheetFooter className="flex-row gap-2 sm:justify-between border-t pt-4">

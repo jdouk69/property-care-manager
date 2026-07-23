@@ -1,0 +1,32 @@
+{
+  "name": "AutomationLog",
+  "type": "object",
+  "properties": {
+    "date_time": {
+      "type": "string"
+    },
+    "automation_type": {
+      "type": "string"
+    },
+    "record_created": {
+      "type": "string"
+    },
+    "related_property_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failure"
+      ],
+      "default": "success"
+    },
+    "error_details": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "automation_type"
+  ]
+}

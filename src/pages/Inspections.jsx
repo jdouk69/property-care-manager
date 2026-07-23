@@ -17,6 +17,9 @@ import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import { badgeTone } from "@/components/resource/ResourceListPage";
+import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
+import RecurrencePanel from "@/components/recurrence/RecurrencePanel";
+import { createRuleFromOccurrence, generateNextOccurrence } from "@/lib/recurrence";
 
 const DEFAULT_CHECKLIST = [
   "Gates", "Doors", "Windows", "Roof", "Pool", "Garden", "Irrigation", "Water leaks",
@@ -67,7 +70,7 @@ export default function Inspections() {
 
   const openNew = () => {
     setEditing(null);
-    setValues({ status: "Draft", checklist: blankChecklist(), date: new Date().toISOString().slice(0, 10) });
+    setValues({ status: "Draft", checklist: blankChecklist(), date: new Date().toISOString().slice(0, 10), is_recurring: false, frequency: "Weekly", interval: 1, days_of_week: [] });
     setDirty(false); setSaved(false); setOpen(true);
   };
   const openEdit = (it) => {
@@ -95,6 +98,9 @@ export default function Inspections() {
         await base44.entities.Inspection.update(editing.id, values);
         setItems((arr) => arr.map((i) => (i.id === editing.id ? { ...i, ...values } : i)));
         setSaving(false); setSaved(true); setDirty(false);
+        if (editing.status !== "Completed" && values.status === "Completed" && values.recurrence_id) {
+          generateNextOccurrence(values.recurrence_id, values.occurrence_date || values.date).then(() => load());
+        }
       } catch (e) { setSaving(false); }
     }, 1000);
     return () => clearTimeout(debounceRef.current);
@@ -104,8 +110,15 @@ export default function Inspections() {
     setSaving(true);
     try {
       const created = await base44.entities.Inspection.create(values);
-      setItems((arr) => [created, ...arr]);
-      setEditing(created);
+      if (values.is_recurring) {
+        await createRuleFromOccurrence("Inspection", values, created);
+        const reloaded = await base44.entities.Inspection.get(created.id);
+        setItems((arr) => [{ ...created, ...reloaded }, ...arr]);
+        setEditing({ ...created, ...reloaded });
+      } else {
+        setItems((arr) => [created, ...arr]);
+        setEditing(created);
+      }
       setSaving(false); setSaved(true); setDirty(false);
     } catch (e) { setSaving(false); }
   };
@@ -238,6 +251,9 @@ export default function Inspections() {
               <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Summary Notes</Label>
               <Textarea rows={3} value={values.summary_notes || ""} onChange={(e) => setField("summary_notes", e.target.value)} />
             </div>
+
+            <RecurrenceFields values={values} setField={setField} />
+            {editing?.recurrence_id && <RecurrencePanel entityType="Inspection" record={editing} reload={load} />}
           </div>
 
           <SheetFooter className="flex-row gap-2 sm:justify-between border-t pt-4">

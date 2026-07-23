@@ -4,11 +4,12 @@ import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Users, Home, ListChecks, ClipboardCheck, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
-  Menu, X, Bell, Sun, Moon
+  Menu, X, Bell, History, Sun, Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import NotificationBell from "@/components/layout/NotificationBell";
 
 export const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -22,6 +23,7 @@ export const NAV_ITEMS = [
   { to: "/keys", label: "Keys", icon: KeyRound },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/reports", label: "Reports", icon: FileText },
+  { to: "/automation", label: "Automation Log", icon: History },
 ];
 
 const MOBILE_NAV = [
@@ -103,6 +105,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           <span className="font-semibold text-sm">Property Care</span>
         </Link>
         <div className="flex items-center gap-1">
+          <NotificationBell />
           <ThemeToggle />
         </div>
       </header>
@@ -111,6 +114,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
       <main className="lg:pl-64 min-h-screen">
         <div className="hidden lg:flex items-center justify-end h-14 px-6 border-b border-border">
           <div className="flex items-center gap-1">
+            <NotificationBell />
             <ThemeToggle />
           </div>
         </div>
