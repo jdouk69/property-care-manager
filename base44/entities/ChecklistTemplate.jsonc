@@ -30,6 +30,10 @@
     },
     "property_id": {
       "type": "string"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

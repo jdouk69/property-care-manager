@@ -39,6 +39,15 @@
     "file_url": {
       "type": "string"
     },
+    "file_name": {
+      "type": "string"
+    },
+    "file_size": {
+      "type": "number"
+    },
+    "file_type": {
+      "type": "string"
+    },
     "caption": {
       "type": "string"
     },

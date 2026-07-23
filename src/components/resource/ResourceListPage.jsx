@@ -2,8 +2,15 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { exportCsv } from "@/lib/exportCsv";
 import {
-  Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive
+  Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive, FileText, Upload
 } from "lucide-react";
+
+function formatBytes(b) {
+  if (!b && b !== 0) return "";
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / 1024 / 1024).toFixed(1)} MB`;
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -217,6 +224,43 @@ export default function ResourceListPage({
             </label>
           </div>
         );
+      case "file": {
+        const isImg = /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(val || "");
+        const meta = f.metaFields;
+        const fileName = meta ? values[meta[0]] : "";
+        const fileSize = meta ? values[meta[1]] : "";
+        const fileType = meta ? values[meta[2]] : "";
+        return (
+          <div className="space-y-2">
+            {val && isImg && <UIImage src={val} className="w-full h-40 rounded-lg" fittingType="fill" />}
+            {val && !isImg && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                <FileText className="w-8 h-8 text-primary shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">{fileName || "File"}</p>
+                  <p className="text-xs text-muted-foreground">{[fileType, formatBytes(fileSize)].filter(Boolean).join(" · ")}</p>
+                </div>
+                <a href={val} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline shrink-0">Open</a>
+              </div>
+            )}
+            <label className="inline-flex items-center gap-2 text-sm text-primary cursor-pointer">
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              <span>{uploading ? "Uploading…" : val ? "Replace file" : "Upload file"}</span>
+              <input type="file" accept={f.accept || "*"} className="hidden" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const url = await uploadImage(file);
+                setField(f.name, url);
+                if (meta) {
+                  setField(meta[0], file.name);
+                  setField(meta[1], file.size);
+                  setField(meta[2], file.type || (file.name.split(".").pop() || "").toUpperCase());
+                }
+              }} />
+            </label>
+          </div>
+        );
+      }
       case "images":
         return (
           <div className="space-y-2">
