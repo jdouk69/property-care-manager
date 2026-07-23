@@ -97,14 +97,16 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon"><Menu className="w-5 h-5" /></Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0">
+          <SheetContent side="left" className="w-72 p-0 flex flex-col">
             <div className="flex items-center gap-2.5 px-5 h-16 border-b border-sidebar-border">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Home className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="font-semibold text-sm">{businessName}</span>
             </div>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            <div className="flex-1 overflow-y-auto">
+              <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            </div>
           </SheetContent>
         </Sheet>
         <Link to="/" className="flex items-center gap-2">
