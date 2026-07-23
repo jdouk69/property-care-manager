@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { ScrollText, Plus, ChevronUp, ChevronDown, Trash2, RotateCcw, Copy, Loader2, Check, Archive, X } from "lucide-react";
+import { ScrollText, Plus, ChevronUp, ChevronDown, Trash2, RotateCcw, Copy, Loader2, Check, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

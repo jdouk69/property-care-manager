@@ -1,5 +1,5 @@
 import React from "react";
-import { ImagePlus, X, Loader2, AlertTriangle, Wrench, Camera } from "lucide-react";
+import { X, Loader2, AlertTriangle, Wrench, Camera } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
 

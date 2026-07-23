@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
-  ChevronLeft, Clock, MapPin, Gauge, Wrench, ListChecks, FileText, Download,
-  Loader2, Archive, CheckCircle2, AlertTriangle, Image as ImageIcon
+  ChevronLeft, Clock, MapPin, Gauge, Wrench, ListChecks, Download,
+  Loader2, Archive, CheckCircle2, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
