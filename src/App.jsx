@@ -31,6 +31,9 @@ import Invoices from '@/pages/Invoices';
 import ServicePackages from '@/pages/ServicePackages';
 import OwnerCommunications from '@/pages/OwnerCommunications';
 import Deliveries from '@/pages/Deliveries';
+import Visits from '@/pages/Visits';
+import OwnerRepReports from '@/pages/OwnerRepReports';
+import PropertyDocuments from '@/pages/PropertyDocuments';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -82,6 +85,9 @@ const AuthenticatedApp = () => {
         <Route path="/services" element={<ServicePackages />} />
         <Route path="/communications" element={<OwnerCommunications />} />
         <Route path="/deliveries" element={<Deliveries />} />
+        <Route path="/visits" element={<Visits />} />
+        <Route path="/rep-reports" element={<OwnerRepReports />} />
+        <Route path="/documents" element={<PropertyDocuments />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

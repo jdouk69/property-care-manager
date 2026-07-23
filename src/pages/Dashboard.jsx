@@ -23,7 +23,7 @@ const greeting = () => {
 };
 
 const QUICK_ACTIONS = [
-  { to: "/properties", label: "Start Visit", icon: MapPin, color: "bg-primary" },
+  { to: "/visits", label: "Start Visit", icon: MapPin, color: "bg-primary" },
   { to: "/inspections", label: "New Inspection", icon: ClipboardCheck, color: "bg-sky-500" },
   { to: "/maintenance", label: "Log Issue", icon: Wrench, color: "bg-amber-500" },
   { to: "/tasks", label: "Add Task", icon: Plus, color: "bg-violet-500" },

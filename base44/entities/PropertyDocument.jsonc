@@ -1,0 +1,60 @@
+{
+  "name": "PropertyDocument",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "maintenance_issue_id": {
+      "type": "string"
+    },
+    "visit_id": {
+      "type": "string"
+    },
+    "invoice_id": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Quotes",
+        "Invoices",
+        "Contracts",
+        "Warranties",
+        "Manuals",
+        "Insurance Documents",
+        "Utility Documents",
+        "Floor Plans",
+        "Photos",
+        "Miscellaneous Files"
+      ],
+      "default": "Miscellaneous Files"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "caption": {
+      "type": "string"
+    },
+    "date_taken": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

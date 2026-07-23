@@ -4,7 +4,8 @@ import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Users, Home, ListChecks, ClipboardCheck, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
-  Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon
+  Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
+  MapPin, FolderOpen, ClipboardList
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -17,6 +18,7 @@ export const NAV_ITEMS = [
   { to: "/properties", label: "Properties", icon: Home },
   { to: "/tasks", label: "Tasks", icon: ListChecks },
   { to: "/inspections", label: "Inspections", icon: ClipboardCheck },
+  { to: "/visits", label: "Property Visits", icon: MapPin },
   { to: "/maintenance", label: "Maintenance", icon: Wrench },
   { to: "/contractors", label: "Contractors", icon: HardHat },
   { to: "/expenses", label: "Expenses", icon: Wallet },
@@ -26,6 +28,8 @@ export const NAV_ITEMS = [
   { to: "/invoices", label: "Invoices", icon: Receipt },
   { to: "/services", label: "Service Packages", icon: Package },
   { to: "/communications", label: "Communications", icon: MessageSquare },
+  { to: "/documents", label: "Documents", icon: FolderOpen },
+  { to: "/rep-reports", label: "Owner-Rep Reports", icon: ClipboardList },
   { to: "/deliveries", label: "Deliveries", icon: Truck },
   { to: "/automation", label: "Automation Log", icon: History },
 ];

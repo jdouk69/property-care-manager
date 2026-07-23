@@ -1,0 +1,111 @@
+{
+  "name": "PropertyVisit",
+  "type": "object",
+  "properties": {
+    "property_id": {
+      "type": "string"
+    },
+    "visit_type": {
+      "type": "string",
+      "enum": [
+        "Monthly Property Watch",
+        "Owner Arrival Preparation",
+        "Guest Arrival Preparation",
+        "Departure Inspection",
+        "Seasonal Opening",
+        "Seasonal Closing",
+        "Owner Representative Construction Visit"
+      ],
+      "default": "Monthly Property Watch"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_time": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "In Progress",
+        "Completed"
+      ],
+      "default": "In Progress"
+    },
+    "gps_location": {
+      "type": "string"
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Normal",
+              "Important",
+              "Emergency",
+              "Not Checked"
+            ],
+            "default": "Not Checked"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "meter_readings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "photo": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "string"
+    },
+    "follow_up_task_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "maintenance_issue_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "owner_report": {
+      "type": "string"
+    },
+    "report_sent": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "property_id"
+  ]
+}

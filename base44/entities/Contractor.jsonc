@@ -11,30 +11,56 @@
     "phone": {
       "type": "string"
     },
+    "whatsapp": {
+      "type": "string"
+    },
     "email": {
       "type": "string"
     },
     "trade": {
       "type": "string",
       "enum": [
-        "Electrician",
         "Plumber",
-        "Pool",
+        "Electrician",
+        "Pool Technician",
         "Gardener",
         "Cleaner",
-        "Painter",
-        "Builder",
         "Locksmith",
         "HVAC",
+        "Pest Control",
+        "Roofer",
+        "Painter",
+        "General Handyman",
+        "Appliance Repair",
+        "Internet / Telecom",
         "Other"
       ],
       "default": "Other"
     },
+    "service_area": {
+      "type": "string"
+    },
+    "languages": {
+      "type": "string"
+    },
     "availability": {
       "type": "string"
     },
+    "emergency_availability": {
+      "type": "string"
+    },
+    "trusted_rating": {
+      "type": "number"
+    },
+    "linked_jobs": {
+      "type": "number"
+    },
     "notes": {
       "type": "string"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

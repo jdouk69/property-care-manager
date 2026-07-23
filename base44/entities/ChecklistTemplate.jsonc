@@ -1,0 +1,38 @@
+{
+  "name": "ChecklistTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "visit_type": {
+      "type": "string",
+      "enum": [
+        "Monthly Property Watch",
+        "Owner Arrival Preparation",
+        "Guest Arrival Preparation",
+        "Departure Inspection",
+        "Seasonal Opening",
+        "Seasonal Closing",
+        "Owner Representative Construction Visit"
+      ],
+      "default": "Monthly Property Watch"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "is_master": {
+      "type": "boolean",
+      "default": true
+    },
+    "property_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "name": "OwnerRepReport",
+  "type": "object",
+  "properties": {
+    "project_name": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "contractor_id": {
+      "type": "string"
+    },
+    "visit_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "expected_work": {
+      "type": "string"
+    },
+    "observed_progress": {
+      "type": "string"
+    },
+    "work_completed": {
+      "type": "string"
+    },
+    "visible_concerns": {
+      "type": "string"
+    },
+    "delays": {
+      "type": "string"
+    },
+    "questions_for_owner": {
+      "type": "string"
+    },
+    "questions_for_contractor": {
+      "type": "string"
+    },
+    "recommendations": {
+      "type": "string"
+    },
+    "before_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "during_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "after_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent"
+      ],
+      "default": "Draft"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "project_name"
+  ]
+}
