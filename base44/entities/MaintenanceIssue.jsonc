@@ -1,0 +1,57 @@
+{
+  "name": "MaintenanceIssue",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High",
+        "Urgent"
+      ],
+      "default": "Medium"
+    },
+    "description": {
+      "type": "string"
+    },
+    "contractor_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Open",
+        "Scheduled",
+        "In Progress",
+        "Completed",
+        "Cancelled"
+      ],
+      "default": "Open"
+    },
+    "completion_notes": {
+      "type": "string"
+    },
+    "before_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "after_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

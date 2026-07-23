@@ -1,0 +1,43 @@
+{
+  "name": "Contractor",
+  "type": "object",
+  "properties": {
+    "company": {
+      "type": "string"
+    },
+    "contact_person": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "trade": {
+      "type": "string",
+      "enum": [
+        "Electrician",
+        "Plumber",
+        "Pool",
+        "Gardener",
+        "Cleaner",
+        "Painter",
+        "Builder",
+        "Locksmith",
+        "HVAC",
+        "Other"
+      ],
+      "default": "Other"
+    },
+    "availability": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "company"
+  ]
+}

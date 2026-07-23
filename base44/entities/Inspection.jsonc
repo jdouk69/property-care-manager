@@ -1,0 +1,60 @@
+{
+  "name": "Inspection",
+  "type": "object",
+  "properties": {
+    "property_id": {
+      "type": "string"
+    },
+    "inspector": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "time": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Completed"
+      ],
+      "default": "Draft"
+    },
+    "summary_notes": {
+      "type": "string"
+    },
+    "checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Pass",
+              "Needs Attention",
+              "Critical",
+              "Not Checked"
+            ],
+            "default": "Not Checked"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "photo": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "property_id"
+  ]
+}

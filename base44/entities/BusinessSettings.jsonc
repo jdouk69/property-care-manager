@@ -1,0 +1,35 @@
+{
+  "name": "BusinessSettings",
+  "type": "object",
+  "properties": {
+    "business_name": {
+      "type": "string"
+    },
+    "logo": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "default_checklist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "English",
+        "Greek"
+      ],
+      "default": "English"
+    }
+  }
+}

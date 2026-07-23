@@ -1,12 +1,31 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
+import { ThemeProvider } from 'next-themes';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
-// Add page imports here
+import ProtectedRoute from '@/components/ProtectedRoute';
+import Dashboard from '@/pages/Dashboard';
+import Clients from '@/pages/Clients';
+import Properties from '@/pages/Properties';
+import PropertyDetail from '@/pages/PropertyDetail';
+import Tasks from '@/pages/Tasks';
+import Inspections from '@/pages/Inspections';
+import Maintenance from '@/pages/Maintenance';
+import Contractors from '@/pages/Contractors';
+import Expenses from '@/pages/Expenses';
+import Keys from '@/pages/Keys';
+import Calendar from '@/pages/Calendar';
+import Reports from '@/pages/Reports';
+import Search from '@/pages/Search';
+import Settings from '@/pages/Settings';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -34,7 +53,26 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Add your page Route elements here */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/properties" element={<Properties />} />
+        <Route path="/properties/:id" element={<PropertyDetail />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/inspections" element={<Inspections />} />
+        <Route path="/maintenance" element={<Maintenance />} />
+        <Route path="/contractors" element={<Contractors />} />
+        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/keys" element={<Keys />} />
+        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
@@ -44,15 +82,17 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <ScrollToTop />
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

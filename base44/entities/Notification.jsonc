@@ -1,0 +1,45 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Inspection",
+        "Task",
+        "Maintenance",
+        "Contractor",
+        "Delivery",
+        "System"
+      ],
+      "default": "System"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High",
+        "Urgent"
+      ],
+      "default": "Medium"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

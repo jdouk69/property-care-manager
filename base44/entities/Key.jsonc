@@ -1,0 +1,29 @@
+{
+  "name": "Key",
+  "type": "object",
+  "properties": {
+    "key_number": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "current_holder": {
+      "type": "string"
+    },
+    "date_issued": {
+      "type": "string",
+      "format": "date"
+    },
+    "date_returned": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "key_number"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "Client",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "preferred_language": {
+      "type": "string",
+      "enum": [
+        "English",
+        "Greek"
+      ],
+      "default": "English"
+    },
+    "emergency_contact_name": {
+      "type": "string"
+    },
+    "emergency_contact_phone": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

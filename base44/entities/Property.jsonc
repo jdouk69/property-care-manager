@@ -1,0 +1,61 @@
+{
+  "name": "Property",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "maps_link": {
+      "type": "string"
+    },
+    "owner_id": {
+      "type": "string"
+    },
+    "gate_code": {
+      "type": "string"
+    },
+    "alarm_instructions": {
+      "type": "string"
+    },
+    "wifi_ssid": {
+      "type": "string"
+    },
+    "wifi_password": {
+      "type": "string"
+    },
+    "utility_info": {
+      "type": "string"
+    },
+    "pool_details": {
+      "type": "string"
+    },
+    "garden_details": {
+      "type": "string"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "special_notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive",
+        "Seasonal",
+        "Maintenance"
+      ],
+      "default": "Active"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Inspection",
+        "Contractor Meeting",
+        "Delivery",
+        "Shopping",
+        "Owner Request",
+        "Maintenance",
+        "Custom"
+      ],
+      "default": "Custom"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "time": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High",
+        "Urgent"
+      ],
+      "default": "Medium"
+    },
+    "assigned_to": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "In Progress",
+        "Completed",
+        "Cancelled"
+      ],
+      "default": "Pending"
+    },
+    "recurring": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

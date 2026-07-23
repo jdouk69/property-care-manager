@@ -1,0 +1,39 @@
+{
+  "name": "Expense",
+  "type": "object",
+  "properties": {
+    "property_id": {
+      "type": "string"
+    },
+    "vendor": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "receipt_photo": {
+      "type": "string"
+    },
+    "paid_by": {
+      "type": "string"
+    },
+    "awaiting_reimbursement": {
+      "type": "boolean",
+      "default": false
+    },
+    "reimbursed": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "vendor"
+  ]
+}
