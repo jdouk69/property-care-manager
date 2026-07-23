@@ -32,8 +32,10 @@ import ServicePackages from '@/pages/ServicePackages';
 import OwnerCommunications from '@/pages/OwnerCommunications';
 import Deliveries from '@/pages/Deliveries';
 import Visits from '@/pages/Visits';
+import VisitDetail from '@/pages/VisitDetail';
 import OwnerRepReports from '@/pages/OwnerRepReports';
 import PropertyDocuments from '@/pages/PropertyDocuments';
+import ChecklistTemplates from '@/pages/ChecklistTemplates';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -86,8 +88,10 @@ const AuthenticatedApp = () => {
         <Route path="/communications" element={<OwnerCommunications />} />
         <Route path="/deliveries" element={<Deliveries />} />
         <Route path="/visits" element={<Visits />} />
+        <Route path="/visits/:id" element={<VisitDetail />} />
         <Route path="/rep-reports" element={<OwnerRepReports />} />
         <Route path="/documents" element={<PropertyDocuments />} />
+        <Route path="/checklist-templates" element={<ChecklistTemplates />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

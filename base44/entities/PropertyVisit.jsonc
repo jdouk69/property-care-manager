@@ -103,6 +103,10 @@
     "report_sent": {
       "type": "boolean",
       "default": false
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

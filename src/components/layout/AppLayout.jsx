@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Home, ListChecks, ClipboardCheck, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
-  MapPin, FolderOpen, ClipboardList
+  MapPin, FolderOpen, ClipboardList, ScrollText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -19,6 +19,7 @@ export const NAV_ITEMS = [
   { to: "/tasks", label: "Tasks", icon: ListChecks },
   { to: "/inspections", label: "Inspections", icon: ClipboardCheck },
   { to: "/visits", label: "Property Visits", icon: MapPin },
+  { to: "/checklist-templates", label: "Checklist Templates", icon: ScrollText },
   { to: "/maintenance", label: "Maintenance", icon: Wrench },
   { to: "/contractors", label: "Contractors", icon: HardHat },
   { to: "/expenses", label: "Expenses", icon: Wallet },
