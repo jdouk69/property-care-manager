@@ -1,0 +1,55 @@
+{
+  "name": "OwnerCommunication",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "communication_type": {
+      "type": "string",
+      "enum": [
+        "WhatsApp",
+        "Email",
+        "Phone",
+        "SMS",
+        "In-person"
+      ],
+      "default": "WhatsApp"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "related_maintenance_id": {
+      "type": "string"
+    },
+    "photos_attached": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "owner_response": {
+      "type": "string"
+    },
+    "follow_up_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "template_used": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "subject"
+  ]
+}

@@ -8,7 +8,13 @@
     "logo": {
       "type": "string"
     },
+    "owner_name": {
+      "type": "string"
+    },
     "phone": {
+      "type": "string"
+    },
+    "whatsapp": {
       "type": "string"
     },
     "email": {
@@ -16,6 +22,14 @@
     },
     "address": {
       "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "EUR"
+    },
+    "vat_rate": {
+      "type": "number",
+      "default": 24
     },
     "default_checklist": {
       "type": "array",
@@ -42,6 +56,9 @@
       "items": {
         "type": "string"
       }
+    },
+    "quick_notes": {
+      "type": "string"
     }
   }
 }

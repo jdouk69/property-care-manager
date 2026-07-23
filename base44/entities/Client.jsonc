@@ -8,6 +8,9 @@
     "phone": {
       "type": "string"
     },
+    "whatsapp": {
+      "type": "string"
+    },
     "email": {
       "type": "string"
     },
@@ -22,14 +25,45 @@
       ],
       "default": "English"
     },
+    "preferred_communication_method": {
+      "type": "string",
+      "enum": [
+        "WhatsApp",
+        "Email",
+        "Phone",
+        "SMS"
+      ],
+      "default": "WhatsApp"
+    },
     "emergency_contact_name": {
       "type": "string"
     },
     "emergency_contact_phone": {
       "type": "string"
     },
+    "billing_address": {
+      "type": "string"
+    },
+    "tax_invoice_info": {
+      "type": "string"
+    },
+    "special_instructions": {
+      "type": "string"
+    },
     "notes": {
       "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive"
+      ],
+      "default": "Active"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

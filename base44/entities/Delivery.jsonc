@@ -1,0 +1,69 @@
+{
+  "name": "Delivery",
+  "type": "object",
+  "properties": {
+    "property_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "time_window": {
+      "type": "string"
+    },
+    "company": {
+      "type": "string"
+    },
+    "contact_person": {
+      "type": "string"
+    },
+    "purpose": {
+      "type": "string",
+      "enum": [
+        "Furniture",
+        "Appliance",
+        "Parcel",
+        "Building materials",
+        "Contractor access",
+        "Utility technician",
+        "Internet technician",
+        "Cleaning"
+      ],
+      "default": "Parcel"
+    },
+    "access_instructions": {
+      "type": "string"
+    },
+    "key_used": {
+      "type": "string"
+    },
+    "items_received": {
+      "type": "string"
+    },
+    "damage_noted": {
+      "type": "string"
+    },
+    "completion_status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Completed",
+        "Issue"
+      ],
+      "default": "Pending"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "company"
+  ]
+}

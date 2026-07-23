@@ -8,31 +8,53 @@
     "address": {
       "type": "string"
     },
+    "gps_coordinates": {
+      "type": "string"
+    },
     "maps_link": {
       "type": "string"
     },
     "owner_id": {
       "type": "string"
     },
-    "gate_code": {
-      "type": "string"
+    "property_type": {
+      "type": "string",
+      "enum": [
+        "Villa",
+        "Apartment",
+        "House",
+        "Studio",
+        "Cottage",
+        "Commercial"
+      ],
+      "default": "Villa"
     },
-    "alarm_instructions": {
-      "type": "string"
+    "status": {
+      "type": "string",
+      "enum": [
+        "Vacant",
+        "Owner Occupied",
+        "Guest Occupied",
+        "Rental Occupied",
+        "Preparing for Arrival",
+        "Preparing for Departure",
+        "Under Maintenance",
+        "Emergency",
+        "Inactive"
+      ],
+      "default": "Vacant"
     },
-    "wifi_ssid": {
-      "type": "string"
+    "condition": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Needs Attention",
+        "Poor"
+      ],
+      "default": "Good"
     },
-    "wifi_password": {
-      "type": "string"
-    },
-    "utility_info": {
-      "type": "string"
-    },
-    "pool_details": {
-      "type": "string"
-    },
-    "garden_details": {
+    "primary_photo": {
       "type": "string"
     },
     "photos": {
@@ -41,18 +63,122 @@
         "type": "string"
       }
     },
+    "gate_code": {
+      "type": "string"
+    },
+    "lockbox_code": {
+      "type": "string"
+    },
+    "key_location": {
+      "type": "string"
+    },
+    "alarm_instructions": {
+      "type": "string"
+    },
+    "alarm_company": {
+      "type": "string"
+    },
+    "security_camera": {
+      "type": "string"
+    },
+    "wifi_ssid": {
+      "type": "string"
+    },
+    "wifi_password": {
+      "type": "string"
+    },
+    "electricity_provider": {
+      "type": "string"
+    },
+    "electricity_account": {
+      "type": "string"
+    },
+    "water_provider": {
+      "type": "string"
+    },
+    "water_account": {
+      "type": "string"
+    },
+    "internet_provider": {
+      "type": "string"
+    },
+    "internet_account": {
+      "type": "string"
+    },
+    "heating_fuel": {
+      "type": "string"
+    },
+    "septic_details": {
+      "type": "string"
+    },
+    "utility_shutoff": {
+      "type": "string"
+    },
+    "pool_details": {
+      "type": "string"
+    },
+    "pool_equipment": {
+      "type": "string"
+    },
+    "irrigation": {
+      "type": "string"
+    },
+    "garden_details": {
+      "type": "string"
+    },
+    "air_conditioning_units": {
+      "type": "string"
+    },
+    "heating": {
+      "type": "string"
+    },
+    "solar_water_heater": {
+      "type": "string"
+    },
+    "appliances": {
+      "type": "string"
+    },
+    "generator": {
+      "type": "string"
+    },
+    "water_tanks": {
+      "type": "string"
+    },
+    "pumps": {
+      "type": "string"
+    },
+    "security_system": {
+      "type": "string"
+    },
+    "service_package_id": {
+      "type": "string"
+    },
+    "monthly_fee": {
+      "type": "number"
+    },
+    "inspection_frequency": {
+      "type": "string"
+    },
+    "included_services": {
+      "type": "string"
+    },
+    "additional_service_charges": {
+      "type": "string"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "renewal_date": {
+      "type": "string",
+      "format": "date"
+    },
     "special_notes": {
       "type": "string"
     },
-    "status": {
-      "type": "string",
-      "enum": [
-        "Active",
-        "Inactive",
-        "Seasonal",
-        "Maintenance"
-      ],
-      "default": "Active"
+    "archived": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

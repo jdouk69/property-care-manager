@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
+import { exportCsv } from "@/lib/exportCsv";
 import {
-  Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus
+  Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,12 @@ const STATUS_TONES = {
   Electrician: "info", Plumber: "info", Pool: "primary", Gardener: "success",
   Cleaner: "muted", Painter: "warning", Builder: "primary", Locksmith: "info", HVAC: "info", Other: "muted",
   English: "muted", Greek: "primary",
+  Routine: "muted", Emergency: "danger",
+  Reported: "info", "Awaiting Owner Approval": "warning", Approved: "success", "Contractor Contacted": "info", "Waiting for Parts": "warning", "Waiting for Payment": "warning",
+  Sent: "info", "Partially Paid": "warning", Paid: "success", Overdue: "danger",
+  "Vacant": "muted", "Owner Occupied": "info", "Guest Occupied": "success", "Rental Occupied": "success", "Preparing for Arrival": "warning", "Preparing for Departure": "warning", "Under Maintenance": "warning",
+  "Recorded": "muted", "Awaiting Receipt": "warning", "Awaiting Reimbursement": "warning", "Partially Reimbursed": "info", "Reimbursed": "success", "Disputed": "danger",
+  Pending: "muted",
 };
 
 function badgeTone(value) {
@@ -49,7 +56,7 @@ function badgeTone(value) {
 export default function ResourceListPage({
   entityName, title, subtitle, icon: Icon, fields, columns, searchKeys = [],
   addItemLabel = "Add", renderSummary, defaultValues = {}, cardExtra,
-  onCreated, onUpdated, extraDrawerContent,
+  onCreated, onUpdated, extraDrawerContent, archivable = false,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -94,9 +101,10 @@ export default function ResourceListPage({
   }, [entityName]);
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return items;
+    const visible = items.filter((it) => !it.archived);
+    if (!query.trim()) return visible;
     const q = query.toLowerCase();
-    return items.filter((it) =>
+    return visible.filter((it) =>
       searchKeys.some((k) => (it[k] || "").toString().toLowerCase().includes(q))
     );
   }, [items, query]);
@@ -136,9 +144,17 @@ export default function ResourceListPage({
   };
 
   const remove = async (it) => {
-    if (!confirm("Delete this record? This cannot be undone.")) return;
+    if (!confirm("Delete this record? This cannot be undone. Consider archiving instead.")) return;
     try {
       await base44.entities[entityName].delete(it.id);
+      setItems((arr) => arr.filter((x) => x.id !== it.id));
+      setDrawerOpen(false);
+    } catch (e) {}
+  };
+
+  const archive = async (it) => {
+    try {
+      await base44.entities[entityName].update(it.id, { archived: true });
       setItems((arr) => arr.filter((x) => x.id !== it.id));
       setDrawerOpen(false);
     } catch (e) {}
@@ -268,9 +284,14 @@ export default function ResourceListPage({
         subtitle={subtitle}
         icon={Icon}
         actions={
-          <Button onClick={openNew} size="sm" className="rounded-full gap-1.5 h-9 px-4">
-            <Plus className="w-4 h-4" /> {addItemLabel}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => exportCsv(filtered, columns, `${title.toLowerCase()}.csv`)} variant="outline" size="sm" className="rounded-full gap-1.5 h-9 px-3" title="Export CSV">
+              <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
+            </Button>
+            <Button onClick={openNew} size="sm" className="rounded-full gap-1.5 h-9 px-4">
+              <Plus className="w-4 h-4" /> {addItemLabel}
+            </Button>
+          </div>
         }
       >
         <div className="relative mt-4 max-w-md">
@@ -313,7 +334,7 @@ export default function ResourceListPage({
                   if (!v || v === "—") return null;
                   return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{v}</span>;
                 })}
-                {cardExtra && cardExtra(item)}
+                {cardExtra && cardExtra(item, lookups)}
               </div>
             </button>
           ))}
@@ -346,9 +367,14 @@ export default function ResourceListPage({
 
           <SheetFooter className="flex-row gap-2 sm:justify-between border-t pt-4">
             {editing ? (
-              <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => remove(editing)}>
-                <Trash2 className="w-4 h-4 mr-1" /> Delete
-              </Button>
+              <div className="flex gap-1">
+                {archivable && (
+                  <Button variant="ghost" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> Archive</Button>
+                )}
+                <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => remove(editing)}>
+                  <Trash2 className="w-4 h-4 mr-1" /> Delete
+                </Button>
+              </div>
             ) : <div />}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setDrawerOpen(false)}>Close</Button>

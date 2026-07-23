@@ -1,0 +1,67 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "invoice_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "services": {
+      "type": "string"
+    },
+    "expenses_total": {
+      "type": "number"
+    },
+    "reimbursements_total": {
+      "type": "number"
+    },
+    "vat": {
+      "type": "number"
+    },
+    "total": {
+      "type": "number"
+    },
+    "amount_paid": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "Partially Paid",
+        "Paid",
+        "Overdue",
+        "Cancelled"
+      ],
+      "default": "Draft"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "invoice_number"
+  ]
+}

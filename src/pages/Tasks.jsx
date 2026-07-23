@@ -9,7 +9,7 @@ import { createRuleFromOccurrence, generateNextOccurrence } from "@/lib/recurren
 
 const fields = [
   { name: "title", label: "Title", type: "text", required: true, placeholder: "e.g. Weekly pool check" },
-  { name: "type", label: "Type", type: "select", options: ["Inspection", "Contractor Meeting", "Delivery", "Shopping", "Owner Request", "Maintenance", "Custom"] },
+  { name: "type", label: "Type", type: "select", options: ["Inspection", "Maintenance", "Maintenance follow-up", "Contractor Meeting", "Delivery", "Owner Request", "Arrival preparation", "Departure inspection", "Shopping", "Utility payment", "Report", "Key return", "Phone call", "Owner-representative visit", "Custom"] },
   { name: "date", label: "Date", type: "date" },
   { name: "time", label: "Time", type: "time" },
   { name: "priority", label: "Priority", type: "select", options: ["Low", "Medium", "High", "Urgent"] },

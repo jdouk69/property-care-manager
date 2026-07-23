@@ -1,0 +1,61 @@
+{
+  "name": "ServicePackage",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "standard_price": {
+      "type": "number"
+    },
+    "billing_type": {
+      "type": "string",
+      "enum": [
+        "One-time",
+        "Monthly",
+        "Quarterly",
+        "Annual"
+      ],
+      "default": "Monthly"
+    },
+    "recurring": {
+      "type": "string",
+      "enum": [
+        "One-time",
+        "Recurring"
+      ],
+      "default": "Recurring"
+    },
+    "visit_duration": {
+      "type": "string"
+    },
+    "hourly_charge": {
+      "type": "number"
+    },
+    "travel_charge": {
+      "type": "number"
+    },
+    "emergency_surcharge": {
+      "type": "number"
+    },
+    "vat_setting": {
+      "type": "string",
+      "enum": [
+        "Included",
+        "Exempt",
+        "Standard 24%"
+      ],
+      "default": "Standard 24%"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

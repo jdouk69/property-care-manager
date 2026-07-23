@@ -4,7 +4,7 @@ import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Users, Home, ListChecks, ClipboardCheck, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
-  Menu, X, Bell, History, Sun, Moon
+  Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -23,6 +23,10 @@ export const NAV_ITEMS = [
   { to: "/keys", label: "Keys", icon: KeyRound },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/reports", label: "Reports", icon: FileText },
+  { to: "/invoices", label: "Invoices", icon: Receipt },
+  { to: "/services", label: "Service Packages", icon: Package },
+  { to: "/communications", label: "Communications", icon: MessageSquare },
+  { to: "/deliveries", label: "Deliveries", icon: Truck },
   { to: "/automation", label: "Automation Log", icon: History },
 ];
 

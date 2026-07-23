@@ -4,22 +4,29 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 
 const fields = [
-  { name: "name", label: "Client Name", type: "text", required: true, placeholder: "e.g. John Smith" },
-  { name: "phone", label: "Phone", type: "text", placeholder: "+30 …" },
-  { name: "email", label: "Email", type: "text", placeholder: "client@email.com" },
-  { name: "country", label: "Country", type: "text", placeholder: "e.g. United Kingdom" },
+  { name: "name", label: "Full Name", type: "text", required: true, placeholder: "e.g. James Whitfield" },
+  { name: "status", label: "Status", type: "select", options: ["Active", "Inactive"] },
+  { name: "phone", label: "Phone", type: "text" },
+  { name: "whatsapp", label: "WhatsApp Number", type: "text" },
+  { name: "email", label: "Email", type: "text" },
+  { name: "country", label: "Home Country", type: "text" },
   { name: "preferred_language", label: "Preferred Language", type: "select", options: ["English", "Greek"] },
+  { name: "preferred_communication_method", label: "Preferred Communication", type: "select", options: ["WhatsApp", "Email", "Phone", "SMS"] },
   { name: "emergency_contact_name", label: "Emergency Contact Name", type: "text" },
   { name: "emergency_contact_phone", label: "Emergency Contact Phone", type: "text" },
+  { name: "billing_address", label: "Billing Address", type: "textarea" },
+  { name: "tax_invoice_info", label: "Tax / Invoice Information", type: "textarea" },
+  { name: "special_instructions", label: "Special Instructions", type: "textarea" },
   { name: "notes", label: "Notes", type: "textarea" },
 ];
 
 const columns = [
-  { key: "name", label: "Name", primary: true },
-  { key: "phone", label: "Phone", icon: Users },
+  { key: "name", label: "Client", primary: true },
+  { key: "phone", label: "Phone" },
   { key: "email", label: "Email" },
   { key: "country", label: "Country" },
-  { key: "preferred_language", label: "Language", badge: true },
+  { key: "preferred_communication_method", label: "Contact", badge: true },
+  { key: "status", label: "Status", badge: true },
 ];
 
 export default function Clients() {
@@ -32,8 +39,10 @@ export default function Clients() {
         icon={Users}
         fields={fields}
         columns={columns}
-        searchKeys={["name", "email", "phone", "country"]}
+        searchKeys={["name", "email", "phone", "country", "whatsapp"]}
         addItemLabel="Add Client"
+        archivable
+        defaultValues={{ status: "Active", preferred_language: "English", preferred_communication_method: "WhatsApp" }}
       />
     </AppLayout>
   );

@@ -8,37 +8,102 @@
     "property_id": {
       "type": "string"
     },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Plumbing",
+        "Electrical",
+        "Pool",
+        "Irrigation",
+        "Garden",
+        "Air conditioning",
+        "Heating",
+        "Appliance",
+        "Internet",
+        "Security",
+        "Locksmith",
+        "Cleaning",
+        "Painting",
+        "Building repair",
+        "Pest control",
+        "Storm damage",
+        "Other"
+      ],
+      "default": "Other"
+    },
     "priority": {
       "type": "string",
       "enum": [
-        "Low",
+        "Routine",
         "Medium",
         "High",
-        "Urgent"
+        "Emergency"
       ],
       "default": "Medium"
     },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Reported",
+        "Awaiting Owner Approval",
+        "Approved",
+        "Contractor Contacted",
+        "Scheduled",
+        "In Progress",
+        "Waiting for Parts",
+        "Waiting for Payment",
+        "Completed",
+        "Cancelled"
+      ],
+      "default": "Reported"
+    },
     "description": {
+      "type": "string"
+    },
+    "reported_by": {
       "type": "string"
     },
     "contractor_id": {
       "type": "string"
     },
-    "status": {
+    "contractor_quotation": {
+      "type": "number"
+    },
+    "owner_approval_status": {
       "type": "string",
       "enum": [
-        "Open",
-        "Scheduled",
-        "In Progress",
-        "Completed",
-        "Cancelled"
+        "Pending",
+        "Approved",
+        "Rejected"
       ],
-      "default": "Open"
+      "default": "Pending"
     },
-    "completion_notes": {
-      "type": "string"
+    "scheduled_appointment": {
+      "type": "string",
+      "format": "date"
+    },
+    "cost_estimate": {
+      "type": "number"
+    },
+    "final_cost": {
+      "type": "number"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "Unpaid",
+        "Partially Paid",
+        "Paid"
+      ],
+      "default": "Unpaid"
     },
     "before_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "during_photos": {
       "type": "array",
       "items": {
         "type": "string"
@@ -49,6 +114,20 @@
       "items": {
         "type": "string"
       }
+    },
+    "completion_notes": {
+      "type": "string"
+    },
+    "warranty_info": {
+      "type": "string"
+    },
+    "follow_up_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
     }
   },
   "required": [

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Image as UIImage } from "@/components/ui/image";
+import { exportEntityCsv } from "@/lib/exportCsv";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import { base44 } from "@/api/base44Client";
@@ -102,8 +103,12 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><Label className="text-xs mb-1.5 block">Business Name</Label><Input value={settings.business_name || ""} onChange={(e) => setField("business_name", e.target.value)} /></div>
+            <div><Label className="text-xs mb-1.5 block">Owner Name (that's you)</Label><Input value={settings.owner_name || ""} onChange={(e) => setField("owner_name", e.target.value)} placeholder="Jim" /></div>
             <div><Label className="text-xs mb-1.5 block">Phone</Label><Input value={settings.phone || ""} onChange={(e) => setField("phone", e.target.value)} /></div>
+            <div><Label className="text-xs mb-1.5 block">WhatsApp</Label><Input value={settings.whatsapp || ""} onChange={(e) => setField("whatsapp", e.target.value)} /></div>
             <div><Label className="text-xs mb-1.5 block">Email</Label><Input value={settings.email || ""} onChange={(e) => setField("email", e.target.value)} /></div>
+            <div><Label className="text-xs mb-1.5 block">Default Currency</Label><Input value={settings.currency || "EUR"} onChange={(e) => setField("currency", e.target.value)} /></div>
+            <div><Label className="text-xs mb-1.5 block">VAT Rate (%)</Label><Input type="number" value={settings.vat_rate ?? 24} onChange={(e) => setField("vat_rate", parseFloat(e.target.value) || 0)} /></div>
             <div>
               <Label className="text-xs mb-1.5 block">Language</Label>
               <Select value={settings.language || "English"} onValueChange={(v) => setField("language", v)}>
@@ -130,6 +135,17 @@ export default function Settings() {
               </span>
             ))}
             {(!settings.default_checklist || !settings.default_checklist.length) && <p className="text-sm text-muted-foreground">No items yet. Add sections like Gates, Pool, Roof…</p>}
+          </div>
+        </div>
+
+        {/* Data export */}
+        <div className="rounded-2xl border border-border bg-card p-5 mb-4">
+          <h3 className="font-medium text-sm mb-1">Data Export</h3>
+          <p className="text-xs text-muted-foreground mb-4">Download your business records as CSV for backup.</p>
+          <div className="flex flex-wrap gap-2">
+            {["Client", "Property", "Task", "Inspection", "MaintenanceIssue", "Expense", "Invoice", "Contractor", "Key"].map((e) => (
+              <button key={e} onClick={() => exportEntityCsv(e)} className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted hover:border-primary/30 transition">{e}</button>
+            ))}
           </div>
         </div>
 

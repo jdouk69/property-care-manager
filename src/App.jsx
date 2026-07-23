@@ -27,6 +27,10 @@ import Reports from '@/pages/Reports';
 import Search from '@/pages/Search';
 import Settings from '@/pages/Settings';
 import AutomationLog from '@/pages/AutomationLog';
+import Invoices from '@/pages/Invoices';
+import ServicePackages from '@/pages/ServicePackages';
+import OwnerCommunications from '@/pages/OwnerCommunications';
+import Deliveries from '@/pages/Deliveries';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -74,6 +78,10 @@ const AuthenticatedApp = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/automation" element={<AutomationLog />} />
+        <Route path="/invoices" element={<Invoices />} />
+        <Route path="/services" element={<ServicePackages />} />
+        <Route path="/communications" element={<OwnerCommunications />} />
+        <Route path="/deliveries" element={<Deliveries />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
