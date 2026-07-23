@@ -9,11 +9,19 @@
       "type": "string",
       "enum": [
         "Inspection",
+        "Maintenance",
+        "Maintenance follow-up",
         "Contractor Meeting",
         "Delivery",
-        "Shopping",
         "Owner Request",
-        "Maintenance",
+        "Arrival preparation",
+        "Departure inspection",
+        "Shopping",
+        "Utility payment",
+        "Report",
+        "Key return",
+        "Phone call",
+        "Owner-representative visit",
         "Custom"
       ],
       "default": "Custom"
