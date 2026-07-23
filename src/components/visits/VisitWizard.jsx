@@ -251,8 +251,8 @@ export default function VisitWizard({ onDone }) {
   if (step === "active") {
     const flaggedCount = checklist.filter((i) => i.status === "Important" || i.status === "Emergency").length;
     return (
-      <div className="pb-28">
-        <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border -mx-4 px-4 py-3 mb-4">
+      <div className="pb-36">
+        <div className="sticky top-14 lg:top-0 z-10 bg-background/90 backdrop-blur border-b border-border -mx-4 px-4 py-3 mb-4">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{propertyName}</p>
@@ -302,7 +302,7 @@ export default function VisitWizard({ onDone }) {
           <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="Overall findings and recommended next steps for the owner…" />
         </div>
 
-        <div className="fixed bottom-0 inset-x-0 z-20 bg-background/95 backdrop-blur border-t border-border p-3 lg:left-64">
+        <div className="fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 lg:left-64">
           <div className="max-w-2xl mx-auto flex gap-2">
             <Button variant="outline" onClick={backFromActive} className="rounded-2xl">Back</Button>
             <Button onClick={completeVisit} disabled={saving} className="flex-1 h-12 rounded-2xl text-base">
