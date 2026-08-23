@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -386,7 +386,7 @@ export default function VisitWizard({ onDone, autoResume }) {
               <p className="font-semibold text-sm truncate">{propertyName}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap"><Clock className="w-3 h-3" /> Started {(startTime || "").slice(11, 16)} · {visitType}</p>
             </div>
-            <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border shrink-0 hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : `${templateSource} template`}</Link>
+            <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border shrink-0 hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : templateSource === "Default" ? "Default checklist" : `${templateSource} template`}</Link>
           </div>
           {/* Step bar */}
           <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar">
@@ -403,6 +403,12 @@ export default function VisitWizard({ onDone, autoResume }) {
         {/* Inspection */}
         <div id="step-inspection" className="scroll-mt-28">
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Checklist</p>
+          {templateSource === "Default" && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 mb-2">
+              <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 dark:text-amber-400">Default checklist in use — no configured template was found.</p>
+            </div>
+          )}
           <div className="space-y-2 mb-6">
             {checklist.map((it, i) => (
               <VisitChecklistItem key={i} item={it} index={i} onChange={(u) => updateItem(i, u)}
