@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +50,9 @@ export default function VisitWizard({ onDone, autoResume }) {
   // inline owner update form
   const [commSubject, setCommSubject] = useState("");
   const [commMessage, setCommMessage] = useState("");
+  const [answered, setAnswered] = useState({});
+  const [skipped, setSkipped] = useState({});
+  const [showIncomplete, setShowIncomplete] = useState(false);
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((p) => setProperties((p || []).filter((x) => !x.archived))).catch(() => {});
@@ -65,9 +68,9 @@ export default function VisitWizard({ onDone, autoResume }) {
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped });
     }
-  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent]);
+  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped]);
 
   const propertyName = properties.find((p) => p.id === propertyId)?.name || "";
 
@@ -86,6 +89,8 @@ export default function VisitWizard({ onDone, autoResume }) {
     setCreatedTasks(resumable.createdTasks || []);
     setExpensesCreated(resumable.expensesCreated || []);
     setCommSent(resumable.commSent || []);
+    setAnswered(resumable.answered || {});
+    setSkipped(resumable.skipped || {});
     setFlagged({});
     (resumable.checklist || []).forEach((it, i) => { if (it.status === "Important" || it.status === "Emergency") setFlagged((f) => ({ ...f, [i]: (resumable.issueIds || []).length > 0 })); });
     setTemplateSource("Resumed");
@@ -118,10 +123,16 @@ export default function VisitWizard({ onDone, autoResume }) {
       setChecklist([]);
       setTemplateSource("None");
     }
+    setAnswered({});
+    setSkipped({});
+    setShowIncomplete(false);
     setStep("active");
   };
 
-  const updateItem = (idx, updated) => setChecklist((arr) => arr.map((it, i) => (i === idx ? updated : it)));
+  const updateItem = (idx, updated) => {
+    setChecklist((arr) => arr.map((it, i) => (i === idx ? updated : it)));
+    setAnswered((a) => ({ ...a, [idx]: true }));
+  };
 
   const uploadPhotos = async (idx, files) => {
     setUploading(true);
@@ -312,11 +323,13 @@ export default function VisitWizard({ onDone, autoResume }) {
   // ---- STEP: active visit ----
   if (step === "active") {
     const flaggedCount = checklist.filter((i) => i.status === "Important" || i.status === "Emergency").length;
-    const inspectionDone = checklist.length > 0 && checklist.some((i) => i.status !== "Not Checked");
-    const issuesDone = issueIds.length > 0 || flaggedCount === 0;
-    const tasksDone = taskIds.length > 0;
-    const expensesDone = expensesCreated.length > 0;
-    const ownerDone = commSent.length > 0;
+    const isAnswered = (it, idx) => it.status === "Normal" || it.status === "Important" || it.status === "Emergency" || !!answered[idx];
+    const inspectionDone = checklist.length > 0 && checklist.every((it, idx) => isAnswered(it, idx));
+    const issuesDone = inspectionDone && (flaggedCount === 0 || issueIds.length > 0);
+    const tasksDone = inspectionDone && issuesDone && (taskIds.length > 0 || !!skipped.tasks);
+    const expensesDone = inspectionDone && issuesDone && (expensesCreated.length > 0 || !!skipped.expenses);
+    const ownerDone = inspectionDone && issuesDone && (commSent.length > 0 || !!skipped.owner);
+    const canComplete = inspectionDone;
     const STEPS = [
       { key: "inspection", label: "Inspection", icon: ClipboardCheck, target: "step-inspection", done: inspectionDone },
       { key: "issues", label: "Issues", icon: Wrench, target: "step-issues", done: issuesDone },
@@ -411,6 +424,13 @@ export default function VisitWizard({ onDone, autoResume }) {
             </div>
             {taskIds.length > 0 && <p className="text-xs text-emerald-600 mt-2">{taskIds.length} follow-up task(s) created.</p>}
             <p className="text-xs text-muted-foreground mt-2">For a contractor visit, use the Contractors module from the More menu.</p>
+            <div className="mt-1">
+              {skipped.tasks ? (
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, tasks: false }))} className="text-xs text-primary hover:underline">Skipped — tap to undo</button>
+              ) : (
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, tasks: true }))} className="text-xs text-muted-foreground hover:underline">Skip if nothing to add</button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -456,6 +476,13 @@ export default function VisitWizard({ onDone, autoResume }) {
                 ))}
               </div>
             )}
+            <div className="mt-1">
+              {skipped.expenses ? (
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, expenses: false }))} className="text-xs text-primary hover:underline">Skipped — tap to undo</button>
+              ) : (
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, expenses: true }))} className="text-xs text-muted-foreground hover:underline">Skip if nothing to add</button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -476,6 +503,13 @@ export default function VisitWizard({ onDone, autoResume }) {
                 ))}
               </div>
             )}
+            <div className="mt-1">
+              {skipped.owner ? (
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, owner: false }))} className="text-xs text-primary hover:underline">Skipped — tap to undo</button>
+              ) : (
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, owner: true }))} className="text-xs text-muted-foreground hover:underline">Skip if nothing to add</button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -503,12 +537,32 @@ export default function VisitWizard({ onDone, autoResume }) {
             </button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={backFromActive} className="rounded-2xl">Back</Button>
-              <Button onClick={completeVisit} disabled={saving} className="flex-1 h-12 rounded-2xl text-base">
+              <Button
+                variant={canComplete ? "default" : "outline"}
+                onClick={() => (canComplete ? completeVisit() : setShowIncomplete(true))}
+                disabled={saving}
+                className="flex-1 h-12 rounded-2xl text-base">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-5 h-5 mr-2" /> Complete Visit</>}
               </Button>
             </div>
           </div>
         </div>
+
+        {showIncomplete && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-2xl border border-border max-w-sm w-full p-5 shadow-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <h3 className="font-semibold">Visit incomplete</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">There are still unanswered inspection items.</p>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => { setShowIncomplete(false); goToStep("step-inspection"); }} className="rounded-2xl h-11">Continue Inspection</Button>
+                <Button variant="outline" onClick={() => { setShowIncomplete(false); completeVisit(); }} className="rounded-2xl h-11">Complete Anyway</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
