@@ -53,6 +53,7 @@ export default function VisitWizard({ onDone, autoResume }) {
   const [answered, setAnswered] = useState({});
   const [skipped, setSkipped] = useState({});
   const [showIncomplete, setShowIncomplete] = useState(false);
+  const [checklistLoadError, setChecklistLoadError] = useState("");
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((p) => setProperties((p || []).filter((x) => !x.archived))).catch(() => {});
@@ -74,13 +75,14 @@ export default function VisitWizard({ onDone, autoResume }) {
 
   const propertyName = properties.find((p) => p.id === propertyId)?.name || "";
 
-  const resume = () => {
+  const resume = async () => {
     if (!resumable) return;
-    setPropertyId(resumable.propertyId);
-    setVisitType(resumable.visitType || VISIT_TYPES[0]);
+    const pid = resumable.propertyId;
+    const vtype = resumable.visitType || VISIT_TYPES[0];
+    setPropertyId(pid);
+    setVisitType(vtype);
     setStartTime(resumable.startTime);
     setGps(resumable.gps || "");
-    setChecklist(resumable.checklist || []);
     setMeters(resumable.meters?.length ? resumable.meters : [{ label: "Electricity meter", value: "", photo: "" }, { label: "Water meter", value: "", photo: "" }]);
     setSummary(resumable.summary || "");
     setIssueIds(resumable.issueIds || []);
@@ -93,12 +95,43 @@ export default function VisitWizard({ onDone, autoResume }) {
     setSkipped(resumable.skipped || {});
     setFlagged({});
     (resumable.checklist || []).forEach((it, i) => { if (it.status === "Important" || it.status === "Emergency") setFlagged((f) => ({ ...f, [i]: (resumable.issueIds || []).length > 0 })); });
-    setTemplateSource("Resumed");
+    setChecklistLoadError("");
+    if (resumable.checklist && resumable.checklist.length > 0) {
+      setChecklist(resumable.checklist);
+      setTemplateSource("Resumed");
+    } else {
+      try {
+        const { items, source, found } = await loadChecklistItems(pid, vtype);
+        if (!found || items.length === 0) {
+          setChecklist([]);
+          setTemplateSource("None");
+          setChecklistLoadError("Could not load a checklist template for this visit type. Add items in Checklist Templates, then resume again.");
+        } else {
+          setChecklist(items);
+          setTemplateSource(source);
+        }
+      } catch (e) {
+        setChecklist([]);
+        setTemplateSource("None");
+        setChecklistLoadError("Could not load a checklist template for this visit type. Add items in Checklist Templates, then resume again.");
+      }
+    }
     setResumable(null);
     setStep("active");
   };
 
   const discardDraft = () => { clearDraft(); setResumable(null); };
+
+  const loadChecklistItems = async (pid, vtype) => {
+    const all = await base44.entities.ChecklistTemplate.list("-created_date", 500);
+    const live = (all || []).filter((t) => !t.archived);
+    const propSpecific = live.find((t) => t.visit_type === vtype && t.property_id === pid);
+    const master = live.find((t) => t.visit_type === vtype && (!t.property_id || t.is_master));
+    const tmpl = propSpecific || master;
+    const items = (tmpl?.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
+    const source = propSpecific ? "Property-Specific" : master ? "Master" : "None";
+    return { items, source, found: !!tmpl };
+  };
 
   const startVisit = async () => {
     const now = new Date();
@@ -111,14 +144,10 @@ export default function VisitWizard({ onDone, autoResume }) {
       );
     }
     try {
-      const all = await base44.entities.ChecklistTemplate.list("-created_date", 500);
-      const live = (all || []).filter((t) => !t.archived);
-      const propSpecific = live.find((t) => t.visit_type === visitType && t.property_id === propertyId);
-      const master = live.find((t) => t.visit_type === visitType && (!t.property_id || t.is_master));
-      const tmpl = propSpecific || master;
-      const items = (tmpl?.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
+      const { items, source } = await loadChecklistItems(propertyId, visitType);
       setChecklist(items);
-      setTemplateSource(propSpecific ? "Property-Specific" : master ? "Master" : "None");
+      setTemplateSource(source);
+      setChecklistLoadError("");
     } catch (e) {
       setChecklist([]);
       setTemplateSource("None");
@@ -373,7 +402,16 @@ export default function VisitWizard({ onDone, autoResume }) {
                 onUploadPhoto={uploadPhotos} onRemovePhoto={removePhoto} uploading={uploading}
                 onFlagIssue={flagIssue} flagged={!!flagged[i]} />
             ))}
-            {checklist.length === 0 && <p className="text-sm text-muted-foreground">No checklist items for this visit type. Add items in Checklist Templates.</p>}
+            {checklist.length === 0 && (
+              checklistLoadError ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                  <p className="text-sm text-destructive">{checklistLoadError}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No checklist items for this visit type. Add items in Checklist Templates.</p>
+              )
+            )}
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
