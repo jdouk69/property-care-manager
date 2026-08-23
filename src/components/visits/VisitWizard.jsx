@@ -9,6 +9,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
 import { generateVisitReportPdf } from "@/lib/visitReport";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
+import { SEED } from "@/lib/checklistSeed";
+import { Link } from "react-router-dom";
 
 const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
@@ -128,9 +130,14 @@ export default function VisitWizard({ onDone, autoResume }) {
     const propSpecific = live.find((t) => t.visit_type === vtype && t.property_id === pid);
     const master = live.find((t) => t.visit_type === vtype && (!t.property_id || t.is_master));
     const tmpl = propSpecific || master;
-    const items = (tmpl?.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
-    const source = propSpecific ? "Property-Specific" : master ? "Master" : "None";
-    return { items, source, found: !!tmpl };
+    if (tmpl) {
+      const items = (tmpl.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
+      return { items, source: propSpecific ? "Property-Specific" : "Master", found: true };
+    }
+    // Fallback to built-in defaults so a visit is never left without a checklist when template records are missing.
+    const seed = SEED[vtype] || [];
+    const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
+    return { items, source: "Default", found: items.length > 0 };
   };
 
   const startVisit = async () => {
@@ -379,7 +386,7 @@ export default function VisitWizard({ onDone, autoResume }) {
               <p className="font-semibold text-sm truncate">{propertyName}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap"><Clock className="w-3 h-3" /> Started {(startTime || "").slice(11, 16)} · {visitType}</p>
             </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border shrink-0">{templateSource} template</span>
+            <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border shrink-0 hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : `${templateSource} template`}</Link>
           </div>
           {/* Step bar */}
           <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar">
