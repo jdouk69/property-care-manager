@@ -14,6 +14,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import { generateTimeBasedNotifications } from "@/lib/notifications";
 import { loadDraft } from "@/lib/visitDraft";
+import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const greeting = () => {
@@ -125,22 +126,31 @@ function QuickNotes({ settingsId, initial }) {
   );
 }
 
-function NextActionCard({ draft, propName, openIssuesByProp, prepTask }) {
+function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelDone }) {
   if (draft && draft.propertyId) {
     return (
-      <Link to="/visits?continue=1" className="block rounded-2xl bg-primary text-primary-foreground p-4 mb-5 hover:opacity-95 transition shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="w-10 h-10 rounded-xl bg-primary-foreground/15 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide opacity-80">Continue working — visit in progress</p>
-              <p className="font-semibold truncate">Continue Visit — {propName(draft.propertyId)}</p>
-              <p className="text-xs opacity-80 truncate">{draft.visitType || "Monthly Property Watch"}</p>
+      <div className="relative rounded-2xl bg-primary text-primary-foreground p-4 mb-5 shadow-sm overflow-hidden">
+        <Link to="/visits?continue=1" className="block pr-12 hover:opacity-95 transition">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-10 h-10 rounded-xl bg-primary-foreground/15 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide opacity-80">Continue working — visit in progress</p>
+                <p className="font-semibold truncate">Continue Visit — {propName(draft.propertyId)}</p>
+                <p className="text-xs opacity-80 truncate">{draft.visitType || "Monthly Property Watch"}</p>
+              </div>
             </div>
+            <span className="text-sm font-medium shrink-0 flex items-center gap-1">Continue <ArrowRight className="w-4 h-4" /></span>
           </div>
-          <span className="text-sm font-medium shrink-0 flex items-center gap-1">Continue <ArrowRight className="w-4 h-4" /></span>
+        </Link>
+        <div className="absolute top-2 right-2">
+          <CancelVisitMenu
+            draft={draft}
+            onDone={onCancelDone}
+            triggerClassName="text-primary-foreground hover:bg-primary-foreground/15"
+          />
         </div>
-      </Link>
+      </div>
     );
   }
   if (openIssuesByProp) {
@@ -266,7 +276,7 @@ export default function Dashboard() {
         </div>
 
         {/* Next action / continue working */}
-        <NextActionCard draft={nextAction.draft} propName={propName} openIssuesByProp={nextAction.openIssuesByProp} prepTask={nextAction.prepTask} />
+        <NextActionCard draft={nextAction.draft} propName={propName} openIssuesByProp={nextAction.openIssuesByProp} prepTask={nextAction.prepTask} onCancelDone={() => setDraft(null)} />
 
         {/* Quick actions grouped */}
         <div className="space-y-4 mb-6">

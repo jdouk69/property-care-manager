@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
   ChevronLeft, Clock, MapPin, Gauge, Wrench, ListChecks, Download,
-  Loader2, Archive, CheckCircle2, AlertTriangle
+  Loader2, Archive, CheckCircle2, AlertTriangle, Trash2, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +29,10 @@ export default function VisitDetail() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     (async () => {
@@ -60,6 +64,10 @@ export default function VisitDetail() {
     })();
   }, [id]);
 
+  useEffect(() => {
+    base44.auth.me().then((u) => setIsAdmin(u?.role === "admin")).catch(() => {});
+  }, []);
+
   const fmt = (iso) => iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
 
   const toggleReportSent = async (val) => {
@@ -73,6 +81,17 @@ export default function VisitDetail() {
     setArchiving(true);
     try { await base44.entities.PropertyVisit.update(visit.id, { archived: true }); setVisit((v) => ({ ...v, archived: true })); } catch (e) {}
     setArchiving(false);
+  };
+
+  const deletePermanently = async () => {
+    setDeleting(true);
+    try {
+      await base44.entities.PropertyVisit.delete(visit.id);
+      navigate("/visits");
+    } catch (e) {
+      alert("Could not delete visit: " + (e?.message || e));
+    }
+    setDeleting(false);
   };
 
   const downloadReport = async () => {
@@ -100,7 +119,7 @@ export default function VisitDetail() {
           {client.name && <p className="text-sm text-muted-foreground">Owner: {client.name}</p>}
           <div className="flex flex-wrap gap-2 mt-3">
             <span className="text-xs px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20">{visit.visit_type}</span>
-            <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted text-muted-foreground border-border"}`}>{visit.status}</span>
+            <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.status === "Cancelled" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : "bg-muted text-muted-foreground border-border"}`}>{visit.status}</span>
             {visit.report_sent && <span className="text-xs px-2.5 py-1 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">Report Sent</span>}
           </div>
         </div>
@@ -200,8 +219,50 @@ export default function VisitDetail() {
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download Owner Report (PDF)
             </Button>
             <Button variant="outline" onClick={archive} disabled={archiving} className="rounded-2xl gap-1.5"><Archive className="w-4 h-4" /> Archive</Button>
+            {isAdmin && (
+              <Button variant="destructive" onClick={() => setDeleteStep(1)} className="rounded-2xl gap-1.5 ml-auto"><Trash2 className="w-4 h-4" /> Delete Permanently</Button>
+            )}
           </div>
         </div>
+
+        {deleteStep > 0 && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-2xl border border-border max-w-sm w-full p-5 shadow-xl">
+              {deleteStep === 1 ? (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-5 h-5 text-rose-500" />
+                    <h3 className="font-semibold">Delete this visit permanently?</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">This will permanently delete the visit record, including its checklist answers, notes, photos, meter readings, and summary.</p>
+                  <div className="rounded-xl border border-border bg-muted/40 p-3 mb-4 text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-foreground">Related data that will be affected:</p>
+                    <p>• Issues, tasks, expenses, receipts, contractor activity, and owner updates created during this visit will <span className="font-medium">remain</span> in their modules, but will no longer be linked to this visit.</p>
+                    <p>• This action <span className="font-medium">cannot be undone</span>.</p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button variant="outline" onClick={() => setDeleteStep(0)} className="rounded-2xl h-11">Keep Visit</Button>
+                    <Button variant="destructive" onClick={() => setDeleteStep(2)} className="rounded-2xl h-11">Continue</Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-5 h-5 text-rose-500" />
+                    <h3 className="font-semibold">Are you absolutely sure?</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">This cannot be undone. The visit record and all its recorded details will be permanently removed.</p>
+                  <div className="flex flex-col gap-2">
+                    <Button variant="outline" onClick={() => setDeleteStep(1)} disabled={deleting} className="rounded-2xl h-11">Back</Button>
+                    <Button variant="destructive" onClick={deletePermanently} disabled={deleting} className="rounded-2xl h-11">
+                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1.5" /> Yes, delete permanently</>}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

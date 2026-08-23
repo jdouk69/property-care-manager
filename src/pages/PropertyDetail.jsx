@@ -88,6 +88,7 @@ export default function PropertyDetail() {
   ].filter((x) => x.date).sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const receipts = expenses.filter((e) => e.receipt_photo);
+  const visitReports = visits.filter((v) => v.status !== "Cancelled");
   const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${(v.start_time || "").slice(0, 10)} · ${v.visit_type || ""}` }));
   const issueOpts = maintenance.map((m) => ({ value: m.id, label: m.title }));
   const contractorOpts = contractors.map((c) => ({ value: c.id, label: c.company }));
@@ -291,7 +292,7 @@ export default function PropertyDetail() {
               addNode={<LinkLink label="New report" to="/rep-reports" />} />
             <div className="mt-3">
               <Section title="Visit Reports">
-                {visits.length === 0 ? <EmptyState icon={FileText} title="No visit reports" /> : visits.slice(0, 6).map((v) => (
+                {visitReports.length === 0 ? <EmptyState icon={FileText} title="No visit reports" /> : visitReports.slice(0, 6).map((v) => (
                   <div key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{v.visit_type}</p>

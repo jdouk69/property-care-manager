@@ -28,7 +28,8 @@
       "type": "string",
       "enum": [
         "In Progress",
-        "Completed"
+        "Completed",
+        "Cancelled"
       ],
       "default": "In Progress"
     },

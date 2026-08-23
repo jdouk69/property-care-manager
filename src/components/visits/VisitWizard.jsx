@@ -10,7 +10,8 @@ import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
 import { generateVisitReportPdf } from "@/lib/visitReport";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
-import { Link } from "react-router-dom";
+import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
+import { Link, useNavigate } from "react-router-dom";
 
 const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
@@ -18,6 +19,7 @@ const VISIT_TYPES = [
 ];
 
 export default function VisitWizard({ onDone, autoResume }) {
+  const navigate = useNavigate();
   const [step, setStep] = useState("property");
   const [properties, setProperties] = useState([]);
   const [propertyId, setPropertyId] = useState(null);
@@ -386,7 +388,13 @@ export default function VisitWizard({ onDone, autoResume }) {
               <p className="font-semibold text-sm truncate">{propertyName}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap"><Clock className="w-3 h-3" /> Started {(startTime || "").slice(11, 16)} · {visitType}</p>
             </div>
-            <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border shrink-0 hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : templateSource === "Default" ? "Default checklist" : `${templateSource} template`}</Link>
+            <div className="flex items-center gap-1 shrink-0">
+              <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : templateSource === "Default" ? "Default checklist" : `${templateSource} template`}</Link>
+              <CancelVisitMenu
+                draft={{ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds }}
+                onDone={() => navigate(`/properties/${propertyId}`)}
+              />
+            </div>
           </div>
           {/* Step bar */}
           <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar">

@@ -54,6 +54,7 @@ const STATUS_TONES = {
   "Vacant": "muted", "Owner Occupied": "info", "Guest Occupied": "success", "Rental Occupied": "success", "Preparing for Arrival": "warning", "Preparing for Departure": "warning", "Under Maintenance": "warning",
   "Recorded": "muted", "Awaiting Receipt": "warning", "Awaiting Reimbursement": "warning", "Partially Reimbursed": "info", "Reimbursed": "success", "Disputed": "danger",
   Pending: "muted",
+  Cancelled: "muted",
 };
 
 function badgeTone(value) {
