@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
 import { generateVisitReportPdf } from "@/lib/visitReport";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
@@ -14,7 +15,7 @@ const VISIT_TYPES = [
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
 ];
 
-export default function VisitWizard({ onDone }) {
+export default function VisitWizard({ onDone, autoResume }) {
   const [step, setStep] = useState("property");
   const [properties, setProperties] = useState([]);
   const [propertyId, setPropertyId] = useState(null);
@@ -36,19 +37,37 @@ export default function VisitWizard({ onDone }) {
   const [createdTasks, setCreatedTasks] = useState([]);
   const [templateSource, setTemplateSource] = useState("");
   const [resumable, setResumable] = useState(null);
+  const [contractors, setContractors] = useState([]);
+  const [expensesCreated, setExpensesCreated] = useState([]);
+  const [commSent, setCommSent] = useState([]);
+  // inline expense form
+  const [expVendor, setExpVendor] = useState("");
+  const [expAmount, setExpAmount] = useState("");
+  const [expPaidBy, setExpPaidBy] = useState("");
+  const [expIssueId, setExpIssueId] = useState("");
+  const [expContractorId, setExpContractorId] = useState("");
+  const [expReceipt, setExpReceipt] = useState("");
+  // inline owner update form
+  const [commSubject, setCommSubject] = useState("");
+  const [commMessage, setCommMessage] = useState("");
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((p) => setProperties((p || []).filter((x) => !x.archived))).catch(() => {});
+    base44.entities.Contractor.list("-created_date", 500).then((c) => setContractors((c || []).filter((x) => !x.archived))).catch(() => {});
     const d = loadDraft();
     if (d && d.propertyId && d.checklist) setResumable(d);
   }, []);
 
+  useEffect(() => {
+    if (autoResume && resumable) resume();
+  }, [autoResume, resumable]);
+
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent });
     }
-  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks]);
+  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent]);
 
   const propertyName = properties.find((p) => p.id === propertyId)?.name || "";
 
@@ -65,6 +84,8 @@ export default function VisitWizard({ onDone }) {
     setTaskIds(resumable.taskIds || []);
     setCreatedIssues(resumable.createdIssues || []);
     setCreatedTasks(resumable.createdTasks || []);
+    setExpensesCreated(resumable.expensesCreated || []);
+    setCommSent(resumable.commSent || []);
     setFlagged({});
     (resumable.checklist || []).forEach((it, i) => { if (it.status === "Important" || it.status === "Emergency") setFlagged((f) => ({ ...f, [i]: (resumable.issueIds || []).length > 0 })); });
     setTemplateSource("Resumed");
@@ -140,6 +161,47 @@ export default function VisitWizard({ onDone }) {
       setCreatedTasks((arr) => [...arr, { title: t.title }]);
       setFollowUpText("");
     } catch (e) { alert("Could not create task: " + (e?.message || e)); }
+  };
+
+  const addExpenseInline = async () => {
+    if (!expVendor.trim()) return;
+    try {
+      const created = await base44.entities.Expense.create({
+        vendor: expVendor.trim(), property_id: propertyId,
+        date: new Date().toISOString().slice(0, 10),
+        amount: parseFloat(expAmount) || 0,
+        paid_by: expPaidBy.trim() || "Jim",
+        receipt_photo: expReceipt || "",
+        maintenance_issue_id: expIssueId || "",
+        contractor_id: expContractorId || "",
+        awaiting_reimbursement: true, reimbursed: false,
+        notes: `Recorded during ${visitType} visit — ${propertyName}`,
+      });
+      setExpensesCreated((arr) => [...arr, { id: created.id, vendor: created.vendor, amount: created.amount }]);
+      setExpVendor(""); setExpAmount(""); setExpPaidBy(""); setExpIssueId(""); setExpContractorId(""); setExpReceipt("");
+    } catch (e) { alert("Could not create expense: " + (e?.message || e)); }
+  };
+
+  const uploadReceipt = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try { const { file_url } = await base44.integrations.Core.UploadFile({ file: file }); setExpReceipt(file_url); } catch (e) {}
+    setUploading(false);
+  };
+
+  const addOwnerUpdateInline = async () => {
+    if (!commSubject.trim()) return;
+    const prop = properties.find((p) => p.id === propertyId) || {};
+    try {
+      const created = await base44.entities.OwnerCommunication.create({
+        client_id: prop.owner_id || "", property_id: propertyId,
+        date: new Date().toISOString().slice(0, 10),
+        communication_type: "WhatsApp", subject: commSubject.trim(),
+        message: commMessage.trim(), follow_up_required: false,
+      });
+      setCommSent((arr) => [...arr, { id: created.id, subject: created.subject }]);
+      setCommSubject(""); setCommMessage("");
+    } catch (e) { alert("Could not send owner update: " + (e?.message || e)); }
   };
 
   const generateReport = async (visitObj) => {
@@ -250,9 +312,26 @@ export default function VisitWizard({ onDone }) {
   // ---- STEP: active visit ----
   if (step === "active") {
     const flaggedCount = checklist.filter((i) => i.status === "Important" || i.status === "Emergency").length;
+    const inspectionDone = checklist.length > 0 && checklist.some((i) => i.status !== "Not Checked");
+    const issuesDone = issueIds.length > 0 || flaggedCount === 0;
+    const tasksDone = taskIds.length > 0;
+    const expensesDone = expensesCreated.length > 0;
+    const ownerDone = commSent.length > 0;
+    const STEPS = [
+      { key: "inspection", label: "Inspection", icon: ClipboardCheck, target: "step-inspection", done: inspectionDone },
+      { key: "issues", label: "Issues", icon: Wrench, target: "step-issues", done: issuesDone },
+      { key: "tasks", label: "Tasks", icon: ListChecks, target: "step-tasks", done: tasksDone },
+      { key: "expenses", label: "Expenses", icon: Wallet, target: "step-expenses", done: expensesDone },
+      { key: "owner", label: "Owner", icon: MessageSquare, target: "step-owner", done: ownerDone },
+      { key: "finish", label: "Finish", icon: CheckCircle2, target: "step-finish", done: false },
+    ];
+    const nextStep = STEPS.find((s) => !s.done) || STEPS[STEPS.length - 1];
+    const goToStep = (target) => { const el = document.getElementById(target); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    const issueOptions = issueIds.map((id, i) => [id, createdIssues[i]?.title || "Issue"]);
+
     return (
-      <div className="pb-36">
-        <div className="sticky top-14 lg:top-0 z-10 bg-background/90 backdrop-blur border-b border-border -mx-4 px-4 py-3 mb-4">
+      <div className="pb-40">
+        <div className="sticky top-14 lg:top-0 z-10 bg-background/90 backdrop-blur border-b border-border -mx-4 px-4 py-3 mb-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{propertyName}</p>
@@ -260,54 +339,174 @@ export default function VisitWizard({ onDone }) {
             </div>
             <span className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border shrink-0">{templateSource} template</span>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 border border-amber-500/20">{flaggedCount} flagged</span>
-          </div>
-        </div>
-
-        <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Checklist</p>
-        <div className="space-y-2 mb-6">
-          {checklist.map((it, i) => (
-            <VisitChecklistItem key={i} item={it} index={i} onChange={(u) => updateItem(i, u)}
-              onUploadPhoto={uploadPhotos} onRemovePhoto={removePhoto} uploading={uploading}
-              onFlagIssue={flagIssue} flagged={!!flagged[i]} />
-          ))}
-          {checklist.length === 0 && <p className="text-sm text-muted-foreground">No checklist items for this visit type. Add items in Checklist Templates.</p>}
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-          <div className="flex items-center gap-2 mb-3"><Gauge className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Meter Readings</h3></div>
-          <div className="space-y-2">
-            {meters.map((m, i) => (
-              <div key={i} className="flex gap-2">
-                <Input value={m.label} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))} placeholder="Label" className="flex-1" />
-                <Input value={m.value} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, value: e.target.value } : x))} placeholder="Reading" className="flex-1" />
-              </div>
+          {/* Step bar */}
+          <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar">
+            {STEPS.map((s) => (
+              <button key={s.key} onClick={() => goToStep(s.target)}
+                className={`flex items-center gap-1.5 shrink-0 text-[11px] px-2.5 py-1.5 rounded-full border transition ${s.done ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/60 text-muted-foreground border-border"}`}>
+                {s.done ? <Check className="w-3 h-3" /> : <s.icon className="w-3 h-3" />}
+                {s.label}
+              </button>
             ))}
-            <Button variant="outline" size="sm" onClick={() => setMeters((arr) => [...arr, { label: "", value: "", photo: "" }])} className="rounded-full"><Plus className="w-4 h-4" /> Add reading</Button>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-          <div className="flex items-center gap-2 mb-3"><Check className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Follow-up Task</h3></div>
-          <div className="flex gap-2">
-            <Input value={followUpText} onChange={(e) => setFollowUpText(e.target.value)} placeholder="e.g. Order replacement pool filter" />
-            <Button variant="outline" onClick={addFollowUpTask} disabled={!followUpText.trim()}>Add</Button>
+        {/* Inspection */}
+        <div id="step-inspection" className="scroll-mt-28">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Checklist</p>
+          <div className="space-y-2 mb-6">
+            {checklist.map((it, i) => (
+              <VisitChecklistItem key={i} item={it} index={i} onChange={(u) => updateItem(i, u)}
+                onUploadPhoto={uploadPhotos} onRemovePhoto={removePhoto} uploading={uploading}
+                onFlagIssue={flagIssue} flagged={!!flagged[i]} />
+            ))}
+            {checklist.length === 0 && <p className="text-sm text-muted-foreground">No checklist items for this visit type. Add items in Checklist Templates.</p>}
           </div>
-          {taskIds.length > 0 && <p className="text-xs text-emerald-600 mt-2">{taskIds.length} follow-up task(s) created.</p>}
+
+          <div className="rounded-2xl border border-border bg-card p-4 mb-4">
+            <div className="flex items-center gap-2 mb-3"><Gauge className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Meter Readings</h3></div>
+            <div className="space-y-2">
+              {meters.map((m, i) => (
+                <div key={i} className="flex gap-2">
+                  <Input value={m.label} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))} placeholder="Label" className="flex-1" />
+                  <Input value={m.value} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, value: e.target.value } : x))} placeholder="Reading" className="flex-1" />
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={() => setMeters((arr) => [...arr, { label: "", value: "", photo: "" }])} className="rounded-full"><Plus className="w-4 h-4" /> Add reading</Button>
+            </div>
+          </div>
         </div>
 
-        <div className="mb-4">
-          <Label className="text-xs mb-1.5 block">Visit Summary & Recommendations</Label>
-          <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="Overall findings and recommended next steps for the owner…" />
+        {/* Issues */}
+        <div id="step-issues" className="scroll-mt-28">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><Wrench className="w-3 h-3" /> Issues</p>
+          <div className="rounded-2xl border border-border bg-card p-4 mb-4">
+            {flaggedCount === 0 ? (
+              <p className="text-sm text-muted-foreground">No items flagged. Mark a checklist item as Important or Emergency to create an issue.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-2">{flaggedCount} checklist item(s) flagged. Tap "Create Issue" on a flagged item to log it.</p>
+            )}
+            {createdIssues.length > 0 && (
+              <div className="space-y-1.5 mt-2">
+                {createdIssues.map((iss, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="font-medium truncate">{iss.title}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 shrink-0">{iss.priority}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Tasks / Contractor */}
+        <div id="step-tasks" className="scroll-mt-28">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Tasks / Contractor</p>
+          <div className="rounded-2xl border border-border bg-card p-4 mb-4">
+            <div className="flex items-center gap-2 mb-3"><Check className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Follow-up Task</h3></div>
+            <div className="flex gap-2">
+              <Input value={followUpText} onChange={(e) => setFollowUpText(e.target.value)} placeholder="e.g. Order replacement pool filter" />
+              <Button variant="outline" onClick={addFollowUpTask} disabled={!followUpText.trim()}>Add</Button>
+            </div>
+            {taskIds.length > 0 && <p className="text-xs text-emerald-600 mt-2">{taskIds.length} follow-up task(s) created.</p>}
+            <p className="text-xs text-muted-foreground mt-2">For a contractor visit, use the Contractors module from the More menu.</p>
+          </div>
+        </div>
+
+        {/* Expenses / Receipts */}
+        <div id="step-expenses" className="scroll-mt-28">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><Wallet className="w-3 h-3" /> Expenses / Receipts</p>
+          <div className="rounded-2xl border border-border bg-card p-4 mb-4 space-y-2.5">
+            <Input value={expVendor} onChange={(e) => setExpVendor(e.target.value)} placeholder="Vendor / description" />
+            <div className="flex gap-2">
+              <Input value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="Amount €" type="number" className="flex-1" />
+              <Input value={expPaidBy} onChange={(e) => setExpPaidBy(e.target.value)} placeholder="Paid by" className="flex-1" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={expIssueId} onValueChange={setExpIssueId}>
+                <SelectTrigger><SelectValue placeholder="Link issue (opt)" /></SelectTrigger>
+                <SelectContent>
+                  {issueOptions.map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={expContractorId} onValueChange={setExpContractorId}>
+                <SelectTrigger><SelectValue placeholder="Link contractor (opt)" /></SelectTrigger>
+                <SelectContent>
+                  {contractors.map((c) => <SelectItem key={c.id} value={c.id}>{c.company}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="inline-flex items-center gap-1.5 text-xs text-primary cursor-pointer">
+                {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Receipt className="w-3.5 h-3.5" />}
+                <span>{expReceipt ? "Receipt attached" : "Attach receipt"}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadReceipt(e.target.files?.[0])} />
+              </label>
+              <Button size="sm" onClick={addExpenseInline} disabled={!expVendor.trim()} className="ml-auto rounded-full">Add expense</Button>
+            </div>
+            {expensesCreated.length > 0 && (
+              <div className="space-y-1 pt-1">
+                {expensesCreated.map((ex, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="font-medium truncate">{ex.vendor}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">€{(ex.amount || 0).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Owner Update */}
+        <div id="step-owner" className="scroll-mt-28">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><MessageSquare className="w-3 h-3" /> Owner Update</p>
+          <div className="rounded-2xl border border-border bg-card p-4 mb-4 space-y-2.5">
+            <Input value={commSubject} onChange={(e) => setCommSubject(e.target.value)} placeholder="Subject e.g. Monthly visit summary" />
+            <Textarea value={commMessage} onChange={(e) => setCommMessage(e.target.value)} rows={2} placeholder="Message to the owner…" />
+            <Button size="sm" onClick={addOwnerUpdateInline} disabled={!commSubject.trim()} className="rounded-full"><Send className="w-3.5 h-3.5 mr-1.5" /> Log owner update</Button>
+            {commSent.length > 0 && (
+              <div className="space-y-1 pt-1">
+                {commSent.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="font-medium truncate">{c.subject}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Finish */}
+        <div id="step-finish" className="scroll-mt-28">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Finish</p>
+          <div className="mb-4">
+            <Label className="text-xs mb-1.5 block">Visit Summary & Recommendations</Label>
+            <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="Overall findings and recommended next steps for the owner…" />
+          </div>
+        </div>
+
+        {/* Next action card + bottom bar */}
         <div className="fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 lg:left-64">
-          <div className="max-w-2xl mx-auto flex gap-2">
-            <Button variant="outline" onClick={backFromActive} className="rounded-2xl">Back</Button>
-            <Button onClick={completeVisit} disabled={saving} className="flex-1 h-12 rounded-2xl text-base">
-              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-5 h-5 mr-2" /> Complete Visit</>}
-            </Button>
+          <div className="max-w-2xl mx-auto space-y-2">
+            <button onClick={() => goToStep(nextStep.target)} className="w-full flex items-center justify-between gap-2 rounded-2xl bg-primary/10 border border-primary/20 px-3 py-2.5 text-left hover:bg-primary/15 transition">
+              <div className="flex items-center gap-2 min-w-0">
+                <nextStep.icon className="w-4 h-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-wide text-primary/80">Next step</p>
+                  <p className="text-sm font-medium text-foreground truncate">{nextStep.label}{nextStep.key === "finish" ? " — complete the visit" : ""}</p>
+                </div>
+              </div>
+              <span className="text-xs text-primary shrink-0">Go →</span>
+            </button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={backFromActive} className="rounded-2xl">Back</Button>
+              <Button onClick={completeVisit} disabled={saving} className="flex-1 h-12 rounded-2xl text-base">
+                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-5 h-5 mr-2" /> Complete Visit</>}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

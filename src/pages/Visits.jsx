@@ -15,6 +15,7 @@ export default function Visits() {
   const [props, setProps] = useState({});
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(null);
+  const [autoResume, setAutoResume] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -31,13 +32,24 @@ export default function Visits() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); setDraft(loadDraft()); }, []);
+  useEffect(() => {
+    load();
+    const d = loadDraft();
+    setDraft(d);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("start") === "1") {
+      setMode("wizard");
+    } else if (params.get("continue") === "1" && d) {
+      setAutoResume(true);
+      setMode("wizard");
+    }
+  }, []);
 
   if (mode === "wizard") {
     return (
       <AppLayout>
         <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-          <VisitWizard onDone={() => { setMode("list"); load(); setDraft(loadDraft()); }} />
+          <VisitWizard autoResume={autoResume} onDone={() => { setMode("list"); setAutoResume(false); load(); setDraft(loadDraft()); }} />
         </div>
       </AppLayout>
     );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search as SearchIcon, Users, Home, HardHat, ListChecks, Wrench, FileText, ArrowRight } from "lucide-react";
+import { Search as SearchIcon, Users, Home, HardHat, ListChecks, Wrench, FileText, ArrowRight, MapPin, ClipboardCheck, Wallet, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
@@ -10,9 +10,13 @@ import { base44 } from "@/api/base44Client";
 const SOURCES = [
   { entity: "Client", label: "Clients", icon: Users, key: "name", sub: "email", to: "/clients" },
   { entity: "Property", label: "Properties", icon: Home, key: "name", sub: "address", to: "/properties" },
-  { entity: "Contractor", label: "Contractors", icon: HardHat, key: "company", sub: "trade", to: "/contractors" },
+  { entity: "PropertyVisit", label: "Visits", icon: MapPin, key: "visit_type", sub: "summary", to: "/visits" },
+  { entity: "Inspection", label: "Inspections", icon: ClipboardCheck, key: "summary_notes", sub: "inspector", to: "/inspections" },
+  { entity: "MaintenanceIssue", label: "Issues", icon: Wrench, key: "title", sub: "description", to: "/maintenance" },
   { entity: "Task", label: "Tasks", icon: ListChecks, key: "title", sub: "notes", to: "/tasks" },
-  { entity: "MaintenanceIssue", label: "Maintenance", icon: Wrench, key: "title", sub: "description", to: "/maintenance" },
+  { entity: "Contractor", label: "Contractors", icon: HardHat, key: "company", sub: "trade", to: "/contractors" },
+  { entity: "Expense", label: "Expenses & Receipts", icon: Wallet, key: "vendor", sub: "notes", to: "/expenses" },
+  { entity: "OwnerCommunication", label: "Owner Updates", icon: MessageSquare, key: "subject", sub: "message", to: "/communications" },
 ];
 
 export default function Search() {
@@ -72,7 +76,7 @@ export default function Search() {
           {results && results.every((r) => r.items.length === 0) && !loading && (
             <EmptyState icon={SearchIcon} title="No results found" description={`Nothing matched "${query}".`} />
           )}
-          {!results && <EmptyState icon={SearchIcon} title="Start typing to search" description="Search across clients, properties, contractors, tasks and maintenance." />}
+          {!results && <EmptyState icon={SearchIcon} title="Start typing to search" description="Search across clients, properties, visits, inspections, issues, tasks, contractors, expenses, receipts and owner updates." />}
         </div>
       </div>
     </AppLayout>

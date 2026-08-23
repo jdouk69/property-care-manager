@@ -13,6 +13,10 @@ const fields = [
   { name: "awaiting_reimbursement", label: "Awaiting Reimbursement", type: "boolean" },
   { name: "reimbursed", label: "Reimbursed", type: "boolean" },
   { name: "receipt_photo", label: "Receipt Photo", type: "image" },
+  { name: "visit_id", label: "Linked Visit", type: "entity-select", entity: "PropertyVisit",
+    optionLabel: (r) => `Visit — ${(r.start_time || "").slice(0, 10)} · ${r.visit_type || ""}` },
+  { name: "maintenance_issue_id", label: "Linked Issue", type: "entity-select", entity: "MaintenanceIssue" },
+  { name: "contractor_id", label: "Linked Contractor", type: "entity-select", entity: "Contractor" },
   { name: "notes", label: "Notes", type: "textarea" },
 ];
 

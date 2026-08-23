@@ -24,7 +24,7 @@ import { Image as UIImage } from "@/components/ui/image";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 
-const ENTITY_LABEL = { Client: "name", Property: "name", Contractor: "company" };
+const ENTITY_LABEL = { Client: "name", Property: "name", Contractor: "company", MaintenanceIssue: "title" };
 
 const TONE = {
   success: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -76,6 +76,7 @@ export default function ResourceListPage({
   const [dirty, setDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lookups, setLookups] = useState({});
+  const [lookupsRaw, setLookupsRaw] = useState({});
   const debounceRef = useRef(null);
 
   const load = async () => {
@@ -98,12 +99,14 @@ export default function ResourceListPage({
         const list = await base44.entities[e].list("-created_date", 500);
         const map = {};
         (list || []).forEach((r) => { map[r.id] = r[ENTITY_LABEL[e] || "name"] || r.title || r.company || "—"; });
-        return [e, map];
+        return [e, { map, list: list || [] }];
       })
     ).then((pairs) => {
       const obj = {};
-      pairs.forEach(([k, v]) => (obj[k] = v));
+      const raw = {};
+      pairs.forEach(([k, v]) => { obj[k] = v.map; raw[k] = v.list; });
       setLookups(obj);
+      setLookupsRaw(raw);
     }).catch(() => {});
   }, [entityName]);
 
@@ -189,17 +192,21 @@ export default function ResourceListPage({
             </SelectContent>
           </Select>
         );
-      case "entity-select":
+      case "entity-select": {
+        const opts = f.optionLabel
+          ? (lookupsRaw[f.entity] || []).map((r) => [r.id, f.optionLabel(r)])
+          : Object.entries(lookups[f.entity] || {});
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
             <SelectTrigger><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
             <SelectContent>
-              {Object.entries(lookups[f.entity] || {}).map(([id, label]) => (
+              {opts.map(([id, label]) => (
                 <SelectItem key={id} value={id}>{label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         );
+      }
       case "date":
         return <Input type="date" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
       case "time":
@@ -313,6 +320,10 @@ export default function ResourceListPage({
     const v = item[col.key];
     const fieldDef = fields.find((f) => f.name === col.key);
     if (fieldDef?.type === "entity-select") {
+      if (fieldDef.optionLabel && v) {
+        const rec = (lookupsRaw[fieldDef.entity] || []).find((r) => r.id === v);
+        return rec ? fieldDef.optionLabel(rec) : "—";
+      }
       return fieldDef.entity ? (lookups[fieldDef.entity]?.[v] || "—") : (v || "—");
     }
     if (col.type === "boolean") return v ? "Yes" : "No";

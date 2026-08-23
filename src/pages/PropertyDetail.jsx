@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, Home, ListChecks, ClipboardCheck, Wrench, Wallet, Clock,
-  MapPin, KeyRound, Wifi, AlertCircle, Image as ImageIcon, Calendar
+  MapPin, KeyRound, Wifi, Image as ImageIcon, Calendar, Truck, MessageSquare,
+  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -12,50 +13,84 @@ import AppLayout from "@/components/layout/AppLayout";
 import { base44 } from "@/api/base44Client";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import EmptyState from "@/components/ui/EmptyState";
-import { Loader2 } from "lucide-react";
+import PropertyInlineAdd from "@/components/properties/PropertyInlineAdd";
+
+const ISSUE_CATEGORIES = ["Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning", "Heating", "Appliance", "Internet", "Security", "Locksmith", "Cleaning", "Painting", "Building repair", "Pest control", "Storm damage", "Other"];
+const ISSUE_PRIORITIES = ["Routine", "Medium", "High", "Emergency"];
+const TASK_TYPES = ["Inspection", "Maintenance", "Maintenance follow-up", "Contractor Meeting", "Delivery", "Owner Request", "Arrival preparation", "Departure inspection", "Shopping", "Utility payment", "Report", "Key return", "Phone call", "Owner-representative visit", "Custom"];
+const TASK_PRIORITIES = ["Low", "Medium", "High", "Urgent"];
+const DELIVERY_PURPOSES = ["Furniture", "Appliance", "Parcel", "Building materials", "Contractor access", "Utility technician", "Internet technician", "Cleaning"];
 
 export default function PropertyDetail() {
   const { id } = useParams();
   const [prop, setProp] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [owner, setOwner] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [inspections, setInspections] = useState([]);
   const [maintenance, setMaintenance] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [owner, setOwner] = useState(null);
+  const [visits, setVisits] = useState([]);
+  const [contractors, setContractors] = useState([]);
+  const [comms, setComms] = useState([]);
+  const [keys, setKeys] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [repReports, setRepReports] = useState([]);
+  const [tick, setTick] = useState(0);
+
+  const reload = () => setTick((x) => x + 1);
 
   useEffect(() => {
     (async () => {
       try {
         const p = await base44.entities.Property.get(id);
         setProp(p);
-        const [t, i, m, e] = await Promise.all([
+        const [t, i, m, e, v, c, cm, k, d, docs, rep] = await Promise.all([
           base44.entities.Task.list("-date", 200),
           base44.entities.Inspection.list("-date", 200),
           base44.entities.MaintenanceIssue.list("-created_date", 200),
           base44.entities.Expense.list("-date", 200),
+          base44.entities.PropertyVisit.list("-start_time", 200),
+          base44.entities.Contractor.list("-created_date", 500),
+          base44.entities.OwnerCommunication.list("-created_date", 200),
+          base44.entities.Key.list("-created_date", 200),
+          base44.entities.Delivery.list("-created_date", 200),
+          base44.entities.PropertyDocument.list("-created_date", 200),
+          base44.entities.OwnerRepReport.list("-created_date", 200),
         ]);
-        setTasks((t || []).filter((x) => x.property_id === id));
-        setInspections((i || []).filter((x) => x.property_id === id));
-        setMaintenance((m || []).filter((x) => x.property_id === id));
-        setExpenses((e || []).filter((x) => x.property_id === id));
-        if (p.owner_id) {
-          try { setOwner(await base44.entities.Client.get(p.owner_id)); } catch {}
-        }
+        const byProp = (arr) => (arr || []).filter((x) => x.property_id === id && !x.archived);
+        setTasks(byProp(t));
+        setInspections(byProp(i));
+        setMaintenance(byProp(m));
+        setExpenses(byProp(e));
+        setVisits(byProp(v));
+        setContractors((c || []).filter((x) => !x.archived));
+        setComms(byProp(cm));
+        setKeys(byProp(k));
+        setDeliveries(byProp(d));
+        setDocuments(byProp(docs));
+        setRepReports(byProp(rep));
+        if (p.owner_id) { try { setOwner(await base44.entities.Client.get(p.owner_id)); } catch {} }
       } catch (e) {}
       setLoading(false);
     })();
-  }, [id]);
+  }, [id, tick]);
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!prop) return <AppLayout><EmptyState icon={Home} title="Property not found" action={<Link to="/properties"><Button>Back to properties</Button></Link>} /></AppLayout>;
 
   const timeline = [
     ...inspections.map((i) => ({ date: i.date, type: "Inspection", title: `Inspection — ${i.status}`, icon: ClipboardCheck, detail: i.inspector })),
-    ...maintenance.map((m) => ({ date: m.date || "", type: "Maintenance", title: m.title, icon: Wrench, detail: m.status })),
+    ...maintenance.map((m) => ({ date: m.date || m.created_date?.slice(0, 10) || "", type: "Maintenance", title: m.title, icon: Wrench, detail: m.status })),
     ...tasks.map((t) => ({ date: t.date, type: t.type, title: t.title, icon: ListChecks, detail: t.status })),
     ...expenses.map((e) => ({ date: e.date, type: "Expense", title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, icon: Wallet, detail: e.reimbursed ? "Reimbursed" : "" })),
   ].filter((x) => x.date).sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  const receipts = expenses.filter((e) => e.receipt_photo);
+  const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${(v.start_time || "").slice(0, 10)} · ${v.visit_type || ""}` }));
+  const issueOpts = maintenance.map((m) => ({ value: m.id, label: m.title }));
+  const contractorOpts = contractors.map((c) => ({ value: c.id, label: c.company }));
 
   return (
     <AppLayout>
@@ -86,10 +121,17 @@ export default function PropertyDetail() {
         <Tabs defaultValue="overview">
           <TabsList className="w-full justify-start overflow-x-auto mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="visits">Visits</TabsTrigger>
             <TabsTrigger value="inspections">Inspections</TabsTrigger>
-            <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            <TabsTrigger value="issues">Issues</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="contractors">Contractors</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="receipts">Receipts</TabsTrigger>
+            <TabsTrigger value="keys">Key Activity</TabsTrigger>
+            <TabsTrigger value="updates">Owner Updates</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
           </TabsList>
 
@@ -111,17 +153,155 @@ export default function PropertyDetail() {
             )}
           </TabsContent>
 
-          <TabsContent value="tasks">
-            <SimpleList items={tasks} title={ListChecks} render={(t) => ({ primary: t.title, sub: `${t.date} · ${t.type}`, badge: t.status })} empty="No tasks for this property" to="/tasks" />
+          <TabsContent value="visits">
+            <RecordSection title="Visits" icon={MapPin} empty="No visits recorded" moduleLink="/visits"
+              items={visits} render={(v) => ({ primary: v.visit_type, sub: (v.start_time || "").slice(0, 16).replace("T", " "), badge: v.status, to: `/visits/${v.id}` })}
+              addNode={<LinkLink label="Start a new visit" to="/visits?start=1" />} />
           </TabsContent>
+
           <TabsContent value="inspections">
-            <SimpleList items={inspections} title={ClipboardCheck} render={(i) => ({ primary: `Inspection — ${i.date}`, sub: i.inspector, badge: i.status })} empty="No inspections yet" to="/inspections" />
+            <RecordSection title="Inspections" icon={ClipboardCheck} empty="No inspections yet" moduleLink="/inspections"
+              items={inspections} render={(i) => ({ primary: `Inspection — ${i.date}`, sub: i.inspector, badge: i.status, to: "/inspections" })}
+              addNode={<LinkLink label="New inspection" to="/inspections" />} />
           </TabsContent>
-          <TabsContent value="maintenance">
-            <SimpleList items={maintenance} title={Wrench} render={(m) => ({ primary: m.title, sub: m.description, badge: m.priority })} empty="No maintenance issues" to="/maintenance" />
+
+          <TabsContent value="issues">
+            <RecordSection title="Issues" icon={Wrench} empty="No maintenance issues" moduleLink="/maintenance"
+              items={maintenance} render={(m) => ({ primary: m.title, sub: m.description, badge: m.priority, to: "/maintenance" })}
+              addNode={
+                <PropertyInlineAdd entity="MaintenanceIssue" propertyId={id} submitLabel="Add Issue" onCreated={reload} moreLink="/maintenance"
+                  defaultValues={{ status: "Reported", priority: "Medium", category: "Other", owner_approval_status: "Pending", payment_status: "Unpaid" }}
+                  fields={[
+                    { name: "title", label: "Title", type: "text", required: true, placeholder: "e.g. Leaking pool pump" },
+                    { name: "category", label: "Category", type: "select", options: ISSUE_CATEGORIES.map((o) => ({ value: o, label: o })) },
+                    { name: "priority", label: "Priority", type: "select", options: ISSUE_PRIORITIES.map((o) => ({ value: o, label: o })) },
+                    { name: "description", label: "Description", type: "textarea", placeholder: "What did you observe?" },
+                  ]} />
+              } />
           </TabsContent>
+
+          <TabsContent value="tasks">
+            <RecordSection title="Tasks" icon={ListChecks} empty="No tasks for this property" moduleLink="/tasks"
+              items={tasks} render={(t) => ({ primary: t.title, sub: `${t.date} · ${t.type}`, badge: t.status, to: "/tasks" })}
+              addNode={
+                <PropertyInlineAdd entity="Task" propertyId={id} submitLabel="Add Task" onCreated={reload} moreLink="/tasks"
+                  defaultValues={{ status: "Pending", priority: "Medium", type: "Custom", date: new Date().toISOString().slice(0, 10) }}
+                  fields={[
+                    { name: "title", label: "Title", type: "text", required: true, placeholder: "e.g. Check irrigation timer" },
+                    { name: "type", label: "Type", type: "select", options: TASK_TYPES.map((o) => ({ value: o, label: o })) },
+                    { name: "date", label: "Date", type: "date" },
+                    { name: "priority", label: "Priority", type: "select", options: TASK_PRIORITIES.map((o) => ({ value: o, label: o })) },
+                  ]} />
+              } />
+          </TabsContent>
+
+          <TabsContent value="contractors">
+            <RecordSection title="Contractor Visits" icon={Truck} empty="No contractor visits logged" moduleLink="/contractors"
+              items={deliveries} render={(d) => ({ primary: d.company, sub: `${d.date || ""} · ${d.purpose}`, badge: d.completion_status, to: "/deliveries" })}
+              addNode={
+                <PropertyInlineAdd entity="Delivery" propertyId={id} submitLabel="Add Contractor Visit" onCreated={reload} moreLink="/deliveries"
+                  defaultValues={{ completion_status: "Pending", purpose: "Contractor access", date: new Date().toISOString().slice(0, 10) }}
+                  fields={[
+                    { name: "company", label: "Company / Contractor", type: "text", required: true },
+                    { name: "purpose", label: "Purpose", type: "select", options: DELIVERY_PURPOSES.map((o) => ({ value: o, label: o })) },
+                    { name: "date", label: "Date", type: "date" },
+                    { name: "contact_person", label: "Contact", type: "text" },
+                    { name: "access_instructions", label: "Access instructions", type: "textarea" },
+                  ]} />
+              } />
+            <div className="mt-3"><LinkLink label="Browse all contractors" to="/contractors" /></div>
+          </TabsContent>
+
           <TabsContent value="expenses">
-            <SimpleList items={expenses} title={Wallet} render={(e) => ({ primary: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, sub: e.date, badge: e.reimbursed ? "reimbursed" : "pending" })} empty="No expenses recorded" to="/expenses" />
+            <RecordSection title="Expenses" icon={Wallet} empty="No expenses recorded" moduleLink="/expenses"
+              items={expenses} render={(e) => ({ primary: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, sub: e.date, badge: e.reimbursed ? "reimbursed" : "pending", to: "/expenses" })}
+              addNode={
+                <PropertyInlineAdd entity="Expense" propertyId={id} submitLabel="Add Expense" onCreated={reload} moreLink="/expenses"
+                  defaultValues={{ date: new Date().toISOString().slice(0, 10), amount: 0, awaiting_reimbursement: true, reimbursed: false }}
+                  fields={[
+                    { name: "vendor", label: "Vendor", type: "text", required: true },
+                    { name: "amount", label: "Amount (€)", type: "number" },
+                    { name: "date", label: "Date", type: "date" },
+                    { name: "paid_by", label: "Paid by", type: "text" },
+                    { name: "visit_id", label: "Linked visit", type: "entity-select", options: visitOpts, placeholder: "Optional" },
+                    { name: "maintenance_issue_id", label: "Linked issue", type: "entity-select", options: issueOpts, placeholder: "Optional" },
+                    { name: "contractor_id", label: "Linked contractor", type: "entity-select", options: contractorOpts, placeholder: "Optional" },
+                    { name: "receipt_photo", label: "Receipt photo", type: "image" },
+                    { name: "notes", label: "Notes", type: "textarea" },
+                  ]} />
+              } />
+          </TabsContent>
+
+          <TabsContent value="receipts">
+            <RecordSection title="Receipts" icon={Receipt} empty="No receipts attached" moduleLink="/expenses"
+              items={receipts} render={(e) => ({ primary: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, sub: e.date, badge: e.reimbursed ? "reimbursed" : "pending", to: "/expenses" })}
+              addNode={
+                <PropertyInlineAdd entity="Expense" propertyId={id} submitLabel="Add Receipt" onCreated={reload} moreLink="/expenses"
+                  defaultValues={{ date: new Date().toISOString().slice(0, 10), amount: 0, awaiting_reimbursement: true, reimbursed: false }}
+                  fields={[
+                    { name: "vendor", label: "Vendor", type: "text", required: true },
+                    { name: "amount", label: "Amount (€)", type: "number" },
+                    { name: "date", label: "Date", type: "date" },
+                    { name: "visit_id", label: "Linked visit", type: "entity-select", options: visitOpts, placeholder: "Optional" },
+                    { name: "maintenance_issue_id", label: "Linked issue", type: "entity-select", options: issueOpts, placeholder: "Optional" },
+                    { name: "contractor_id", label: "Linked contractor", type: "entity-select", options: contractorOpts, placeholder: "Optional" },
+                    { name: "receipt_photo", label: "Receipt photo", type: "image" },
+                  ]} />
+              } />
+          </TabsContent>
+
+          <TabsContent value="keys">
+            <RecordSection title="Key Activity" icon={KeyRound} empty="No key activity recorded" moduleLink="/keys"
+              items={keys} render={(k) => ({ primary: `Key ${k.key_number}`, sub: `${k.date_issued || ""} · ${k.current_holder || "—"}`, badge: k.date_returned ? "returned" : "out", to: "/keys" })}
+              addNode={
+                <PropertyInlineAdd entity="Key" propertyId={id} submitLabel="Log Key Activity" onCreated={reload} moreLink="/keys"
+                  defaultValues={{ date_issued: new Date().toISOString().slice(0, 10) }}
+                  fields={[
+                    { name: "key_number", label: "Key number", type: "text", required: true },
+                    { name: "current_holder", label: "Holder", type: "text" },
+                    { name: "date_issued", label: "Date issued", type: "date" },
+                    { name: "notes", label: "Notes", type: "textarea" },
+                  ]} />
+              } />
+          </TabsContent>
+
+          <TabsContent value="updates">
+            <RecordSection title="Owner Updates" icon={MessageSquare} empty="No owner updates logged" moduleLink="/communications"
+              items={comms} render={(c) => ({ primary: c.subject, sub: `${c.date} · ${c.communication_type}`, to: "/communications" })}
+              addNode={
+                <PropertyInlineAdd entity="OwnerCommunication" propertyId={id} submitLabel="Add Owner Update" onCreated={reload} moreLink="/communications"
+                  defaultValues={{ date: new Date().toISOString().slice(0, 10), communication_type: "WhatsApp", client_id: prop.owner_id || "" }}
+                  fields={[
+                    { name: "subject", label: "Subject", type: "text", required: true },
+                    { name: "communication_type", label: "Channel", type: "select", options: ["WhatsApp", "Email", "Phone", "SMS", "In-person"].map((o) => ({ value: o, label: o })) },
+                    { name: "message", label: "Message", type: "textarea" },
+                  ]} />
+              } />
+          </TabsContent>
+
+          <TabsContent value="documents">
+            <RecordSection title="Documents & Photos" icon={FolderOpen} empty="No documents uploaded" moduleLink="/documents"
+              items={documents} render={(d) => ({ primary: d.name, sub: d.category, to: "/documents" })}
+              addNode={<LinkLink label="Upload document" to="/documents" />} />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <RecordSection title="Owner-Rep Reports" icon={FileText} empty="No reports yet" moduleLink="/rep-reports"
+              items={repReports} render={(r) => ({ primary: r.project_name, sub: r.visit_date, badge: r.status, to: "/rep-reports" })}
+              addNode={<LinkLink label="New report" to="/rep-reports" />} />
+            <div className="mt-3">
+              <Section title="Visit Reports">
+                {visits.length === 0 ? <EmptyState icon={FileText} title="No visit reports" /> : visits.slice(0, 6).map((v) => (
+                  <div key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{v.visit_type}</p>
+                      <p className="text-xs text-muted-foreground truncate">{(v.start_time || "").slice(0, 10)}</p>
+                    </div>
+                    <Link to={`/visits/${v.id}`} className="text-xs text-primary hover:underline">Open</Link>
+                  </div>
+                ))}
+              </Section>
+            </div>
           </TabsContent>
 
           <TabsContent value="timeline">
@@ -150,6 +330,14 @@ export default function PropertyDetail() {
         </Tabs>
       </div>
     </AppLayout>
+  );
+}
+
+function LinkLink({ label, to }) {
+  return (
+    <div className="px-4 py-3">
+      <Link to={to}><Button size="sm" variant="outline" className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {label}</Button></Link>
+    </div>
   );
 }
 
@@ -184,22 +372,32 @@ function Detail({ label, value }) {
   );
 }
 
-function SimpleList({ items, title: Icon, render, empty, to }) {
-  if (!items.length) return <EmptyState icon={Icon} title={empty} action={<Link to={to}><Button variant="outline" size="sm">Add</Button></Link>} />;
+function RecordSection({ title, icon: Icon, items, render, empty, moduleLink, addNode }) {
   return (
-    <div className="rounded-2xl border border-border bg-card divide-y divide-border">
-      {items.map((it) => {
-        const r = render(it);
-        return (
-          <Link to={to} key={it.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{r.primary}</p>
-              {r.sub && <p className="text-xs text-muted-foreground truncate">{r.sub}</p>}
-            </div>
-            {r.badge && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(r.badge)}`}>{r.badge}</span>}
-          </Link>
-        );
-      })}
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2 font-medium text-sm"><Icon className="w-4 h-4 text-muted-foreground" /> {title}</div>
+        {moduleLink && <Link to={moduleLink} className="text-xs text-primary flex items-center gap-1 hover:underline">View all</Link>}
+      </div>
+      {items.length > 0 ? (
+        <div className="divide-y divide-border">
+          {items.map((it) => {
+            const r = render(it);
+            return (
+              <Link to={r.to || moduleLink || "#"} key={it.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{r.primary}</p>
+                  {r.sub && <p className="text-xs text-muted-foreground truncate">{r.sub}</p>}
+                </div>
+                {r.badge && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(r.badge)}`}>{r.badge}</span>}
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="px-4 py-6"><EmptyState icon={Icon} title={empty} /></div>
+      )}
+      {addNode}
     </div>
   );
 }
