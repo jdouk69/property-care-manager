@@ -15,6 +15,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import { generateTimeBasedNotifications } from "@/lib/notifications";
 import { loadDraft } from "@/lib/visitDraft";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
+import ActionCard from "@/components/dashboard/ActionCard";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const greeting = () => {
@@ -279,47 +280,63 @@ export default function Dashboard() {
         <NextActionCard draft={nextAction.draft} propName={propName} openIssuesByProp={nextAction.openIssuesByProp} prepTask={nextAction.prepTask} onCancelDone={() => setDraft(null)} />
 
         {/* Quick actions grouped */}
-        <div className="space-y-4 mb-6">
-          {ACTION_GROUPS.map((group) => (
-            <div key={group.label}>
-              {group.label === "Property Visit" ? (
-                <>
+        <div className="space-y-3 mb-5">
+          {ACTION_GROUPS.map((group) => {
+            if (group.label === "Property Visit") {
+              const visitActive = !!(draft && draft.propertyId);
+              return (
+                <div key={group.label}>
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
-                  <Link to={startVisitTo} className="block mb-2">
-                    <Button className="w-full h-auto py-3.5 rounded-2xl bg-primary text-primary-foreground flex items-center gap-3 hover:bg-primary/90 shadow-sm">
-                      <span className="w-10 h-10 rounded-xl bg-primary-foreground/15 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
-                      <span className="font-semibold text-base truncate">{startVisitLabel}</span>
-                      <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
-                    </Button>
-                  </Link>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                  {!visitActive && (
+                    <Link to={startVisitTo} className="block mb-2">
+                      <div className="flex items-center gap-3 h-16 rounded-xl bg-primary text-primary-foreground px-3.5 hover:bg-primary/90 shadow-sm transition">
+                        <span className="w-11 h-11 rounded-lg bg-primary-foreground/15 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
+                        <span className="font-semibold text-sm truncate">{startVisitLabel}</span>
+                        <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
+                      </div>
+                    </Link>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
                     {group.items.map((a) => (
-                      <Link key={a.label} to={a.to}>
-                        <Button variant="outline" className="w-full h-auto py-2.5 rounded-2xl flex-col gap-1.5 hover:shadow-md hover:border-primary/30">
-                          <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${a.color}`}><a.icon className="w-4 h-4" /></span>
-                          <span className="text-[11px] font-medium text-center leading-tight">{a.label}</span>
-                        </Button>
-                      </Link>
+                      <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
                     ))}
                   </div>
-                </>
-              ) : (
-                <>
+                </div>
+              );
+            }
+            if (group.label === "Follow-Up") {
+              return (
+                <div key={group.label}>
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {group.items.map((a) => (
-                      <Link key={a.label} to={a.to}>
-                        <Button variant="outline" className="w-full h-auto py-2.5 rounded-2xl flex-col gap-1.5 hover:shadow-md hover:border-primary/30">
-                          <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-white ${a.color}`}><a.icon className="w-4 h-4" /></span>
-                          <span className="text-[11px] font-medium text-center leading-tight">{a.label}</span>
-                        </Button>
-                      </Link>
+                      <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
                     ))}
                   </div>
-                </>
-              )}
-            </div>
-          ))}
+                </div>
+              );
+            }
+            if (group.label === "Communication") {
+              return (
+                <div key={group.label}>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
+                  {group.items.map((a) => (
+                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <div key={group.label}>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {group.items.map((a) => (
+                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Financial summary */}
