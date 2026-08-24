@@ -14,10 +14,9 @@ import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import { Link, useNavigate } from "react-router-dom";
 
 const VISIT_TYPES = [
-  "Monthly Property Watch", "Home Watch Inspection", "Property Care Inspection",
-  "Owner Arrival Preparation", "Guest Arrival Preparation", "Departure Inspection",
-  "Seasonal Opening", "Seasonal Closing", "Emergency Visit",
-  "Owner Representative Construction Visit", "Owner Representative Site Visit",
+  "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
+  "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
+  "Home Watch Inspection", "Property Care Inspection", "Emergency Visit", "Owner Representative Site Visit",
 ];
 
 export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, resumeVisitId }) {
