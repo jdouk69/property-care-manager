@@ -193,14 +193,14 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [] });
+  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [] });
   const [settings, setSettings] = useState(null);
   const [draft, setDraft] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, sList] = await Promise.all([
+        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, sList] = await Promise.all([
           base44.entities.Task.list("-date", 200),
           base44.entities.Inspection.list("-date", 200),
           base44.entities.MaintenanceIssue.list("-created_date", 200),
@@ -210,9 +210,10 @@ export default function Dashboard() {
           base44.entities.Expense.list("-date", 200),
           base44.entities.Key.list("-created_date", 200),
           base44.entities.Invoice.list("-created_date", 200),
+          base44.entities.PropertyVisit.list("-start_time", 200),
           base44.entities.BusinessSettings.list("-created_date", 1),
         ]);
-        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices });
+        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits });
         if (sList && sList[0]) setSettings(sList[0]);
       } catch (e) {}
       setLoading(false);
@@ -283,27 +284,31 @@ export default function Dashboard() {
         <div className="space-y-3 mb-5">
           {ACTION_GROUPS.map((group) => {
             if (group.label === "Property Visit") {
-              const visitActive = !!(draft && draft.propertyId);
-              return (
-                <div key={group.label}>
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
-                  {!visitActive && (
-                    <Link to={startVisitTo} className="block mb-2">
-                      <div className="flex items-center gap-3 h-16 rounded-xl bg-primary text-primary-foreground px-3.5 hover:bg-primary/90 shadow-sm transition">
-                        <span className="w-11 h-11 rounded-lg bg-primary-foreground/15 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
-                        <span className="font-semibold text-sm truncate">{startVisitLabel}</span>
-                        <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
-                      </div>
-                    </Link>
-                  )}
-                  <div className="grid grid-cols-2 gap-2">
-                    {group.items.map((a) => (
-                      <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
-                    ))}
-                  </div>
-                </div>
-              );
-            }
+               return (
+                 <div key={group.label}>
+                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
+                   <Link to="/visits?schedule=1" className="block mb-2">
+                     <div className="flex items-center gap-3 h-16 rounded-xl bg-primary text-primary-foreground px-3.5 hover:bg-primary/90 shadow-sm transition">
+                       <span className="w-11 h-11 rounded-lg bg-primary-foreground/15 flex items-center justify-center shrink-0"><CalendarClock className="w-5 h-5" /></span>
+                       <span className="font-semibold text-sm truncate">Schedule Visit</span>
+                       <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
+                     </div>
+                   </Link>
+                   <Link to={startVisitTo} className="block mb-2">
+                     <div className="flex items-center gap-3 h-14 rounded-xl border border-primary/30 bg-primary/5 text-primary px-3.5 hover:bg-primary/10 transition">
+                       <span className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
+                       <span className="font-semibold text-sm truncate">{startVisitLabel}</span>
+                       <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
+                     </div>
+                   </Link>
+                   <div className="grid grid-cols-2 gap-2">
+                     {group.items.map((a) => (
+                       <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
+                     ))}
+                   </div>
+                 </div>
+               );
+             }
             if (group.label === "Follow-Up") {
               return (
                 <div key={group.label}>
@@ -337,6 +342,40 @@ export default function Dashboard() {
               </div>
             );
           })}
+        </div>
+
+        {/* Today's visits */}
+        <div className="rounded-2xl border border-border bg-card overflow-hidden mb-6">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2 font-medium text-sm text-foreground">
+              <CalendarClock className="w-4 h-4 text-muted-foreground" /> Today's Visits
+            </div>
+            <Link to="/calendar" className="text-xs text-primary flex items-center gap-1 hover:underline">View Calendar <ArrowRight className="w-3 h-3" /></Link>
+          </div>
+          <div className="divide-y divide-border">
+            {(() => {
+              const todaysVisits = (data.visits || [])
+                .filter((v) => v.status === "Scheduled" && !v.archived && (v.scheduled_time || v.start_time || "").slice(0, 10) === t)
+                .sort((a, b) => (a.scheduled_time || a.start_time || "").localeCompare(b.scheduled_time || b.start_time || ""));
+              if (todaysVisits.length === 0) {
+                return <div className="px-4 py-3"><p className="text-sm text-muted-foreground">No visits scheduled for today.</p></div>;
+              }
+              return todaysVisits.map((v) => {
+                const prop = data.properties.find((p) => p.id === v.property_id);
+                const client = data.clients.find((c) => c.id === prop?.owner_id);
+                const when = (v.scheduled_time || v.start_time || "").slice(11, 16);
+                return (
+                  <Link key={v.id} to={`/visits/${v.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{when} · {client?.name || "—"} · {prop?.name || "—"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{v.visit_type}</p>
+                    </div>
+                    <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20 shrink-0">{v.status}</span>
+                  </Link>
+                );
+              });
+            })()}
+          </div>
         </div>
 
         {/* Financial summary */}

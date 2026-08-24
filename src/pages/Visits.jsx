@@ -18,6 +18,7 @@ export default function Visits() {
   const [autoResume, setAutoResume] = useState(false);
   const [ctx, setCtx] = useState({});
   const [resumeId, setResumeId] = useState(null);
+  const [scheduleMode, setScheduleMode] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -47,7 +48,11 @@ export default function Visits() {
     if (agreement) setCtx((c) => ({ ...c, agreement }));
     if (client) setCtx((c) => ({ ...c, client }));
     if (resume) setResumeId(resume);
+    const schedule = params.get("schedule") === "1";
+    if (schedule) setScheduleMode(true);
     if (resume) {
+      setMode("wizard");
+    } else if (schedule) {
       setMode("wizard");
     } else if (params.get("start") === "1") {
       setMode("wizard");
@@ -67,7 +72,8 @@ export default function Visits() {
             ctxAgreement={ctx.agreement}
             ctxClient={ctx.client}
             resumeVisitId={resumeId}
-            onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); load(); setDraft(loadDraft()); }}
+            scheduleMode={scheduleMode}
+            onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); setScheduleMode(false); load(); setDraft(loadDraft()); }}
           />
         </div>
       </AppLayout>
