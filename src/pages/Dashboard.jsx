@@ -14,10 +14,11 @@ import EmptyState from "@/components/ui/EmptyState";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import { generateTimeBasedNotifications } from "@/lib/notifications";
 import { loadDraft } from "@/lib/visitDraft";
+import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel } from "@/lib/timezone";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import ActionCard from "@/components/dashboard/ActionCard";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = athensToday;
 const greeting = () => {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
@@ -102,6 +103,59 @@ function Row({ title, subtitle, badge }) {
         {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
       </div>
       {badge && <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${badgeTone(badge)}`}>{badge}</span>}
+    </div>
+  );
+}
+
+function Next3Days({ visits, properties, clients }) {
+  const days = [
+    { idx: 0, date: athensToday() },
+    { idx: 1, date: athensDateOffset(1) },
+    { idx: 2, date: athensDateOffset(2) },
+  ];
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden mb-6">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center gap-2 font-semibold text-sm text-foreground">
+          <CalendarClock className="w-4 h-4 text-muted-foreground" /> NEXT 3 DAYS
+        </div>
+        <Link to="/calendar" className="text-xs text-primary flex items-center gap-1 hover:underline">View Full Calendar <ArrowRight className="w-3 h-3" /></Link>
+      </div>
+      {days.map((d, i) => {
+        const dayVisits = (visits || [])
+          .filter((v) => v.status === "Scheduled" && !v.archived && athensDate(v.scheduled_time || v.start_time) === d.date)
+          .sort((a, b) => (a.scheduled_time || a.start_time || "").localeCompare(b.scheduled_time || b.start_time || ""));
+        const heading = i === 0 ? `TODAY — ${athensDayLabel(d.date)}` : i === 1 ? `TOMORROW — ${athensDayLabel(d.date)}` : athensDayLabel(d.date);
+        return (
+          <div key={d.date} className={i > 0 ? "border-t border-border" : ""}>
+            <div className="px-4 py-2 bg-muted/40">
+              <p className="text-xs font-semibold tracking-wide text-foreground">{heading}</p>
+            </div>
+            {dayVisits.length === 0 ? (
+              <div className="px-4 py-3"><p className="text-sm text-muted-foreground">No visits scheduled</p></div>
+            ) : (
+              <div className="divide-y divide-border">
+                {dayVisits.map((v) => {
+                  const prop = properties.find((p) => p.id === v.property_id);
+                  const client = clients.find((c) => c.id === prop?.owner_id);
+                  const st = v.scheduled_time || v.start_time;
+                  return (
+                    <Link key={v.id} to={`/visits/${v.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition">
+                      <span className="text-base font-semibold text-foreground shrink-0 w-12">{athensTime(st)}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">{client?.name || "—"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{prop?.name || "—"}</p>
+                        <p className="text-xs text-muted-foreground truncate">{v.visit_type}</p>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20 shrink-0 mt-0.5">{v.status}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -241,6 +295,8 @@ export default function Dashboard() {
   const unreturnedKeys = data.keys.filter((k) => k.date_issued && !k.date_returned);
   const awaitingReimb = data.expenses.filter((e) => e.awaiting_reimbursement && !e.reimbursed);
   const propsNeedingAttention = data.properties.filter((p) => ["Needs Attention", "Poor"].includes(p.condition) || ["Emergency", "Under Maintenance", "Preparing for Arrival"].includes(p.status));
+  // Missed scheduled visits: scheduled time passed (by >1h grace) and still Scheduled.
+  const missedVisits = (data.visits || []).filter((v) => v.status === "Scheduled" && !v.archived && (v.scheduled_time || v.start_time) && new Date(v.scheduled_time || v.start_time).getTime() < Date.now() - 3600000);
 
   // Next Action computation
   const followUpStatuses = ["Reported", "Awaiting Owner Approval", "Contractor Contacted", "Approved"];
@@ -263,7 +319,7 @@ export default function Dashboard() {
     .reduce((s, i) => s + ((i.total || 0) - (i.amount_paid || 0)), 0);
   const outstandingReimb = awaitingReimb.reduce((s, e) => s + (e.amount || 0), 0);
 
-  const alertCount = emergency.length + overdue.length + inspToday.length + contractorsToday.length + unreturnedKeys.length + awaitingReimb.length + overdueInspections.length;
+  const alertCount = emergency.length + overdue.length + inspToday.length + contractorsToday.length + unreturnedKeys.length + awaitingReimb.length + overdueInspections.length + missedVisits.length;
 
   const startVisitTo = draft && draft.propertyId ? "/visits?continue=1" : "/visits?start=1";
   const startVisitLabel = draft && draft.propertyId ? `Continue Visit — ${propName(draft.propertyId)}` : "Start Visit";
@@ -344,39 +400,8 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Today's visits */}
-        <div className="rounded-2xl border border-border bg-card overflow-hidden mb-6">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div className="flex items-center gap-2 font-medium text-sm text-foreground">
-              <CalendarClock className="w-4 h-4 text-muted-foreground" /> Today's Visits
-            </div>
-            <Link to="/calendar" className="text-xs text-primary flex items-center gap-1 hover:underline">View Calendar <ArrowRight className="w-3 h-3" /></Link>
-          </div>
-          <div className="divide-y divide-border">
-            {(() => {
-              const todaysVisits = (data.visits || [])
-                .filter((v) => v.status === "Scheduled" && !v.archived && (v.scheduled_time || v.start_time || "").slice(0, 10) === t)
-                .sort((a, b) => (a.scheduled_time || a.start_time || "").localeCompare(b.scheduled_time || b.start_time || ""));
-              if (todaysVisits.length === 0) {
-                return <div className="px-4 py-3"><p className="text-sm text-muted-foreground">No visits scheduled for today.</p></div>;
-              }
-              return todaysVisits.map((v) => {
-                const prop = data.properties.find((p) => p.id === v.property_id);
-                const client = data.clients.find((c) => c.id === prop?.owner_id);
-                const when = (v.scheduled_time || v.start_time || "").slice(11, 16);
-                return (
-                  <Link key={v.id} to={`/visits/${v.id}`} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{when} · {client?.name || "—"} · {prop?.name || "—"}</p>
-                      <p className="text-xs text-muted-foreground truncate">{v.visit_type}</p>
-                    </div>
-                    <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20 shrink-0">{v.status}</span>
-                  </Link>
-                );
-              });
-            })()}
-          </div>
-        </div>
+        {/* Next 3 days schedule */}
+        <Next3Days visits={data.visits} properties={data.properties} clients={data.clients} />
 
         {/* Financial summary */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -401,6 +426,7 @@ export default function Dashboard() {
               {contractorsToday.length > 0 && <AlertGroup label="Contractor appointments today">{contractorsToday.slice(0, 4).map((c) => <AlertRow key={c.id} to="/tasks" title={c.title} subtitle={c.time} tone="info" badge="High" />)}</AlertGroup>}
               {unreturnedKeys.length > 0 && <AlertGroup label="Unreturned keys">{unreturnedKeys.slice(0, 4).map((k) => <AlertRow key={k.id} to="/keys" title={`Key ${k.key_number}`} subtitle={`Issued ${k.date_issued} · ${k.current_holder || "—"}`} tone="warning" />)}</AlertGroup>}
               {awaitingReimb.length > 0 && <AlertGroup label="Expenses awaiting reimbursement">{awaitingReimb.slice(0, 4).map((e) => <AlertRow key={e.id} to="/expenses" title={`${e.vendor} — €${(e.amount || 0).toFixed(2)}`} subtitle={e.date} tone="warning" />)}</AlertGroup>}
+              {missedVisits.length > 0 && <AlertGroup label="Missed scheduled visits">{missedVisits.slice(0, 4).map((v) => <AlertRow key={v.id} to={`/visits/${v.id}`} title={`${propName(v.property_id)} · ${v.visit_type}`} subtitle={`Scheduled for ${athensTime(v.scheduled_time || v.start_time)}`} tone="danger" badge="Missed" />)}</AlertGroup>}
             </div>
           </div>
         )}

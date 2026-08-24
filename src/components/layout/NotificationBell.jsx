@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 
-const TYPES = ["Task", "Inspection", "Maintenance", "Contractor", "System"];
+const TYPES = ["Task", "Inspection", "Maintenance", "Contractor", "Visit", "System"];
 
 export default function NotificationBell() {
   const [items, setItems] = useState([]);

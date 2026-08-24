@@ -13,6 +13,8 @@ import { SEED } from "@/lib/checklistSeed";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
+import { createNotification } from "@/lib/notifications";
 
 const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
@@ -265,8 +267,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     if (!scheduleDate || !scheduleTime || !propertyId) return;
     setSaving(true);
     try {
-      const iso = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
-      await base44.entities.PropertyVisit.create({
+      // Interpret the entered date/time as Athens wall-clock → store a tz-correct UTC instant.
+      const iso = athensLocalToIso(scheduleDate, scheduleTime);
+      const created = await base44.entities.PropertyVisit.create({
         property_id: propertyId,
         property_service_agreement_id: agreementId || "",
         visit_type: visitType,
@@ -274,11 +277,29 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         start_time: iso,
         scheduled_time: iso,
       });
+      // On-schedule confirmation notification (respects the Visits category setting).
+      try {
+        const sList = await base44.entities.BusinessSettings.list("-created_date", 1);
+        const cats = (sList && sList[0] && sList[0].notif_categories) || [];
+        if (cats.includes("Visits")) {
+          const prop = properties.find((p) => p.id === propertyId);
+          await createNotification({
+            title: "Visit scheduled",
+            message: `${clientObj?.name || "Client"} · ${prop?.name || "Property"} · ${visitType} · ${athensVisitWhen(iso)}`,
+            type: "Visit",
+            priority: "Medium",
+            related_entity: "PropertyVisit",
+            related_record_id: created.id,
+            related_property_id: propertyId,
+            related_path: `/visits/${created.id}`,
+            dedup_key: `visit_scheduled:${created.id}`,
+          });
+        }
+      } catch (e) {}
       setSaving(false);
       if (scheduleMode) {
-        const when = new Date(iso).toLocaleString("en-GB", { weekday: "long", hour: "2-digit", minute: "2-digit" });
         const pname = properties.find((p) => p.id === propertyId)?.name || "Property";
-        toast({ title: "Visit scheduled", description: `${clientObj?.name || ""} · ${pname} · ${when}` });
+        toast({ title: "Visit scheduled", description: `${clientObj?.name || ""} · ${pname} · ${athensVisitWhen(iso)}` });
         navigate("/");
       } else {
         navigate(`/clients/${ctxClient || agreement?.client_id || ""}`);

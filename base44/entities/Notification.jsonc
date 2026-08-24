@@ -15,6 +15,7 @@
         "Inspection",
         "Maintenance",
         "Contractor",
+        "Visit",
         "System"
       ],
       "default": "System"

@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
+import { athensDate, athensTime, athensToday } from "@/lib/timezone";
 
 const TYPE_COLORS = {
   Inspection: "bg-sky-500",
@@ -24,7 +25,7 @@ const DOW = ["M","T","W","T","F","S","S"];
 
 export default function Calendar() {
   const [cursor, setCursor] = useState(new Date());
-  const [selected, setSelected] = useState(new Date().toISOString().slice(0, 10));
+  const [selected, setSelected] = useState(athensToday());
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["tasks-calendar"],
@@ -40,12 +41,13 @@ export default function Calendar() {
     tasks.forEach((t) => { if (t.date) { (map[t.date] = map[t.date] || []).push({ ...t, _kind: "task" }); } });
     (visits || []).forEach((v) => {
       if (v.archived || v.status === "Cancelled") return;
-      const ds = (v.scheduled_time || v.start_time || "").slice(0, 10);
-      if (!ds) return;
+      const st = v.scheduled_time || v.start_time;
+      if (!st) return;
+      const ds = athensDate(st);
       (map[ds] = map[ds] || []).push({
         ...v, _kind: "visit", type: "Property Visit",
         title: v.visit_type || "Property Visit",
-        time: (v.scheduled_time || v.start_time || "").slice(11, 16),
+        time: athensTime(st),
         to: `/visits/${v.id}`,
       });
     });
@@ -76,7 +78,7 @@ export default function Calendar() {
           <h2 className="text-lg font-semibold">{MONTHS[month]} {year}</h2>
           <div className="flex gap-1">
             <Button variant="outline" size="icon" onClick={() => move(-1)}><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" onClick={() => { setCursor(new Date()); setSelected(new Date().toISOString().slice(0, 10)); }}>Today</Button>
+            <Button variant="outline" size="sm" onClick={() => { setCursor(new Date()); setSelected(athensToday()); }}>Today</Button>
             <Button variant="outline" size="icon" onClick={() => move(1)}><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
@@ -87,9 +89,9 @@ export default function Calendar() {
         <div className="grid grid-cols-7 gap-1">
           {cells.map((date, i) => {
             if (!date) return <div key={i} />;
-            const ds = date.toISOString().slice(0, 10);
+            const ds = `${year}-${String(month + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
             const dayTasks = byDate[ds] || [];
-            const isToday = ds === new Date().toISOString().slice(0, 10);
+            const isToday = ds === athensToday();
             const isSelected = ds === selected;
             return (
               <button key={i} onClick={() => setSelected(ds)}
@@ -117,7 +119,7 @@ export default function Calendar() {
         {/* Selected day */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border font-medium text-sm">
-            {new Date(selected).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+            {new Date(selected + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
           </div>
           <div className="divide-y divide-border">
             {selectedTasks.length === 0 ? (

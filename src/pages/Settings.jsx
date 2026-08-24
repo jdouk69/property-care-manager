@@ -175,8 +175,8 @@ export default function Settings() {
           </div>
 
           <div className="space-y-2">
-            {["Tasks", "Inspections", "Maintenance", "Contractors", "Expenses", "Keys", "Reports"].map((cat) => {
-              const arr = settings.notif_categories || ["Tasks", "Inspections", "Maintenance", "Contractors", "Expenses", "Keys", "Reports"];
+            {["Tasks", "Inspections", "Maintenance", "Contractors", "Expenses", "Keys", "Reports", "Visits"].map((cat) => {
+              const arr = settings.notif_categories || ["Tasks", "Inspections", "Maintenance", "Contractors", "Expenses", "Keys", "Reports", "Visits"];
               const on = arr.includes(cat);
               return (
                 <div key={cat} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">

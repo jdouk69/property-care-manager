@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { buildVisitReminders } from "@/lib/visitReminders";
 
 export async function createNotification(n) {
   try {
@@ -34,15 +35,15 @@ function push(arr, n) {
 }
 
 export async function generateTimeBasedNotifications() {
-  let prefs = {
-    reminder_offsets: ["due", "1d", "3d"],
-    notif_categories: ["Tasks", "Inspections", "Maintenance", "Contractors", "Expenses", "Keys", "Reports"],
-  };
+  // The user's saved Settings are the source of truth. An intentionally empty array
+  // means "off" — never silently replaced with defaults. Defaults apply only when no
+  // BusinessSettings record/field exists at all.
+  let prefs = { reminder_offsets: [], notif_categories: [] };
   try {
     const list = await base44.entities.BusinessSettings.list("-created_date", 1);
     if (list && list[0]) {
-      if (list[0].reminder_offsets && list[0].reminder_offsets.length) prefs.reminder_offsets = list[0].reminder_offsets;
-      if (list[0].notif_categories && list[0].notif_categories.length) prefs.notif_categories = list[0].notif_categories;
+      prefs.reminder_offsets = list[0].reminder_offsets || [];
+      prefs.notif_categories = list[0].notif_categories || [];
     }
   } catch (e) {}
 
@@ -62,15 +63,17 @@ export async function generateTimeBasedNotifications() {
     ? 1
     : 0;
 
-  let tasks = [], inspections = [], maintenance = [], expenses = [], keys = [], props = [];
+  let tasks = [], inspections = [], maintenance = [], expenses = [], keys = [], props = [], visits = [], clients = [];
   try {
-    [tasks, inspections, maintenance, expenses, keys, props] = await Promise.all([
+    [tasks, inspections, maintenance, expenses, keys, props, visits, clients] = await Promise.all([
       base44.entities.Task.list("-date", 500),
       base44.entities.Inspection.list("-date", 500),
       base44.entities.MaintenanceIssue.list("-created_date", 500),
       base44.entities.Expense.list("-date", 500),
       base44.entities.Key.list("-created_date", 500),
       base44.entities.Property.list("-created_date", 500),
+      base44.entities.PropertyVisit.list("-start_time", 500),
+      base44.entities.Client.list("-created_date", 500),
     ]);
   } catch (e) {
     return;
@@ -189,6 +192,30 @@ export async function generateTimeBasedNotifications() {
           related_path: "/keys", dedup_key: `key_unreturned:${k.id}`,
         })
       );
+  }
+
+  if (cat("Visits")) {
+    const propMap = {}; (props || []).forEach((p) => (propMap[p.id] = p));
+    const clientMap = {}; (clients || []).forEach((c) => (clientMap[c.id] = c));
+    const enriched = (visits || [])
+      .filter((v) => !v.archived && v.status === "Scheduled")
+      .map((v) => {
+        const prop = propMap[v.property_id];
+        const client = clientMap[prop && prop.owner_id];
+        const st = v.scheduled_time || v.start_time;
+        return {
+          id: v.id,
+          propertyId: v.property_id,
+          status: v.status,
+          archived: v.archived,
+          visitType: v.visit_type,
+          scheduledTime: st,
+          scheduledMs: st ? new Date(st).getTime() : null,
+          propertyName: (prop && prop.name) || "Property",
+          clientName: (client && client.name) || "Client",
+        };
+      });
+    buildVisitReminders({ visits: enriched, offsets: prefs.reminder_offsets, nowMs: Date.now() }).forEach((n) => push(desired, n));
   }
 
   if (!desired.length) return;
