@@ -9,12 +9,16 @@
       "type": "string",
       "enum": [
         "Monthly Property Watch",
+        "Home Watch Inspection",
+        "Property Care Inspection",
         "Owner Arrival Preparation",
         "Guest Arrival Preparation",
         "Departure Inspection",
         "Seasonal Opening",
         "Seasonal Closing",
-        "Owner Representative Construction Visit"
+        "Emergency Visit",
+        "Owner Representative Construction Visit",
+        "Owner Representative Site Visit"
       ],
       "default": "Monthly Property Watch"
     },

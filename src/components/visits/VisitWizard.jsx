@@ -14,8 +14,10 @@ import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import { Link, useNavigate } from "react-router-dom";
 
 const VISIT_TYPES = [
-  "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
-  "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
+  "Monthly Property Watch", "Home Watch Inspection", "Property Care Inspection",
+  "Owner Arrival Preparation", "Guest Arrival Preparation", "Departure Inspection",
+  "Seasonal Opening", "Seasonal Closing", "Emergency Visit",
+  "Owner Representative Construction Visit", "Owner Representative Site Visit",
 ];
 
 export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, resumeVisitId }) {
@@ -87,7 +89,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             try {
               const p = await base44.entities.ServicePackage.get(a.service_package_id);
               setPkg(p);
-              if (p && p.recurring === "Recurring") setVisitType("Monthly Property Watch");
+              setVisitType(p?.default_visit_type || "");
             } catch (e) {}
           }
           if (ctxClient) { try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {} }
@@ -211,7 +213,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       const ag = (all || []).find((a) => !a.archived && a.status === "Active" && a.property_id === pid && a.client_id === ctxClient);
       if (ag) {
         setAgreement(ag); setAgreementId(ag.id);
-        if (ag.service_package_id) { try { const p = await base44.entities.ServicePackage.get(ag.service_package_id); setPkg(p); if (p && p.recurring === "Recurring") setVisitType("Monthly Property Watch"); } catch (e) {} }
+        if (ag.service_package_id) { try { const p = await base44.entities.ServicePackage.get(ag.service_package_id); setPkg(p); setVisitType(p?.default_visit_type || ""); } catch (e) {} }
         try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {}
         setStep("first-visit");
       } else { setStep("type"); }
@@ -221,7 +223,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const handleStartNow = () => {
     const d = loadDraft();
     if (d && d.propertyId && d.checklist && d.checklist.length > 0) { setDraftConflict(true); return; }
-    startVisit();
+    const vt = visitType || VISIT_TYPES[0];
+    if (!visitType) setVisitType(vt);
+    startVisit(vt);
   };
 
   const startNowDiscardDraft = () => {
@@ -246,7 +250,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     } catch (e) { setSaving(false); alert("Could not schedule visit: " + (e?.message || e)); }
   };
 
-  const startVisit = async () => {
+  const startVisit = async (overrideType) => {
+    const vt = overrideType || visitType;
     const now = new Date();
     setStartTime(now.toISOString());
     if (navigator.geolocation) {
@@ -257,7 +262,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       );
     }
     try {
-      const { items, source } = await loadChecklistItems(propertyId, visitType);
+      const { items, source } = await loadChecklistItems(propertyId, vt);
       setChecklist(items);
       setTemplateSource(source);
       setChecklistLoadError("");
@@ -465,7 +470,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Type</Label>
             <Select value={visitType} onValueChange={setVisitType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select visit type" /></SelectTrigger>
               <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}</SelectContent>
             </Select>
           </div>
@@ -479,7 +484,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
             </div>
           </div>
-          <Button onClick={saveScheduled} disabled={saving || !scheduleDate || !scheduleTime} className="w-full h-12 rounded-2xl text-base gap-2">
+          <Button onClick={saveScheduled} disabled={saving || !scheduleDate || !scheduleTime || !visitType} className="w-full h-12 rounded-2xl text-base gap-2">
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CalendarClock className="w-5 h-5" />} Save Scheduled Visit
           </Button>
         </div>

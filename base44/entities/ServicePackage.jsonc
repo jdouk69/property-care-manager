@@ -35,6 +35,9 @@
     "inspection_frequency": {
       "type": "string"
     },
+    "default_visit_type": {
+      "type": "string"
+    },
     "hourly_charge": {
       "type": "number"
     },
