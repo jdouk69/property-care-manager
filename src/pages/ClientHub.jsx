@@ -62,11 +62,12 @@ export default function ClientHub() {
   const [invoices, setInvoices] = useState([]);
   const [communications, setCommunications] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [agreements, setAgreements] = useState([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, allProps, pkgs, allVisits, allTasks, allMaint, allExp, allInv, allComm, allDocs] = await Promise.all([
+        const [c, allProps, pkgs, allVisits, allTasks, allMaint, allExp, allInv, allComm, allDocs, allAgs] = await Promise.all([
           base44.entities.Client.get(id),
           base44.entities.Property.list("-created_date", 500),
           base44.entities.ServicePackage.list("-created_date", 200),
@@ -77,6 +78,7 @@ export default function ClientHub() {
           base44.entities.Invoice.list("-created_date", 200),
           base44.entities.OwnerCommunication.list("-date", 200),
           base44.entities.PropertyDocument.list("-created_date", 200),
+          base44.entities.PropertyServiceAgreement.list("-created_date", 200),
         ]);
         setClient(c);
         const props = (allProps || []).filter((p) => p.owner_id === id && !p.archived);
@@ -92,6 +94,7 @@ export default function ClientHub() {
         setInvoices((allInv || []).filter((i) => i.client_id === id || propIds.has(i.property_id)));
         setCommunications((allComm || []).filter((co) => co.client_id === id || propIds.has(co.property_id)));
         setDocuments((allDocs || []).filter((d) => d.client_id === id || propIds.has(d.property_id)));
+        setAgreements((allAgs || []).filter((a) => (a.client_id === id || propIds.has(a.property_id)) && !a.archived));
       } catch (e) {}
       setLoading(false);
     })();
@@ -101,15 +104,13 @@ export default function ClientHub() {
   if (!client) return <AppLayout><div className="p-6"><EmptyState icon={Home} title="Client not found" /></div></AppLayout>;
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
-  const assignedPackages = properties.filter((p) => p.service_package_id && servicePackages[p.service_package_id])
-    .map((p) => ({ property: p, pkg: servicePackages[p.service_package_id] }));
-  const hasPackage = assignedPackages.length > 0;
+  const activeAgreements = agreements.filter((a) => a.status === "Active");
 
   let nextStep = null;
   if (properties.length === 0) {
     nextStep = { label: "Add the client's first property", to: `/properties?add=1&owner=${id}`, button: "Add Property" };
-  } else if (!hasPackage) {
-    nextStep = { label: "Assign a service package", to: `/properties?edit=${properties[0].id}`, button: "Assign Service Package" };
+  } else if (activeAgreements.length === 0) {
+    nextStep = { label: "Assign a service package", to: `/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`, button: "Assign Service Package" };
   } else if (visits.length === 0) {
     nextStep = { label: "Schedule the first visit", to: "/visits?start=1", button: "Schedule Visit" };
   }
@@ -198,30 +199,41 @@ export default function ClientHub() {
           </div>
         </div>
 
-        {/* Service package */}
+        {/* Service agreement */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div className="flex items-center gap-2 font-medium text-sm"><Package className="w-4 h-4 text-muted-foreground" /> Service Package</div>
+            <div className="flex items-center gap-2 font-medium text-sm"><Package className="w-4 h-4 text-muted-foreground" /> Service Agreement</div>
             {properties.length > 0 && (
-              <Link to={`/properties?edit=${properties[0].id}`}><Button variant="outline" size="sm" className="gap-1.5"><Package className="w-4 h-4" /> {hasPackage ? "Manage" : "Assign Service Package"}</Button></Link>
+              <Link to={`/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`}>
+                <Button variant="outline" size="sm" className="gap-1.5"><Package className="w-4 h-4" /> Assign Service Package</Button>
+              </Link>
             )}
           </div>
-          <div className="px-4 py-3">
-            {hasPackage ? (
-              <div className="space-y-2">
-                {assignedPackages.map((x) => (
-                  <div key={x.property.id} className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{x.pkg.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{x.property.name} · {x.pkg.billing_type} · €{x.pkg.standard_price}</p>
-                    </div>
-                    <Link to={`/properties/${x.property.id}`} className="text-xs text-primary hover:underline shrink-0">View</Link>
-                  </div>
-                ))}
+          <div className="divide-y divide-border">
+            {activeAgreements.length === 0 ? (
+              <div className="px-4 py-6">
+                <EmptyState icon={Package} title={properties.length === 0 ? "Add a property first" : "No active service agreement"} description={properties.length === 0 ? "Add a property, then assign a service package." : "Assign a service package to start billing and scheduling."} />
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{properties.length === 0 ? "Add a property first, then assign a service package." : "No service package assigned"}</p>
-            )}
+            ) : activeAgreements.map((a) => {
+              const pkg = servicePackages[a.service_package_id];
+              return (
+                <div key={a.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{pkg ? pkg.name : "Service package"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{propName(a.property_id)} · €{(a.agreed_price || 0).toFixed(2)} · {a.billing_type}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${badgeTone(a.status)}`}>{a.status}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                    {a.inspection_frequency && <span>Frequency: {a.inspection_frequency}</span>}
+                    {a.start_date && <span>Start: {a.start_date}</span>}
+                    {a.renewal_date && <span>Renewal: {a.renewal_date}</span>}
+                  </div>
+                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Edit Agreement</Link>
+                </div>
+              );
+            })}
           </div>
         </div>
 

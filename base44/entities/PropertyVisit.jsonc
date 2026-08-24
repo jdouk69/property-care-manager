@@ -105,6 +105,9 @@
       "type": "boolean",
       "default": false
     },
+    "property_service_agreement_id": {
+      "type": "string"
+    },
     "archived": {
       "type": "boolean",
       "default": false

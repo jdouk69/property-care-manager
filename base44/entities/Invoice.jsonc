@@ -11,6 +11,9 @@
     "property_id": {
       "type": "string"
     },
+    "property_service_agreement_id": {
+      "type": "string"
+    },
     "invoice_date": {
       "type": "string",
       "format": "date"

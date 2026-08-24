@@ -37,6 +37,7 @@ import OwnerRepReports from '@/pages/OwnerRepReports';
 import PropertyDocuments from '@/pages/PropertyDocuments';
 import ChecklistTemplates from '@/pages/ChecklistTemplates';
 import ClientHub from '@/pages/ClientHub';
+import ServiceAgreement from '@/pages/ServiceAgreement';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -94,6 +95,8 @@ const AuthenticatedApp = () => {
         <Route path="/rep-reports" element={<OwnerRepReports />} />
         <Route path="/documents" element={<PropertyDocuments />} />
         <Route path="/checklist-templates" element={<ChecklistTemplates />} />
+        <Route path="/agreements/new" element={<ServiceAgreement />} />
+        <Route path="/agreements/:id" element={<ServiceAgreement />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

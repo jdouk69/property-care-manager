@@ -37,6 +37,8 @@ export default function PropertyDetail() {
   const [deliveries, setDeliveries] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [repReports, setRepReports] = useState([]);
+  const [agreements, setAgreements] = useState([]);
+  const [pkgMap, setPkgMap] = useState({});
   const [tick, setTick] = useState(0);
 
   const reload = () => setTick((x) => x + 1);
@@ -46,7 +48,7 @@ export default function PropertyDetail() {
       try {
         const p = await base44.entities.Property.get(id);
         setProp(p);
-        const [t, i, m, e, v, c, cm, k, d, docs, rep] = await Promise.all([
+        const [t, i, m, e, v, c, cm, k, d, docs, rep, pkgs, ags] = await Promise.all([
           base44.entities.Task.list("-date", 200),
           base44.entities.Inspection.list("-date", 200),
           base44.entities.MaintenanceIssue.list("-created_date", 200),
@@ -58,6 +60,8 @@ export default function PropertyDetail() {
           base44.entities.Delivery.list("-created_date", 200),
           base44.entities.PropertyDocument.list("-created_date", 200),
           base44.entities.OwnerRepReport.list("-created_date", 200),
+          base44.entities.ServicePackage.list("-created_date", 200),
+          base44.entities.PropertyServiceAgreement.list("-created_date", 200),
         ]);
         const byProp = (arr) => (arr || []).filter((x) => x.property_id === id && !x.archived);
         setTasks(byProp(t));
@@ -71,6 +75,10 @@ export default function PropertyDetail() {
         setDeliveries(byProp(d));
         setDocuments(byProp(docs));
         setRepReports(byProp(rep));
+        setAgreements((ags || []).filter((x) => x.property_id === id && !x.archived));
+        const pm = {};
+        (pkgs || []).forEach((p) => { pm[p.id] = p; });
+        setPkgMap(pm);
         if (p.owner_id) { try { setOwner(await base44.entities.Client.get(p.owner_id)); } catch {} }
       } catch (e) {}
       setLoading(false);
@@ -137,6 +145,23 @@ export default function PropertyDetail() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
+            <Section title="Service Agreement">
+              {agreements.length > 0 ? agreements.map((a) => (
+                <div key={a.id} className="px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium truncate">{pkgMap[a.service_package_id]?.name || "Service package"}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{a.status}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">€{(a.agreed_price || 0).toFixed(2)} · {a.billing_type}{a.inspection_frequency ? ` · ${a.inspection_frequency}` : ""}{a.start_date ? ` · Start ${a.start_date}` : ""}{a.renewal_date ? ` · Renew ${a.renewal_date}` : ""}</p>
+                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Edit Agreement</Link>
+                </div>
+              )) : (
+                <div className="px-4 py-4">
+                  <p className="text-sm text-muted-foreground mb-2">No active service agreement for this property.</p>
+                  <Link to={`/agreements/new?client=${prop.owner_id || ""}&property=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-4 h-4" /> Assign Service Package</Button></Link>
+                </div>
+              )}
+            </Section>
             <Section title="Property Details">
               <Detail label="Alarm Instructions" value={prop.alarm_instructions} />
               <Detail label="Wi-Fi Password" value={prop.wifi_password} />

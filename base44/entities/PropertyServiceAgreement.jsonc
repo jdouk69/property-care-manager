@@ -1,0 +1,73 @@
+{
+  "name": "PropertyServiceAgreement",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "service_package_id": {
+      "type": "string"
+    },
+    "agreed_price": {
+      "type": "number"
+    },
+    "billing_type": {
+      "type": "string",
+      "enum": [
+        "One-time",
+        "Monthly",
+        "Quarterly",
+        "Annual"
+      ],
+      "default": "Monthly"
+    },
+    "inspection_frequency": {
+      "type": "string"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "renewal_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Paused",
+        "Ended",
+        "Cancelled"
+      ],
+      "default": "Active"
+    },
+    "included_services_override": {
+      "type": "string"
+    },
+    "additional_terms": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "next_invoice_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "created_from_package_price": {
+      "type": "number"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "property_id",
+    "service_package_id"
+  ]
+}
