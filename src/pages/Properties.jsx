@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Home, LayoutDashboard } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
+import PropertyLocationFields from "@/components/properties/PropertyLocationFields";
 
 const fields = [
   { name: "name", label: "Property Name", type: "text", required: true, placeholder: "e.g. Villa Sunset" },
@@ -10,9 +11,7 @@ const fields = [
   { name: "property_type", label: "Property Type", type: "select", options: ["Villa", "Apartment", "House", "Studio", "Cottage", "Commercial"] },
   { name: "status", label: "Occupancy Status", type: "select", options: ["Vacant", "Owner Occupied", "Guest Occupied", "Rental Occupied", "Preparing for Arrival", "Preparing for Departure", "Under Maintenance", "Emergency", "Inactive"] },
   { name: "condition", label: "Current Condition", type: "select", options: ["Excellent", "Good", "Needs Attention", "Poor"] },
-  { name: "address", label: "Full Address", type: "textarea" },
-  { name: "gps_coordinates", label: "GPS Coordinates", type: "text", placeholder: "35.3387, 25.1442" },
-  { name: "maps_link", label: "Google Maps Link", type: "text" },
+  { name: "location", type: "custom", render: (values, setField) => <PropertyLocationFields values={values} setField={setField} /> },
   { name: "primary_photo", label: "Primary Photo", type: "image" },
   { name: "photos", label: "Additional Photos", type: "images" },
   { name: "gate_code", label: "Gate Code", type: "text" },
