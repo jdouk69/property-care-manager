@@ -32,6 +32,9 @@
     "visit_duration": {
       "type": "string"
     },
+    "inspection_frequency": {
+      "type": "string"
+    },
     "hourly_charge": {
       "type": "number"
     },

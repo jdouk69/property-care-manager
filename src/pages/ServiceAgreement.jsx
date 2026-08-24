@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Package, Loader2, Save, User, Building2 } from "lucide-react";
+import {
+  ArrowLeft, Package, Loader2, Save, User, Building2, FileText,
+  ChevronDown, ChevronRight,
+} from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +19,22 @@ const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
 const STATUSES = ["Active", "Paused", "Ended", "Cancelled"];
 const FREQUENCY_OPTS = ["Weekly", "Twice Weekly", "Monthly", "As Needed"];
 
+const fmt = (dt) =>
+  `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+
+// Returns the suggested next invoice date for a recurring agreement, or "" for One-time.
+const addInterval = (dateStr, billingType) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return "";
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  if (billingType === "Monthly") dt.setMonth(dt.getMonth() + 1);
+  else if (billingType === "Quarterly") dt.setMonth(dt.getMonth() + 3);
+  else if (billingType === "Annual") dt.setFullYear(dt.getFullYear() + 1);
+  else return "";
+  return fmt(dt);
+};
+
 export default function ServiceAgreement() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -29,6 +48,7 @@ export default function ServiceAgreement() {
   const [client, setClient] = useState(null);
   const [properties, setProperties] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [additionalOpen, setAdditionalOpen] = useState(false);
   const [values, setValues] = useState({
     client_id: clientId || "",
     property_id: propertyParam || "",
@@ -83,6 +103,12 @@ export default function ServiceAgreement() {
             next_invoice_date: loaded.next_invoice_date || "",
             created_from_package_price: loaded.created_from_package_price ?? 0,
           });
+          // Auto-open Additional Details if any of those fields already contain data.
+          const hasExtra = !!(
+            loaded.included_services_override || loaded.additional_terms ||
+            loaded.notes || loaded.next_invoice_date
+          );
+          setAdditionalOpen(hasExtra);
         } else if (propertyParam) {
           set("property_id", propertyParam);
         } else if (clientProps.length === 1) {
@@ -95,16 +121,48 @@ export default function ServiceAgreement() {
   }, [id]);
 
   const selectedPackage = packages.find((p) => p.id === values.service_package_id);
+  const hasExtra = !!(
+    values.included_services_override || values.additional_terms ||
+    values.notes || values.next_invoice_date
+  );
 
   const onPackageChange = (pid) => {
     const pkg = packages.find((p) => p.id === pid);
     if (!pkg) { set("service_package_id", pid); return; }
+    setValues((s) => {
+      const newBilling = pkg.billing_type || s.billing_type;
+      const billingChanged = newBilling !== s.billing_type;
+      // Recompute next_invoice_date only when the billing type actually changes.
+      const nextInvoice = billingChanged
+        ? (s.start_date && newBilling !== "One-time" ? addInterval(s.start_date, newBilling) : (newBilling === "One-time" ? "" : s.next_invoice_date))
+        : s.next_invoice_date;
+      return {
+        ...s,
+        service_package_id: pid,
+        agreed_price: pkg.standard_price ?? s.agreed_price,
+        billing_type: newBilling,
+        inspection_frequency: pkg.inspection_frequency || s.inspection_frequency,
+        created_from_package_price: pkg.standard_price ?? 0,
+        next_invoice_date: nextInvoice,
+      };
+    });
+  };
+
+  const onStartDateChange = (v) => {
+    // Changing Start Date explicitly recomputes the suggested next invoice date.
     setValues((s) => ({
       ...s,
-      service_package_id: pid,
-      agreed_price: pkg.standard_price ?? s.agreed_price,
-      billing_type: pkg.billing_type || s.billing_type,
-      created_from_package_price: pkg.standard_price ?? 0,
+      start_date: v,
+      next_invoice_date: v && s.billing_type !== "One-time" ? addInterval(v, s.billing_type) : "",
+    }));
+  };
+
+  const onBillingTypeChange = (v) => {
+    // Changing Billing Type explicitly recomputes the suggested next invoice date.
+    setValues((s) => ({
+      ...s,
+      billing_type: v,
+      next_invoice_date: v === "One-time" ? "" : (s.start_date ? addInterval(s.start_date, v) : s.next_invoice_date),
     }));
   };
 
@@ -144,7 +202,7 @@ export default function ServiceAgreement() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-28 lg:pb-6">
         <Link to={backTo} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-3">
           <ArrowLeft className="w-4 h-4" /> Back to Client Hub
         </Link>
@@ -198,7 +256,8 @@ export default function ServiceAgreement() {
                   <div>Standard price: <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)}</span></div>
                   <div>Billing: <span className="text-foreground">{selectedPackage.billing_type}</span></div>
                   <div>Visit duration: <span className="text-foreground">{selectedPackage.visit_duration || "—"}</span></div>
-                  <div>VAT: <span className="text-foreground">{selectedPackage.vat_setting}</span></div>
+                  <div>Frequency: <span className="text-foreground">{selectedPackage.inspection_frequency || "—"}</span></div>
+                  <div className="col-span-2">VAT: <span className="text-foreground">{selectedPackage.vat_setting}</span></div>
                 </div>
               </div>
             )}
@@ -213,7 +272,7 @@ export default function ServiceAgreement() {
                 </div>
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Billing Type</Label>
-                  <Select value={values.billing_type} onValueChange={(v) => set("billing_type", v)}>
+                  <Select value={values.billing_type} onValueChange={onBillingTypeChange}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{BILLING_TYPES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
@@ -226,10 +285,10 @@ export default function ServiceAgreement() {
                 <datalist id="freq-opts">{FREQUENCY_OPTS.map((o) => <option key={o} value={o} />)}</datalist>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Start Date</Label>
-                  <Input type="date" value={values.start_date || ""} onChange={(e) => set("start_date", e.target.value)} />
+                  <Input type="date" value={values.start_date || ""} onChange={(e) => onStartDateChange(e.target.value)} />
                 </div>
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Renewal Date</Label>
@@ -244,27 +303,49 @@ export default function ServiceAgreement() {
                   <SelectContent>{STATUSES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Included Services Override</Label>
-                <Textarea value={values.included_services_override || ""} onChange={(e) => set("included_services_override", e.target.value)} rows={2} placeholder="Override or add to the package's included services" />
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Additional Terms</Label>
-                <Textarea value={values.additional_terms || ""} onChange={(e) => set("additional_terms", e.target.value)} rows={2} />
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Notes</Label>
-                <Textarea value={values.notes || ""} onChange={(e) => set("notes", e.target.value)} rows={2} />
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Next Invoice Date (optional)</Label>
-                <Input type="date" value={values.next_invoice_date || ""} onChange={(e) => set("next_invoice_date", e.target.value)} />
-              </div>
             </div>
+
+            {/* Additional Details (optional, collapsible) */}
+            <button
+              type="button"
+              onClick={() => setAdditionalOpen((o) => !o)}
+              className="w-full flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left hover:bg-muted/40 transition"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                Additional Details (optional)
+                {hasExtra && !additionalOpen && (
+                  <span className="text-xs font-normal text-primary">· has data</span>
+                )}
+              </span>
+              {additionalOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+            </button>
+
+            {additionalOpen && (
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-4 -mt-1">
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Custom Services / Changes</Label>
+                  <Textarea value={values.included_services_override || ""} onChange={(e) => set("included_services_override", e.target.value)} rows={2} placeholder="Override or add to the package's included services" />
+                  <p className="text-xs text-muted-foreground mt-1">Only use this if this customer's services differ from the selected package.</p>
+                </div>
+
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Additional Terms</Label>
+                  <Textarea value={values.additional_terms || ""} onChange={(e) => set("additional_terms", e.target.value)} rows={2} />
+                </div>
+
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Notes</Label>
+                  <Textarea value={values.notes || ""} onChange={(e) => set("notes", e.target.value)} rows={2} />
+                </div>
+
+                <div>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Next Invoice Date</Label>
+                  <Input type="date" value={values.next_invoice_date || ""} onChange={(e) => set("next_invoice_date", e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Auto-calculated from Start Date for recurring billing. You can adjust it manually.</p>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between gap-2 pt-1">
               <Link to={backTo}><Button variant="outline">Cancel</Button></Link>
