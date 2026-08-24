@@ -1,5 +1,6 @@
 import React from "react";
 import { Users } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 
@@ -30,6 +31,9 @@ const columns = [
 ];
 
 export default function Clients() {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const editId = params.get("edit");
   return (
     <AppLayout>
       <ResourceListPage
@@ -43,6 +47,8 @@ export default function Clients() {
         addItemLabel="Add Client"
         archivable
         defaultValues={{ status: "Active", preferred_language: "English", preferred_communication_method: "WhatsApp" }}
+        onOpenItem={(item) => navigate(`/clients/${item.id}`)}
+        autoOpenEditId={editId || undefined}
       />
     </AppLayout>
   );

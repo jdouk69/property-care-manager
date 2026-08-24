@@ -36,6 +36,7 @@ import VisitDetail from '@/pages/VisitDetail';
 import OwnerRepReports from '@/pages/OwnerRepReports';
 import PropertyDocuments from '@/pages/PropertyDocuments';
 import ChecklistTemplates from '@/pages/ChecklistTemplates';
+import ClientHub from '@/pages/ClientHub';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -70,6 +71,7 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />
+        <Route path="/clients/:id" element={<ClientHub />} />
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} />
         <Route path="/tasks" element={<Tasks />} />

@@ -65,6 +65,7 @@ export default function ResourceListPage({
   entityName, title, subtitle, icon: Icon, fields, columns, searchKeys = [],
   addItemLabel = "Add", renderSummary, defaultValues = {}, cardExtra,
   onCreated, onUpdated, extraDrawerContent, archivable = false,
+  onOpenItem, autoOpen = false, autoOpenEditId,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +124,20 @@ export default function ResourceListPage({
   const openNew = () => { setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setDrawerOpen(true); };
   const openEdit = (it) => { setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setDrawerOpen(true); };
   const setField = (k, v) => { setValues((s) => ({ ...s, [k]: v })); setDirty(true); setSaved(false); };
+
+  const autoOpenDone = useRef(false);
+  useEffect(() => {
+    if (autoOpen && !autoOpenDone.current) { autoOpenDone.current = true; openNew(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const autoEditDone = useRef(false);
+  useEffect(() => {
+    if (autoOpenEditId && !autoEditDone.current && items.length) {
+      const it = items.find((x) => x.id === autoOpenEditId);
+      if (it) { autoEditDone.current = true; openEdit(it); }
+    }
+  }, [items, autoOpenEditId]);
 
   useEffect(() => {
     if (!editing || !dirty) return;
@@ -367,7 +382,7 @@ export default function ResourceListPage({
           {filtered.map((item) => (
             <button
               key={item.id}
-              onClick={() => openEdit(item)}
+              onClick={onOpenItem ? () => onOpenItem(item) : () => openEdit(item)}
               className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.99] group"
             >
               <div className="flex items-start justify-between gap-2">

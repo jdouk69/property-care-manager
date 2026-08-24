@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Home, LayoutDashboard } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
@@ -63,6 +63,10 @@ const columns = [
 ];
 
 export default function Properties() {
+  const [params] = useSearchParams();
+  const ownerId = params.get("owner");
+  const autoOpen = params.get("add") === "1";
+  const defaultValues = { property_type: "Villa", status: "Vacant", condition: "Good", ...(ownerId ? { owner_id: ownerId } : {}) };
   return (
     <AppLayout>
       <ResourceListPage
@@ -75,7 +79,9 @@ export default function Properties() {
         searchKeys={["name", "address"]}
         addItemLabel="Add Property"
         archivable
-        defaultValues={{ property_type: "Villa", status: "Vacant", condition: "Good" }}
+        defaultValues={defaultValues}
+        autoOpen={autoOpen}
+        autoOpenEditId={params.get("edit") || undefined}
         cardExtra={(item) => (
           <Link to={`/properties/${item.id}`} onClick={(e) => e.stopPropagation()}
             className="text-[11px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1">
