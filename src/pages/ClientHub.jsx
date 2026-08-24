@@ -105,14 +105,23 @@ export default function ClientHub() {
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
   const activeAgreements = agreements.filter((a) => a.status === "Active");
+  const liveVisits = visits.filter((v) => v.status === "Scheduled" || v.status === "In Progress");
+  const hasStartedVisit = visits.some((v) => v.status === "In Progress" || v.status === "Completed");
 
   let nextStep = null;
   if (properties.length === 0) {
     nextStep = { label: "Add the client's first property", to: `/properties?add=1&owner=${id}`, button: "Add Property" };
   } else if (activeAgreements.length === 0) {
     nextStep = { label: "Assign a service package", to: `/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`, button: "Assign Service Package" };
-  } else if (visits.length === 0) {
-    nextStep = { label: "Schedule the first visit", to: "/visits?start=1", button: "Schedule Visit" };
+  } else if (liveVisits.length === 0 && !hasStartedVisit) {
+    const ag = activeAgreements.length === 1 ? activeAgreements[0] : null;
+    const to = ag
+      ? `/visits?start=1&property=${ag.property_id}&agreement=${ag.id}&client=${id}`
+      : `/visits?start=1&client=${id}`;
+    nextStep = { label: "Schedule the first visit", to, button: "Schedule Visit" };
+  } else if (liveVisits.some((v) => v.status === "Scheduled") && !hasStartedVisit) {
+    const scheduled = visits.find((v) => v.status === "Scheduled");
+    nextStep = { label: "First visit scheduled", to: `/visits/${scheduled.id}`, button: "View Visit" };
   }
 
   const upcomingVisits = visits.filter((v) => v.status !== "Completed" && v.status !== "Cancelled");

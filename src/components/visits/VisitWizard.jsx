@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,9 +18,18 @@ const VISIT_TYPES = [
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
 ];
 
-export default function VisitWizard({ onDone, autoResume }) {
+export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, resumeVisitId }) {
   const navigate = useNavigate();
-  const [step, setStep] = useState("property");
+  const initialStep = ctxAgreement ? "first-visit" : resumeVisitId ? "active" : "property";
+  const [step, setStep] = useState(initialStep);
+  const [agreement, setAgreement] = useState(null);
+  const [pkg, setPkg] = useState(null);
+  const [clientObj, setClientObj] = useState(null);
+  const [agreementId, setAgreementId] = useState(ctxAgreement || "");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [draftConflict, setDraftConflict] = useState(false);
+  const [resumeVisit, setResumeVisit] = useState(null);
   const [properties, setProperties] = useState([]);
   const [propertyId, setPropertyId] = useState(null);
   const [visitType, setVisitType] = useState(VISIT_TYPES[0]);
@@ -64,6 +73,58 @@ export default function VisitWizard({ onDone, autoResume }) {
     base44.entities.Contractor.list("-created_date", 500).then((c) => setContractors((c || []).filter((x) => !x.archived))).catch(() => {});
     const d = loadDraft();
     if (d && d.propertyId && d.checklist) setResumable(d);
+
+    // Guided "first visit" flow: load agreement + package + client context.
+    if (ctxAgreement) {
+      (async () => {
+        try {
+          const a = await base44.entities.PropertyServiceAgreement.get(ctxAgreement);
+          setAgreement(a);
+          setAgreementId(a.id);
+          if (ctxProperty) setPropertyId(ctxProperty);
+          else if (a.property_id) setPropertyId(a.property_id);
+          if (a.service_package_id) {
+            try {
+              const p = await base44.entities.ServicePackage.get(a.service_package_id);
+              setPkg(p);
+              if (p && p.recurring === "Recurring") setVisitType("Monthly Property Watch");
+            } catch (e) {}
+          }
+          if (ctxClient) { try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {} }
+        } catch (e) {}
+      })();
+    } else if (resumeVisitId) {
+      // Resume / start an existing (scheduled) visit record.
+      (async () => {
+        try {
+          const v = await base44.entities.PropertyVisit.get(resumeVisitId);
+          setResumeVisit(v);
+          setPropertyId(v.property_id);
+          setVisitType(v.visit_type || VISIT_TYPES[0]);
+          setStartTime(v.start_time || null);
+          setAgreementId(v.property_service_agreement_id || "");
+          if (v.property_service_agreement_id) {
+            try {
+              const a = await base44.entities.PropertyServiceAgreement.get(v.property_service_agreement_id);
+              setAgreement(a);
+              if (a.service_package_id) { try { setPkg(await base44.entities.ServicePackage.get(a.service_package_id)); } catch (e) {} }
+            } catch (e) {}
+          }
+          if (v.checklist && v.checklist.length > 0) {
+            setChecklist(v.checklist);
+            setTemplateSource("Resumed");
+          } else {
+            try {
+              const { items, source } = await loadChecklistItems(v.property_id, v.visit_type || VISIT_TYPES[0]);
+              setChecklist(items);
+              setTemplateSource(source);
+            } catch (e) { setChecklist([]); setTemplateSource("None"); }
+          }
+          setStep("active");
+        } catch (e) { setStep("property"); }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -72,7 +133,7 @@ export default function VisitWizard({ onDone, autoResume }) {
 
   // persist draft while a visit is active
   useEffect(() => {
-    if (step === "active" && propertyId) {
+    if (step === "active" && propertyId && !resumeVisitId) {
       saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped });
     }
   }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped]);
@@ -140,6 +201,49 @@ export default function VisitWizard({ onDone, autoResume }) {
     const seed = SEED[vtype] || [];
     const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
     return { items, source: "Default", found: items.length > 0 };
+  };
+
+  const handleSelectProperty = async (pid) => {
+    setPropertyId(pid);
+    if (!ctxClient) { setStep("type"); return; }
+    try {
+      const all = await base44.entities.PropertyServiceAgreement.list("-created_date", 500);
+      const ag = (all || []).find((a) => !a.archived && a.status === "Active" && a.property_id === pid && a.client_id === ctxClient);
+      if (ag) {
+        setAgreement(ag); setAgreementId(ag.id);
+        if (ag.service_package_id) { try { const p = await base44.entities.ServicePackage.get(ag.service_package_id); setPkg(p); if (p && p.recurring === "Recurring") setVisitType("Monthly Property Watch"); } catch (e) {} }
+        try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {}
+        setStep("first-visit");
+      } else { setStep("type"); }
+    } catch (e) { setStep("type"); }
+  };
+
+  const handleStartNow = () => {
+    const d = loadDraft();
+    if (d && d.propertyId && d.checklist && d.checklist.length > 0) { setDraftConflict(true); return; }
+    startVisit();
+  };
+
+  const startNowDiscardDraft = () => {
+    clearDraft(); setResumable(null); setDraftConflict(false); startVisit();
+  };
+
+  const saveScheduled = async () => {
+    if (!scheduleDate || !scheduleTime || !propertyId) return;
+    setSaving(true);
+    try {
+      const iso = new Date(`${scheduleDate}T${scheduleTime}`).toISOString();
+      await base44.entities.PropertyVisit.create({
+        property_id: propertyId,
+        property_service_agreement_id: agreementId || "",
+        visit_type: visitType,
+        status: "Scheduled",
+        start_time: iso,
+        scheduled_time: iso,
+      });
+      setSaving(false);
+      navigate(`/clients/${ctxClient || agreement?.client_id || ""}`);
+    } catch (e) { setSaving(false); alert("Could not schedule visit: " + (e?.message || e)); }
   };
 
   const startVisit = async () => {
@@ -270,14 +374,21 @@ export default function VisitWizard({ onDone, autoResume }) {
     setSaving(true);
     const end = new Date().toISOString();
     setEndTime(end);
+    const shared = {
+      property_id: propertyId, visit_type: visitType, start_time: startTime, end_time: end,
+      status: "Completed", gps_location: gps, checklist,
+      meter_readings: meters.filter((m) => m.label || m.value),
+      summary, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
+      owner_report: "", report_sent: false,
+      property_service_agreement_id: agreementId || "",
+    };
     try {
-      const visit = await base44.entities.PropertyVisit.create({
-        property_id: propertyId, visit_type: visitType, start_time: startTime, end_time: end,
-        status: "Completed", gps_location: gps, checklist,
-        meter_readings: meters.filter((m) => m.label || m.value),
-        summary, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
-        owner_report: "", report_sent: false,
-      });
+      let visit;
+      if (resumeVisitId) {
+        visit = await base44.entities.PropertyVisit.update(resumeVisitId, shared);
+      } else {
+        visit = await base44.entities.PropertyVisit.create(shared);
+      }
       setCompleted(visit);
       clearDraft();
       setStep("done");
@@ -287,8 +398,94 @@ export default function VisitWizard({ onDone, autoResume }) {
 
   const backFromActive = () => {
     if (!confirm("Leave the active visit? Your progress is saved and you can resume it from the visits list.")) return;
-    setStep("type");
+    if (resumeVisitId) { onDone(); return; }
+    setStep(ctxAgreement ? "first-visit" : "type");
   };
+
+  // ---- STEP: first visit (agreement context) ----
+  if (step === "first-visit") {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Button variant="ghost" size="icon" onClick={onDone}><ChevronLeft className="w-5 h-5" /></Button>
+          <h2 className="font-semibold text-lg">First Visit</h2>
+        </div>
+
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 mb-4">
+          <p className="text-[11px] uppercase tracking-wide text-primary mb-2">Agreement context</p>
+          <div className="space-y-1.5 text-sm">
+            <div className="flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">Client:</span> <span className="font-medium truncate">{clientObj?.name || "—"}</span></div>
+            <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">Property:</span> <span className="font-medium truncate">{properties.find((p) => p.id === propertyId)?.name || "—"}</span></div>
+            <div className="flex items-center gap-2"><Package className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">Service:</span> <span className="font-medium truncate">{pkg?.name || "—"}</span></div>
+            <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">Frequency:</span> <span className="font-medium">{agreement?.inspection_frequency || pkg?.inspection_frequency || "—"}</span></div>
+            <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">Expected visit time:</span> <span className="font-medium">{pkg?.visit_duration || "—"}</span></div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Button onClick={() => setStep("schedule")} className="rounded-2xl h-14 text-base gap-2"><CalendarClock className="w-5 h-5" /> Schedule Visit</Button>
+          <Button variant="outline" onClick={handleStartNow} className="rounded-2xl h-14 text-base gap-2"><Navigation className="w-5 h-5" /> Start Visit Now</Button>
+        </div>
+
+        {draftConflict && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-2xl border border-border max-w-sm w-full p-5 shadow-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <h3 className="font-semibold">You already have a visit in progress.</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">Starting a new visit will discard the unfinished one. Choose how to proceed.</p>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => { setDraftConflict(false); resume(); }} className="rounded-2xl h-11">Continue Existing Visit</Button>
+                <Button variant="outline" onClick={() => setDraftConflict(false)} className="rounded-2xl h-11">Cancel</Button>
+                <Button variant="destructive" onClick={startNowDiscardDraft} className="rounded-2xl h-11">Start New Visit</Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ---- STEP: schedule visit ----
+  if (step === "schedule") {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Button variant="ghost" size="icon" onClick={() => setStep("first-visit")}><ChevronLeft className="w-5 h-5" /></Button>
+          <h2 className="font-semibold text-lg">Schedule Visit</h2>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4 mb-4 text-sm">
+          <p><span className="text-muted-foreground">Property:</span> <span className="font-medium">{properties.find((p) => p.id === propertyId)?.name || "—"}</span></p>
+          <p><span className="text-muted-foreground">Service:</span> <span className="font-medium">{pkg?.name || "—"}</span></p>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Type</Label>
+            <Select value={visitType} onValueChange={setVisitType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Date</Label>
+              <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Time</Label>
+              <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+            </div>
+          </div>
+          <Button onClick={saveScheduled} disabled={saving || !scheduleDate || !scheduleTime} className="w-full h-12 rounded-2xl text-base gap-2">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CalendarClock className="w-5 h-5" />} Save Scheduled Visit
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // ---- STEP: select property ----
   if (step === "property") {
@@ -316,8 +513,8 @@ export default function VisitWizard({ onDone, autoResume }) {
 
         <p className="text-sm text-muted-foreground mb-4 px-1">Select the property you're visiting.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {properties.map((p) => (
-            <button key={p.id} onClick={() => { setPropertyId(p.id); setStep("type"); }}
+          {(ctxClient ? properties.filter((p) => p.owner_id === ctxClient) : properties).map((p) => (
+            <button key={p.id} onClick={() => handleSelectProperty(p.id)}
               className="text-left rounded-2xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition flex items-center gap-3">
               <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
               <div className="min-w-0">
@@ -390,10 +587,14 @@ export default function VisitWizard({ onDone, autoResume }) {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : templateSource === "Default" ? "Default checklist" : `${templateSource} template`}</Link>
-              <CancelVisitMenu
-                draft={{ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds }}
-                onDone={() => navigate(`/properties/${propertyId}`)}
-              />
+              {resumeVisitId ? (
+                <button type="button" onClick={async () => { if (!confirm("Cancel this visit?")) return; try { await base44.entities.PropertyVisit.update(resumeVisitId, { status: "Cancelled", end_time: new Date().toISOString() }); } catch (e) {} onDone(); }} className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive transition">Cancel visit</button>
+              ) : (
+                <CancelVisitMenu
+                  draft={{ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds }}
+                  onDone={() => navigate(`/properties/${propertyId}`)}
+                />
+              )}
             </div>
           </div>
           {/* Step bar */}

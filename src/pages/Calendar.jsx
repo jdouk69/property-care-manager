@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Plus, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
@@ -16,6 +16,7 @@ const TYPE_COLORS = {
   "Owner Request": "bg-rose-500",
   Maintenance: "bg-orange-500",
   Custom: "bg-primary",
+  "Property Visit": "bg-cyan-500",
 };
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -29,12 +30,27 @@ export default function Calendar() {
     queryKey: ["tasks-calendar"],
     queryFn: () => base44.entities.Task.list("-date", 500),
   });
+  const { data: visits = [] } = useQuery({
+    queryKey: ["visits-calendar"],
+    queryFn: () => base44.entities.PropertyVisit.list("-start_time", 500),
+  });
 
   const byDate = useMemo(() => {
     const map = {};
-    tasks.forEach((t) => { if (t.date) { (map[t.date] = map[t.date] || []).push(t); } });
+    tasks.forEach((t) => { if (t.date) { (map[t.date] = map[t.date] || []).push({ ...t, _kind: "task" }); } });
+    (visits || []).forEach((v) => {
+      if (v.archived || v.status === "Cancelled") return;
+      const ds = (v.scheduled_time || v.start_time || "").slice(0, 10);
+      if (!ds) return;
+      (map[ds] = map[ds] || []).push({
+        ...v, _kind: "visit", type: "Property Visit",
+        title: v.visit_type || "Property Visit",
+        time: (v.scheduled_time || v.start_time || "").slice(11, 16),
+        to: `/visits/${v.id}`,
+      });
+    });
     return map;
-  }, [tasks]);
+  }, [tasks, visits]);
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -108,15 +124,17 @@ export default function Calendar() {
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">No tasks scheduled.</div>
             ) : (
               selectedTasks.map((t) => (
-                <Link to="/tasks" key={t.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
+                <Link to={t.to || "/tasks"} key={t.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TYPE_COLORS[t.type] || "bg-primary"}`} />
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{t.title}</p>
-                      <p className="text-xs text-muted-foreground">{t.time} · {t.type}</p>
+                      <p className="text-xs text-muted-foreground">{t.time ? `${t.time} · ` : ""}{t.type}{t._kind === "visit" && t.status ? ` · ${t.status}` : ""}</p>
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(t.priority)}`}>{t.priority}</span>
+                  {t._kind === "visit" && t.status
+                    ? <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">{t.status}</span>
+                    : (t.priority && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(t.priority)}`}>{t.priority}</span>)}
                 </Link>
               ))
             )}

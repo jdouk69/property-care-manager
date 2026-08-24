@@ -16,6 +16,8 @@ export default function Visits() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(null);
   const [autoResume, setAutoResume] = useState(false);
+  const [ctx, setCtx] = useState({});
+  const [resumeId, setResumeId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -37,7 +39,17 @@ export default function Visits() {
     const d = loadDraft();
     setDraft(d);
     const params = new URLSearchParams(window.location.search);
-    if (params.get("start") === "1") {
+    const property = params.get("property");
+    const agreement = params.get("agreement");
+    const client = params.get("client");
+    const resume = params.get("resume");
+    if (property) setCtx((c) => ({ ...c, property }));
+    if (agreement) setCtx((c) => ({ ...c, agreement }));
+    if (client) setCtx((c) => ({ ...c, client }));
+    if (resume) setResumeId(resume);
+    if (resume) {
+      setMode("wizard");
+    } else if (params.get("start") === "1") {
       setMode("wizard");
     } else if (params.get("continue") === "1" && d) {
       setAutoResume(true);
@@ -49,7 +61,14 @@ export default function Visits() {
     return (
       <AppLayout>
         <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-          <VisitWizard autoResume={autoResume} onDone={() => { setMode("list"); setAutoResume(false); load(); setDraft(loadDraft()); }} />
+          <VisitWizard
+            autoResume={autoResume}
+            ctxProperty={ctx.property}
+            ctxAgreement={ctx.agreement}
+            ctxClient={ctx.client}
+            resumeVisitId={resumeId}
+            onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); load(); setDraft(loadDraft()); }}
+          />
         </div>
       </AppLayout>
     );

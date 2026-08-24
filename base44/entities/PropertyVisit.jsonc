@@ -24,9 +24,13 @@
     "end_time": {
       "type": "string"
     },
+    "scheduled_time": {
+      "type": "string"
+    },
     "status": {
       "type": "string",
       "enum": [
+        "Scheduled",
         "In Progress",
         "Completed",
         "Cancelled"

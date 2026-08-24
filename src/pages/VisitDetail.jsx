@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
   ChevronLeft, Clock, MapPin, Gauge, Wrench, ListChecks, Download,
-  Loader2, Archive, CheckCircle2, AlertTriangle, Trash2, X
+  Loader2, Archive, CheckCircle2, AlertTriangle, Trash2, X, Package, Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -32,6 +32,10 @@ export default function VisitDetail() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteStep, setDeleteStep] = useState(0);
   const [deleting, setDeleting] = useState(false);
+  const [agreement, setAgreement] = useState(null);
+  const [pkg, setPkg] = useState(null);
+  const [starting, setStarting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,6 +51,13 @@ export default function VisitDetail() {
         setProperty(p);
         setBusiness((bss && bss[0]) || {});
         if (p.owner_id) { try { setClient(await base44.entities.Client.get(p.owner_id)); } catch (e) {} }
+        if (v.property_service_agreement_id) {
+          try {
+            const ag = await base44.entities.PropertyServiceAgreement.get(v.property_service_agreement_id);
+            setAgreement(ag);
+            if (ag?.service_package_id) { try { setPkg(await base44.entities.ServicePackage.get(ag.service_package_id)); } catch (e) {} }
+          } catch (e) {}
+        }
         if (v.maintenance_issue_ids?.length) {
           try {
             const all = await base44.entities.MaintenanceIssue.list("-created_date", 500);
@@ -74,6 +85,23 @@ export default function VisitDetail() {
     const updated = { ...visit, report_sent: val };
     setVisit(updated);
     try { await base44.entities.PropertyVisit.update(visit.id, { report_sent: val }); } catch (e) {}
+  };
+
+  const startScheduledVisit = async () => {
+    if (!confirm("Start this visit now? It will move to In Progress and open the checklist.")) return;
+    setStarting(true);
+    try {
+      await base44.entities.PropertyVisit.update(visit.id, { status: "In Progress", start_time: new Date().toISOString() });
+      navigate(`/visits?resume=${visit.id}`);
+    } catch (e) { alert("Could not start visit: " + (e?.message || e)); }
+    setStarting(false);
+  };
+
+  const cancelScheduledVisit = async () => {
+    if (!confirm("Cancel this scheduled visit?")) return;
+    setCancelling(true);
+    try { await base44.entities.PropertyVisit.update(visit.id, { status: "Cancelled" }); setVisit((v) => ({ ...v, status: "Cancelled" })); } catch (e) { alert("Could not cancel visit: " + (e?.message || e)); }
+    setCancelling(false);
   };
 
   const archive = async () => {
@@ -119,13 +147,32 @@ export default function VisitDetail() {
           {client.name && <p className="text-sm text-muted-foreground">Owner: {client.name}</p>}
           <div className="flex flex-wrap gap-2 mt-3">
             <span className="text-xs px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20">{visit.visit_type}</span>
-            <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.status === "Cancelled" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : "bg-muted text-muted-foreground border-border"}`}>{visit.status}</span>
+            <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.status === "Cancelled" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : visit.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : visit.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-muted text-muted-foreground border-border"}`}>{visit.status}</span>
             {visit.report_sent && <span className="text-xs px-2.5 py-1 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">Report Sent</span>}
           </div>
         </div>
 
+        {visit.property_service_agreement_id && agreement && (
+          <div className="rounded-2xl border border-border bg-card p-4 mb-4">
+            <div className="flex items-center gap-2 mb-2"><Package className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Service Agreement</h3></div>
+            <div className="text-sm space-y-0.5">
+              <p><span className="text-muted-foreground">Package:</span> <span className="text-foreground font-medium">{pkg?.name || "—"}</span></p>
+              <p><span className="text-muted-foreground">Client / Property:</span> <span className="text-foreground">{client.name || "—"} · {property.name || "—"}</span></p>
+              <p><span className="text-muted-foreground">Agreed service:</span> <span className="text-foreground">{agreement.billing_type || "—"}{agreement.inspection_frequency ? ` · ${agreement.inspection_frequency}` : ""}</span></p>
+              {pkg?.visit_duration && <p><span className="text-muted-foreground">Expected visit time:</span> <span className="text-foreground">{pkg.visit_duration}</span></p>}
+            </div>
+          </div>
+        )}
+
+        {visit.status === "Scheduled" && (
+          <div className="rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 mb-4 flex flex-col sm:flex-row gap-2">
+            <Button onClick={startScheduledVisit} disabled={starting} className="rounded-2xl gap-1.5"><Play className="w-4 h-4" /> {starting ? "Starting…" : "Start Visit"}</Button>
+            <Button variant="outline" onClick={cancelScheduledVisit} disabled={cancelling} className="rounded-2xl gap-1.5"><X className="w-4 h-4" /> Cancel Visit</Button>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 mb-4">
-          <div className="rounded-2xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> Arrival</p><p className="text-sm font-medium mt-1">{fmt(visit.start_time)}</p></div>
+          <div className="rounded-2xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {visit.status === "Scheduled" ? "Scheduled" : "Arrival"}</p><p className="text-sm font-medium mt-1">{fmt(visit.scheduled_time || visit.start_time)}</p></div>
           <div className="rounded-2xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> Completion</p><p className="text-sm font-medium mt-1">{fmt(visit.end_time)}</p></div>
         </div>
 
