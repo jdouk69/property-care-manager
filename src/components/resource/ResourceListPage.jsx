@@ -65,7 +65,7 @@ export default function ResourceListPage({
   entityName, title, subtitle, icon: Icon, fields, columns, searchKeys = [],
   addItemLabel = "Add", renderSummary, defaultValues = {}, cardExtra,
   onCreated, onUpdated, extraDrawerContent, archivable = false,
-  onOpenItem, autoOpen = false, autoOpenEditId,
+  onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -449,7 +449,7 @@ export default function ResourceListPage({
             ) : <div />}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setDrawerOpen(false)}>Close</Button>
-              {!editing && <Button onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}</Button>}
+              {!editing && <Button onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}</Button>}
             </div>
           </SheetFooter>
         </SheetContent>

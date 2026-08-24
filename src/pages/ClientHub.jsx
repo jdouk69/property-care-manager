@@ -109,7 +109,9 @@ export default function ClientHub() {
   if (properties.length === 0) {
     nextStep = { label: "Add the client's first property", to: `/properties?add=1&owner=${id}`, button: "Add Property" };
   } else if (!hasPackage) {
-    nextStep = { label: "Assign a service package", to: `/properties?edit=${properties[0].id}`, button: "Assign Service" };
+    nextStep = { label: "Assign a service package", to: `/properties?edit=${properties[0].id}`, button: "Assign Service Package" };
+  } else if (visits.length === 0) {
+    nextStep = { label: "Schedule the first visit", to: "/visits?start=1", button: "Schedule Visit" };
   }
 
   const upcomingVisits = visits.filter((v) => v.status !== "Completed" && v.status !== "Cancelled");
