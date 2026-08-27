@@ -18,7 +18,6 @@ export default async function(req) {
     const categories = settings.notif_categories || [];
 
     if (!categories.includes("Visits")) {
-      await log(base44, "Visit reminders: skipped (Visits category off)", 0, "success");
       return Response.json({ ok: true, generated: 0, reason: "Visits category off" });
     }
 
@@ -73,7 +72,7 @@ export default async function(req) {
       }
     }
 
-    await log(base44, "Visit reminders: generated", created, "success");
+    if (created > 0) await log(base44, "Visit reminders: generated", created, "success");
     return Response.json({ ok: true, generated: created, scanned: enriched.length });
   } catch (error) {
     try {
