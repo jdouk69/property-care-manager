@@ -91,9 +91,18 @@ export default function ResourceListPage({
   const dirtyRef = useRef(false);
   const destructiveRef = useRef(false);
   const inFlightValuesRef = useRef(null);
+  // Lifecycle + StrictMode guards for the route-leave flush.
+  const mountedRef = useRef(true);
+  const leaveGuardActiveRef = useRef(false);
+  const leaveFlushTimerRef = useRef(null);
   editingRef.current = editing;
   valuesRef.current = values;
   dirtyRef.current = dirty;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -160,8 +169,8 @@ export default function ResourceListPage({
     debounceRef.current = setTimeout(async () => {
       try {
         await runUpdate(editing, values);
-        setSaving(false); setSaved(true); setDirty(false);
-      } catch (e) { setSaving(false); }
+        if (mountedRef.current) { setSaving(false); setSaved(true); setDirty(false); }
+      } catch (e) { if (mountedRef.current) setSaving(false); }
     }, 1000);
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -379,7 +388,9 @@ export default function ResourceListPage({
     inFlightValuesRef.current = vals;
     try {
       await p;
-      if (updateUI) {
+      // The DB update always completes; UI callbacks run only while mounted so an
+      // in-flight save that resolves after unmount touches no React state.
+      if (updateUI && mountedRef.current) {
         setItems((arr) => arr.map((it) => (it.id === record.id ? { ...it, ...vals } : it)));
         if (onUpdated) onUpdated(record, vals);
       }
@@ -390,10 +401,14 @@ export default function ResourceListPage({
 
   const runUpdate = (record, vals) => persistRecord(record, vals, { updateUI: true });
 
-  // Route-leave / unmount autosave guard. Fires exactly once, against the ref
-  // snapshot, only for an existing dirty record that isn't mid-delete/archive.
+  // Route-leave / unmount autosave guard. The flush is deferred by one tick and gated
+  // on leaveGuardActiveRef so React 18 StrictMode's synthetic cleanup→remount cycle
+  // cancels it (setup clears the flag + timer), while a real unmount lets it fire.
   useEffect(() => {
+    leaveGuardActiveRef.current = false;
+    if (leaveFlushTimerRef.current) { clearTimeout(leaveFlushTimerRef.current); leaveFlushTimerRef.current = null; }
     return () => {
+      leaveGuardActiveRef.current = true;
       const rec = editingRef.current;
       const vals = valuesRef.current;
       if (!rec || !dirtyRef.current || destructiveRef.current) return;
@@ -404,6 +419,7 @@ export default function ResourceListPage({
         JSON.stringify(inFlightValuesRef.current) === JSON.stringify(vals);
       if (inflightHasLatest) return;
       const write = () => {
+        if (!leaveGuardActiveRef.current) return; // cancelled by StrictMode remount
         persistRecord(rec, vals, { updateUI: false }).catch((e) => {
           if (typeof console !== "undefined") {
             console.error("[ResourceListPage] route-leave autosave failed", e);
@@ -411,8 +427,12 @@ export default function ResourceListPage({
         });
       };
       // If a stale in-flight save is running, chain the latest values after it so the
-      // newest values land last; otherwise persist immediately.
-      if (inflight) { inflight.then(write, write); } else { write(); }
+      // newest values land last; otherwise schedule a deferred immediate write.
+      if (inflight) {
+        inflight.then(write, write);
+      } else {
+        leaveFlushTimerRef.current = setTimeout(() => { leaveFlushTimerRef.current = null; write(); }, 0);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -424,7 +444,7 @@ export default function ResourceListPage({
     clearTimeout(debounceRef.current);
     try {
       await runUpdate(editing, values);
-      setDirty(false);
+      if (mountedRef.current) setDirty(false);
     } catch (e) { /* leave dirty; next change retriggers autosave */ }
   };
 
@@ -432,8 +452,8 @@ export default function ResourceListPage({
 
   const flushSave = async () => {
     setSaving(true);
-    try { await flushPendingEdit(); } finally { setSaving(false); }
-    setDrawerOpen(false);
+    try { await flushPendingEdit(); } finally { if (mountedRef.current) setSaving(false); }
+    if (mountedRef.current) setDrawerOpen(false);
   };
 
   const renderFieldRow = (f) => {
