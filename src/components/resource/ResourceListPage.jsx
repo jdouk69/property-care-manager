@@ -529,7 +529,7 @@ export default function ResourceListPage({
               {renderFormFields}
             </div>
 
-            <SheetFooter className="flex-row gap-2 justify-between border-t pt-4">
+            <SheetFooter className="flex-row flex-wrap gap-2 justify-between border-t pt-4">
               {actionButtons}
             </SheetFooter>
           </SheetContent>
