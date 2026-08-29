@@ -514,26 +514,41 @@ export default function ResourceListPage({
   );
 
   // Tablet / desktop: open as a true full page (no modal/sheet/backdrop).
+  // Tablet (md–xl): large centered workspace with a dimmed backdrop — the form is
+  // the primary working surface. Desktop (≥2xl): reverts to the inline full-page
+  // form (no backdrop). Phone uses the Sheet rendered below.
   if (!isMobile && drawerOpen) {
     return (
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-32">
-        <button
-          type="button"
-          onClick={closeForm}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg px-2.5 py-1.5 -ml-1 transition-colors min-h-[36px] touch-manipulation mb-3"
-        >
-          <ArrowLeft className="w-4 h-4 shrink-0" /> Back
-        </button>
-        <div className="flex items-center gap-3">
-          {Icon && <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" /></div>}
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">{editing ? `Edit ${singular}` : `Add ${singular}`}</h1>
-        </div>
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 flex justify-center items-start p-4 pb-10 2xl:static 2xl:z-0 2xl:bg-transparent 2xl:overflow-visible 2xl:p-0 2xl:block">
+        <div className="w-full max-w-[92%] md:max-w-[880px] xl:max-w-[1020px] my-4 rounded-2xl bg-card shadow-xl border border-border p-6 pb-10 2xl:max-w-5xl 2xl:mx-auto 2xl:my-0 2xl:shadow-none 2xl:bg-transparent 2xl:border-0 2xl:rounded-none 2xl:pb-32">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg px-2.5 py-1.5 transition-colors min-h-[36px] touch-manipulation"
+            >
+              <ArrowLeft className="w-4 h-4 shrink-0" /> Back
+            </button>
+            <button
+              type="button"
+              onClick={closeForm}
+              aria-label="Close"
+              className="h-9 w-9 md:h-11 md:w-11 2xl:hidden rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            {Icon && <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" /></div>}
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">{editing ? `Edit ${singular}` : `Add ${singular}`}</h1>
+          </div>
 
-        <div className="mt-6 space-y-6">{renderFormFields}</div>
+          <div className="mt-6 space-y-6">{renderFormFields}</div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-border pt-6">
-          <div className="mr-auto">{savingIndicator}</div>
-          {actionButtons}
+          <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-border pt-6">
+            <div className="mr-auto">{savingIndicator}</div>
+            {actionButtons}
+          </div>
         </div>
       </div>
     );
