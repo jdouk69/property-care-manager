@@ -28,10 +28,10 @@ const greeting = () => {
 
 const ACTION_GROUPS = [
   {
-    label: "Setup",
+    label: "Manage",
     items: [
-      { label: "Add Client", to: "/clients", icon: HardHat, color: "bg-rose-500" },
-      { label: "Add Property", to: "/properties", icon: Home, color: "bg-indigo-500" },
+      { label: "Clients", to: "/clients", icon: HardHat, color: "bg-rose-500" },
+      { label: "Properties", to: "/properties", icon: Home, color: "bg-indigo-500" },
     ],
   },
   {
