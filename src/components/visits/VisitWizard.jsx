@@ -208,10 +208,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       const items = (tmpl.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
       return { items, source: propSpecific ? "Property-Specific" : "Master", found: true };
     }
-    // Fallback to built-in defaults so a visit is never left without a checklist when template records are missing.
+    // Defensive fallback: built-in defaults only when no template record exists and the seed is non-empty.
     const seed = SEED[vtype] || [];
-    const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
-    return { items, source: "Default", found: items.length > 0 };
+    if (seed.length > 0) {
+      const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
+      return { items, source: "Default", found: true };
+    }
+    return { items: [], source: "None", found: false };
   };
 
   const loadAgreementContext = async (ag, cid) => {
@@ -755,6 +758,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <p className="text-xs text-amber-700 dark:text-amber-400">Default checklist in use — no configured template was found.</p>
             </div>
           )}
+          {templateSource === "None" && (
+            <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-2.5 mb-2">
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-destructive font-medium">No checklist is configured for this visit type.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Create or assign a checklist template before using this visit type.</p>
+              </div>
+            </div>
+          )}
           <div className="space-y-2 mb-6">
             {checklist.map((it, i) => (
               <VisitChecklistItem key={i} item={it} index={i} onChange={(u) => updateItem(i, u)}
@@ -767,7 +779,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                   <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
                   <p className="text-sm text-destructive">{checklistLoadError}</p>
                 </div>
-              ) : (
+              ) : templateSource === "None" ? null : (
                 <p className="text-sm text-muted-foreground">No checklist items for this visit type. Add items in Checklist Templates.</p>
               )
             )}

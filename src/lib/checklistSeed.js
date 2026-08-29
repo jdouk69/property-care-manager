@@ -9,3 +9,9 @@ export const SEED = {
   "Seasonal Closing": ["Drain pipes if needed","Turn off water","Set AC to frost protection","Close shutters","Lock all doors and gates","Empty refrigerator","Secure outdoor furniture","Check alarm","Leave keys with caretaker"],
   "Owner Representative Construction Visit": ["Record arrival time and site access","Contractors present","Materials delivered","Work expected","Work observed","Workmanship concerns","Incomplete work","Photos of progress","Questions for owner decision","Record departure time"],
 };
+
+export const VISIT_TYPES = [
+  "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
+  "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
+  "Home Watch Inspection", "Property Care Inspection", "Emergency Visit", "Owner Representative Site Visit",
+];

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { ScrollText, Plus, ChevronUp, ChevronDown, Trash2, RotateCcw, Copy, Loader2, Check, Archive } from "lucide-react";
+import { ScrollText, Plus, ChevronUp, ChevronDown, Trash2, RotateCcw, Copy, Loader2, Check, Archive, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import AppLayout from "@/components/layout/AppLayout";
-import { SEED } from "@/lib/checklistSeed";
+import { SEED, VISIT_TYPES } from "@/lib/checklistSeed";
 
 export default function ChecklistTemplates() {
   const [templates, setTemplates] = useState([]);
@@ -21,6 +21,12 @@ export default function ChecklistTemplates() {
   const [saved, setSaved] = useState(false);
   const [copyTarget, setCopyTarget] = useState("");
   const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newVisitType, setNewVisitType] = useState(VISIT_TYPES[0]);
+  const [newItems, setNewItems] = useState([]);
+  const [createItem, setCreateItem] = useState("");
+  const [createError, setCreateError] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -93,6 +99,30 @@ export default function ChecklistTemplates() {
     try { await base44.entities.ChecklistTemplate.update(t.id, { archived: true }); setTemplates((arr) => arr.filter((x) => x.id !== t.id)); if (editing?.id === t.id) setEditing(null); } catch (e) {}
   };
 
+  const openCreate = () => {
+    setNewName(""); setNewVisitType(VISIT_TYPES[0]); setNewItems([]); setCreateItem(""); setCreateError(""); setCreating(true);
+  };
+  const addCreateItem = () => { if (!createItem.trim()) return; setNewItems((a) => [...a, createItem.trim()]); setCreateItem(""); };
+  const removeNewItem = (i) => setNewItems((a) => a.filter((_, idx) => idx !== i));
+  const moveNewItem = (i, dir) => { const j = i + dir; if (j < 0 || j >= newItems.length) return; const n = [...newItems]; [n[i], n[j]] = [n[j], n[i]]; setNewItems(n); };
+  const renameNewItem = (i, val) => setNewItems((a) => a.map((x, idx) => (idx === i ? val : x)));
+  const createTemplate = async () => {
+    if (!newName.trim()) { setCreateError("Enter a template name."); return; }
+    if (!newVisitType) { setCreateError("Choose a visit type."); return; }
+    const existing = templates.find((t) => t.visit_type === newVisitType && (t.is_master || !t.property_id) && !t.archived);
+    if (existing) { setCreateError(`An active master template for "${newVisitType}" already exists. Edit that template instead of creating a duplicate.`); return; }
+    setBusy(true);
+    try {
+      const created = await base44.entities.ChecklistTemplate.create({
+        name: newName.trim(), visit_type: newVisitType, items: [...newItems],
+        is_master: true, property_id: null, archived: false,
+      });
+      setTemplates((arr) => [created, ...arr]);
+      setCreating(false);
+    } catch (e) { setCreateError("Could not create: " + (e?.message || e)); }
+    setBusy(false);
+  };
+
   const visible = templates.filter((t) => {
     if (t.is_master || !t.property_id) return true;
     if (propFilter === "all") return true;
@@ -109,6 +139,7 @@ export default function ChecklistTemplates() {
             <h1 className="text-2xl font-semibold tracking-tight">Checklist Templates</h1>
             <p className="text-sm text-muted-foreground">Manage master and property-specific checklists.</p>
           </div>
+          <Button onClick={openCreate} className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> New Template</Button>
         </div>
 
         <div className="max-w-xs mb-4">
@@ -207,6 +238,58 @@ export default function ChecklistTemplates() {
               </>
             )}
             <Button variant="ghost" onClick={() => setEditing(null)} className="w-full">Close</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={creating} onOpenChange={setCreating}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
+          <SheetHeader>
+            <SheetTitle>New Checklist Template</SheetTitle>
+            <SheetDescription className="sr-only">Create a master template</SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 py-4 space-y-4">
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Template Name</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Emergency Visit (Master)" />
+            </div>
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Type</Label>
+              <Select value={newVisitType} onValueChange={setNewVisitType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Checklist Items</Label>
+              <div className="space-y-2">
+                {newItems.map((it, i) => (
+                  <div key={i} className="flex items-center gap-1.5">
+                    <div className="flex flex-col">
+                      <button onClick={() => moveNewItem(i, -1)} disabled={i === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
+                      <button onClick={() => moveNewItem(i, 1)} disabled={i === newItems.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+                    </div>
+                    <Input value={it} onChange={(e) => renameNewItem(i, e.target.value)} className="flex-1" />
+                    <button onClick={() => removeNewItem(i)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                ))}
+                {newItems.length === 0 && <p className="text-sm text-muted-foreground">No items yet.</p>}
+                <div className="flex gap-2 pt-1">
+                  <Input value={createItem} onChange={(e) => setCreateItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCreateItem()} placeholder="Add checklist item" />
+                  <Button onClick={addCreateItem} disabled={!createItem.trim()}><Plus className="w-4 h-4" /></Button>
+                </div>
+              </div>
+            </div>
+            {createError && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">{createError}</p>
+              </div>
+            )}
+          </div>
+          <SheetFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setCreating(false)} className="rounded-full">Cancel</Button>
+            <Button onClick={createTemplate} disabled={busy} className="rounded-full">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> Create Master Template</>}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

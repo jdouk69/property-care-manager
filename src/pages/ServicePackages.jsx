@@ -2,6 +2,8 @@ import React from "react";
 import { Package } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { VISIT_TYPES } from "@/lib/checklistSeed";
 
 const fields = [
   { name: "name", label: "Service Name", type: "text", required: true, placeholder: "e.g. Standard property care" },
@@ -15,6 +17,23 @@ const fields = [
   { name: "emergency_surcharge", label: "Emergency Surcharge (€)", type: "number" },
   { name: "vat_setting", label: "VAT Setting", type: "select", options: ["Included", "Exempt", "Standard 24%"] },
   { name: "active", label: "Active", type: "boolean" },
+  {
+    name: "default_visit_type",
+    label: "Default Visit Type",
+    type: "custom",
+    render: (values, setField) => (
+      <div>
+        <Select value={values.default_visit_type || "__none__"} onValueChange={(v) => setField("default_visit_type", v === "__none__" ? "" : v)}>
+          <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">None</SelectItem>
+            {VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground mt-1.5">Used to choose the default checklist/visit workflow when this service package is scheduled.</p>
+      </div>
+    ),
+  },
 ];
 
 const columns = [
