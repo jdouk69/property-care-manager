@@ -22,6 +22,13 @@ const VISIT_TYPES = [
   "Home Watch Inspection", "Property Care Inspection", "Emergency Visit", "Owner Representative Site Visit",
 ];
 
+// iPad touch-sizing helpers. Tablet range md–xl (768–1535) gets larger touch targets;
+// large desktop (≥2xl / 1536) resets to original so desktop behavior is preserved.
+const FIELD = "md:h-11 md:text-base 2xl:h-9 2xl:text-sm";
+const AREA = "md:text-base 2xl:text-sm";
+const BTN = "md:h-11 2xl:h-9";
+const BTN_SM = "md:h-10 md:px-4 md:text-sm 2xl:h-8 2xl:px-3 2xl:text-xs";
+
 export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, resumeVisitId, scheduleMode }) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -571,7 +578,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
         {draftConflict && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-2xl border border-border max-w-sm w-full p-5 shadow-xl">
+            <div className="bg-card rounded-2xl border border-border max-w-sm md:max-w-md 2xl:max-w-sm w-full p-5 shadow-xl">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 <h3 className="font-semibold">You already have a visit in progress.</h3>
@@ -618,18 +625,18 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <div>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Type</Label>
             <Select value={visitType} onValueChange={setVisitType}>
-              <SelectTrigger><SelectValue placeholder="Select visit type" /></SelectTrigger>
+              <SelectTrigger className={FIELD}><SelectValue placeholder="Select visit type" /></SelectTrigger>
               <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Date</Label>
-              <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
+              <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className={FIELD} />
             </div>
             <div>
               <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Time</Label>
-              <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+              <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className={FIELD} />
             </div>
           </div>
           <Button onClick={saveScheduled} disabled={saving || !scheduleDate || !scheduleTime || !visitType} className="w-full h-12 rounded-2xl text-base gap-2">
@@ -744,9 +751,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap"><Clock className="w-3 h-3" /> Started {(startTime || "").slice(11, 16)} · {visitType}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : templateSource === "Default" ? "Default checklist" : `${templateSource} template`}</Link>
+              <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 md:text-xs md:px-2.5 md:py-1 2xl:text-[10px] 2xl:px-2 2xl:py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : templateSource === "Default" ? "Default checklist" : `${templateSource} template`}</Link>
               {resumeVisitId ? (
-                <button type="button" onClick={async () => { if (!confirm("Cancel this visit?")) return; try { await base44.entities.PropertyVisit.update(resumeVisitId, { status: "Cancelled", end_time: new Date().toISOString() }); } catch (e) {} onDone(); }} className="text-[10px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive transition">Cancel visit</button>
+                <button type="button" onClick={async () => { if (!confirm("Cancel this visit?")) return; try { await base44.entities.PropertyVisit.update(resumeVisitId, { status: "Cancelled", end_time: new Date().toISOString() }); } catch (e) {} onDone(); }} className="text-[10px] px-2 py-0.5 md:text-xs md:px-2.5 md:py-1 2xl:text-[10px] 2xl:px-2 2xl:py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-destructive/10 hover:text-destructive transition">Cancel visit</button>
               ) : (
                 <CancelVisitMenu
                   draft={{ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds }}
@@ -759,7 +766,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar">
             {STEPS.map((s) => (
               <button key={s.key} onClick={() => goToStep(s.target)}
-                className={`flex items-center gap-1.5 shrink-0 text-[11px] px-2.5 py-1.5 rounded-full border transition ${s.done ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/60 text-muted-foreground border-border"}`}>
+                className={`flex items-center gap-1.5 shrink-0 text-[11px] px-2.5 py-1.5 md:text-sm md:px-4 md:py-2 2xl:text-[11px] 2xl:px-2.5 2xl:py-1.5 rounded-full border transition ${s.done ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/60 text-muted-foreground border-border"}`}>
                 {s.done ? <Check className="w-3 h-3" /> : <s.icon className="w-3 h-3" />}
                 {s.label}
               </button>
@@ -808,11 +815,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <div className="space-y-2">
               {meters.map((m, i) => (
                 <div key={i} className="flex gap-2">
-                  <Input value={m.label} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))} placeholder="Label" className="flex-1" />
-                  <Input value={m.value} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, value: e.target.value } : x))} placeholder="Reading" className="flex-1" />
+                  <Input value={m.label} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x))} placeholder="Label" className={`flex-1 ${FIELD}`} />
+                  <Input value={m.value} onChange={(e) => setMeters((arr) => arr.map((x, idx) => idx === i ? { ...x, value: e.target.value } : x))} placeholder="Reading" className={`flex-1 ${FIELD}`} />
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={() => setMeters((arr) => [...arr, { label: "", value: "", photo: "" }])} className="rounded-full"><Plus className="w-4 h-4" /> Add reading</Button>
+              <Button variant="outline" size="sm" onClick={() => setMeters((arr) => [...arr, { label: "", value: "", photo: "" }])} className={`rounded-full ${BTN_SM}`}><Plus className="w-4 h-4" /> Add reading</Button>
             </div>
           </div>
         </div>
@@ -846,16 +853,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
             <div className="flex items-center gap-2 mb-3"><Check className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Follow-up Task</h3></div>
             <div className="flex gap-2">
-              <Input value={followUpText} onChange={(e) => setFollowUpText(e.target.value)} placeholder="e.g. Order replacement pool filter" />
-              <Button variant="outline" onClick={addFollowUpTask} disabled={!followUpText.trim()}>Add</Button>
+              <Input value={followUpText} onChange={(e) => setFollowUpText(e.target.value)} placeholder="e.g. Order replacement pool filter" className={FIELD} />
+              <Button variant="outline" onClick={addFollowUpTask} disabled={!followUpText.trim()} className={BTN}>Add</Button>
             </div>
             {taskIds.length > 0 && <p className="text-xs text-emerald-600 mt-2">{taskIds.length} follow-up task(s) created.</p>}
             <p className="text-xs text-muted-foreground mt-2">For a contractor visit, use the Contractors module from the More menu.</p>
             <div className="mt-1">
               {skipped.tasks ? (
-                <button type="button" onClick={() => setSkipped((s) => ({ ...s, tasks: false }))} className="text-xs text-primary hover:underline">Skipped — tap to undo</button>
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, tasks: false }))} className="text-xs md:text-sm md:py-1 2xl:text-xs 2xl:py-0 text-primary hover:underline">Skipped — tap to undo</button>
               ) : (
-                <button type="button" onClick={() => setSkipped((s) => ({ ...s, tasks: true }))} className="text-xs text-muted-foreground hover:underline">Skip if nothing to add</button>
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, tasks: true }))} className="text-xs md:text-sm md:py-1 2xl:text-xs 2xl:py-0 text-muted-foreground hover:underline">Skip if nothing to add</button>
               )}
             </div>
           </div>
@@ -865,20 +872,20 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         <div id="step-expenses" className="scroll-mt-28">
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><Wallet className="w-3 h-3" /> Expenses / Receipts</p>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4 space-y-2.5">
-            <Input value={expVendor} onChange={(e) => setExpVendor(e.target.value)} placeholder="Vendor / description" />
+            <Input value={expVendor} onChange={(e) => setExpVendor(e.target.value)} placeholder="Vendor / description" className={FIELD} />
             <div className="flex gap-2">
-              <Input value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="Amount €" type="number" className="flex-1" />
-              <Input value={expPaidBy} onChange={(e) => setExpPaidBy(e.target.value)} placeholder="Paid by" className="flex-1" />
+              <Input value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="Amount €" type="number" className={`flex-1 ${FIELD}`} />
+              <Input value={expPaidBy} onChange={(e) => setExpPaidBy(e.target.value)} placeholder="Paid by" className={`flex-1 ${FIELD}`} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Select value={expIssueId} onValueChange={setExpIssueId}>
-                <SelectTrigger><SelectValue placeholder="Link issue (opt)" /></SelectTrigger>
+                <SelectTrigger className={FIELD}><SelectValue placeholder="Link issue (opt)" /></SelectTrigger>
                 <SelectContent>
                   {issueOptions.map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={expContractorId} onValueChange={setExpContractorId}>
-                <SelectTrigger><SelectValue placeholder="Link contractor (opt)" /></SelectTrigger>
+                <SelectTrigger className={FIELD}><SelectValue placeholder="Link contractor (opt)" /></SelectTrigger>
                 <SelectContent>
                   {contractors.map((c) => <SelectItem key={c.id} value={c.id}>{c.company}</SelectItem>)}
                 </SelectContent>
@@ -890,7 +897,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 <span>{expReceipt ? "Receipt attached" : "Attach receipt"}</span>
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => uploadReceipt(e.target.files?.[0])} />
               </label>
-              <Button size="sm" onClick={addExpenseInline} disabled={!expVendor.trim()} className="ml-auto rounded-full">Add expense</Button>
+              <Button size="sm" onClick={addExpenseInline} disabled={!expVendor.trim()} className={`ml-auto rounded-full ${BTN_SM}`}>Add expense</Button>
             </div>
             {expensesCreated.length > 0 && (
               <div className="space-y-1 pt-1">
@@ -905,9 +912,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             )}
             <div className="mt-1">
               {skipped.expenses ? (
-                <button type="button" onClick={() => setSkipped((s) => ({ ...s, expenses: false }))} className="text-xs text-primary hover:underline">Skipped — tap to undo</button>
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, expenses: false }))} className="text-xs md:text-sm md:py-1 2xl:text-xs 2xl:py-0 text-primary hover:underline">Skipped — tap to undo</button>
               ) : (
-                <button type="button" onClick={() => setSkipped((s) => ({ ...s, expenses: true }))} className="text-xs text-muted-foreground hover:underline">Skip if nothing to add</button>
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, expenses: true }))} className="text-xs md:text-sm md:py-1 2xl:text-xs 2xl:py-0 text-muted-foreground hover:underline">Skip if nothing to add</button>
               )}
             </div>
           </div>
@@ -917,9 +924,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         <div id="step-owner" className="scroll-mt-28">
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><MessageSquare className="w-3 h-3" /> Owner Update</p>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4 space-y-2.5">
-            <Input value={commSubject} onChange={(e) => setCommSubject(e.target.value)} placeholder="Subject e.g. Monthly visit summary" />
-            <Textarea value={commMessage} onChange={(e) => setCommMessage(e.target.value)} rows={2} placeholder="Message to the owner…" />
-            <Button size="sm" onClick={addOwnerUpdateInline} disabled={!commSubject.trim()} className="rounded-full"><Send className="w-3.5 h-3.5 mr-1.5" /> Log owner update</Button>
+            <Input value={commSubject} onChange={(e) => setCommSubject(e.target.value)} placeholder="Subject e.g. Monthly visit summary" className={FIELD} />
+            <Textarea value={commMessage} onChange={(e) => setCommMessage(e.target.value)} rows={2} placeholder="Message to the owner…" className={AREA} />
+            <Button size="sm" onClick={addOwnerUpdateInline} disabled={!commSubject.trim()} className={`rounded-full ${BTN_SM}`}><Send className="w-3.5 h-3.5 mr-1.5" /> Log owner update</Button>
             {commSent.length > 0 && (
               <div className="space-y-1 pt-1">
                 {commSent.map((c, i) => (
@@ -932,9 +939,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             )}
             <div className="mt-1">
               {skipped.owner ? (
-                <button type="button" onClick={() => setSkipped((s) => ({ ...s, owner: false }))} className="text-xs text-primary hover:underline">Skipped — tap to undo</button>
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, owner: false }))} className="text-xs md:text-sm md:py-1 2xl:text-xs 2xl:py-0 text-primary hover:underline">Skipped — tap to undo</button>
               ) : (
-                <button type="button" onClick={() => setSkipped((s) => ({ ...s, owner: true }))} className="text-xs text-muted-foreground hover:underline">Skip if nothing to add</button>
+                <button type="button" onClick={() => setSkipped((s) => ({ ...s, owner: true }))} className="text-xs md:text-sm md:py-1 2xl:text-xs 2xl:py-0 text-muted-foreground hover:underline">Skip if nothing to add</button>
               )}
             </div>
           </div>
@@ -945,7 +952,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Finish</p>
           <div className="mb-4">
             <Label className="text-xs mb-1.5 block">Visit Summary & Recommendations</Label>
-            <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="Overall findings and recommended next steps for the owner…" />
+            <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="Overall findings and recommended next steps for the owner…" className={AREA} />
           </div>
         </div>
 
@@ -963,7 +970,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <span className="text-xs text-primary shrink-0">Go →</span>
             </button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={backFromActive} className="rounded-2xl">Back</Button>
+              <Button variant="outline" onClick={backFromActive} className={`rounded-2xl ${BTN}`}>Back</Button>
               <Button
                 variant={canComplete ? "default" : "outline"}
                 onClick={() => (canComplete ? completeVisit() : setShowIncomplete(true))}
@@ -977,7 +984,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
         {showIncomplete && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-2xl border border-border max-w-sm w-full p-5 shadow-xl">
+            <div className="bg-card rounded-2xl border border-border max-w-sm md:max-w-md 2xl:max-w-sm w-full p-5 shadow-xl">
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 <h3 className="font-semibold">Visit incomplete</h3>

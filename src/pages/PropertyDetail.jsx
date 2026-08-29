@@ -127,20 +127,20 @@ export default function PropertyDetail() {
         </div>
 
         <Tabs defaultValue="overview">
-          <TabsList className="w-full justify-start overflow-x-auto mb-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="visits">Visits</TabsTrigger>
-            <TabsTrigger value="inspections">Inspections</TabsTrigger>
-            <TabsTrigger value="issues">Issues</TabsTrigger>
-            <TabsTrigger value="tasks">Tasks</TabsTrigger>
-            <TabsTrigger value="contractors">Contractors</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="receipts">Receipts</TabsTrigger>
-            <TabsTrigger value="keys">Key Activity</TabsTrigger>
-            <TabsTrigger value="updates">Owner Updates</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsList className="w-full justify-start overflow-x-auto mb-4 md:h-auto 2xl:h-9">
+            <TabsTrigger value="overview" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Overview</TabsTrigger>
+            <TabsTrigger value="visits" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Visits</TabsTrigger>
+            <TabsTrigger value="inspections" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Inspections</TabsTrigger>
+            <TabsTrigger value="issues" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Issues</TabsTrigger>
+            <TabsTrigger value="tasks" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Tasks</TabsTrigger>
+            <TabsTrigger value="contractors" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Contractors</TabsTrigger>
+            <TabsTrigger value="expenses" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Expenses</TabsTrigger>
+            <TabsTrigger value="receipts" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Receipts</TabsTrigger>
+            <TabsTrigger value="keys" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Key Activity</TabsTrigger>
+            <TabsTrigger value="updates" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Owner Updates</TabsTrigger>
+            <TabsTrigger value="documents" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Documents</TabsTrigger>
+            <TabsTrigger value="reports" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Reports</TabsTrigger>
+            <TabsTrigger value="timeline" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Timeline</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">

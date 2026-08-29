@@ -17,7 +17,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
   return (
     <div className="rounded-2xl border border-border bg-card p-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-foreground flex-1 leading-snug">{index + 1}. {item.name}</p>
+        <p className="text-sm md:text-base 2xl:text-sm font-medium text-foreground flex-1 leading-snug">{index + 1}. {item.name}</p>
         {(item.status === "Important" || item.status === "Emergency") && (
           <AlertTriangle className={`w-4 h-4 shrink-0 ${item.status === "Emergency" ? "text-rose-500" : "text-amber-500"}`} />
         )}
@@ -26,7 +26,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
       <div className="flex flex-wrap gap-1.5 mt-2">
         {STATUSES.map((s) => (
           <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-            className={`text-xs px-2.5 py-1 rounded-full border transition ${item.status === s.value ? s.cls + " font-medium" : "border-border text-muted-foreground hover:bg-muted"}`}>
+            className={`text-xs px-2.5 py-1 md:text-sm md:px-4 md:py-2.5 2xl:text-xs 2xl:px-2.5 2xl:py-1 rounded-full border transition ${item.status === s.value ? s.cls + " font-medium" : "border-border text-muted-foreground hover:bg-muted"}`}>
             {s.label}
           </button>
         ))}
@@ -34,14 +34,14 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
 
       {item.status !== "Not Checked" && (
         <div className="mt-2 space-y-2">
-          <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder="Notes…" rows={2} className="resize-none text-sm" />
+          <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder="Notes…" rows={2} className="resize-none text-sm md:text-base 2xl:text-sm" />
           <div className="grid grid-cols-4 gap-2">
             {(item.photos || []).map((url, i) => (
               <div key={i} className="relative group aspect-square">
                 <UIImage src={url} className="w-full h-full rounded-lg" fittingType="fill" />
                 <button type="button" onClick={() => onRemovePhoto(index, i)}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                  <X className="w-3 h-3" />
+                  className="absolute top-1 right-1 w-5 h-5 md:w-7 md:h-7 2xl:w-5 2xl:h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 md:opacity-100 2xl:opacity-0 transition">
+                  <X className="w-3 h-3 md:w-4 md:h-4 2xl:w-3 2xl:h-3" />
                 </button>
               </div>
             ))}
@@ -54,7 +54,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
           {(item.status === "Important" || item.status === "Emergency") && (
             <button type="button" onClick={() => onFlagIssue(index)}
               disabled={flagged}
-              className={`text-xs px-3 py-1.5 rounded-full border inline-flex items-center gap-1.5 transition ${flagged ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-primary/30 text-primary hover:bg-primary/10"}`}>
+              className={`text-xs px-3 py-1.5 md:text-sm md:px-4 md:py-2.5 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border inline-flex items-center gap-1.5 transition ${flagged ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-primary/30 text-primary hover:bg-primary/10"}`}>
               <Wrench className="w-3.5 h-3.5" /> {flagged ? "Issue created" : "Create maintenance issue"}
             </button>
           )}

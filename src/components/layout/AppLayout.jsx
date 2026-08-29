@@ -139,9 +139,9 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
             <button
               key={item.to}
               onClick={() => setMobileOpen(true)}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 text-[10px] md:text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-5 h-5 md:w-6 md:h-6" />
               {item.label}
             </button>
           ) : (
@@ -150,12 +150,12 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-0.5 flex-1 text-[10px] font-medium transition-colors ${
+                `flex flex-col items-center justify-center gap-0.5 flex-1 text-[10px] md:text-xs font-medium transition-colors ${
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`
               }
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-5 h-5 md:w-6 md:h-6" />
               {item.label}
             </NavLink>
           )

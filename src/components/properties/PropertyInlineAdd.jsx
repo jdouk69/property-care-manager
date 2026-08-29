@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Image as UIImage } from "@/components/ui/image";
 
+// iPad touch-sizing helpers (md–xl enlarged; ≥2xl resets to original).
+const FIELD = "md:h-11 md:text-base 2xl:h-9 2xl:text-sm";
+const AREA = "md:text-base 2xl:text-sm";
+
 export default function PropertyInlineAdd({ entity, propertyId, fields, defaultValues = {}, submitLabel = "Add", onCreated, moreLabel, moreLink }) {
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState({});
@@ -44,12 +48,12 @@ export default function PropertyInlineAdd({ entity, propertyId, fields, defaultV
     const val = values[f.name] ?? defaultValues[f.name] ?? "";
     switch (f.type) {
       case "textarea":
-        return <Textarea value={val} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} rows={2} />;
+        return <Textarea value={val} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} rows={2} className={AREA} />;
       case "select":
       case "entity-select":
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
-            <SelectTrigger><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
+            <SelectTrigger className={FIELD}><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
             <SelectContent>
               {(f.options || []).map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
@@ -58,9 +62,9 @@ export default function PropertyInlineAdd({ entity, propertyId, fields, defaultV
           </Select>
         );
       case "date":
-        return <Input type="date" value={val} onChange={(e) => setField(f.name, e.target.value)} />;
+        return <Input type="date" value={val} onChange={(e) => setField(f.name, e.target.value)} className={FIELD} />;
       case "number":
-        return <Input type="number" step="0.01" value={val} onChange={(e) => setField(f.name, parseFloat(e.target.value) || 0)} />;
+        return <Input type="number" step="0.01" value={val} onChange={(e) => setField(f.name, parseFloat(e.target.value) || 0)} className={FIELD} />;
       case "image":
         return (
           <div className="space-y-2">
@@ -73,14 +77,14 @@ export default function PropertyInlineAdd({ entity, propertyId, fields, defaultV
           </div>
         );
       default:
-        return <Input value={val} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} />;
+        return <Input value={val} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} className={FIELD} />;
     }
   };
 
   if (!open) {
     return (
       <div className="flex items-center justify-between gap-2 px-4 py-3">
-        <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="rounded-full gap-1.5">
+        <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="rounded-full gap-1.5 md:h-10 md:px-4 md:text-sm 2xl:h-8 2xl:px-3 2xl:text-xs">
           <Plus className="w-4 h-4" /> {submitLabel}
         </Button>
         {moreLink && (
@@ -96,20 +100,20 @@ export default function PropertyInlineAdd({ entity, propertyId, fields, defaultV
     <div className="px-4 py-3 space-y-2.5 bg-muted/40">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-muted-foreground">{submitLabel}</p>
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={reset}><X className="w-4 h-4" /></Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7 md:h-9 md:w-9 2xl:h-7 2xl:w-7" onClick={reset}><X className="w-4 h-4" /></Button>
       </div>
       {fields.map((f) => (
         <div key={f.name}>
-          {f.label && <Label className="text-xs text-muted-foreground mb-1 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
+          {f.label && <Label className="text-xs md:text-base 2xl:text-xs text-muted-foreground mb-1 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
           {renderField(f)}
         </div>
       ))}
       <div className="flex items-center gap-2 pt-1">
-        <Button size="sm" onClick={submit} disabled={saving} className="rounded-full gap-1.5">
+        <Button size="sm" onClick={submit} disabled={saving} className="rounded-full gap-1.5 md:h-10 md:px-4 md:text-sm 2xl:h-8 2xl:px-3 2xl:text-xs">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : done ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           {done ? "Saved" : "Save"}
         </Button>
-        <Button size="sm" variant="ghost" onClick={reset} className="rounded-full">Cancel</Button>
+        <Button size="sm" variant="ghost" onClick={reset} className="rounded-full md:h-10 md:px-4 md:text-sm 2xl:h-8 2xl:px-3 2xl:text-xs">Cancel</Button>
         {moreLink && (
           <a href={moreLink} className="text-xs text-primary hover:underline flex items-center gap-1 ml-auto">
             More details <ExternalLink className="w-3 h-3" />

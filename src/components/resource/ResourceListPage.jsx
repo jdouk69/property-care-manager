@@ -322,8 +322,8 @@ export default function ResourceListPage({
                 <div key={i} className="relative group aspect-square">
                   <UIImage src={url} className="w-full h-full rounded-lg" fittingType="fill" />
                   <button type="button" onClick={() => setField(f.name, (val || []).filter((_, idx) => idx !== i))}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                    <X className="w-3.5 h-3.5" />
+                    className="absolute top-1 right-1 w-6 h-6 md:w-8 md:h-8 2xl:w-6 2xl:h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 md:opacity-100 2xl:opacity-0 transition">
+                    <X className="w-3.5 h-3.5 md:w-4 md:h-4 2xl:w-3.5 2xl:h-3.5" />
                   </button>
                 </div>
               ))}
