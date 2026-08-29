@@ -84,6 +84,16 @@ export default function ResourceListPage({
   const [lookupsRaw, setLookupsRaw] = useState({});
   const debounceRef = useRef(null);
   const inFlightRef = useRef(null);
+  // Refs mirror the latest edit state so an unmount/route-leave flush can read the
+  // current record + values without relying on a stale render closure.
+  const editingRef = useRef(null);
+  const valuesRef = useRef({});
+  const dirtyRef = useRef(false);
+  const destructiveRef = useRef(false);
+  const inFlightValuesRef = useRef(null);
+  editingRef.current = editing;
+  valuesRef.current = values;
+  dirtyRef.current = dirty;
 
   const load = async () => {
     setLoading(true);
@@ -125,8 +135,8 @@ export default function ResourceListPage({
     );
   }, [items, query]);
 
-  const openNew = () => { flushPendingEdit(); setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setDrawerOpen(true); };
-  const openEdit = (it) => { flushPendingEdit(); setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setDrawerOpen(true); };
+  const openNew = () => { flushPendingEdit(); destructiveRef.current = false; setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setDrawerOpen(true); };
+  const openEdit = (it) => { flushPendingEdit(); destructiveRef.current = false; setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setDrawerOpen(true); };
   const setField = (k, v) => { setValues((s) => ({ ...s, [k]: v })); setDirty(true); setSaved(false); };
 
   const autoOpenDone = useRef(false);
@@ -174,6 +184,7 @@ export default function ResourceListPage({
 
   const remove = async (it) => {
     if (!confirm("Delete this record? This cannot be undone. Consider archiving instead.")) return;
+    destructiveRef.current = true;
     clearTimeout(debounceRef.current);
     setDirty(false);
     if (inFlightRef.current) { try { await inFlightRef.current; } catch {} }
@@ -185,6 +196,7 @@ export default function ResourceListPage({
   };
 
   const archive = async (it) => {
+    destructiveRef.current = true;
     clearTimeout(debounceRef.current);
     setDirty(false);
     if (inFlightRef.current) { try { await inFlightRef.current; } catch {} }
@@ -358,19 +370,52 @@ export default function ResourceListPage({
   const singular = title.replace(/s$/, "");
   const isMobile = useIsMobile();
 
-  // Single shared update primitive. Tracks the in-flight promise so Delete/Archive
-  // can wait for an already-fired autosave before mutating the same record.
-  const runUpdate = async (record, vals) => {
+  // Single shared persistence primitive. `updateUI` controls whether React state
+  // (setItems/onUpdated) is touched — true for live edits while mounted, false for
+  // the unmount/route-leave flush so we never update state after the component is gone.
+  const persistRecord = async (record, vals, { updateUI = true } = {}) => {
     const p = base44.entities[entityName].update(record.id, vals);
     inFlightRef.current = p;
+    inFlightValuesRef.current = vals;
     try {
       await p;
-      setItems((arr) => arr.map((it) => (it.id === record.id ? { ...it, ...vals } : it)));
-      if (onUpdated) onUpdated(record, vals);
+      if (updateUI) {
+        setItems((arr) => arr.map((it) => (it.id === record.id ? { ...it, ...vals } : it)));
+        if (onUpdated) onUpdated(record, vals);
+      }
     } finally {
-      if (inFlightRef.current === p) inFlightRef.current = null;
+      if (inFlightRef.current === p) { inFlightRef.current = null; inFlightValuesRef.current = null; }
     }
   };
+
+  const runUpdate = (record, vals) => persistRecord(record, vals, { updateUI: true });
+
+  // Route-leave / unmount autosave guard. Fires exactly once, against the ref
+  // snapshot, only for an existing dirty record that isn't mid-delete/archive.
+  useEffect(() => {
+    return () => {
+      const rec = editingRef.current;
+      const vals = valuesRef.current;
+      if (!rec || !dirtyRef.current || destructiveRef.current) return;
+      clearTimeout(debounceRef.current);
+      // If an update is already in flight with these exact values, let it finish.
+      const inflight = inFlightRef.current;
+      const inflightHasLatest = inflight && inFlightValuesRef.current &&
+        JSON.stringify(inFlightValuesRef.current) === JSON.stringify(vals);
+      if (inflightHasLatest) return;
+      const write = () => {
+        persistRecord(rec, vals, { updateUI: false }).catch((e) => {
+          if (typeof console !== "undefined") {
+            console.error("[ResourceListPage] route-leave autosave failed", e);
+          }
+        });
+      };
+      // If a stale in-flight save is running, chain the latest values after it so the
+      // newest values land last; otherwise persist immediately.
+      if (inflight) { inflight.then(write, write); } else { write(); }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Flush the CURRENT dirty edit (current editing.id + current values) before the
   // form is left, closed, or switched. No-op when not editing or not dirty.
