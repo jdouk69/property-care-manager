@@ -16,6 +16,7 @@ import { Image as UIImage } from "@/components/ui/image";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
 import RecurrencePanel from "@/components/recurrence/RecurrencePanel";
@@ -143,6 +144,7 @@ export default function Inspections() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton fallback="/" className="mb-3" />
         <PageHeader
           title="Inspections"
           subtitle="Customizable property checklists and photo reports"
