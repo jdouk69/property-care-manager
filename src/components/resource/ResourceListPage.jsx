@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { exportCsv } from "@/lib/exportCsv";
 import {
-  Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive, FileText, Upload
+  Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive, FileText, Upload, ArrowLeft
 } from "lucide-react";
 
 function formatBytes(b) {
@@ -23,6 +23,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescrip
 import { Image as UIImage } from "@/components/ui/image";
 import PageHeader from "@/components/ui/PageHeader";
 import PageBackButton from "@/components/ui/PageBackButton";
+import { useIsMobile } from "@/hooks/use-mobile";
 import EmptyState from "@/components/ui/EmptyState";
 
 const ENTITY_LABEL = { Client: "name", Property: "name", Contractor: "company", MaintenanceIssue: "title" };
@@ -67,7 +68,7 @@ export default function ResourceListPage({
   addItemLabel = "Add", renderSummary, defaultValues = {}, cardExtra,
   onCreated, onUpdated, extraDrawerContent, archivable = false,
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
-  showBack = true,
+  showBack = true, sections = [],
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -349,6 +350,105 @@ export default function ResourceListPage({
   };
 
   const singular = title.replace(/s$/, "");
+  const isMobile = useIsMobile();
+
+  const closeForm = () => setDrawerOpen(false);
+
+  const flushSave = async () => {
+    if (!editing || !dirty) { closeForm(); return; }
+    clearTimeout(debounceRef.current);
+    setSaving(true);
+    try {
+      await base44.entities[entityName].update(editing.id, values);
+      setItems((arr) => arr.map((it) => (it.id === editing.id ? { ...it, ...values } : it)));
+      setSaving(false); setSaved(true); setDirty(false);
+      if (onUpdated) onUpdated(editing, values);
+    } catch (e) { setSaving(false); return; }
+    closeForm();
+  };
+
+  const renderFieldRow = (f) => {
+    if (f.showIf && !f.showIf(values)) return null;
+    return (
+      <div key={f.name}>
+        {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
+        {renderField(f)}
+      </div>
+    );
+  };
+
+  const assignedNames = new Set();
+  (sections || []).forEach((s) => (s.fields || []).forEach((n) => assignedNames.add(n)));
+  const renderFormFields = (
+    <>
+      {(sections || []).map((sec) => (
+        <section key={sec.title} className="space-y-4">
+          <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-2">{sec.title}</h2>
+          {fields.filter((f) => (sec.fields || []).includes(f.name)).map(renderFieldRow)}
+        </section>
+      ))}
+      <div className="space-y-4">
+        {fields.filter((f) => !assignedNames.has(f.name)).map(renderFieldRow)}
+      </div>
+      {extraDrawerContent && editing && extraDrawerContent(editing, { reload: load, setValues })}
+    </>
+  );
+
+  const savingIndicator = (
+    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+      {saving && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>}
+      {saved && !saving && <><Check className="w-3.5 h-3.5 text-emerald-500" /> Saved</>}
+    </div>
+  );
+
+  const actionButtons = (
+    <>
+      {editing ? (
+        <div className="flex gap-1">
+          {archivable && (
+            <Button variant="ghost" className="sm:h-11" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> Archive</Button>
+          )}
+          <Button variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => remove(editing)}>
+            <Trash2 className="w-4 h-4 mr-1" /> Delete
+          </Button>
+        </div>
+      ) : <div />}
+      <div className="flex gap-2">
+        <Button variant="outline" className="sm:h-11 sm:px-5" onClick={closeForm}>Cancel</Button>
+        {editing ? (
+          <Button className="sm:h-11 sm:px-5" onClick={flushSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}</Button>
+        ) : (
+          <Button className="sm:h-11 sm:px-5" onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}</Button>
+        )}
+      </div>
+    </>
+  );
+
+  // Tablet / desktop: open as a true full page (no modal/sheet/backdrop).
+  if (!isMobile && drawerOpen) {
+    return (
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-32">
+        <button
+          type="button"
+          onClick={closeForm}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg px-2.5 py-1.5 -ml-1 transition-colors min-h-[36px] touch-manipulation mb-3"
+        >
+          <ArrowLeft className="w-4 h-4 shrink-0" /> Back
+        </button>
+        <div className="flex items-center gap-3">
+          {Icon && <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" /></div>}
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">{editing ? `Edit ${singular}` : `Add ${singular}`}</h1>
+        </div>
+
+        <div className="mt-6 space-y-6">{renderFormFields}</div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-border pt-6">
+          <div className="mr-auto">{savingIndicator}</div>
+          {actionButtons}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6">
@@ -416,48 +516,25 @@ export default function ResourceListPage({
         </div>
       )}
 
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent className="w-full sm:left-0 sm:m-auto sm:h-[90vh] sm:w-[90%] sm:max-w-3xl lg:max-w-4xl sm:rounded-2xl sm:border sm:shadow-xl flex flex-col overflow-hidden">
-          <SheetHeader className="sm:pr-12">
-            <SheetTitle className="sm:text-xl">{editing ? `Edit ${singular}` : `New ${singular}`}</SheetTitle>
-            <SheetDescription className="sr-only">Form</SheetDescription>
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
-              {saving && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>}
-              {saved && !saving && <><Check className="w-3.5 h-3.5 text-emerald-500" /> Saved</>}
-            </div>
-          </SheetHeader>
+      {isMobile && (
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetContent className="w-full h-full flex flex-col overflow-hidden">
+            <SheetHeader>
+              <SheetTitle>{editing ? `Edit ${singular}` : `New ${singular}`}</SheetTitle>
+              <SheetDescription className="sr-only">Form</SheetDescription>
+              {savingIndicator}
+            </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-1 py-4 space-y-4 sm:space-y-6">
-            {fields.map((f) => {
-              if (f.showIf && !f.showIf(values)) return null;
-              return (
-                <div key={f.name}>
-                  {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
-                  {renderField(f)}
-                </div>
-              );
-            })}
-            {extraDrawerContent && editing && extraDrawerContent(editing, { reload: load, setValues })}
-          </div>
-
-          <SheetFooter className="flex-row gap-2 sm:justify-between border-t pt-4">
-            {editing ? (
-              <div className="flex gap-1">
-                {archivable && (
-                  <Button variant="ghost" className="sm:h-11" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> Archive</Button>
-                )}
-                <Button variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => remove(editing)}>
-                  <Trash2 className="w-4 h-4 mr-1" /> Delete
-                </Button>
-              </div>
-            ) : <div />}
-            <div className="flex gap-2">
-              <Button variant="outline" className="sm:h-11 sm:px-5" onClick={() => setDrawerOpen(false)}>Close</Button>
-              {!editing && <Button className="sm:h-11 sm:px-5" onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}</Button>}
+            <div className="flex-1 overflow-y-auto px-1 py-4 space-y-4">
+              {renderFormFields}
             </div>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+
+            <SheetFooter className="flex-row gap-2 justify-between border-t pt-4">
+              {actionButtons}
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

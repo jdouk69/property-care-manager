@@ -76,6 +76,10 @@ export default function Properties() {
         icon={Home}
         fields={fields}
         columns={columns}
+        sections={[
+          { title: "Property Details", fields: ["name", "owner_id", "property_type", "status", "condition"] },
+          { title: "Location", fields: ["location"] },
+        ]}
         searchKeys={["name", "address"]}
         addItemLabel="Add Property"
         archivable
