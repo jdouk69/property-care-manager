@@ -254,7 +254,7 @@ export default function ResourceListPage({
         );
       }
       case "date":
-        return <Input className="sm:h-12 sm:text-base" type="date" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
+        return <Input className="w-full min-w-0 max-w-full sm:h-12 sm:text-base" type="date" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
       case "time":
         return <Input className="sm:h-12 sm:text-base" type="time" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
       case "number":
