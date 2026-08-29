@@ -83,6 +83,7 @@ export default function ResourceListPage({
   const [lookups, setLookups] = useState({});
   const [lookupsRaw, setLookupsRaw] = useState({});
   const debounceRef = useRef(null);
+  const inFlightRef = useRef(null);
 
   const load = async () => {
     setLoading(true);
@@ -124,8 +125,8 @@ export default function ResourceListPage({
     );
   }, [items, query]);
 
-  const openNew = () => { setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setDrawerOpen(true); };
-  const openEdit = (it) => { setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setDrawerOpen(true); };
+  const openNew = () => { flushPendingEdit(); setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setDrawerOpen(true); };
+  const openEdit = (it) => { flushPendingEdit(); setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setDrawerOpen(true); };
   const setField = (k, v) => { setValues((s) => ({ ...s, [k]: v })); setDirty(true); setSaved(false); };
 
   const autoOpenDone = useRef(false);
@@ -148,13 +149,12 @@ export default function ResourceListPage({
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
-        await base44.entities[entityName].update(editing.id, values);
-        setItems((arr) => arr.map((it) => (it.id === editing.id ? { ...it, ...values } : it)));
+        await runUpdate(editing, values);
         setSaving(false); setSaved(true); setDirty(false);
-        if (onUpdated) onUpdated(editing, values);
       } catch (e) { setSaving(false); }
     }, 1000);
     return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values]);
 
   const saveNew = async () => {
@@ -174,6 +174,9 @@ export default function ResourceListPage({
 
   const remove = async (it) => {
     if (!confirm("Delete this record? This cannot be undone. Consider archiving instead.")) return;
+    clearTimeout(debounceRef.current);
+    setDirty(false);
+    if (inFlightRef.current) { try { await inFlightRef.current; } catch {} }
     try {
       await base44.entities[entityName].delete(it.id);
       setItems((arr) => arr.filter((x) => x.id !== it.id));
@@ -182,6 +185,9 @@ export default function ResourceListPage({
   };
 
   const archive = async (it) => {
+    clearTimeout(debounceRef.current);
+    setDirty(false);
+    if (inFlightRef.current) { try { await inFlightRef.current; } catch {} }
     try {
       await base44.entities[entityName].update(it.id, { archived: true });
       setItems((arr) => arr.filter((x) => x.id !== it.id));
@@ -352,19 +358,37 @@ export default function ResourceListPage({
   const singular = title.replace(/s$/, "");
   const isMobile = useIsMobile();
 
-  const closeForm = () => setDrawerOpen(false);
+  // Single shared update primitive. Tracks the in-flight promise so Delete/Archive
+  // can wait for an already-fired autosave before mutating the same record.
+  const runUpdate = async (record, vals) => {
+    const p = base44.entities[entityName].update(record.id, vals);
+    inFlightRef.current = p;
+    try {
+      await p;
+      setItems((arr) => arr.map((it) => (it.id === record.id ? { ...it, ...vals } : it)));
+      if (onUpdated) onUpdated(record, vals);
+    } finally {
+      if (inFlightRef.current === p) inFlightRef.current = null;
+    }
+  };
+
+  // Flush the CURRENT dirty edit (current editing.id + current values) before the
+  // form is left, closed, or switched. No-op when not editing or not dirty.
+  const flushPendingEdit = async () => {
+    if (!editing || !dirty) return;
+    clearTimeout(debounceRef.current);
+    try {
+      await runUpdate(editing, values);
+      setDirty(false);
+    } catch (e) { /* leave dirty; next change retriggers autosave */ }
+  };
+
+  const closeForm = () => { flushPendingEdit(); setDrawerOpen(false); };
 
   const flushSave = async () => {
-    if (!editing || !dirty) { closeForm(); return; }
-    clearTimeout(debounceRef.current);
     setSaving(true);
-    try {
-      await base44.entities[entityName].update(editing.id, values);
-      setItems((arr) => arr.map((it) => (it.id === editing.id ? { ...it, ...values } : it)));
-      setSaving(false); setSaved(true); setDirty(false);
-      if (onUpdated) onUpdated(editing, values);
-    } catch (e) { setSaving(false); return; }
-    closeForm();
+    try { await flushPendingEdit(); } finally { setSaving(false); }
+    setDrawerOpen(false);
   };
 
   const renderFieldRow = (f) => {
@@ -517,7 +541,7 @@ export default function ResourceListPage({
       )}
 
       {isMobile && (
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <Sheet open={drawerOpen} onOpenChange={(open) => { if (!open) closeForm(); }}>
           <SheetContent className="w-full h-full flex flex-col overflow-hidden">
             <SheetHeader>
               <SheetTitle>{editing ? `Edit ${singular}` : `New ${singular}`}</SheetTitle>
