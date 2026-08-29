@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -148,6 +148,24 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped });
     }
   }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped]);
+
+  // Safety net: if a visit is active but the checklist failed to load (a transient list failure, or a
+  // stale draft left over from before a Master template existed), re-attempt the lookup once so a
+  // matching Master template is still applied automatically. Lookup priority is unchanged.
+  const noneRetryDone = useRef(false);
+  useEffect(() => {
+    if (step !== "active") { noneRetryDone.current = false; return; }
+    if (noneRetryDone.current) return;
+    if (checklist.length > 0 || templateSource !== "None" || !visitType) return;
+    noneRetryDone.current = true;
+    (async () => {
+      try {
+        const { items, source, found } = await loadChecklistItems(propertyId, visitType);
+        if (found && items.length > 0) { setChecklist(items); setTemplateSource(source); setChecklistLoadError(""); }
+      } catch (e) {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, checklist.length, templateSource, visitType, propertyId]);
 
   const propertyName = properties.find((p) => p.id === propertyId)?.name || "";
 
@@ -688,7 +706,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             </button>
           ))}
         </div>
-        <Button onClick={startVisit} className="w-full mt-5 h-12 rounded-2xl text-base">
+        <Button onClick={() => startVisit(visitType)} className="w-full mt-5 h-12 rounded-2xl text-base">
           <Navigation className="w-5 h-5 mr-2" /> Start Visit & Record Arrival
         </Button>
       </div>
