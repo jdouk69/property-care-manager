@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import jsPDF from "jspdf";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
+import PageBackButton from "@/components/ui/PageBackButton";
 import EmptyState from "@/components/ui/EmptyState";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -84,6 +85,7 @@ export default function Reports() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-4xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton className="mb-3" />
         <PageHeader title="Reports" subtitle="Generate and export professional reports" icon={FileText} />
 
         <div className="rounded-2xl border border-border bg-card p-5 mb-6">

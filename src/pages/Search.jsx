@@ -4,6 +4,7 @@ import { Search as SearchIcon, Users, Home, HardHat, ListChecks, Wrench, FileTex
 import { Input } from "@/components/ui/input";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
+import PageBackButton from "@/components/ui/PageBackButton";
 import EmptyState from "@/components/ui/EmptyState";
 import { base44 } from "@/api/base44Client";
 
@@ -45,6 +46,7 @@ export default function Search() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton className="mb-3" />
         <PageHeader title="Search" subtitle="Find anything across your business" icon={SearchIcon} />
         <div className="relative">
           <SearchIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import AppLayout from "@/components/layout/AppLayout";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { SEED, VISIT_TYPES } from "@/lib/checklistSeed";
 
 export default function ChecklistTemplates() {
@@ -134,6 +135,7 @@ export default function ChecklistTemplates() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton className="mb-3" />
         <div className="flex items-center justify-between mb-2">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Checklist Templates</h1>

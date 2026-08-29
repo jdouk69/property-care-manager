@@ -5,6 +5,7 @@ import {
   ChevronDown, ChevronRight,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,9 +204,7 @@ export default function ServiceAgreement() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-28 lg:pb-6">
-        <Link to={backTo} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-3">
-          <ArrowLeft className="w-4 h-4" /> Back to Client Hub
-        </Link>
+        <PageBackButton fallback={backTo} className="mb-1" />
         <h1 className="text-xl font-semibold mb-4">{isEdit ? "Edit Service Agreement" : "New Service Agreement"}</h1>
 
         {!client ? (

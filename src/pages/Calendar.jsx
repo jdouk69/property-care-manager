@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -70,6 +71,7 @@ export default function Calendar() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton className="mb-3" />
         <PageHeader title="Calendar" subtitle="Your schedule at a glance" icon={CalendarDays}
           actions={<Link to="/tasks"><Button size="sm" className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> Add Task</Button></Link>}
         />

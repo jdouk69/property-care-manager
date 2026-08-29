@@ -7,6 +7,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import EmptyState from "@/components/ui/EmptyState";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import VisitWizard from "@/components/visits/VisitWizard";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { loadDraft, clearDraft } from "@/lib/visitDraft";
 
 export default function Visits() {
@@ -83,6 +84,7 @@ export default function Visits() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton className="mb-3" />
         <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Property Visits</h1>

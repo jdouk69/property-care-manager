@@ -7,6 +7,7 @@ import {
   ArrowRight, ArrowLeft, Globe, Languages, Loader2, MapPin, Sparkles,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/EmptyState";
@@ -133,9 +134,7 @@ export default function ClientHub() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
-        <Link to="/clients" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-3">
-          <ArrowLeft className="w-4 h-4" /> Back to Clients
-        </Link>
+        <PageBackButton fallback="/clients" className="mb-1" />
 
         {/* Header */}
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">

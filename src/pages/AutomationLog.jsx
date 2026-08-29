@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { History, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
+import PageBackButton from "@/components/ui/PageBackButton";
 import EmptyState from "@/components/ui/EmptyState";
 
 export default function AutomationLog() {
@@ -39,6 +40,7 @@ export default function AutomationLog() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-4xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton className="mb-3" />
         <PageHeader title="Automation Log" subtitle="History of recurring tasks and notifications" icon={History} />
 
         <div className="flex flex-wrap gap-1.5 mb-4">

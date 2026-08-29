@@ -22,6 +22,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
 import { Image as UIImage } from "@/components/ui/image";
 import PageHeader from "@/components/ui/PageHeader";
+import PageBackButton from "@/components/ui/PageBackButton";
 import EmptyState from "@/components/ui/EmptyState";
 
 const ENTITY_LABEL = { Client: "name", Property: "name", Contractor: "company", MaintenanceIssue: "title" };
@@ -66,6 +67,7 @@ export default function ResourceListPage({
   addItemLabel = "Add", renderSummary, defaultValues = {}, cardExtra,
   onCreated, onUpdated, extraDrawerContent, archivable = false,
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
+  showBack = true,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -350,6 +352,8 @@ export default function ResourceListPage({
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6">
+      {showBack && <PageBackButton className="mb-3" />}
+
       <PageHeader
         title={title}
         subtitle={subtitle}

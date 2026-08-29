@@ -12,6 +12,7 @@ import { Image as UIImage } from "@/components/ui/image";
 import { exportEntityCsv } from "@/lib/exportCsv";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { base44 } from "@/api/base44Client";
 
 const FUTURE_FEATURES = [
@@ -79,6 +80,7 @@ export default function Settings() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+        <PageBackButton className="mb-3" />
         <PageHeader title="Settings" subtitle="Business profile and preferences" icon={SettingsIcon} />
 
         {/* Business profile */}

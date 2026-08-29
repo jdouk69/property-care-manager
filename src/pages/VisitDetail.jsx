@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import AppLayout from "@/components/layout/AppLayout";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { Image as UIImage } from "@/components/ui/image";
 import { generateVisitReportPdf } from "@/lib/visitReport";
 
@@ -139,7 +140,7 @@ export default function VisitDetail() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-        <Link to="/visits" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"><ChevronLeft className="w-4 h-4" /> Visits</Link>
+        <PageBackButton fallback="/visits" className="mb-2" />
 
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">
           <h1 className="text-xl font-semibold">{property.name || "Property"}</h1>

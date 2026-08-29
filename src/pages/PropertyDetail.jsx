@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Image as UIImage } from "@/components/ui/image";
 import AppLayout from "@/components/layout/AppLayout";
+import PageBackButton from "@/components/ui/PageBackButton";
 import { base44 } from "@/api/base44Client";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import EmptyState from "@/components/ui/EmptyState";
@@ -104,9 +105,7 @@ export default function PropertyDetail() {
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
-        <Link to="/properties" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
-          <ArrowLeft className="w-4 h-4" /> Properties
-        </Link>
+        <PageBackButton fallback="/properties" className="mb-3" />
 
         <div className="flex items-start justify-between gap-3 flex-wrap mb-6">
           <div className="flex items-center gap-3">
