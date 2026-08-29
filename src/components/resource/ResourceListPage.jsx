@@ -200,11 +200,11 @@ export default function ResourceListPage({
     const val = values[f.name];
     switch (f.type) {
       case "textarea":
-        return <Textarea value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} rows={3} />;
+        return <Textarea className="sm:text-base" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} rows={3} />;
       case "select":
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
-            <SelectTrigger><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
+            <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
             <SelectContent>
               {(f.options || []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
             </SelectContent>
@@ -216,7 +216,7 @@ export default function ResourceListPage({
           : Object.entries(lookups[f.entity] || {});
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
-            <SelectTrigger><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
+            <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
             <SelectContent>
               {opts.map(([id, label]) => (
                 <SelectItem key={id} value={id}>{label}</SelectItem>
@@ -226,11 +226,11 @@ export default function ResourceListPage({
         );
       }
       case "date":
-        return <Input type="date" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
+        return <Input className="sm:h-12 sm:text-base" type="date" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
       case "time":
-        return <Input type="time" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
+        return <Input className="sm:h-12 sm:text-base" type="time" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} />;
       case "number":
-        return <Input type="number" step="0.01" value={val ?? ""} onChange={(e) => setField(f.name, parseFloat(e.target.value) || 0)} />;
+        return <Input className="sm:h-12 sm:text-base" type="number" step="0.01" value={val ?? ""} onChange={(e) => setField(f.name, parseFloat(e.target.value) || 0)} />;
       case "boolean":
         return (
           <div className="flex items-center gap-2 pt-1">
@@ -329,7 +329,7 @@ export default function ResourceListPage({
       case "custom":
         return f.render ? f.render(values, setField) : null;
       default:
-        return <Input value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} />;
+        return <Input className="sm:h-12 sm:text-base" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} />;
     }
   };
 
@@ -417,22 +417,22 @@ export default function ResourceListPage({
       )}
 
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
-          <SheetHeader>
-            <SheetTitle>{editing ? `Edit ${singular}` : `New ${singular}`}</SheetTitle>
+        <SheetContent className="w-full sm:left-0 sm:m-auto sm:h-[90vh] sm:w-[90%] sm:max-w-3xl lg:max-w-4xl sm:rounded-2xl sm:border sm:shadow-xl flex flex-col overflow-hidden">
+          <SheetHeader className="sm:pr-12">
+            <SheetTitle className="sm:text-xl">{editing ? `Edit ${singular}` : `New ${singular}`}</SheetTitle>
             <SheetDescription className="sr-only">Form</SheetDescription>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
               {saving && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>}
               {saved && !saving && <><Check className="w-3.5 h-3.5 text-emerald-500" /> Saved</>}
             </div>
           </SheetHeader>
 
-          <div className="flex-1 px-1 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-1 py-4 space-y-4 sm:space-y-6">
             {fields.map((f) => {
               if (f.showIf && !f.showIf(values)) return null;
               return (
                 <div key={f.name}>
-                  {f.label && <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
+                  {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
                   {renderField(f)}
                 </div>
               );
@@ -444,16 +444,16 @@ export default function ResourceListPage({
             {editing ? (
               <div className="flex gap-1">
                 {archivable && (
-                  <Button variant="ghost" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> Archive</Button>
+                  <Button variant="ghost" className="sm:h-11" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> Archive</Button>
                 )}
-                <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={() => remove(editing)}>
+                <Button variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => remove(editing)}>
                   <Trash2 className="w-4 h-4 mr-1" /> Delete
                 </Button>
               </div>
             ) : <div />}
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setDrawerOpen(false)}>Close</Button>
-              {!editing && <Button onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}</Button>}
+              <Button variant="outline" className="sm:h-11 sm:px-5" onClick={() => setDrawerOpen(false)}>Close</Button>
+              {!editing && <Button className="sm:h-11 sm:px-5" onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}</Button>}
             </div>
           </SheetFooter>
         </SheetContent>
