@@ -520,7 +520,7 @@ export default function ResourceListPage({
   if (!isMobile && drawerOpen) {
     return (
       <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 flex justify-center items-start p-4 pb-10 2xl:static 2xl:z-0 2xl:bg-transparent 2xl:overflow-visible 2xl:p-0 2xl:block">
-        <div className="w-full max-w-[92%] md:max-w-[880px] xl:max-w-[1020px] my-4 rounded-2xl bg-card shadow-xl border border-border p-6 pb-10 2xl:max-w-5xl 2xl:mx-auto 2xl:my-0 2xl:shadow-none 2xl:bg-transparent 2xl:border-0 2xl:rounded-none 2xl:pb-32">
+        <div className="w-full min-w-0 max-w-[92%] md:max-w-[880px] xl:max-w-[1020px] my-4 rounded-2xl bg-card shadow-xl border border-border p-6 pb-10 overflow-x-hidden 2xl:max-w-5xl 2xl:mx-auto 2xl:my-0 2xl:shadow-none 2xl:bg-transparent 2xl:border-0 2xl:rounded-none 2xl:pb-32">
           <div className="flex items-center justify-between gap-2 mb-3">
             <button
               type="button"
@@ -629,7 +629,7 @@ export default function ResourceListPage({
               {savingIndicator}
             </SheetHeader>
 
-            <div className="flex-1 overflow-y-auto px-1 py-4 space-y-4">
+            <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden px-1 py-4 space-y-4">
               {renderFormFields}
             </div>
 
