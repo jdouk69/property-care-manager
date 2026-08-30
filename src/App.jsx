@@ -38,6 +38,8 @@ import PropertyDocuments from '@/pages/PropertyDocuments';
 import ChecklistTemplates from '@/pages/ChecklistTemplates';
 import ClientHub from '@/pages/ClientHub';
 import ServiceAgreement from '@/pages/ServiceAgreement';
+import IntakeForm from '@/pages/IntakeForm';
+import IntakeReview from '@/pages/IntakeReview';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -69,10 +71,13 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Public customer intake — NOT protected. Gated by secure token server-side. */}
+      <Route path="/intake/:token" element={<IntakeForm />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientHub />} />
+        <Route path="/clients/:id/intake" element={<IntakeReview />} />
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} />
         <Route path="/tasks" element={<Tasks />} />

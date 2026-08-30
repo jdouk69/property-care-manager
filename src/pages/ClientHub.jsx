@@ -11,6 +11,7 @@ import PageBackButton from "@/components/ui/PageBackButton";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/EmptyState";
+import ClientIntakePanel from "@/components/intake/ClientIntakePanel";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -64,11 +65,12 @@ export default function ClientHub() {
   const [communications, setCommunications] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [agreements, setAgreements] = useState([]);
+  const [intakes, setIntakes] = useState([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, allProps, pkgs, allVisits, allTasks, allMaint, allExp, allInv, allComm, allDocs, allAgs] = await Promise.all([
+        const [c, allProps, pkgs, allVisits, allTasks, allMaint, allExp, allInv, allComm, allDocs, allAgs, allIntakes] = await Promise.all([
           base44.entities.Client.get(id),
           base44.entities.Property.list("-created_date", 500),
           base44.entities.ServicePackage.list("-created_date", 200),
@@ -80,6 +82,7 @@ export default function ClientHub() {
           base44.entities.OwnerCommunication.list("-date", 200),
           base44.entities.PropertyDocument.list("-created_date", 200),
           base44.entities.PropertyServiceAgreement.list("-created_date", 200),
+          base44.entities.CustomerIntake.list("-created_date", 200),
         ]);
         setClient(c);
         const props = (allProps || []).filter((p) => p.owner_id === id && !p.archived);
@@ -96,6 +99,7 @@ export default function ClientHub() {
         setCommunications((allComm || []).filter((co) => co.client_id === id || propIds.has(co.property_id)));
         setDocuments((allDocs || []).filter((d) => d.client_id === id || propIds.has(d.property_id)));
         setAgreements((allAgs || []).filter((a) => (a.client_id === id || propIds.has(a.property_id)) && !a.archived));
+        setIntakes((allIntakes || []).filter((i) => i.client_id === id && !i.archived));
       } catch (e) {}
       setLoading(false);
     })();
@@ -104,13 +108,23 @@ export default function ClientHub() {
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!client) return <AppLayout><div className="p-6"><EmptyState icon={Home} title="Client not found" /></div></AppLayout>;
 
+  const reloadIntakes = async () => {
+    try {
+      const all = await base44.entities.CustomerIntake.list("-created_date", 200);
+      setIntakes((all || []).filter((i) => i.client_id === id && !i.archived));
+    } catch (e) {}
+  };
+
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
   const activeAgreements = agreements.filter((a) => a.status === "Active");
   const liveVisits = visits.filter((v) => v.status === "Scheduled" || v.status === "In Progress");
   const hasStartedVisit = visits.some((v) => v.status === "In Progress" || v.status === "Completed");
 
   let nextStep = null;
-  if (properties.length === 0) {
+  const latestIntake = (intakes || []).slice().sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0] || null;
+  if (latestIntake && (latestIntake.status === "Received" || latestIntake.status === "Reviewed")) {
+    nextStep = { label: "Review the customer's intake submission", to: `/clients/${id}/intake`, button: "Review Intake" };
+  } else if (properties.length === 0) {
     nextStep = { label: "Add the client's first property", to: `/properties?add=1&owner=${id}`, button: "Add Property" };
   } else if (activeAgreements.length === 0) {
     nextStep = { label: "Assign a service package", to: `/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`, button: "Assign Service Package" };
@@ -177,6 +191,9 @@ export default function ClientHub() {
             <Link to={nextStep.to}><Button size="sm" className="gap-1.5 shrink-0">{nextStep.button} <ArrowRight className="w-4 h-4" /></Button></Link>
           </div>
         )}
+
+        {/* Customer intake */}
+        <ClientIntakePanel client={client} intakes={intakes} onChanged={reloadIntakes} />
 
         {/* Properties */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">
