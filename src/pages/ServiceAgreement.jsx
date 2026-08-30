@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom"
 import {
   ArrowLeft, Package, Loader2, Save, User, Building2, FileText,
   ChevronDown, ChevronRight, Eye, Lock, AlertTriangle, Send,
-  CheckCircle2, Copy, MessageCircle,
+  CheckCircle2, Copy, MessageCircle, Download,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -615,6 +615,16 @@ export default function ServiceAgreement() {
                 {values.signer_name && <p className="text-xs text-muted-foreground">Signed by: {values.signer_name}</p>}
                 {values.signer_email && <p className="text-xs text-muted-foreground">Email: {values.signer_email}</p>}
                 {values.signed_at && <p className="text-xs text-muted-foreground">Signed {formatSentAt(values.signed_at)}</p>}
+                {values.signed_pdf_url && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <a href={values.signed_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 h-8 rounded-md border border-input bg-transparent px-3 text-xs font-medium hover:bg-accent">
+                      <FileText className="w-3.5 h-3.5" /> View Signed Agreement
+                    </a>
+                    <a href={values.signed_pdf_url} download className="inline-flex items-center gap-1.5 h-8 rounded-md border border-input bg-transparent px-3 text-xs font-medium hover:bg-accent">
+                      <Download className="w-3.5 h-3.5" /> Download PDF
+                    </a>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground pt-1">Activation pending — review and activate the service when ready.</p>
               </div>
             )}

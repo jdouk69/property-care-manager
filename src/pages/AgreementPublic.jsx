@@ -54,7 +54,7 @@ export default function AgreementPublic() {
   const [signature, setSignature] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const [done, setDone] = useState(null); // "signed" | "declined" | { signer_name, signed_at, version }
+  const [done, setDone] = useState(null); // { type: "signed" | "declined", signed_pdf_url, signed_at, signer_name, version }
 
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
@@ -91,7 +91,7 @@ export default function AgreementPublic() {
     });
     setSubmitting(false);
     if (d && d.ok) {
-      setDone({ type: "signed", signer_name: d.signer_name, signed_at: d.signed_at, version: d.agreement_version });
+      setDone({ type: "signed", signed_pdf_url: d.signed_pdf_url, signed_at: d.signed_at, signer_name: d.signer_name, version: d.agreement_version });
     } else {
       setFormError((d && d.error) || "Signing failed. Please try again.");
     }
@@ -146,65 +146,12 @@ export default function AgreementPublic() {
   const emergency = snap.emergency_authorization || {};
   const sections = snap.sections || [];
 
-  // Terminal states
-  if (done && done.type === "signed") {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <div className="rounded-2xl border border-emerald-200 bg-white p-6 sm:p-8 text-center">
-            <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
-            <h1 className="text-xl font-semibold text-slate-900">Agreement signed successfully</h1>
-            <p className="text-sm text-slate-600 mt-2">Signed by {done.signer_name} on {fmt(done.signed_at)}</p>
-            <p className="text-xs text-slate-500 mt-1">Version {done.version}</p>
-            <p className="text-sm text-slate-600 mt-5">A signed copy will be available from the service provider.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  if (done && done.type === "declined") {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <div className="rounded-2xl border border-border bg-white p-6 sm:p-8 text-center">
-            <XCircle className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-            <h1 className="text-lg font-semibold text-slate-900">Decline recorded</h1>
-            <p className="text-sm text-slate-600 mt-2">The service provider has been notified. They will contact you to discuss any requested changes.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Already signed before this visit
-  if (data.signing_status === "Signed") {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <div className="rounded-2xl border border-emerald-200 bg-white p-6 sm:p-8 text-center">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-3" />
-            <h1 className="text-lg font-semibold text-slate-900">This agreement has already been signed</h1>
-            {data.signed_at && <p className="text-sm text-slate-600 mt-2">Signed on {fmt(data.signed_at)}</p>}
-          </div>
-        </div>
-      </div>
-    );
-  }
-  if (data.signing_status === "Declined") {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <div className="rounded-2xl border border-border bg-white p-6 sm:p-8 text-center">
-            <XCircle className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-            <h1 className="text-lg font-semibold text-slate-900">This agreement has been declined</h1>
-            <p className="text-sm text-slate-600 mt-2">The service provider will contact you to discuss any requested changes.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const consentTextValue = consentText(snap);
+  const isSigned = (done && done.type === "signed") || data.signing_status === "Signed";
+  const isDeclined = (done && done.type === "declined") || data.signing_status === "Declined";
+  const signedPdfUrl = (done && done.signed_pdf_url) || data.signed_pdf_url;
+  const signedAt = (done && done.signed_at) || data.signed_at;
+  const signerNameDisplay = (done && done.signer_name) || "";
+  const signable = data.signable && !isSigned && !isDeclined;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -258,7 +205,7 @@ export default function AgreementPublic() {
           </div>
         )}
 
-        {/* Frozen sections */}
+        {/* Frozen sections (always read-only) */}
         <div className="rounded-2xl border border-border bg-white p-5 sm:p-6 mb-4 space-y-5">
           {sections.map((s, i) => (
             <section key={s.id || i}>
@@ -286,8 +233,42 @@ export default function AgreementPublic() {
           )}
         </div>
 
-        {/* Signable form */}
-        {data.signable ? (
+        {/* Signed state: read-only confirmation + signed-copy access */}
+        {isSigned && (
+          <div className="rounded-2xl border border-emerald-200 bg-white p-5 sm:p-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-base font-semibold text-slate-900">Agreement signed successfully</h2>
+            </div>
+            <div className="text-sm text-slate-600 space-y-0.5">
+              {signerNameDisplay && <p>Signed by {signerNameDisplay}</p>}
+              {signedAt && <p>Signed {fmt(signedAt)}</p>}
+              <p>Agreement Version {snap.agreement_version}</p>
+            </div>
+            {signedPdfUrl && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button asChild className="gap-2">
+                  <a href={signedPdfUrl} target="_blank" rel="noopener noreferrer">
+                    <FileText className="w-4 h-4" /> View / Download Signed Agreement
+                  </a>
+                </Button>
+              </div>
+            )}
+            <p className="text-xs text-slate-400">This agreement is final and cannot be signed again.</p>
+          </div>
+        )}
+
+        {/* Declined state: read-only confirmation */}
+        {isDeclined && (
+          <div className="rounded-2xl border border-border bg-white p-5 sm:p-6 text-center">
+            <XCircle className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+            <h2 className="text-lg font-semibold text-slate-900">This agreement has been declined</h2>
+            <p className="text-sm text-slate-600 mt-2">The service provider will contact you to discuss any requested changes.</p>
+          </div>
+        )}
+
+        {/* Signable form (only before signing/declining) */}
+        {signable && (
           <div className="rounded-2xl border border-slate-300 bg-white p-5 sm:p-6 space-y-4">
             <h2 className="text-base font-semibold text-slate-900">Sign this agreement</h2>
 
@@ -301,7 +282,7 @@ export default function AgreementPublic() {
             </div>
 
             <div className="rounded-lg border border-border bg-slate-50 p-3">
-              <p className="text-sm text-slate-700 leading-relaxed">{consentTextValue}</p>
+              <p className="text-sm text-slate-700 leading-relaxed">{consentText(snap)}</p>
             </div>
             <div className="flex items-start gap-2.5">
               <Checkbox id="consent" checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
@@ -319,15 +300,14 @@ export default function AgreementPublic() {
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenLine className="w-4 h-4" />} Sign Agreement
             </Button>
 
-            <button
-              type="button"
-              onClick={() => setDeclineOpen(true)}
-              className="w-full text-sm text-slate-500 hover:text-slate-700 py-2"
-            >
+            <button type="button" onClick={() => setDeclineOpen(true)} className="w-full text-sm text-slate-500 hover:text-slate-700 py-2">
               Decline / Request Changes
             </button>
           </div>
-        ) : (
+        )}
+
+        {/* Not signable and not terminal (shouldn't normally happen publicly) */}
+        {!isSigned && !isDeclined && !signable && (
           <div className="rounded-2xl border border-border bg-white p-5 text-center">
             <p className="text-sm text-slate-600">This agreement cannot currently be signed. Please contact the service provider.</p>
           </div>

@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 import { snapshotHash } from '../../shared/agreementTerms.js';
+import { generateSignedAgreementPdf, scanForSecrets } from '../../shared/agreementPdf.js';
 
 // Public (unauthenticated) agreement endpoint — the ONLY data interface the
 // anonymous customer page uses. Authenticity = the public_token. The function
@@ -136,6 +137,7 @@ export default async function(req) {
           signed_at: agreement.signed_at || null,
           declined_at: agreement.declined_at || null,
           decline_reason: agreement.decline_reason || null,
+          signed_pdf_url: agreement.signed_pdf_url || null,
           hash_valid: true,
           signable: true,
         });
@@ -150,9 +152,10 @@ export default async function(req) {
         signed_at: agreement.signed_at || null,
         declined_at: agreement.declined_at || null,
         decline_reason: agreement.decline_reason || null,
+        signed_pdf_url: agreement.signed_pdf_url || null,
         hash_valid: true,
         signable,
-      });
+        });
     }
 
     // --- sign / decline require an open signing state (integrity already gated) ---
@@ -201,10 +204,84 @@ export default async function(req) {
         signature_url = (up && up.file_url) || "";
       } catch (e) { signature_url = ""; }
 
+      // If the signature could not be stored we cannot produce a complete
+      // signed record (the PDF embeds the stored signature). Fail safely
+      // without mutating the agreement.
+      if (!signature_url) {
+        try { await base44.asServiceRole.entities.AutomationLog.create({
+          date_time: new Date().toISOString(), automation_type: "Agreement signature upload failed",
+          record_created: `Agreement ${agreement.id} signature upload failed`,
+          related_property_id: agreement.property_id || "", status: "failure", error_details: "",
+        }); } catch (e) {}
+        return Response.json({ error: "Signing could not be completed. Please try again or contact the service provider." }, { status: 500 });
+      }
+
       const signed_at = new Date().toISOString();
       const signer_user_agent = req.headers.get("user-agent") || null;
       const signer_ip = clientIp(req);
 
+      // --- Pre-PDF integrity/security checks: re-verify snapshot hash,
+      // signature hash (over the prepared bytes), exact consent, version
+      // consistency, and a defensive secret scan. Any mismatch aborts the
+      // whole sign transaction (no evidence persisted) so a retry does not
+      // create duplicate signature evidence.
+      const snap = agreement.sent_snapshot || {};
+      const reSnapHash = await snapshotHash(snap);
+      const reSigHashBuf = await crypto.subtle.digest("SHA-256", sigBytes);
+      const reSigHash = Array.from(new Uint8Array(reSigHashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      const snapHashOk = reSnapHash === agreement.sent_snapshot_hash;
+      const sigHashOk = reSigHash === signature_hash;
+      const consentOk = expected === consent_text;
+      const versionOk = String(snap.agreement_version) === String(agreement.agreement_version ?? 1)
+        && String(snap.terms_version) === String(agreement.terms_version || "");
+      const secretLeak = scanForSecrets({ snapshot: snap, evidence: { signer_name, signer_email, consent_text } });
+      if (!snapHashOk || !sigHashOk || !consentOk || !versionOk || secretLeak.length) {
+        try { await base44.asServiceRole.entities.AutomationLog.create({
+          date_time: signed_at, automation_type: "Agreement signed PDF generation failed",
+          record_created: `Agreement ${agreement.id} pre-PDF integrity check failed`,
+          related_property_id: agreement.property_id || "", status: "failure", error_details: "",
+        }); } catch (e) {}
+        return Response.json({ error: "Signing could not be completed. Please contact the service provider." }, { status: 500 });
+      }
+
+      // --- Generate the signed PDF from the FROZEN snapshot + prepared evidence ---
+      let signed_pdf_url = "";
+      try {
+        let bin = ""; for (let i = 0; i < sigBytes.length; i++) bin += String.fromCharCode(sigBytes[i]);
+        const signatureDataUrl = "data:image/png;base64," + btoa(bin);
+        const pdfBytes = await generateSignedAgreementPdf(snap, {
+          signer_name: signer_name.trim(),
+          signer_email: email,
+          signed_at,
+          agreement_version: String(snap.agreement_version),
+          terms_version: String(snap.terms_version),
+          consent_text: expected,
+          signature_data_url: signatureDataUrl,
+          signature_hash,
+          snapshot_hash: agreement.sent_snapshot_hash,
+          signer_ip,
+          signer_user_agent,
+        });
+        const pdfFile = new File([pdfBytes], `Service-Agreement-v${snap.agreement_version}-Signed.pdf`, { type: "application/pdf" });
+        const pdfUp = await base44.asServiceRole.integrations.Core.UploadFile({ file: pdfFile });
+        signed_pdf_url = (pdfUp && pdfUp.file_url) || "";
+      } catch (e) { signed_pdf_url = ""; }
+
+      if (!signed_pdf_url) {
+        try { await base44.asServiceRole.entities.AutomationLog.create({
+          date_time: signed_at, automation_type: "Agreement signed PDF generation failed",
+          record_created: `Agreement ${agreement.id} PDF generation/upload failed`,
+          related_property_id: agreement.property_id || "", status: "failure", error_details: "",
+        }); } catch (e) {}
+        // Signature was stored but the sign transaction did not complete: the
+        // agreement stays in its pre-sign state (Sent/Viewed) with NO signature
+        // evidence persisted on the record, so a retry creates no duplicate
+        // evidence. The orphan signature file in storage is harmless. Base44
+        // does not provide a transaction across file uploads + entity update.
+        return Response.json({ error: "Signing could not be completed. Please try again or contact the service provider." }, { status: 500 });
+      }
+
+      // --- Persist Signed evidence + signed_pdf_url in a single update ---
       await base44.asServiceRole.entities.PropertyServiceAgreement.update(agreement.id, {
         signer_name: signer_name.trim(),
         signer_email: email,
@@ -215,6 +292,7 @@ export default async function(req) {
         signer_user_agent,
         signature_url,
         signature_hash,
+        signed_pdf_url,
         signing_status: "Signed",
       });
 
@@ -225,14 +303,22 @@ export default async function(req) {
           related_property_id: agreement.property_id || "", status: "success", error_details: "",
         });
       } catch (e) {}
+      try {
+        await base44.asServiceRole.entities.AutomationLog.create({
+          date_time: signed_at, automation_type: "Agreement signed PDF generated",
+          record_created: `Agreement ${agreement.id} signed PDF generated`,
+          related_property_id: agreement.property_id || "", status: "success", error_details: "",
+        });
+      } catch (e) {}
 
       return Response.json({
         ok: true,
         signing_status: "Signed",
         signed_at,
+        signed_pdf_url,
         signer_name: signer_name.trim(),
-        agreement_version: agreement.sent_snapshot ? agreement.sent_snapshot.agreement_version : (agreement.agreement_version ?? 1),
-        terms_version: agreement.sent_snapshot ? agreement.sent_snapshot.terms_version : (agreement.terms_version || ""),
+        agreement_version: snap.agreement_version,
+        terms_version: snap.terms_version,
       });
     }
 

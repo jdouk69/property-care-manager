@@ -293,6 +293,11 @@ export default function ClientHub() {
                       {a.declined_at && <span>Declined {new Date(a.declined_at).toLocaleDateString()}</span>}
                     </div>
                   )}
+                  {a.signed_pdf_url && (
+                    <a href={a.signed_pdf_url} target="_blank" rel="noopener noreferrer" className="mt-0.5 text-[11px] text-primary hover:underline inline-flex items-center gap-1">
+                      <FileText className="w-3 h-3" /> View Signed PDF
+                    </a>
+                  )}
                 </div>
               );
             })}
