@@ -47,6 +47,10 @@ export async function generateSignedAgreementPdf(snapshot, evidence) {
   const { default: jsPDF } = await import('npm:jspdf@4.2.1');
   const ev = evidence || {};
   const doc = new jsPDF({ unit: "pt", format: "a4" });
+  // Fail-fast: decode/validate the signature image BEFORE building the doc.
+  // If the prepared bytes are not a decodable PNG, throw now — the caller
+  // aborts and NO signed PDF is persisted (no fallback placeholder).
+  const sigProps = ev.signature_data_url ? doc.getImageProperties(ev.signature_data_url) : null;
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 40;
@@ -164,19 +168,16 @@ export async function generateSignedAgreementPdf(snapshot, evidence) {
   doc.splitTextToSize(val(ev.consent_text), maxWidth).forEach((l) => { ensure(12); doc.text(l, margin, y); y += 12; });
   y += 8;
 
-  // Stored signature image (bytes correspond to signature_hash)
-  if (ev.signature_data_url) {
-    try {
-      const props = doc.getImageProperties(ev.signature_data_url);
-      const imgW = Math.min(180, props.width);
-      const imgH = (imgW * props.height) / props.width;
-      ensure(imgH + 16);
-      doc.addImage(ev.signature_data_url, "PNG", margin, y, imgW, imgH);
-      y += imgH + 8;
-    } catch (e) {
-      ensure(16);
-      doc.setTextColor(120); doc.text("[Signature image held on file]", margin, y); doc.setTextColor(0); y += 12;
-    }
+  // Stored signature image — the EXACT prepared bytes that correspond to
+  // signature_hash. Decode + embed with NO fallback: if the image cannot be
+  // decoded or embedded, this throws and the caller aborts the entire PDF
+  // (no signed document is persisted, no placeholder is rendered).
+  if (sigProps) {
+    const imgW = Math.min(180, sigProps.width);
+    const imgH = (imgW * sigProps.height) / sigProps.width;
+    ensure(imgH + 16);
+    doc.addImage(ev.signature_data_url, "PNG", margin, y, imgW, imgH);
+    y += imgH + 8;
   }
   y += 6;
 

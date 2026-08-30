@@ -12,6 +12,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/EmptyState";
 import ClientIntakePanel from "@/components/intake/ClientIntakePanel";
+import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -66,6 +67,14 @@ export default function ClientHub() {
   const [documents, setDocuments] = useState([]);
   const [agreements, setAgreements] = useState([]);
   const [intakes, setIntakes] = useState([]);
+  const [downloadingPdf, setDownloadingPdf] = useState("");
+
+  const handleDownloadSigned = async (token) => {
+    if (!token) return;
+    setDownloadingPdf(token);
+    try { await downloadSignedAgreementPdf(token); } catch (e) {}
+    setDownloadingPdf("");
+  };
 
   useEffect(() => {
     (async () => {
@@ -293,10 +302,10 @@ export default function ClientHub() {
                       {a.declined_at && <span>Declined {new Date(a.declined_at).toLocaleDateString()}</span>}
                     </div>
                   )}
-                  {a.signed_pdf_url && (
-                    <a href={a.signed_pdf_url} target="_blank" rel="noopener noreferrer" className="mt-0.5 text-[11px] text-primary hover:underline inline-flex items-center gap-1">
-                      <FileText className="w-3 h-3" /> View Signed PDF
-                    </a>
+                  {a.signed_pdf_url && a.public_token && (
+                    <button type="button" onClick={() => handleDownloadSigned(a.public_token)} disabled={downloadingPdf === a.public_token} className="mt-0.5 text-[11px] text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-50">
+                      {downloadingPdf === a.public_token ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />} View Signed PDF
+                    </button>
                   )}
                 </div>
               );

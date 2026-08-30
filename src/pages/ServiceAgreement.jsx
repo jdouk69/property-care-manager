@@ -20,6 +20,7 @@ import { buildSentSnapshot } from "@/lib/agreementTerms";
 import EmergencyAuthSection from "@/components/agreements/EmergencyAuthSection";
 import IntakeReferenceCard from "@/components/agreements/IntakeReferenceCard";
 import AgreementPreview from "@/components/agreements/AgreementPreview";
+import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 
 const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
 // Pending is the default for NEW agreements. Legacy agreements keep their stored status.
@@ -65,6 +66,7 @@ export default function ServiceAgreement() {
   const [sendResult, setSendResult] = useState(null);
   const [sendError, setSendError] = useState("");
   const [copied, setCopied] = useState("");
+  const [downloadingSigned, setDownloadingSigned] = useState(false);
   const [values, setValues] = useState({
     client_id: clientId || "",
     property_id: propertyParam || "",
@@ -95,6 +97,12 @@ export default function ServiceAgreement() {
     signed_at: "",
   });
 
+  const handleDownloadSigned = async () => {
+    if (!values.public_token) return;
+    setDownloadingSigned(true);
+    try { await downloadSignedAgreementPdf(values.public_token); } catch (e) {}
+    setDownloadingSigned(false);
+  };
   const set = (k, v) => setValues((s) => ({ ...s, [k]: v }));
   // Changing any emergency field resets the staff confirmation, forcing reconfirm.
   const setEmergency = (k, v) => setValues((s) => ({ ...s, [k]: v, emergency_authorization_confirmed: false }));
@@ -615,14 +623,11 @@ export default function ServiceAgreement() {
                 {values.signer_name && <p className="text-xs text-muted-foreground">Signed by: {values.signer_name}</p>}
                 {values.signer_email && <p className="text-xs text-muted-foreground">Email: {values.signer_email}</p>}
                 {values.signed_at && <p className="text-xs text-muted-foreground">Signed {formatSentAt(values.signed_at)}</p>}
-                {values.signed_pdf_url && (
+                {values.signed_pdf_url && values.public_token && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <a href={values.signed_pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 h-8 rounded-md border border-input bg-transparent px-3 text-xs font-medium hover:bg-accent">
-                      <FileText className="w-3.5 h-3.5" /> View Signed Agreement
-                    </a>
-                    <a href={values.signed_pdf_url} download className="inline-flex items-center gap-1.5 h-8 rounded-md border border-input bg-transparent px-3 text-xs font-medium hover:bg-accent">
-                      <Download className="w-3.5 h-3.5" /> Download PDF
-                    </a>
+                    <button type="button" onClick={handleDownloadSigned} disabled={downloadingSigned} className="inline-flex items-center gap-1.5 h-8 rounded-md border border-input bg-transparent px-3 text-xs font-medium hover:bg-accent disabled:opacity-50">
+                      {downloadingSigned ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} Download Signed PDF
+                    </button>
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground pt-1">Activation pending — review and activate the service when ready.</p>

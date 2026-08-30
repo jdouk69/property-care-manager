@@ -79,7 +79,7 @@ export default async function(req) {
     try { const text = await req.text(); if (text) body = JSON.parse(text); } catch (e) { body = {}; }
     const { action, token } = body || {};
 
-    if (!["get", "sign", "decline"].includes(action)) {
+    if (!["get", "sign", "decline", "download"].includes(action)) {
       return Response.json({ error: "Invalid request" }, { status: 400 });
     }
     if (!isValidToken(token)) {
@@ -137,7 +137,7 @@ export default async function(req) {
           signed_at: agreement.signed_at || null,
           declined_at: agreement.declined_at || null,
           decline_reason: agreement.decline_reason || null,
-          signed_pdf_url: agreement.signed_pdf_url || null,
+          signed_pdf_available: !!agreement.signed_pdf_url,
           hash_valid: true,
           signable: true,
         });
@@ -152,13 +152,54 @@ export default async function(req) {
         signed_at: agreement.signed_at || null,
         declined_at: agreement.declined_at || null,
         decline_reason: agreement.decline_reason || null,
-        signed_pdf_url: agreement.signed_pdf_url || null,
+        signed_pdf_available: !!agreement.signed_pdf_url,
         hash_valid: true,
         signable,
         });
-    }
+        }
 
-    // --- sign / decline require an open signing state (integrity already gated) ---
+        // --- DOWNLOAD (token-gated binary PDF delivery) ---
+        // The customer/staff never receive the raw private storage reference; the
+        // PDF is streamed through this function only after the secure token is
+        // validated, the Signed state and snapshot integrity are verified, and a
+        // private file reference exists. Returns binary PDF on success, JSON error
+        // on failure. Integrity was already verified above (hashValid gate).
+        if (action === "download") {
+        if (agreement.signing_status !== "Signed") {
+        return Response.json({ error: "This agreement is not yet signed." }, { status: 400 });
+        }
+        if (!agreement.signed_pdf_url) {
+        return Response.json({ error: "The signed PDF is not available." }, { status: 404 });
+        }
+        let pdfBytes = null;
+        try {
+        const signed = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+          file_uri: agreement.signed_pdf_url, expires_in: 60,
+        });
+        if (!signed || !signed.signed_url) throw new Error("no signed url");
+        const fr = await fetch(signed.signed_url);
+        if (!fr.ok) throw new Error("fetch failed");
+        pdfBytes = await fr.arrayBuffer();
+        } catch (e) {
+        try { await base44.asServiceRole.entities.AutomationLog.create({
+          date_time: new Date().toISOString(), automation_type: "Agreement signed PDF download failed",
+          record_created: `Agreement ${agreement.id} PDF download retrieval failed`,
+          related_property_id: agreement.property_id || "", status: "failure", error_details: "",
+        }); } catch (ee) {}
+        return Response.json({ error: "The signed PDF could not be retrieved. Please try again or contact the service provider." }, { status: 500 });
+        }
+        const av = (agreement.sent_snapshot && agreement.sent_snapshot.agreement_version) || agreement.agreement_version || 1;
+        return new Response(pdfBytes, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="Service-Agreement-v${av}-Signed.pdf"`,
+          "Cache-Control": "private, max-age=0, no-store",
+        },
+        });
+        }
+
+        // --- sign / decline require an open signing state (integrity already gated) ---
     if (!["Sent", "Viewed"].includes(agreement.signing_status)) {
       if (agreement.signing_status === "Signed") return Response.json({ error: "This agreement has already been signed." }, { status: 409 });
       if (agreement.signing_status === "Declined") return Response.json({ error: "This agreement has been declined and can no longer be signed." }, { status: 409 });
@@ -244,6 +285,20 @@ export default async function(req) {
         return Response.json({ error: "Signing could not be completed. Please contact the service provider." }, { status: 500 });
       }
 
+      // --- Verify the prepared signature bytes are a decodable PNG before
+      // building the PDF. The helper also fails-closed on decode/embed, but
+      // this explicit magic-byte check aborts earlier with a clear audit.
+      const PNG_MAGIC = [137, 80, 78, 71, 13, 10, 26, 10];
+      const pngMagicOk = sigBytes.length >= 24 && PNG_MAGIC.every((b, i) => sigBytes[i] === b);
+      if (!pngMagicOk) {
+        try { await base44.asServiceRole.entities.AutomationLog.create({
+          date_time: signed_at, automation_type: "Agreement signed PDF generation failed",
+          record_created: `Agreement ${agreement.id} signature bytes not a valid PNG`,
+          related_property_id: agreement.property_id || "", status: "failure", error_details: "",
+        }); } catch (e) {}
+        return Response.json({ error: "Signing could not be completed. Please try again or contact the service provider." }, { status: 500 });
+      }
+
       // --- Generate the signed PDF from the FROZEN snapshot + prepared evidence ---
       let signed_pdf_url = "";
       try {
@@ -263,8 +318,11 @@ export default async function(req) {
           signer_user_agent,
         });
         const pdfFile = new File([pdfBytes], `Service-Agreement-v${snap.agreement_version}-Signed.pdf`, { type: "application/pdf" });
-        const pdfUp = await base44.asServiceRole.integrations.Core.UploadFile({ file: pdfFile });
-        signed_pdf_url = (pdfUp && pdfUp.file_url) || "";
+        // Store the signed PDF in PRIVATE storage (never a public URL). The
+        // returned file_uri is only ever read back through the token-gated
+        // download action via a short-lived signed URL.
+        const pdfUp = await base44.asServiceRole.integrations.Core.UploadPrivateFile({ file: pdfFile });
+        signed_pdf_url = (pdfUp && pdfUp.file_uri) || "";
       } catch (e) { signed_pdf_url = ""; }
 
       if (!signed_pdf_url) {
@@ -315,7 +373,7 @@ export default async function(req) {
         ok: true,
         signing_status: "Signed",
         signed_at,
-        signed_pdf_url,
+        signed_pdf_available: true,
         signer_name: signer_name.trim(),
         agreement_version: snap.agreement_version,
         terms_version: snap.terms_version,

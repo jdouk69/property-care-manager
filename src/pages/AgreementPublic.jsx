@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import SignaturePad from "@/components/agreements/SignaturePad";
 import {
-  Loader2, CheckCircle2, XCircle, ShieldCheck, PenLine, FileText, Home, User,
+  Loader2, CheckCircle2, XCircle, ShieldCheck, PenLine, FileText, Home, User, Download,
 } from "lucide-react";
+import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 
 // Exact consent wording — must match the backend re-resolution exactly.
 const consentText = (snapshot) => {
@@ -54,7 +55,9 @@ export default function AgreementPublic() {
   const [signature, setSignature] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const [done, setDone] = useState(null); // { type: "signed" | "declined", signed_pdf_url, signed_at, signer_name, version }
+  const [done, setDone] = useState(null); // { type: "signed" | "declined", signed_pdf_available, signed_at, signer_name, version }
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   const [declineOpen, setDeclineOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
@@ -91,7 +94,7 @@ export default function AgreementPublic() {
     });
     setSubmitting(false);
     if (d && d.ok) {
-      setDone({ type: "signed", signed_pdf_url: d.signed_pdf_url, signed_at: d.signed_at, signer_name: d.signer_name, version: d.agreement_version });
+      setDone({ type: "signed", signed_pdf_available: d.signed_pdf_available === true, signed_at: d.signed_at, signer_name: d.signer_name, version: d.agreement_version });
     } else {
       setFormError((d && d.error) || "Signing failed. Please try again.");
     }
@@ -107,6 +110,14 @@ export default function AgreementPublic() {
     } else {
       setFormError((d && d.error) || "Decline failed. Please try again.");
     }
+  };
+
+  const handleDownload = async () => {
+    setDownloadError("");
+    setDownloading(true);
+    try { await downloadSignedAgreementPdf(token); }
+    catch (e) { setDownloadError((e && e.message) || "Download failed."); }
+    finally { setDownloading(false); }
   };
 
   if (loading) {
@@ -148,7 +159,7 @@ export default function AgreementPublic() {
 
   const isSigned = (done && done.type === "signed") || data.signing_status === "Signed";
   const isDeclined = (done && done.type === "declined") || data.signing_status === "Declined";
-  const signedPdfUrl = (done && done.signed_pdf_url) || data.signed_pdf_url;
+  const signedPdfAvailable = (done && done.signed_pdf_available) || data.signed_pdf_available === true;
   const signedAt = (done && done.signed_at) || data.signed_at;
   const signerNameDisplay = (done && done.signer_name) || "";
   const signable = data.signable && !isSigned && !isDeclined;
@@ -245,15 +256,14 @@ export default function AgreementPublic() {
               {signedAt && <p>Signed {fmt(signedAt)}</p>}
               <p>Agreement Version {snap.agreement_version}</p>
             </div>
-            {signedPdfUrl && (
+            {signedPdfAvailable && (
               <div className="flex flex-wrap gap-2 pt-1">
-                <Button asChild className="gap-2">
-                  <a href={signedPdfUrl} target="_blank" rel="noopener noreferrer">
-                    <FileText className="w-4 h-4" /> View / Download Signed Agreement
-                  </a>
+                <Button onClick={handleDownload} disabled={downloading} className="gap-2">
+                  {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} View / Download Signed Agreement
                 </Button>
               </div>
             )}
+            {downloadError && <p className="text-sm text-red-600">{downloadError}</p>}
             <p className="text-xs text-slate-400">This agreement is final and cannot be signed again.</p>
           </div>
         )}
