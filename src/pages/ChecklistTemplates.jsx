@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { SEED, VISIT_TYPES } from "@/lib/checklistSeed";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 export default function ChecklistTemplates() {
   const [templates, setTemplates] = useState([]);
@@ -163,7 +164,7 @@ export default function ChecklistTemplates() {
               {masters.map((t) => (
                 <button key={t.id} onClick={() => openEdit(t)} className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-sm truncate">{t.visit_type}</p>
+                    <p className="font-medium text-sm truncate">{visitTypeLabel(t.visit_type)}</p>
                     <span className="text-[10px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 shrink-0">Master</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{(t.items || []).length} items</p>
@@ -180,7 +181,7 @@ export default function ChecklistTemplates() {
                   <div key={t.id} className="rounded-2xl border border-border bg-card p-4 hover:shadow-md transition">
                     <button onClick={() => openEdit(t)} className="text-left w-full">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-sm truncate">{t.visit_type}</p>
+                        <p className="font-medium text-sm truncate">{visitTypeLabel(t.visit_type)}</p>
                         <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 shrink-0">Property</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{propName(t.property_id)} · {(t.items || []).length} items</p>
@@ -197,7 +198,7 @@ export default function ChecklistTemplates() {
       <Sheet open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
           <SheetHeader>
-            <SheetTitle>{editing?.visit_type}</SheetTitle>
+            <SheetTitle>{visitTypeLabel(editing?.visit_type)}</SheetTitle>
             <SheetDescription className="sr-only">Edit checklist items</SheetDescription>
             <div className="flex items-center gap-2">
               <span className={`text-[10px] px-2 py-0.5 rounded-full border ${editing?.is_master || !editing?.property_id ? "bg-primary/10 text-primary border-primary/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
@@ -259,7 +260,7 @@ export default function ChecklistTemplates() {
               <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Type</Label>
               <Select value={newVisitType} onValueChange={setNewVisitType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}</SelectContent>
+                <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{visitTypeLabel(vt)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>

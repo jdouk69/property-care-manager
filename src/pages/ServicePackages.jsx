@@ -4,6 +4,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { VISIT_TYPES } from "@/lib/checklistSeed";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 const fields = [
   { name: "name", label: "Service Name", type: "text", required: true, placeholder: "e.g. Standard property care" },
@@ -27,7 +28,7 @@ const fields = [
           <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">None</SelectItem>
-            {VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}
+            {VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{visitTypeLabel(vt)}</SelectItem>)}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground mt-1.5">Used to choose the default checklist/visit workflow when this service package is scheduled.</p>

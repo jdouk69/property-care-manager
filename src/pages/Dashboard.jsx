@@ -14,6 +14,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import { generateTimeBasedNotifications } from "@/lib/notifications";
 import { loadDraft } from "@/lib/visitDraft";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel } from "@/lib/timezone";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import ActionCard from "@/components/dashboard/ActionCard";
@@ -145,7 +146,7 @@ function Next3Days({ visits, properties, clients }) {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground truncate">{client?.name || "—"}</p>
                         <p className="text-xs text-muted-foreground truncate">{prop?.name || "—"}</p>
-                        <p className="text-xs text-muted-foreground truncate">{v.visit_type}</p>
+                        <p className="text-xs text-muted-foreground truncate">{visitTypeLabel(v.visit_type)}</p>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20 shrink-0 mt-0.5">{v.status}</span>
                     </Link>
@@ -192,7 +193,7 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
               <div className="min-w-0">
                 <p className="text-[11px] uppercase tracking-wide opacity-80">Continue working — visit in progress</p>
                 <p className="font-semibold truncate">Continue Visit — {propName(draft.propertyId)}</p>
-                <p className="text-xs opacity-80 truncate">{draft.visitType || "Monthly Property Watch"}</p>
+                <p className="text-xs opacity-80 truncate">{visitTypeLabel(draft.visitType) || "Monthly Property Watch"}</p>
               </div>
             </div>
             <span className="text-sm font-medium shrink-0 flex items-center gap-1">Continue <ArrowRight className="w-4 h-4" /></span>
@@ -426,7 +427,7 @@ export default function Dashboard() {
               {contractorsToday.length > 0 && <AlertGroup label="Contractor appointments today">{contractorsToday.slice(0, 4).map((c) => <AlertRow key={c.id} to="/tasks" title={c.title} subtitle={c.time} tone="info" badge="High" />)}</AlertGroup>}
               {unreturnedKeys.length > 0 && <AlertGroup label="Unreturned keys">{unreturnedKeys.slice(0, 4).map((k) => <AlertRow key={k.id} to="/keys" title={`Key ${k.key_number}`} subtitle={`Issued ${k.date_issued} · ${k.current_holder || "—"}`} tone="warning" />)}</AlertGroup>}
               {awaitingReimb.length > 0 && <AlertGroup label="Expenses awaiting reimbursement">{awaitingReimb.slice(0, 4).map((e) => <AlertRow key={e.id} to="/expenses" title={`${e.vendor} — €${(e.amount || 0).toFixed(2)}`} subtitle={e.date} tone="warning" />)}</AlertGroup>}
-              {missedVisits.length > 0 && <AlertGroup label="Missed scheduled visits">{missedVisits.slice(0, 4).map((v) => <AlertRow key={v.id} to={`/visits/${v.id}`} title={`${propName(v.property_id)} · ${v.visit_type}`} subtitle={`Scheduled for ${athensTime(v.scheduled_time || v.start_time)}`} tone="danger" badge="Missed" />)}</AlertGroup>}
+              {missedVisits.length > 0 && <AlertGroup label="Missed scheduled visits">{missedVisits.slice(0, 4).map((v) => <AlertRow key={v.id} to={`/visits/${v.id}`} title={`${propName(v.property_id)} · ${visitTypeLabel(v.visit_type)}`} subtitle={`Scheduled for ${athensTime(v.scheduled_time || v.start_time)}`} tone="danger" badge="Missed" />)}</AlertGroup>}
             </div>
           </div>
         )}

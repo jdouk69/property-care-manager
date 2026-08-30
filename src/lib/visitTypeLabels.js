@@ -3,6 +3,9 @@
 // is rendered on screens and in reports.
 export const VISIT_TYPE_LABELS = {
   "Initial Property Onboarding Inspection": "Initial Property Onboarding Visit",
+  "Home Watch Inspection": "Home Watch Visit",
+  "Property Care Inspection": "Property Care Visit",
+  "Departure Inspection": "Departure Visit",
 };
 
 export function visitTypeLabel(vt) {

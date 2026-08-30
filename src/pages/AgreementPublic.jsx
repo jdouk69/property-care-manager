@@ -202,7 +202,7 @@ export default function AgreementPublic() {
           </SummaryCard>
           <SummaryCard icon={FileText} label="Service">
             <p className="font-medium">{service.package_name || "—"}</p>
-            {service.inspection_frequency && <p className="text-xs text-slate-500">Inspection: {service.inspection_frequency}</p>}
+            {service.inspection_frequency && <p className="text-xs text-slate-500">Visit frequency: {service.inspection_frequency}</p>}
           </SummaryCard>
           <SummaryCard icon={PenLine} label="Fees">
             <p className="font-medium">{fees.agreed_price ? `€${fees.agreed_price}` : "—"}{fees.billing_frequency ? ` · ${fees.billing_frequency}` : ""}</p>

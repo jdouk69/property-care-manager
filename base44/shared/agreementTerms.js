@@ -10,6 +10,21 @@
 
 // Access secrets that must never be resolved into the agreement/snapshot, and
 // whose values are scanned for defensively before a snapshot is frozen.
+// Customer-facing display labels for visit types. The stored enum on the
+// ServicePackage is NEVER changed; this only controls how the visit type is
+// rendered inside a NEW agreement snapshot. Already-signed/frozen snapshots
+// are never rebuilt, so historical canonical evidence is preserved as-is.
+const VISIT_TYPE_LABELS = {
+  "Initial Property Onboarding Inspection": "Initial Property Onboarding Visit",
+  "Home Watch Inspection": "Home Watch Visit",
+  "Property Care Inspection": "Property Care Visit",
+  "Departure Inspection": "Departure Visit",
+};
+function visitTypeDisplay(vt) {
+  if (!vt) return "";
+  return VISIT_TYPE_LABELS[vt] || vt;
+}
+
 export const SECRET_FIELDS = [
   "gate_code",
   "lockbox_code",
@@ -145,7 +160,7 @@ export function buildSentSnapshot(ctx) {
       .join("\n"),
     inspection_frequency: agreement.inspection_frequency || "",
     visit_duration: servicePackage.visit_duration || "",
-    default_visit_type: servicePackage.default_visit_type || "",
+    default_visit_type: visitTypeDisplay(servicePackage.default_visit_type),
     agreed_price:
       typeof agreement.agreed_price === "number"
         ? agreement.agreed_price.toFixed(2)
