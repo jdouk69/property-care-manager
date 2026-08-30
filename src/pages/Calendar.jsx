@@ -9,6 +9,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { athensDate, athensTime, athensToday } from "@/lib/timezone";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 const TYPE_COLORS = {
   Inspection: "bg-sky-500",
@@ -47,7 +48,7 @@ export default function Calendar() {
       const ds = athensDate(st);
       (map[ds] = map[ds] || []).push({
         ...v, _kind: "visit", type: "Property Visit",
-        title: v.visit_type || "Property Visit",
+        title: visitTypeLabel(v.visit_type) || "Property Visit",
         time: athensTime(st),
         to: `/visits/${v.id}`,
       });

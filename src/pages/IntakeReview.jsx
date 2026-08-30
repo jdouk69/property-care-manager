@@ -30,6 +30,7 @@ export default function IntakeReview() {
   const [propertyMode, setPropertyMode] = useState("existing"); // "existing" | "create"
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
   const [apply, setApply] = useState({}); // { [fieldName]: true }
+  const [monitoringApply, setMonitoringApply] = useState(false);
   const [applying, setApplying] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -88,6 +89,7 @@ export default function IntakeReview() {
   };
 
   const toggleApply = (name) => setApply((s) => ({ ...s, [name]: !s[name] }));
+  const toggleMonitoringApply = () => setMonitoringApply((s) => !s);
 
   const doApply = async () => {
     if (!intake) return;
@@ -102,6 +104,14 @@ export default function IntakeReview() {
         if (f.map.entity === "Client") clientUpdate[f.map.field] = sub;
         else if (f.map.entity === "Property") propertyUpdate[f.map.field] = sub;
       });
+
+      if (monitoringApply) {
+        const areas = payload.monitoring_areas || [];
+        const notes = (payload.monitoring_notes || "").trim();
+        const priorities = areas.map((a) => ({ area: a, detail: a === "Other" ? notes : "", active: true }));
+        if (notes && !areas.includes("Other")) priorities.push({ area: "Other", detail: notes, active: true });
+        if (priorities.length > 0) propertyUpdate.monitoring_priorities = priorities;
+      }
 
       let targetPropertyId = "";
       if (Object.keys(propertyUpdate).length > 0) {
@@ -261,6 +271,36 @@ export default function IntakeReview() {
                           <Package className="w-3.5 h-3.5 text-muted-foreground" /> {s.name}
                         </div>
                       ))}
+                  </div>
+                )}
+                {sec.special === "monitoring-areas" && (
+                  <div className="space-y-2.5 mt-3">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Owner monitoring requests</p>
+                    {(payload.monitoring_areas || []).length === 0 ? (
+                      <p className="text-sm text-muted-foreground/60">No areas selected.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(payload.monitoring_areas || []).map((a) => (
+                          <span key={a} className="inline-flex items-center text-xs px-2.5 py-1 rounded-full border border-border bg-muted/40">{a}</span>
+                        ))}
+                      </div>
+                    )}
+                    {payload.monitoring_notes && (
+                      <div className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                        <p className="text-[10px] uppercase text-muted-foreground mb-0.5">Specific instructions</p>
+                        <p className="whitespace-pre-wrap">{payload.monitoring_notes}</p>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2 rounded-xl border border-border p-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground">Apply as confirmed monitoring priorities on the property</p>
+                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">Replaces the property's current monitoring priorities only when approved.</p>
+                      </div>
+                      <button type="button" onClick={toggleMonitoringApply}
+                        className={`text-xs px-3 py-1.5 min-h-[40px] inline-flex items-center rounded-full border transition shrink-0 ${monitoringApply ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                        {monitoringApply ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Apply</span> : "Apply"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </section>

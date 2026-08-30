@@ -11,6 +11,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { Image as UIImage } from "@/components/ui/image";
 import { generateVisitReportPdf } from "@/lib/visitReport";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 const GROUPS = [
   { key: "Emergency", tone: "text-rose-600 bg-rose-500/10 border-rose-500/20" },
@@ -147,7 +148,7 @@ export default function VisitDetail() {
           {property.address && <p className="text-sm text-muted-foreground">{property.address}</p>}
           {client.name && <p className="text-sm text-muted-foreground">Owner: {client.name}</p>}
           <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-xs px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20">{visit.visit_type}</span>
+            <span className="text-xs px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20">{visitTypeLabel(visit.visit_type)}</span>
             <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.status === "Cancelled" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : visit.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : visit.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-muted text-muted-foreground border-border"}`}>{visit.status}</span>
             {visit.report_sent && <span className="text-xs px-2.5 py-1 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">Report Sent</span>}
           </div>

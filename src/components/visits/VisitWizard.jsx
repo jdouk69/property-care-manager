@@ -10,6 +10,7 @@ import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
 import { generateVisitReportPdf } from "@/lib/visitReport";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -314,7 +315,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           const prop = properties.find((p) => p.id === propertyId);
           await createNotification({
             title: "Visit scheduled",
-            message: `${clientObj?.name || "Client"} · ${prop?.name || "Property"} · ${visitType} · ${athensVisitWhen(iso)}`,
+            message: `${clientObj?.name || "Client"} · ${prop?.name || "Property"} · ${visitTypeLabel(visitType)} · ${athensVisitWhen(iso)}`,
             type: "Visit",
             priority: "Medium",
             related_entity: "PropertyVisit",
@@ -399,7 +400,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       const t = await base44.entities.Task.create({
         title: followUpText.trim(), type: "Maintenance follow-up", property_id: propertyId,
         assigned_to: "Jim", priority: "Medium", status: "Pending",
-        date: new Date().toISOString().slice(0, 10), notes: `Follow-up from ${visitType} visit — ${propertyName}`,
+        date: new Date().toISOString().slice(0, 10),         notes: `Follow-up from ${visitTypeLabel(visitType)} visit — ${propertyName}`,
       });
       setTaskIds((arr) => [...arr, t.id]);
       setCreatedTasks((arr) => [...arr, { title: t.title }]);
@@ -419,7 +420,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         maintenance_issue_id: expIssueId || "",
         contractor_id: expContractorId || "",
         awaiting_reimbursement: true, reimbursed: false,
-        notes: `Recorded during ${visitType} visit — ${propertyName}`,
+        notes: `Recorded during ${visitTypeLabel(visitType)} visit — ${propertyName}`,
       });
       setExpensesCreated((arr) => [...arr, { id: created.id, vendor: created.vendor, amount: created.amount }]);
       setExpVendor(""); setExpAmount(""); setExpPaidBy(""); setExpIssueId(""); setExpContractorId(""); setExpReceipt("");
@@ -627,7 +628,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Type</Label>
             <Select value={visitType} onValueChange={setVisitType}>
               <SelectTrigger className={FIELD}><SelectValue placeholder="Select visit type" /></SelectTrigger>
-              <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{vt}</SelectItem>)}</SelectContent>
+              <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{visitTypeLabel(vt)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -710,7 +711,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           {VISIT_TYPES.map((vt) => (
             <button key={vt} onClick={() => setVisitType(vt)}
               className={`text-left rounded-2xl border p-4 transition ${visitType === vt ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"}`}>
-              <p className="font-medium text-sm text-foreground">{vt}</p>
+              <p className="font-medium text-sm text-foreground">{visitTypeLabel(vt)}</p>
             </button>
           ))}
         </div>
@@ -749,7 +750,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{propertyName}</p>
-              <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap"><Clock className="w-3 h-3" /> Started {(startTime || "").slice(11, 16)} · {visitType}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap"><Clock className="w-3 h-3" /> Started {(startTime || "").slice(11, 16)} · {visitTypeLabel(visitType)}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 md:text-xs md:px-2.5 md:py-1 2xl:text-[10px] 2xl:px-2 2xl:py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? "No template — manage" : templateSource === "Default" ? "Default checklist" : `${templateSource} template`}</Link>
@@ -1010,7 +1011,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <CheckCircle2 className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-semibold mb-1">Visit Complete</h2>
-        <p className="text-sm text-muted-foreground mb-6">{propertyName} · {visitType}</p>
+        <p className="text-sm text-muted-foreground mb-6">{propertyName} · {visitTypeLabel(visitType)}</p>
         <div className="rounded-2xl border border-border bg-card p-4 text-left text-sm space-y-1 mb-6">
           <p>Duration: {(startTime || "").slice(11, 16)} – {(endTime || "").slice(11, 16)}</p>
           <p>Checklist items: {checklist.length}</p>

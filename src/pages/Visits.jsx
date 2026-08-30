@@ -9,6 +9,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import VisitWizard from "@/components/visits/VisitWizard";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { loadDraft, clearDraft } from "@/lib/visitDraft";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 export default function Visits() {
   const [mode, setMode] = useState("list");
@@ -97,7 +98,7 @@ export default function Visits() {
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-medium text-amber-700 dark:text-amber-500">Unfinished visit in progress</p>
-              <p className="text-xs text-muted-foreground truncate">{props[draft.propertyId] || "Property"} · {draft.visitType}</p>
+              <p className="text-xs text-muted-foreground truncate">{props[draft.propertyId] || "Property"} · {visitTypeLabel(draft.visitType)}</p>
             </div>
             <div className="flex gap-2 shrink-0">
               <Button size="sm" onClick={() => setMode("wizard")} className="rounded-full">Resume</Button>
@@ -121,7 +122,7 @@ export default function Visits() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="font-medium text-foreground truncate">{props[v.property_id] || "Property"}</p>
-                      <p className="text-xs text-muted-foreground truncate">{v.visit_type}</p>
+                      <p className="text-xs text-muted-foreground truncate">{visitTypeLabel(v.visit_type)}</p>
                       <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {(v.start_time || "").slice(0, 16).replace("T", " ")}
                       </p>

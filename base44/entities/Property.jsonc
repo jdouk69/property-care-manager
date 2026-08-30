@@ -176,6 +176,27 @@
     "special_notes": {
       "type": "string"
     },
+    "monitoring_priorities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "area"
+        ]
+      }
+    },
     "archived": {
       "type": "boolean",
       "default": false

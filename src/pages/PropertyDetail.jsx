@@ -15,6 +15,7 @@ import { base44 } from "@/api/base44Client";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import EmptyState from "@/components/ui/EmptyState";
 import PropertyInlineAdd from "@/components/properties/PropertyInlineAdd";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 const ISSUE_CATEGORIES = ["Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning", "Heating", "Appliance", "Internet", "Security", "Locksmith", "Cleaning", "Painting", "Building repair", "Pest control", "Storm damage", "Other"];
 const ISSUE_PRIORITIES = ["Routine", "Medium", "High", "Emergency"];
@@ -98,7 +99,7 @@ export default function PropertyDetail() {
 
   const receipts = expenses.filter((e) => e.receipt_photo);
   const visitReports = visits.filter((v) => v.status !== "Cancelled");
-  const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${(v.start_time || "").slice(0, 10)} · ${v.visit_type || ""}` }));
+  const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${(v.start_time || "").slice(0, 10)} · ${visitTypeLabel(v.visit_type) || ""}` }));
   const issueOpts = maintenance.map((m) => ({ value: m.id, label: m.title }));
   const contractorOpts = contractors.map((c) => ({ value: c.id, label: c.company }));
 
@@ -174,6 +175,16 @@ export default function PropertyDetail() {
               <Detail label="Garden Details" value={prop.garden_details} />
               <Detail label="Special Notes" value={prop.special_notes} />
             </Section>
+            {(prop.monitoring_priorities || []).filter((p) => p.active).length > 0 && (
+              <Section title="Monitoring Priorities">
+                {(prop.monitoring_priorities || []).filter((p) => p.active).map((p, i) => (
+                  <div key={i} className="px-4 py-3">
+                    <p className="text-sm font-medium">{p.area}</p>
+                    {p.detail && <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-wrap">{p.detail}</p>}
+                  </div>
+                ))}
+              </Section>
+            )}
             {(prop.photos || []).length > 0 && (
               <Section title="Photos">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
@@ -185,7 +196,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="visits">
             <RecordSection title="Visits" icon={MapPin} empty="No visits recorded" moduleLink="/visits"
-              items={visits} render={(v) => ({ primary: v.visit_type, sub: (v.start_time || "").slice(0, 16).replace("T", " "), badge: v.status, to: `/visits/${v.id}` })}
+              items={visits} render={(v) => ({ primary: visitTypeLabel(v.visit_type), sub: (v.start_time || "").slice(0, 16).replace("T", " "), badge: v.status, to: `/visits/${v.id}` })}
               addNode={<LinkLink label="Start a new visit" to="/visits?start=1" />} />
           </TabsContent>
 
@@ -324,7 +335,7 @@ export default function PropertyDetail() {
                 {visitReports.length === 0 ? <EmptyState icon={FileText} title="No visit reports" /> : visitReports.slice(0, 6).map((v) => (
                   <div key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{v.visit_type}</p>
+                      <p className="text-sm font-medium truncate">{visitTypeLabel(v.visit_type)}</p>
                       <p className="text-xs text-muted-foreground truncate">{(v.start_time || "").slice(0, 10)}</p>
                     </div>
                     <Link to={`/visits/${v.id}`} className="text-xs text-primary hover:underline">Open</Link>

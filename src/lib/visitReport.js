@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -71,7 +72,7 @@ export async function generateVisitReportPdf(visit, ctx = {}) {
   doc.text(`Property: ${property.name || "—"}`, margin, y); y += 5;
   if (property.address) { doc.splitTextToSize(`Address: ${property.address}`, maxWidth).forEach((l) => { doc.text(l, margin, y); y += 4; }); }
   if (client.name) { doc.text(`Owner: ${client.name}`, margin, y); y += 5; }
-  doc.text(`Visit type: ${visit.visit_type || "—"}`, margin, y); y += 5;
+  doc.text(`Visit type: ${visitTypeLabel(visit.visit_type) || "—"}`, margin, y); y += 5;
   doc.text(`Visit date: ${fmtDate(visit.start_time)}`, margin, y); y += 5;
   doc.text(`Arrival: ${fmtTime(visit.start_time)}    Completion: ${fmtTime(visit.end_time)}`, margin, y); y += 5;
   if (visit.gps_location) { doc.text(`GPS: ${visit.gps_location}`, margin, y); y += 5; }

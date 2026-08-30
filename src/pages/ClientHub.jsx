@@ -14,6 +14,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import ClientIntakePanel from "@/components/intake/ClientIntakePanel";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -330,9 +331,9 @@ export default function ClientHub() {
         {/* Activity sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ActivitySection title="Upcoming Visits" icon={MapPin} to="/visits" count={upcomingVisits.length} emptyTitle="No upcoming visits"
-            items={upcomingVisits.map((v) => ({ title: `${propName(v.property_id)} — ${v.visit_type}`, subtitle: v.start_time, badge: v.status, to: `/visits/${v.id}` }))} />
+            items={upcomingVisits.map((v) => ({ title: `${propName(v.property_id)} — ${visitTypeLabel(v.visit_type)}`, subtitle: v.start_time, badge: v.status, to: `/visits/${v.id}` }))} />
           <ActivitySection title="Recent Visits" icon={ClipboardCheck} to="/visits" count={recentVisits.length} emptyTitle="No recent visits"
-            items={recentVisits.map((v) => ({ title: `${propName(v.property_id)} — ${v.visit_type}`, subtitle: v.start_time, badge: v.status, to: `/visits/${v.id}` }))} />
+            items={recentVisits.map((v) => ({ title: `${propName(v.property_id)} — ${visitTypeLabel(v.visit_type)}`, subtitle: v.start_time, badge: v.status, to: `/visits/${v.id}` }))} />
           <ActivitySection title="Open Tasks" icon={CalendarClock} to="/tasks" count={openTasks.length} emptyTitle="No open tasks"
             items={openTasks.map((t) => ({ title: t.title, subtitle: `${propName(t.property_id)} · ${t.date || ""}`, badge: t.priority, to: "/tasks" }))} />
           <ActivitySection title="Open Issues / Maintenance" icon={Wrench} to="/maintenance" count={openIssues.length} emptyTitle="No open issues"

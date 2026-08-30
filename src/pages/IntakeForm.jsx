@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, AlertTriangle, Plus, Trash2, Home } from "lucide-react";
-import { INTAKE_SECTIONS, emptyPayload } from "@/lib/intakeSchema";
+import { INTAKE_SECTIONS, MONITORING_AREAS, emptyPayload } from "@/lib/intakeSchema";
 
 const SAVE_DEBOUNCE = 1500;
 
@@ -122,6 +122,13 @@ export default function IntakeForm() {
     const exists = cur.find((c) => c.id === pkg.id);
     const nextArr = exists ? cur.filter((c) => c.id !== pkg.id) : [...cur, { id: pkg.id, name: pkg.name }];
     const next = { ...values, service_interest: nextArr };
+    setValues(next); scheduleSave(next);
+  };
+
+  const toggleMonitoringArea = (area) => {
+    const cur = values.monitoring_areas || [];
+    const nextArr = cur.includes(area) ? cur.filter((a) => a !== area) : [...cur, area];
+    const next = { ...values, monitoring_areas: nextArr };
     setValues(next); scheduleSave(next);
   };
 
@@ -267,6 +274,26 @@ export default function IntakeForm() {
                     );
                   })}
                   <p className="text-xs text-slate-400 mt-1">Indicating interest only — not a commitment or assignment.</p>
+                </div>
+              )}
+
+              {sec.special === "monitoring-areas" && (
+                <div className="space-y-3 mt-1">
+                  <div className="flex flex-wrap gap-2">
+                    {MONITORING_AREAS.map((area) => {
+                      const checked = (values.monitoring_areas || []).includes(area);
+                      return (
+                        <button type="button" key={area} onClick={() => toggleMonitoringArea(area)}
+                          className={`min-h-[44px] px-3.5 py-2.5 rounded-full border text-sm transition touch-manipulation ${checked ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-700 hover:border-primary/40"}`}>
+                          {area}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700 mb-1 block">Is there anything specific you would like us to keep an eye on?</Label>
+                    <Textarea value={fieldVal("monitoring_notes")} onChange={(e) => setField("monitoring_notes", e.target.value)} rows={3} className="bg-white" placeholder="Examples: humidity in a downstairs room, a pool pump that has caused problems, shutters you want kept closed, an irrigation area that often leaks, or repair work you want monitored." />
+                  </div>
                 </div>
               )}
             </section>

@@ -19,6 +19,23 @@ export const PROPERTY_FIELDS = [
   "septic_details", "pool_details", "pool_equipment", "garden_details", "irrigation",
 ];
 
+export const MONITORING_AREAS = [
+  "General interior condition",
+  "General exterior condition",
+  "Leaks / water intrusion",
+  "Humidity / mold",
+  "Pool / spa",
+  "Garden / irrigation",
+  "Air conditioning / heating",
+  "Utilities",
+  "Appliances",
+  "Security / alarm",
+  "Doors / windows / shutters",
+  "Mail / deliveries",
+  "Contractor / repair work",
+  "Other",
+];
+
 export const INTAKE_SECTIONS = [
   {
     id: "owner",
@@ -121,6 +138,12 @@ export const INTAKE_SECTIONS = [
     special: "service-packages",
   },
   {
+    id: "monitoring",
+    title: "What Would You Like Us to Monitor?",
+    intro: "Every property and owner is different. Tell us which areas you would like Property Care to pay particular attention to while you are away. We will review these with you before service begins. Selecting a category does not mean Property Care performs a professional technical inspection of that system.",
+    special: "monitoring-areas",
+  },
+  {
     id: "emergency_auth",
     title: "Emergency Authorization",
     fields: [
@@ -165,5 +188,7 @@ export function emptyPayload() {
   SCALAR_FIELDS.forEach((f) => { p[f.name] = ""; });
   p.contractors = [];
   p.service_interest = [];
+  p.monitoring_areas = [];
+  p.monitoring_notes = "";
   return p;
 }
