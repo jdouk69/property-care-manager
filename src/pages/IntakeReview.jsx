@@ -106,11 +106,24 @@ export default function IntakeReview() {
       });
 
       if (monitoringApply) {
+        // Build the incoming priorities from this intake:
+        //  - one entry per selected broad area, with NO detail (broad areas are kept
+        //    separate from specific owner instructions)
+        //  - the free-text monitoring_notes preserved as a SINGLE
+        //    "Owner-specific instructions" entry (never duplicated across areas)
         const areas = payload.monitoring_areas || [];
         const notes = (payload.monitoring_notes || "").trim();
-        const priorities = areas.map((a) => ({ area: a, detail: a === "Other" ? notes : "", active: true }));
-        if (notes && !areas.includes("Other")) priorities.push({ area: "Other", detail: notes, active: true });
-        if (priorities.length > 0) propertyUpdate.monitoring_priorities = priorities;
+        const incoming = areas.map((a) => ({ area: a, detail: "", active: true }));
+        if (notes) incoming.push({ area: "Owner-specific instructions", detail: notes, active: true });
+
+        // Preserve existing confirmed priorities by default. Only APPEND incoming
+        // priorities whose area is not already present. Never delete, never
+        // overwrite an existing priority's detail. Removal/edits are intentional
+        // staff actions done on the Property itself.
+        const existing = Array.isArray(propForReview?.monitoring_priorities) ? propForReview.monitoring_priorities : [];
+        const existingAreas = new Set(existing.map((p) => p.area));
+        const additions = incoming.filter((p) => !existingAreas.has(p.area));
+        if (additions.length > 0) propertyUpdate.monitoring_priorities = [...existing, ...additions];
       }
 
       let targetPropertyId = "";
@@ -274,27 +287,53 @@ export default function IntakeReview() {
                   </div>
                 )}
                 {sec.special === "monitoring-areas" && (
-                  <div className="space-y-2.5 mt-3">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Owner monitoring requests</p>
-                    {(payload.monitoring_areas || []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground/60">No areas selected.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(payload.monitoring_areas || []).map((a) => (
-                          <span key={a} className="inline-flex items-center text-xs px-2.5 py-1 rounded-full border border-border bg-muted/40">{a}</span>
-                        ))}
+                  <div className="space-y-3 mt-3">
+                    {/* Existing confirmed priorities on the target property */}
+                    {propForReview && Array.isArray(propForReview.monitoring_priorities) && propForReview.monitoring_priorities.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Existing confirmed priorities</p>
+                        <div className="rounded-lg bg-muted/30 px-3 py-2 space-y-1">
+                          {propForReview.monitoring_priorities.map((p, i) => (
+                            <p key={i} className="text-sm">
+                              <span className="font-medium">{p.area}</span>
+                              {p.detail ? <span className="text-muted-foreground"> — {p.detail}</span> : null}
+                              {p.active === false && <span className="text-muted-foreground/60"> (inactive)</span>}
+                            </p>
+                          ))}
+                        </div>
                       </div>
                     )}
-                    {payload.monitoring_notes && (
-                      <div className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
-                        <p className="text-[10px] uppercase text-muted-foreground mb-0.5">Specific instructions</p>
-                        <p className="whitespace-pre-wrap">{payload.monitoring_notes}</p>
-                      </div>
-                    )}
+
+                    {/* New customer requests from this intake */}
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">New customer requests from this intake</p>
+                      {(payload.monitoring_areas || []).length === 0 && !payload.monitoring_notes ? (
+                        <p className="text-sm text-muted-foreground/60">No monitoring requests submitted.</p>
+                      ) : (
+                        <>
+                          {(payload.monitoring_areas || []).length === 0 ? (
+                            <p className="text-sm text-muted-foreground/60">No areas selected.</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              {(payload.monitoring_areas || []).map((a) => (
+                                <span key={a} className="inline-flex items-center text-xs px-2.5 py-1 rounded-full border border-border bg-muted/40">{a}</span>
+                              ))}
+                            </div>
+                          )}
+                          {payload.monitoring_notes && (
+                            <div className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                              <p className="text-[10px] uppercase text-muted-foreground mb-0.5">Specific instructions</p>
+                              <p className="whitespace-pre-wrap">{payload.monitoring_notes}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+
                     <div className="flex items-center justify-between gap-2 rounded-xl border border-border p-3">
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-muted-foreground">Apply as confirmed monitoring priorities on the property</p>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">Replaces the property's current monitoring priorities only when approved.</p>
+                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">Adds the approved areas as new priorities. Existing confirmed priorities are preserved; duplicates are skipped.</p>
                       </div>
                       <button type="button" onClick={toggleMonitoringApply}
                         className={`text-xs px-3 py-1.5 min-h-[40px] inline-flex items-center rounded-full border transition shrink-0 ${monitoringApply ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>

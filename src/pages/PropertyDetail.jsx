@@ -16,6 +16,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import EmptyState from "@/components/ui/EmptyState";
 import PropertyInlineAdd from "@/components/properties/PropertyInlineAdd";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import MonitoringPrioritiesEditor from "@/components/properties/MonitoringPrioritiesEditor";
 
 const ISSUE_CATEGORIES = ["Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning", "Heating", "Appliance", "Internet", "Security", "Locksmith", "Cleaning", "Painting", "Building repair", "Pest control", "Storm damage", "Other"];
 const ISSUE_PRIORITIES = ["Routine", "Medium", "High", "Emergency"];
@@ -175,16 +176,13 @@ export default function PropertyDetail() {
               <Detail label="Garden Details" value={prop.garden_details} />
               <Detail label="Special Notes" value={prop.special_notes} />
             </Section>
-            {(prop.monitoring_priorities || []).filter((p) => p.active).length > 0 && (
-              <Section title="Monitoring Priorities">
-                {(prop.monitoring_priorities || []).filter((p) => p.active).map((p, i) => (
-                  <div key={i} className="px-4 py-3">
-                    <p className="text-sm font-medium">{p.area}</p>
-                    {p.detail && <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-wrap">{p.detail}</p>}
-                  </div>
-                ))}
-              </Section>
-            )}
+            <Section title="Monitoring Priorities">
+              <MonitoringPrioritiesEditor
+                propertyId={id}
+                initial={prop.monitoring_priorities}
+                onChanged={(cleaned) => setProp((p) => ({ ...p, monitoring_priorities: cleaned }))}
+              />
+            </Section>
             {(prop.photos || []).length > 0 && (
               <Section title="Photos">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
