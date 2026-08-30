@@ -117,6 +117,7 @@ export default function ClientHub() {
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
   const activeAgreements = agreements.filter((a) => a.status === "Active");
+  const pendingAgreements = agreements.filter((a) => a.status === "Pending");
   const liveVisits = visits.filter((v) => v.status === "Scheduled" || v.status === "In Progress");
   const hasStartedVisit = visits.some((v) => v.status === "In Progress" || v.status === "Completed");
 
@@ -126,8 +127,10 @@ export default function ClientHub() {
     nextStep = { label: "Review the customer's intake submission", to: `/clients/${id}/intake`, button: "Review Intake" };
   } else if (properties.length === 0) {
     nextStep = { label: "Add the client's first property", to: `/properties?add=1&owner=${id}`, button: "Add Property" };
-  } else if (activeAgreements.length === 0) {
+  } else if (activeAgreements.length === 0 && pendingAgreements.length === 0) {
     nextStep = { label: "Assign a service package", to: `/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`, button: "Assign Service Package" };
+  } else if (activeAgreements.length === 0 && pendingAgreements.length > 0) {
+    nextStep = { label: "Complete the pending service agreement draft", to: `/agreements/${pendingAgreements[0].id}`, button: "Review Agreement" };
   } else if (liveVisits.length === 0 && !hasStartedVisit) {
     const ag = activeAgreements.length === 1 ? activeAgreements[0] : null;
     const to = ag
@@ -235,11 +238,11 @@ export default function ClientHub() {
             )}
           </div>
           <div className="divide-y divide-border">
-            {activeAgreements.length === 0 ? (
+            {agreements.length === 0 ? (
               <div className="px-4 py-6">
-                <EmptyState icon={Package} title={properties.length === 0 ? "Add a property first" : "No active service agreement"} description={properties.length === 0 ? "Add a property, then assign a service package." : "Assign a service package to start billing and scheduling."} />
+                <EmptyState icon={Package} title={properties.length === 0 ? "Add a property first" : "No service agreement yet"} description={properties.length === 0 ? "Add a property, then assign a service package." : "Assign a service package to start billing and scheduling."} />
               </div>
-            ) : activeAgreements.map((a) => {
+            ) : [...agreements].sort((a, b) => (a.status === "Active" ? 0 : 1) - (b.status === "Active" ? 0 : 1)).map((a) => {
               const pkg = servicePackages[a.service_package_id];
               return (
                 <div key={a.id} className="px-4 py-3">
@@ -248,14 +251,17 @@ export default function ClientHub() {
                       <p className="text-sm font-medium truncate">{pkg ? pkg.name : "Service package"}</p>
                       <p className="text-xs text-muted-foreground truncate">{propName(a.property_id)} · €{(a.agreed_price || 0).toFixed(2)} · {a.billing_type}</p>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${badgeTone(a.status)}`}>{a.status}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {a.signing_status && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.signing_status)}`}>{a.signing_status}</span>}
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{a.status}</span>
+                    </div>
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
                     {a.inspection_frequency && <span>Frequency: {a.inspection_frequency}</span>}
                     {a.start_date && <span>Start: {a.start_date}</span>}
                     {a.renewal_date && <span>Renewal: {a.renewal_date}</span>}
                   </div>
-                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Edit Agreement</Link>
+                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{a.status === "Pending" ? "Review Agreement" : "Edit Agreement"}</Link>
                 </div>
               );
             })}

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Package, Loader2, Save, User, Building2, FileText,
-  ChevronDown, ChevronRight,
+  ChevronDown, ChevronRight, Eye, Lock, AlertTriangle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -15,9 +15,15 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import EmptyState from "@/components/ui/EmptyState";
+import { buildSentSnapshot } from "@/lib/agreementTerms";
+import EmergencyAuthSection from "@/components/agreements/EmergencyAuthSection";
+import IntakeReferenceCard from "@/components/agreements/IntakeReferenceCard";
+import AgreementPreview from "@/components/agreements/AgreementPreview";
 
 const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
-const STATUSES = ["Active", "Paused", "Ended", "Cancelled"];
+// Pending is the default for NEW agreements. Legacy agreements keep their stored status.
+const STATUSES = ["Pending", "Active", "Paused", "Ended", "Cancelled"];
+const FROZEN_STATUSES = ["Sent", "Viewed", "Signed"];
 const FREQUENCY_OPTS = ["Weekly", "Twice Weekly", "Monthly", "As Needed"];
 
 const fmt = (dt) =>
@@ -49,7 +55,12 @@ export default function ServiceAgreement() {
   const [client, setClient] = useState(null);
   const [properties, setProperties] = useState([]);
   const [packages, setPackages] = useState([]);
+  const [business, setBusiness] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [latestIntake, setLatestIntake] = useState(null);
   const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [emergencyConfirmed, setEmergencyConfirmed] = useState(false);
   const [values, setValues] = useState({
     client_id: clientId || "",
     property_id: propertyParam || "",
@@ -59,12 +70,19 @@ export default function ServiceAgreement() {
     inspection_frequency: "",
     start_date: "",
     renewal_date: "",
-    status: "Active",
+    status: "Pending",
+    signing_status: "Draft",
+    agreement_version: 1,
     included_services_override: "",
     additional_terms: "",
     notes: "",
     next_invoice_date: "",
     created_from_package_price: 0,
+    emergency_authorization: "",
+    emergency_max_amount: "",
+    emergency_unreachable_instructions: "",
+    terms_template_id: "",
+    terms_version: "",
   });
 
   const set = (k, v) => setValues((s) => ({ ...s, [k]: v }));
@@ -78,15 +96,24 @@ export default function ServiceAgreement() {
           loaded = await base44.entities.PropertyServiceAgreement.get(id);
           cid = loaded.client_id || clientId;
         }
-        const [cl, allProps, allPkgs] = await Promise.all([
+        const [cl, allProps, allPkgs, allBiz, allTemplates, allIntakes] = await Promise.all([
           cid ? base44.entities.Client.get(cid) : Promise.resolve(null),
           base44.entities.Property.list("-created_date", 500),
           base44.entities.ServicePackage.list("-created_date", 200),
+          base44.entities.BusinessSettings.list("-created_date", 10),
+          base44.entities.AgreementTermsTemplate.list("-version", 50),
+          cid ? base44.entities.CustomerIntake.list("-created_date", 200) : Promise.resolve([]),
         ]);
         setClient(cl);
         const clientProps = (allProps || []).filter((p) => p.owner_id === cid && !p.archived);
         setProperties(clientProps);
         setPackages((allPkgs || []).filter((p) => p.active !== false));
+        setBusiness((allBiz || [])[0] || null);
+        setTemplates(allTemplates || []);
+        const clientIntakes = (allIntakes || []).filter((i) => i.client_id === cid && !i.archived);
+        const latest = clientIntakes.slice().sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0] || null;
+        setLatestIntake(latest);
+
         if (isEdit && loaded) {
           setValues({
             client_id: loaded.client_id || "",
@@ -98,11 +125,18 @@ export default function ServiceAgreement() {
             start_date: loaded.start_date || "",
             renewal_date: loaded.renewal_date || "",
             status: loaded.status || "Active",
+            signing_status: loaded.signing_status,
+            agreement_version: loaded.agreement_version ?? 1,
             included_services_override: loaded.included_services_override || "",
             additional_terms: loaded.additional_terms || "",
             notes: loaded.notes || "",
             next_invoice_date: loaded.next_invoice_date || "",
             created_from_package_price: loaded.created_from_package_price ?? 0,
+            emergency_authorization: loaded.emergency_authorization || "",
+            emergency_max_amount: loaded.emergency_max_amount ?? "",
+            emergency_unreachable_instructions: loaded.emergency_unreachable_instructions || "",
+            terms_template_id: loaded.terms_template_id || "",
+            terms_version: loaded.terms_version || "",
           });
           // Auto-open Additional Details if any of those fields already contain data.
           const hasExtra = !!(
@@ -122,10 +156,28 @@ export default function ServiceAgreement() {
   }, [id]);
 
   const selectedPackage = packages.find((p) => p.id === values.service_package_id);
+  const selectedProperty = properties.find((p) => p.id === values.property_id) || null;
+  // Use the most recent terms template for the preview (V1 currently DRAFT).
+  const selectedTemplate = templates[0] || null;
+  const isFrozen = FROZEN_STATUSES.includes(values.signing_status);
   const hasExtra = !!(
     values.included_services_override || values.additional_terms ||
     values.notes || values.next_invoice_date
   );
+
+  // Live preview snapshot — never frozen, always recomputed from current draft.
+  const snapshot = useMemo(() => {
+    if (!selectedPackage || !selectedProperty || !selectedTemplate) return null;
+    return buildSentSnapshot({
+      business: business || {},
+      client: client || {},
+      property: selectedProperty,
+      servicePackage: selectedPackage,
+      agreement: values,
+      template: selectedTemplate,
+      vatRate: business?.vat_rate,
+    });
+  }, [business, client, selectedProperty, selectedPackage, values, selectedTemplate]);
 
   const onPackageChange = (pid) => {
     const pkg = packages.find((p) => p.id === pid);
@@ -186,7 +238,20 @@ export default function ServiceAgreement() {
         notes: values.notes,
         next_invoice_date: values.next_invoice_date || null,
         created_from_package_price: Number(values.created_from_package_price) || 0,
+        emergency_authorization: values.emergency_authorization || "",
+        emergency_max_amount: values.emergency_max_amount === "" ? null : Number(values.emergency_max_amount),
+        emergency_unreachable_instructions: values.emergency_unreachable_instructions || "",
+        terms_template_id: selectedTemplate?.id || "",
+        terms_version: selectedTemplate ? String(selectedTemplate.version) : "",
       };
+      // Preserve signing_status for edit; set Draft for new.
+      if (isEdit) {
+        if (values.signing_status) payload.signing_status = values.signing_status;
+        if (values.agreement_version) payload.agreement_version = values.agreement_version;
+      } else {
+        payload.signing_status = "Draft";
+        payload.agreement_version = 1;
+      }
       if (isEdit) {
         await base44.entities.PropertyServiceAgreement.update(id, payload);
       } else {
@@ -207,6 +272,17 @@ export default function ServiceAgreement() {
         <PageBackButton fallback={backTo} className="mb-1" />
         <h1 className="text-xl font-semibold mb-4">{isEdit ? "Edit Service Agreement" : "New Service Agreement"}</h1>
 
+        {/* Frozen banner */}
+        {isFrozen && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-4 flex items-start gap-3">
+            <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-700">This agreement version has been sent and is frozen.</p>
+              <p className="text-xs text-amber-600/90 mt-0.5">Create a replacement version to change customer-facing terms. (Replacement creation will be available in a later phase.)</p>
+            </div>
+          </div>
+        )}
+
         {!client ? (
           <EmptyState icon={User} title="No client selected" description="Open this screen from a client's hub." />
         ) : properties.length === 0 ? (
@@ -224,7 +300,7 @@ export default function ServiceAgreement() {
               {properties.length === 1 ? (
                 <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">{properties[0].name}</div>
               ) : (
-                <Select value={values.property_id} onValueChange={(v) => set("property_id", v)}>
+                <Select value={values.property_id} onValueChange={(v) => set("property_id", v)} disabled={isFrozen}>
                   <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
                   <SelectContent>
                     {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -235,7 +311,7 @@ export default function ServiceAgreement() {
 
             <div>
               <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Service Package</Label>
-              <Select value={values.service_package_id} onValueChange={onPackageChange}>
+              <Select value={values.service_package_id} onValueChange={onPackageChange} disabled={isFrozen}>
                 <SelectTrigger><SelectValue placeholder="Select a package" /></SelectTrigger>
                 <SelectContent>
                   {packages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -267,11 +343,11 @@ export default function ServiceAgreement() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Agreed Price (€)</Label>
-                  <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} />
+                  <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} disabled={isFrozen} />
                 </div>
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Billing Type</Label>
-                  <Select value={values.billing_type} onValueChange={onBillingTypeChange}>
+                  <Select value={values.billing_type} onValueChange={onBillingTypeChange} disabled={isFrozen}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{BILLING_TYPES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
@@ -280,18 +356,18 @@ export default function ServiceAgreement() {
 
               <div>
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Inspection Frequency</Label>
-                <Input value={values.inspection_frequency || ""} onChange={(e) => set("inspection_frequency", e.target.value)} placeholder="e.g. Weekly" list="freq-opts" />
+                <Input value={values.inspection_frequency || ""} onChange={(e) => set("inspection_frequency", e.target.value)} placeholder="e.g. Weekly" list="freq-opts" disabled={isFrozen} />
                 <datalist id="freq-opts">{FREQUENCY_OPTS.map((o) => <option key={o} value={o} />)}</datalist>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Start Date</Label>
-                  <Input type="date" value={values.start_date || ""} onChange={(e) => onStartDateChange(e.target.value)} />
+                  <Input type="date" className="min-w-0" value={values.start_date || ""} onChange={(e) => onStartDateChange(e.target.value)} disabled={isFrozen} />
                 </div>
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Renewal Date</Label>
-                  <Input type="date" value={values.renewal_date || ""} onChange={(e) => set("renewal_date", e.target.value)} />
+                  <Input type="date" className="min-w-0" value={values.renewal_date || ""} onChange={(e) => set("renewal_date", e.target.value)} disabled={isFrozen} />
                 </div>
               </div>
 
@@ -301,14 +377,27 @@ export default function ServiceAgreement() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{STATUSES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                 </Select>
+                {values.status === "Pending" && (
+                  <p className="text-xs text-muted-foreground mt-1.5">Pending agreements are drafts awaiting activation. They do not count as active service.</p>
+                )}
               </div>
             </div>
+
+            {/* Emergency Repair Authorization + intake reference */}
+            <IntakeReferenceCard intake={latestIntake} />
+            <EmergencyAuthSection
+              values={values}
+              set={set}
+              frozen={isFrozen}
+              confirmed={emergencyConfirmed}
+              setConfirmed={setEmergencyConfirmed}
+            />
 
             {/* Additional Details (optional, collapsible) */}
             <button
               type="button"
               onClick={() => setAdditionalOpen((o) => !o)}
-              className="w-full flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left hover:bg-muted/40 transition"
+              className="w-full flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left hover:bg-muted/40 transition min-h-[44px]"
             >
               <span className="flex items-center gap-2 text-sm font-medium">
                 <FileText className="w-4 h-4 text-muted-foreground" />
@@ -324,13 +413,13 @@ export default function ServiceAgreement() {
               <div className="rounded-2xl border border-border bg-card p-4 space-y-4 -mt-1">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Custom Services / Changes</Label>
-                  <Textarea value={values.included_services_override || ""} onChange={(e) => set("included_services_override", e.target.value)} rows={2} placeholder="Override or add to the package's included services" />
+                  <Textarea value={values.included_services_override || ""} onChange={(e) => set("included_services_override", e.target.value)} rows={2} placeholder="Override or add to the package's included services" disabled={isFrozen} />
                   <p className="text-xs text-muted-foreground mt-1">Only use this if this customer's services differ from the selected package.</p>
                 </div>
 
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Additional Terms</Label>
-                  <Textarea value={values.additional_terms || ""} onChange={(e) => set("additional_terms", e.target.value)} rows={2} />
+                  <Textarea value={values.additional_terms || ""} onChange={(e) => set("additional_terms", e.target.value)} rows={2} disabled={isFrozen} />
                 </div>
 
                 <div>
@@ -340,9 +429,42 @@ export default function ServiceAgreement() {
 
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Next Invoice Date</Label>
-                  <Input type="date" value={values.next_invoice_date || ""} onChange={(e) => set("next_invoice_date", e.target.value)} />
+                  <Input type="date" className="min-w-0" value={values.next_invoice_date || ""} onChange={(e) => set("next_invoice_date", e.target.value)} />
                   <p className="text-xs text-muted-foreground mt-1">Auto-calculated from Start Date for recurring billing. You can adjust it manually.</p>
                 </div>
+              </div>
+            )}
+
+            {/* Customer Agreement Preview */}
+            <button
+              type="button"
+              onClick={() => setShowPreview((o) => !o)}
+              className="w-full flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-left hover:bg-primary/10 transition min-h-[44px]"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Eye className="w-4 h-4 text-primary" />
+                Preview Customer Agreement
+              </span>
+              {showPreview ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-primary" />}
+            </button>
+
+            {showPreview && (
+              <div className="-mt-1">
+                {!selectedPackage || !selectedProperty ? (
+                  <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+                    Select a property and service package to preview the agreement.
+                  </div>
+                ) : !selectedTemplate ? (
+                  <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+                    No terms template available to preview.
+                  </div>
+                ) : (
+                  <AgreementPreview
+                    snapshot={snapshot}
+                    template={selectedTemplate}
+                    property={selectedProperty}
+                  />
+                )}
               </div>
             )}
 
