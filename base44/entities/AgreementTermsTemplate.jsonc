@@ -49,6 +49,10 @@
       "type": "boolean",
       "default": false
     },
+    "legal_approved": {
+      "type": "boolean",
+      "default": false
+    },
     "archived": {
       "type": "boolean",
       "default": false

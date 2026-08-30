@@ -84,6 +84,7 @@ export default async function(req) {
     else {
       if (template.archived) errs.push('The selected terms template is archived.');
       if (template.active !== true) errs.push('No active legally-approved agreement terms template is available.');
+      else if (template.legal_approved !== true) errs.push('The selected agreement terms have not been legally approved for customer use.');
       if (!template.language) errs.push('Terms template language is invalid.');
       if (typeof template.version !== 'number') errs.push('Terms template version is invalid.');
     }

@@ -180,7 +180,9 @@ export default function ServiceAgreement() {
         ? "Confirm the emergency authorization before sending."
         : selectedTemplate && selectedTemplate.active !== true
           ? "No active legally-approved agreement terms template is available."
-          : null;
+          : selectedTemplate && selectedTemplate.legal_approved !== true
+            ? "The selected agreement terms have not been legally approved for customer use."
+            : null;
   const hasExtra = !!(
     values.included_services_override || values.additional_terms ||
     values.notes || values.next_invoice_date
@@ -556,7 +558,7 @@ export default function ServiceAgreement() {
                 </p>
                 {selectedTemplate && (
                   <p className="text-xs text-muted-foreground">
-                    Terms template: {selectedTemplate.name} · Version {selectedTemplate.version} · {selectedTemplate.active === true ? "Active" : "Inactive (cannot send)"}
+                    Terms template: {selectedTemplate.name} · Version {selectedTemplate.version} · {selectedTemplate.active !== true ? "Draft / inactive" : selectedTemplate.legal_approved !== true ? "Active — legal approval pending" : "Active + legally approved"}
                   </p>
                 )}
                 {sendDisabledReason && (
@@ -592,7 +594,11 @@ export default function ServiceAgreement() {
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground">Awaiting customer signature. The signing experience will be available in a later phase.</p>
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 space-y-0.5">
+                  <p className="font-medium">Internal preview only — do not send this link to a customer yet.</p>
+                  <p>The customer signing page will become available in the next implementation phase.</p>
+                </div>
+                <p className="text-xs text-muted-foreground">Awaiting customer signature.</p>
               </div>
             )}
 
