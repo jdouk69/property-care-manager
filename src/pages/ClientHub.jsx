@@ -130,7 +130,12 @@ export default function ClientHub() {
   } else if (activeAgreements.length === 0 && pendingAgreements.length === 0) {
     nextStep = { label: "Assign a service package", to: `/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`, button: "Assign Service Package" };
   } else if (activeAgreements.length === 0 && pendingAgreements.length > 0) {
-    nextStep = { label: "Complete the pending service agreement draft", to: `/agreements/${pendingAgreements[0].id}`, button: "Review Agreement" };
+    const pendingSent = pendingAgreements.find((a) => a.signing_status === "Sent");
+    if (pendingSent) {
+      nextStep = { label: "Awaiting customer signature on the service agreement", to: `/agreements/${pendingSent.id}`, button: "View Agreement" };
+    } else {
+      nextStep = { label: "Complete the pending service agreement draft", to: `/agreements/${pendingAgreements[0].id}`, button: "Review Agreement" };
+    }
   } else if (liveVisits.length === 0 && !hasStartedVisit) {
     const ag = activeAgreements.length === 1 ? activeAgreements[0] : null;
     const to = ag
@@ -261,7 +266,7 @@ export default function ClientHub() {
                     {a.start_date && <span>Start: {a.start_date}</span>}
                     {a.renewal_date && <span>Renewal: {a.renewal_date}</span>}
                   </div>
-                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{a.status === "Pending" ? "Review Agreement" : "Edit Agreement"}</Link>
+                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{a.status === "Pending" && a.signing_status === "Sent" ? "Awaiting customer signature" : a.status === "Pending" ? "Review Agreement" : "Edit Agreement"}</Link>
                 </div>
               );
             })}

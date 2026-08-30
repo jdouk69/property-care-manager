@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, Package, Loader2, Save, User, Building2, FileText,
-  ChevronDown, ChevronRight, Eye, Lock, AlertTriangle,
+  ChevronDown, ChevronRight, Eye, Lock, AlertTriangle, Send,
+  CheckCircle2, Copy, MessageCircle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -60,6 +61,10 @@ export default function ServiceAgreement() {
   const [latestIntake, setLatestIntake] = useState(null);
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState(null);
+  const [sendError, setSendError] = useState("");
+  const [copied, setCopied] = useState("");
   const [values, setValues] = useState({
     client_id: clientId || "",
     property_id: propertyParam || "",
@@ -83,6 +88,8 @@ export default function ServiceAgreement() {
     emergency_authorization_confirmed: false,
     terms_template_id: "",
     terms_version: "",
+    public_token: "",
+    sent_at: "",
   });
 
   const set = (k, v) => setValues((s) => ({ ...s, [k]: v }));
@@ -140,6 +147,8 @@ export default function ServiceAgreement() {
             emergency_authorization_confirmed: loaded.emergency_authorization_confirmed ?? false,
             terms_template_id: loaded.terms_template_id || "",
             terms_version: loaded.terms_version || "",
+            public_token: loaded.public_token || "",
+            sent_at: loaded.sent_at || "",
           });
           // Auto-open Additional Details if any of those fields already contain data.
           const hasExtra = !!(
@@ -163,6 +172,15 @@ export default function ServiceAgreement() {
   // Use the most recent terms template for the preview (V1 currently DRAFT).
   const selectedTemplate = templates[0] || null;
   const isFrozen = FROZEN_STATUSES.includes(values.signing_status);
+  const sendDisabledReason = !isEdit
+    ? null
+    : values.signing_status !== "Draft"
+      ? null
+      : !values.emergency_authorization_confirmed
+        ? "Confirm the emergency authorization before sending."
+        : selectedTemplate && selectedTemplate.active !== true
+          ? "No active legally-approved agreement terms template is available."
+          : null;
   const hasExtra = !!(
     values.included_services_override || values.additional_terms ||
     values.notes || values.next_invoice_date
@@ -181,6 +199,58 @@ export default function ServiceAgreement() {
       vatRate: business?.vat_rate,
     });
   }, [business, client, selectedProperty, selectedPackage, values, selectedTemplate]);
+
+  const publicLink = values.public_token
+    ? `${window.location.origin}/agreement/${values.public_token}`
+    : (sendResult && sendResult.public_link) || "";
+
+  const handleSend = async () => {
+    if (!isEdit || !id) return;
+    setSending(true);
+    setSendError("");
+    try {
+      const res = await base44.functions.invoke("agreementSend", { action: "send", agreement_id: id });
+      const data = res && res.data ? res.data : res;
+      if (data && data.ok) {
+        const token = data.public_link ? String(data.public_link).split("/agreement/")[1] || "" : "";
+        setValues((s) => ({
+          ...s,
+          signing_status: "Sent",
+          public_token: token || s.public_token,
+          sent_at: data.sent_at || "",
+        }));
+        setSendResult({ public_link: data.public_link, sent_at: data.sent_at });
+      } else {
+        const msg = (data && data.error) || "Send failed.";
+        const detail = data && Array.isArray(data.details) ? " " + data.details.join(" ") : "";
+        setSendError(msg + detail);
+      }
+    } catch (e) {
+      const data = e && e.response && e.response.data ? e.response.data : null;
+      const msg = (data && data.error) || (e && e.message) || "Send failed.";
+      const detail = data && Array.isArray(data.details) ? " " + data.details.join(" ") : "";
+      setSendError(msg + detail);
+    }
+    setSending(false);
+  };
+
+  const copyToClipboard = async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(""), 2000);
+    } catch (e) {}
+  };
+
+  const copyMessage = () => {
+    const msg = `Hello${client && client.name ? " " + client.name : ""}, your service agreement is ready for your signature: ${publicLink}`;
+    copyToClipboard(msg, "message");
+  };
+
+  const formatSentAt = (iso) => {
+    if (!iso) return "";
+    try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+  };
 
   const onPackageChange = (pid) => {
     const pkg = packages.find((p) => p.id === pid);
@@ -470,6 +540,59 @@ export default function ServiceAgreement() {
                     emergencyConfirmed={!!values.emergency_authorization_confirmed}
                   />
                 )}
+              </div>
+            )}
+
+            {/* Send for Signature (existing Draft agreements only) */}
+            {isEdit && values.signing_status === "Draft" && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-medium">Send for Signature</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Freezes this agreement version, generates a secure customer signing link, and marks the agreement as Sent.
+                  After sending, customer-facing terms cannot be changed without a replacement version (available in a later phase).
+                </p>
+                {selectedTemplate && (
+                  <p className="text-xs text-muted-foreground">
+                    Terms template: {selectedTemplate.name} · Version {selectedTemplate.version} · {selectedTemplate.active === true ? "Active" : "Inactive (cannot send)"}
+                  </p>
+                )}
+                {sendDisabledReason && (
+                  <p className="text-xs text-amber-600">{sendDisabledReason}</p>
+                )}
+                {sendError && (
+                  <p className="text-xs text-destructive">{sendError}</p>
+                )}
+                <Button onClick={handleSend} disabled={sending || !!sendDisabledReason} className="gap-1.5">
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Send for Signature
+                </Button>
+              </div>
+            )}
+
+            {/* Sent panel */}
+            {isEdit && values.signing_status === "Sent" && (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <p className="text-sm font-medium text-emerald-700">Sent for signature</p>
+                </div>
+                {values.sent_at && <p className="text-xs text-muted-foreground">Sent {formatSentAt(values.sent_at)}</p>}
+                {publicLink && (
+                  <div className="space-y-2">
+                    <div className="rounded-md border border-border bg-card px-3 py-2 text-xs break-all">{publicLink}</div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => copyToClipboard(publicLink, "link")} className="gap-1.5">
+                        <Copy className="w-4 h-4" /> {copied === "link" ? "Copied" : "Copy Link"}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={copyMessage} className="gap-1.5">
+                        <MessageCircle className="w-4 h-4" /> {copied === "message" ? "Copied" : "Copy Message"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Awaiting customer signature. The signing experience will be available in a later phase.</p>
               </div>
             )}
 
