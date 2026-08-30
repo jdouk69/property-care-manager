@@ -197,6 +197,9 @@
           },
           "recurring_check_text": {
             "type": "string"
+          },
+          "recurring_visit_type": {
+            "type": "string"
           }
         },
         "required": [
