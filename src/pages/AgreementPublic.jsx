@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import SignaturePad from "@/components/agreements/SignaturePad";
 import {
-  Loader2, CheckCircle2, XCircle, ShieldCheck, PenLine, FileText, Home, User, Download,
+  Loader2, CheckCircle2, XCircle, ShieldCheck, PenLine, FileText, Home, User, Download, AlertTriangle,
 } from "lucide-react";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 
@@ -243,6 +243,14 @@ export default function AgreementPublic() {
             </section>
           )}
         </div>
+
+        {/* Historical note: this signed agreement is no longer the current active one */}
+        {isSigned && data.operational_status && data.operational_status !== "Active" && (
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 mb-4 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-sm text-amber-800">This agreement is no longer the current active service agreement.</p>
+          </div>
+        )}
 
         {/* Signed state: read-only confirmation + signed-copy access */}
         {isSigned && (

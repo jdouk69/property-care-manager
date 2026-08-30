@@ -140,6 +140,8 @@ export default async function(req) {
           signed_pdf_available: !!agreement.signed_pdf_url,
           hash_valid: true,
           signable: true,
+          operational_status: agreement.status || null,
+          is_current_active: agreement.status === "Active",
         });
       }
       // No mutation for Viewed/Signed/Declined
@@ -155,6 +157,8 @@ export default async function(req) {
         signed_pdf_available: !!agreement.signed_pdf_url,
         hash_valid: true,
         signable,
+        operational_status: agreement.status || null,
+        is_current_active: agreement.status === "Active",
         });
         }
 

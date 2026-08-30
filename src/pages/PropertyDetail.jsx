@@ -145,14 +145,19 @@ export default function PropertyDetail() {
 
           <TabsContent value="overview" className="space-y-4">
             <Section title="Service Agreement">
-              {agreements.length > 0 ? agreements.map((a) => (
+              {agreements.length > 0 ? [...agreements].sort((a, b) => (a.status === "Active" ? 0 : 1) - (b.status === "Active" ? 0 : 1)).map((a) => (
                 <div key={a.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-medium truncate">{pkgMap[a.service_package_id]?.name || "Service package"}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{a.status}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {a.signing_status && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.signing_status)}`}>{a.signing_status}</span>}
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{a.status}</span>
+                    </div>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">€{(a.agreed_price || 0).toFixed(2)} · {a.billing_type}{a.inspection_frequency ? ` · ${a.inspection_frequency}` : ""}{a.start_date ? ` · Start ${a.start_date}` : ""}{a.renewal_date ? ` · Renew ${a.renewal_date}` : ""}</p>
-                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Edit Agreement</Link>
+                  {a.status === "Active" && a.signing_status === "Signed"
+                    ? <p className="text-xs text-emerald-700 font-medium mt-1">Current operational service agreement</p>
+                    : <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Open Agreement</Link>}
                 </div>
               )) : (
                 <div className="px-4 py-4">

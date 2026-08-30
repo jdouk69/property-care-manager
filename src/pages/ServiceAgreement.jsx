@@ -21,6 +21,9 @@ import EmergencyAuthSection from "@/components/agreements/EmergencyAuthSection";
 import IntakeReferenceCard from "@/components/agreements/IntakeReferenceCard";
 import AgreementPreview from "@/components/agreements/AgreementPreview";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
+import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
+import CreateReplacementButton from "@/components/agreements/CreateReplacementButton";
+import AgreementHistory from "@/components/agreements/AgreementHistory";
 
 const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
 // Pending is the default for NEW agreements. Legacy agreements keep their stored status.
@@ -67,6 +70,7 @@ export default function ServiceAgreement() {
   const [sendError, setSendError] = useState("");
   const [copied, setCopied] = useState("");
   const [downloadingSigned, setDownloadingSigned] = useState(false);
+  const [groupVersions, setGroupVersions] = useState([]);
   const [values, setValues] = useState({
     client_id: clientId || "",
     property_id: propertyParam || "",
@@ -95,6 +99,8 @@ export default function ServiceAgreement() {
     signer_name: "",
     signer_email: "",
     signed_at: "",
+    activated_at: "",
+    activated_by: "",
   });
 
   const handleDownloadSigned = async () => {
@@ -163,6 +169,8 @@ export default function ServiceAgreement() {
             signer_name: loaded.signer_name || "",
             signer_email: loaded.signer_email || "",
             signed_at: loaded.signed_at || "",
+            activated_at: loaded.activated_at || "",
+            activated_by: loaded.activated_by || "",
           });
           // Auto-open Additional Details if any of those fields already contain data.
           const hasExtra = !!(
@@ -170,6 +178,17 @@ export default function ServiceAgreement() {
             loaded.notes || loaded.next_invoice_date
           );
           setAdditionalOpen(hasExtra);
+          // Load version history for the agreement group (legacy w/o group id: just this version).
+          if (loaded.agreement_group_id) {
+            try {
+              const gv = await base44.entities.PropertyServiceAgreement.filter(
+                { agreement_group_id: loaded.agreement_group_id }, "-agreement_version", 500,
+              );
+              setGroupVersions((gv || []).filter((a) => !a.archived));
+            } catch (e) { setGroupVersions([loaded]); }
+          } else {
+            setGroupVersions([loaded]);
+          }
         } else if (propertyParam) {
           set("property_id", propertyParam);
         } else if (clientProps.length === 1) {
@@ -185,7 +204,12 @@ export default function ServiceAgreement() {
   const selectedProperty = properties.find((p) => p.id === values.property_id) || null;
   // Use the most recent terms template for the preview (V1 currently DRAFT).
   const selectedTemplate = templates[0] || null;
-  const isFrozen = FROZEN_STATUSES.includes(values.signing_status);
+  const isFrozen = FROZEN_STATUSES.includes(values.signing_status) || values.status === "Active";
+  const canActivate = isEdit && values.status === "Pending" && values.signing_status === "Signed";
+  const isActive = isEdit && values.status === "Active" && values.signing_status === "Signed";
+  const hasActiveSibling = (groupVersions || []).some((a) => a.id !== id && a.status === "Active");
+  const canReplace = isEdit && (["Sent", "Viewed", "Signed", "Declined"].includes(values.signing_status) || values.status === "Active");
+  const isDeclinedReplace = isEdit && values.signing_status === "Declined";
   const sendDisabledReason = !isEdit
     ? null
     : values.signing_status !== "Draft"
@@ -368,7 +392,7 @@ export default function ServiceAgreement() {
             <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-amber-700">This agreement version has been sent and is frozen.</p>
-              <p className="text-xs text-amber-600/90 mt-0.5">Create a replacement version to change customer-facing terms. (Replacement creation will be available in a later phase.)</p>
+              <p className="text-xs text-amber-600/90 mt-0.5">Use “Create Replacement Version” below to draft a new version; this version's signed terms remain immutable.</p>
             </div>
           </div>
         )}
@@ -463,7 +487,7 @@ export default function ServiceAgreement() {
 
               <div>
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</Label>
-                <Select value={values.status} onValueChange={(v) => set("status", v)}>
+                <Select value={values.status} onValueChange={(v) => set("status", v)} disabled={isFrozen}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{STATUSES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                 </Select>
@@ -612,17 +636,19 @@ export default function ServiceAgreement() {
               </div>
             )}
 
-            {/* Signed panel */}
+            {/* Signed panel (Pending/Signed = activation pending; Active/Signed = active) */}
             {isEdit && values.signing_status === "Signed" && (
               <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-1.5">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <p className="text-sm font-medium text-emerald-700">Agreement signed</p>
+                  <p className="text-sm font-medium text-emerald-700">{isActive ? "Active Service Agreement" : "Agreement signed"}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">Version {values.agreement_version} · Terms {values.terms_version || "—"}</p>
                 {values.signer_name && <p className="text-xs text-muted-foreground">Signed by: {values.signer_name}</p>}
-                {values.signer_email && <p className="text-xs text-muted-foreground">Email: {values.signer_email}</p>}
                 {values.signed_at && <p className="text-xs text-muted-foreground">Signed {formatSentAt(values.signed_at)}</p>}
+                {isActive && values.activated_at && (
+                  <p className="text-xs text-muted-foreground">Activated {formatSentAt(values.activated_at)}{values.activated_by ? ` by ${values.activated_by}` : ""}</p>
+                )}
                 {values.signed_pdf_url && values.public_token && (
                   <div className="flex flex-wrap gap-2 pt-2">
                     <button type="button" onClick={handleDownloadSigned} disabled={downloadingSigned} className="inline-flex items-center gap-1.5 h-8 rounded-md border border-input bg-transparent px-3 text-xs font-medium hover:bg-accent disabled:opacity-50">
@@ -630,8 +656,37 @@ export default function ServiceAgreement() {
                     </button>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground pt-1">Activation pending — review and activate the service when ready.</p>
+                {canActivate && (
+                  <div className="pt-2">
+                    <ActivateServiceButton agreementId={id} isReplacement={hasActiveSibling} onActivated={() => navigate(0)} />
+                  </div>
+                )}
+                {canActivate && (
+                  <p className="text-xs text-muted-foreground pt-1">Activation pending — review and activate the service when ready.</p>
+                )}
+                {isActive && (
+                  <p className="text-xs text-muted-foreground pt-1">This is the current operational service agreement. To change terms, create a replacement version below.</p>
+                )}
+                {isActive && (
+                  <div className="pt-2">
+                    <CreateReplacementButton agreementId={id} />
+                  </div>
+                )}
               </div>
+            )}
+
+            {/* Replacement / revised action for frozen non-active versions (Sent/Viewed/Signed-pending/Declined) */}
+            {canReplace && !isActive && (
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+                <p className="text-sm font-medium">Change customer-facing terms</p>
+                <p className="text-xs text-muted-foreground">This version is frozen. Create a new editable draft version to change terms; this version is preserved as permanent history.</p>
+                <CreateReplacementButton agreementId={id} label={isDeclinedReplace ? "Create Revised Agreement" : "Create Replacement Version"} />
+              </div>
+            )}
+
+            {/* Version history */}
+            {isEdit && groupVersions.length > 0 && (
+              <AgreementHistory versions={groupVersions} currentId={id} />
             )}
 
             <div className="flex items-center justify-between gap-2 pt-1">

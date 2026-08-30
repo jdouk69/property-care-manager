@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import {
   Phone, MessageCircle, Mail, Pencil, Home, Plus, Package, CalendarClock,
   ClipboardCheck, Wrench, Wallet, FileText, MessageSquare, FileWarning,
-  ArrowRight, ArrowLeft, Globe, Languages, Loader2, MapPin, Sparkles,
+  ArrowRight, ArrowLeft, Globe, Languages, Loader2, MapPin, Sparkles, CheckCircle2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/EmptyState";
 import ClientIntakePanel from "@/components/intake/ClientIntakePanel";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
+import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -306,6 +307,19 @@ export default function ClientHub() {
                     <button type="button" onClick={() => handleDownloadSigned(a.public_token)} disabled={downloadingPdf === a.public_token} className="mt-0.5 text-[11px] text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-50">
                       {downloadingPdf === a.public_token ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />} View Signed PDF
                     </button>
+                  )}
+                  {a.status === "Active" && a.signing_status === "Signed" && (
+                    <p className="mt-1 text-[11px] text-emerald-700 font-medium inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Service active</p>
+                  )}
+                  {a.status === "Pending" && a.signing_status === "Signed" && (
+                    <div className="mt-1.5">
+                      <ActivateServiceButton
+                        agreementId={a.id}
+                        isReplacement={!!(a.agreement_group_id && agreements.some((x) => x.id !== a.id && x.status === "Active" && x.agreement_group_id === a.agreement_group_id))}
+                        onActivated={() => window.location.reload()}
+                        label="Activate Service"
+                      />
+                    </div>
                   )}
                 </div>
               );

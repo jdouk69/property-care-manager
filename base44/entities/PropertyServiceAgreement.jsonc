@@ -139,6 +139,15 @@
     "signed_pdf_url": {
       "type": "string"
     },
+    "activated_at": {
+      "type": "string"
+    },
+    "activated_by": {
+      "type": "string"
+    },
+    "ended_at": {
+      "type": "string"
+    },
     "emergency_authorization": {
       "type": "string"
     },
