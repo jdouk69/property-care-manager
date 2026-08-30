@@ -38,12 +38,13 @@
     "status": {
       "type": "string",
       "enum": [
+        "Pending",
         "Active",
         "Paused",
         "Ended",
         "Cancelled"
       ],
-      "default": "Active"
+      "default": "Pending"
     },
     "included_services_override": {
       "type": "string"
@@ -60,6 +61,92 @@
     },
     "created_from_package_price": {
       "type": "number"
+    },
+    "signing_status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "Viewed",
+        "Signed",
+        "Declined",
+        "Expired"
+      ],
+      "default": "Draft"
+    },
+    "agreement_group_id": {
+      "type": "string"
+    },
+    "agreement_version": {
+      "type": "number",
+      "default": 1
+    },
+    "public_token": {
+      "type": "string"
+    },
+    "sent_at": {
+      "type": "string"
+    },
+    "viewed_at": {
+      "type": "string"
+    },
+    "signed_at": {
+      "type": "string"
+    },
+    "declined_at": {
+      "type": "string"
+    },
+    "decline_reason": {
+      "type": "string"
+    },
+    "sent_snapshot": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "sent_snapshot_hash": {
+      "type": "string"
+    },
+    "terms_template_id": {
+      "type": "string"
+    },
+    "terms_version": {
+      "type": "string"
+    },
+    "signer_name": {
+      "type": "string"
+    },
+    "signer_email": {
+      "type": "string"
+    },
+    "consent_text": {
+      "type": "string"
+    },
+    "consent_accepted": {
+      "type": "boolean"
+    },
+    "signer_ip": {
+      "type": "string"
+    },
+    "signer_user_agent": {
+      "type": "string"
+    },
+    "signature_url": {
+      "type": "string"
+    },
+    "signature_hash": {
+      "type": "string"
+    },
+    "signed_pdf_url": {
+      "type": "string"
+    },
+    "emergency_authorization": {
+      "type": "string"
+    },
+    "emergency_max_amount": {
+      "type": "number"
+    },
+    "emergency_unreachable_instructions": {
+      "type": "string"
     },
     "archived": {
       "type": "boolean",
