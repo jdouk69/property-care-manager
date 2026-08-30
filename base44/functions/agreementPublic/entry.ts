@@ -169,6 +169,27 @@ export default async function(req) {
         // private file reference exists. Returns binary PDF on success, JSON error
         // on failure. Integrity was already verified above (hashValid gate).
         if (action === "download") {
+        // --- Explicit download integrity gate (defense in depth, in addition
+        // to the shared top-level gate). Before any PDF byte is served, verify
+        // the frozen snapshot is intact and the record is Signed with a stored
+        // PDF. On integrity failure: do NOT return the PDF, return a generic
+        // safe error, and log a deduped internal audit. No agreement state is
+        // mutated (no viewed_at, no signed evidence, no status change). This
+        // makes public GET, Sign, Activation, and Download all fail closed on
+        // snapshot corruption.
+        let downloadIntegrityOk = true;
+        try {
+          if (!agreement.sent_snapshot || !agreement.sent_snapshot_hash) {
+            downloadIntegrityOk = false;
+          } else {
+            const recomputed = await snapshotHash(agreement.sent_snapshot);
+            if (recomputed !== agreement.sent_snapshot_hash) downloadIntegrityOk = false;
+          }
+        } catch (e) { downloadIntegrityOk = false; }
+        if (!downloadIntegrityOk) {
+          await logIntegrityFailure(base44, agreement, "download");
+          return Response.json({ error: INTEGRITY_ERROR }, { status: 400 });
+        }
         if (agreement.signing_status !== "Signed") {
         return Response.json({ error: "This agreement is not yet signed." }, { status: 400 });
         }
@@ -227,6 +248,37 @@ export default async function(req) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return Response.json({ error: "Please enter a valid email address." }, { status: 400 });
       }
+
+      // --- Bind the signer email to the intended customer email frozen into
+      // the sent_snapshot at Send time. The authoritative comparison source is
+      // the FROZEN snapshot (already integrity-verified above and re-verified
+      // pre-PDF below), NOT a live Client record — so a later change to the
+      // client cannot widen who may sign. Both emails are normalized (trim +
+      // lowercase) and must match exactly. If the frozen snapshot has no valid
+      // intended customer email, signing is rejected safely rather than
+      // silently allowing any email. The error never reveals another person's
+      // email address. The entered (normalized) email is stored as signer_email
+      // per the existing evidence architecture; previously signed agreements
+      // are not affected (this runs only on Sent/Viewed records).
+      const intendedEmail =
+        agreement.sent_snapshot &&
+        agreement.sent_snapshot.customer &&
+        typeof agreement.sent_snapshot.customer.email === "string"
+          ? agreement.sent_snapshot.customer.email.trim().toLowerCase()
+          : "";
+      if (!intendedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intendedEmail)) {
+        return Response.json(
+          { error: "Please sign using the email address associated with this agreement." },
+          { status: 400 }
+        );
+      }
+      if (email !== intendedEmail) {
+        return Response.json(
+          { error: "Please sign using the email address associated with this agreement." },
+          { status: 400 }
+        );
+      }
+
       const sigBytes = decodeDataUrlPng(signature);
       if (!sigBytes || sigBytes.length < 500) {
         return Response.json({ error: "Please draw your signature." }, { status: 400 });
