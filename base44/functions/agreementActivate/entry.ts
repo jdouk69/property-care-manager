@@ -134,25 +134,38 @@ export default async function(req) {
     }
 
     // --- Recovery-safe multi-record ordering (Base44 has no cross-record transactions) ---
-    // 1) Activate the replacement FIRST. 2) Then end the prior Active version(s).
-    // This guarantees the property is never left with zero Active agreements because
-    // of a failed second update. If the end fails (retried once), the property briefly
-    // has two Active agreements in the same group; the replacement is the intended one
-    // and the conflict guard surfaces the stale one for manual resolution. We never
-    // end before activating, and never end on an unsigned replacement.
-    await base44.asServiceRole.entities.PropertyServiceAgreement.update(agreement_id, {
-      status: 'Active',
-      activated_at: now,
-      activated_by,
-    });
-    await auditAgreementEvent(base44, {
-      automation_type: 'Agreement activated',
-      record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} activated (replacement)`,
-      property_id: agreement.property_id || '',
-      status: 'success',
-    });
+    // A) fully validate eligibility (done above). B) identify prior Active (done above).
+    // C) activate the replacement FIRST. D) attempt to End the prior Active (retry once).
+    // E) if End succeeds -> transaction complete. F) if End fails after retry ->
+    // compensating rollback: replacement -> Pending/Signed and clear only the failed
+    // activation evidence (activated_at, activated_by); ALL signing evidence is preserved,
+    // so the property keeps exactly one Active (the old one). G) if rollback also fails
+    // -> critical conflict (possible dual Active), explicitly reported and logged, never
+    // reported as success. The old Active is never ended before the replacement has
+    // successfully become Active, so a failure can never leave the property with zero
+    // Active agreements. Signed evidence is never deleted or altered at any step.
 
-    let endWarning = '';
+    // C. Activate the replacement first.
+    try {
+      await base44.asServiceRole.entities.PropertyServiceAgreement.update(agreement_id, {
+        status: 'Active',
+        activated_at: now,
+        activated_by,
+      });
+    } catch (e) {
+      await auditAgreementEvent(base44, {
+        automation_type: 'Replacement activation failed',
+        record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} activation update failed`,
+        property_id: agreement.property_id || '',
+        status: 'failure',
+      });
+      return Response.json({
+        error: 'The replacement could not be activated. The original agreement remains active.',
+      }, { status: 500 });
+    }
+
+    // D. Attempt to End each prior Active version (retry once per record).
+    const endFailed = [];
     for (const a of priorActive) {
       let ok = false;
       try {
@@ -176,24 +189,86 @@ export default async function(req) {
           status: 'success',
         });
       } else {
-        endWarning = 'The replacement was activated, but the previous active agreement could not be ended automatically. Resolve it manually from the agreement page.';
-        await auditAgreementEvent(base44, {
-          automation_type: 'Agreement replaced / previous version ended',
-          record_created: `Agreement ${a.id} v${a.agreement_version ?? 1} end failed — manual resolution required`,
-          property_id: a.property_id || '',
-          status: 'failure',
-        });
+        endFailed.push(a);
       }
     }
 
-    return Response.json({
-      ok: true,
-      status: 'Active',
-      activated_at: now,
-      activated_by,
-      prior_ended: priorActive.map((a) => a.id),
-      warning: endWarning || undefined,
+    // E. Normal success: every prior Active ended.
+    if (endFailed.length === 0) {
+      await auditAgreementEvent(base44, {
+        automation_type: 'Agreement activated',
+        record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} activated (replacement)`,
+        property_id: agreement.property_id || '',
+        status: 'success',
+      });
+      return Response.json({
+        ok: true,
+        status: 'Active',
+        activated_at: now,
+        activated_by,
+        prior_ended: priorActive.map((a) => a.id),
+      });
+    }
+
+    // F. End failed -> compensating rollback. Restore the replacement to Pending/Signed
+    // and clear only the failed activation evidence (activated_at, activated_by). All
+    // signing evidence (signed_at, signer_*, signature_hash, signature_url, signed_pdf_url,
+    // consent_*, sent_snapshot, sent_snapshot_hash) is preserved unchanged.
+    await auditAgreementEvent(base44, {
+      automation_type: 'Replacement activation failed',
+      record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} prior-end failed (prior ids: ${endFailed.map((a) => a.id).join(', ')})`,
+      property_id: agreement.property_id || '',
+      status: 'failure',
     });
+
+    let rollbackOk = false;
+    try {
+      await base44.asServiceRole.entities.PropertyServiceAgreement.update(agreement_id, {
+        status: 'Pending',
+        activated_at: '',
+        activated_by: '',
+      });
+      rollbackOk = true;
+    } catch (e1) {
+      try {
+        await base44.asServiceRole.entities.PropertyServiceAgreement.update(agreement_id, {
+          status: 'Pending',
+          activated_at: '',
+          activated_by: '',
+        });
+        rollbackOk = true;
+      } catch (e2) {}
+    }
+
+    if (rollbackOk) {
+      await auditAgreementEvent(base44, {
+        automation_type: 'Replacement activation rolled back',
+        record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} rolled back to Pending/Signed`,
+        property_id: agreement.property_id || '',
+        status: 'success',
+      });
+      return Response.json({
+        status: 'rollback_complete',
+        message: 'The replacement could not be activated because the previous agreement could not be ended. The original agreement remains active.',
+        agreement_id,
+        prior_active: endFailed.map((a) => a.id),
+      }, { status: 409 });
+    }
+
+    // G. Rollback failed too -> critical conflict. Possible dual Active. Never report
+    // success; do not alter any signed evidence. Staff must resolve manually.
+    await auditAgreementEvent(base44, {
+      automation_type: 'Replacement activation recovery failed',
+      record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} rollback failed — possible dual active (prior ids: ${endFailed.map((a) => a.id).join(', ')})`,
+      property_id: agreement.property_id || '',
+      status: 'failure',
+    });
+    return Response.json({
+      status: 'critical_conflict',
+      message: 'Replacement activation could not be completed cleanly. More than one active agreement may require administrative resolution.',
+      agreement_id,
+      prior_active: endFailed.map((a) => a.id),
+    }, { status: 500 });
   } catch (error) {
     return Response.json({ error: error && error.message ? error.message : String(error) }, { status: 500 });
   }

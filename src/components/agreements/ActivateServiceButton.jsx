@@ -26,11 +26,11 @@ export default function ActivateServiceButton({ agreementId, isReplacement = fal
         if (onActivated) onActivated(d);
         else navigate(0);
       } else {
-        setErr((d && d.error) || "Activation failed.");
+        setErr((d && (d.message || d.error)) || "Activation failed.");
       }
     } catch (e) {
       const d = e && e.response && e.response.data ? e.response.data : null;
-      setErr((d && d.error) || (e && e.message) || "Activation failed.");
+      setErr((d && (d.message || d.error)) || (e && e.message) || "Activation failed.");
     }
     setBusy(false);
   };

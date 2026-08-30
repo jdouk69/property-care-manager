@@ -244,13 +244,28 @@ export default function AgreementPublic() {
           )}
         </div>
 
-        {/* Historical note: this signed agreement is no longer the current active one */}
-        {isSigned && data.operational_status && data.operational_status !== "Active" && (
-          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 mb-4 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-800">This agreement is no longer the current active service agreement.</p>
-          </div>
-        )}
+        {/* Signed operational status banner: reflects the actual operational state. */}
+        {(() => {
+          if (!isSigned || !data.operational_status) return null;
+          const os = data.operational_status;
+          let tone = null, text = "", Icon = AlertTriangle;
+          if (os === "Ended") { tone = "amber"; text = "This agreement is no longer the current active service agreement."; Icon = AlertTriangle; }
+          else if (os === "Cancelled") { tone = "amber"; text = "This agreement is no longer active."; Icon = AlertTriangle; }
+          else if (os === "Paused") { tone = "slate"; text = "Service under this agreement is currently paused."; Icon = AlertTriangle; }
+          else if (os === "Pending") { tone = "slate"; text = "This agreement has been signed and is awaiting service activation."; Icon = CheckCircle2; }
+          else if (os === "Active") { tone = "emerald"; text = "This is the current active service agreement."; Icon = CheckCircle2; }
+          else return null;
+          const cls = tone === "amber" ? "border-amber-300 bg-amber-50 text-amber-800"
+            : tone === "emerald" ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : "border-slate-300 bg-slate-50 text-slate-700";
+          const icCls = tone === "amber" ? "text-amber-600" : tone === "emerald" ? "text-emerald-600" : "text-slate-500";
+          return (
+            <div className={`rounded-2xl border p-4 mb-4 flex items-start gap-2 ${cls}`}>
+              <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${icCls}`} />
+              <p className="text-sm">{text}</p>
+            </div>
+          );
+        })()}
 
         {/* Signed state: read-only confirmation + signed-copy access */}
         {isSigned && (
