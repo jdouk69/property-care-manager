@@ -39,6 +39,7 @@ import ChecklistTemplates from '@/pages/ChecklistTemplates';
 import ClientHub from '@/pages/ClientHub';
 import ServiceAgreement from '@/pages/ServiceAgreement';
 import IntakeForm from '@/pages/IntakeForm';
+import AgreementPublic from '@/pages/AgreementPublic';
 import IntakeReview from '@/pages/IntakeReview';
 
 const AuthenticatedApp = () => {
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       {/* Public customer intake — NOT protected. Gated by secure token server-side. */}
       <Route path="/intake/:token" element={<IntakeForm />} />
+      <Route path="/agreement/:token" element={<AgreementPublic />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />

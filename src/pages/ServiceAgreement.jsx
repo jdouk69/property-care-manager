@@ -90,6 +90,9 @@ export default function ServiceAgreement() {
     terms_version: "",
     public_token: "",
     sent_at: "",
+    signer_name: "",
+    signer_email: "",
+    signed_at: "",
   });
 
   const set = (k, v) => setValues((s) => ({ ...s, [k]: v }));
@@ -149,6 +152,9 @@ export default function ServiceAgreement() {
             terms_version: loaded.terms_version || "",
             public_token: loaded.public_token || "",
             sent_at: loaded.sent_at || "",
+            signer_name: loaded.signer_name || "",
+            signer_email: loaded.signer_email || "",
+            signed_at: loaded.signed_at || "",
           });
           // Auto-open Additional Details if any of those fields already contain data.
           const hasExtra = !!(
@@ -573,12 +579,12 @@ export default function ServiceAgreement() {
               </div>
             )}
 
-            {/* Sent panel */}
-            {isEdit && values.signing_status === "Sent" && (
+            {/* Sent / Viewed panel */}
+            {isEdit && (values.signing_status === "Sent" || values.signing_status === "Viewed") && (
               <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <p className="text-sm font-medium text-emerald-700">Sent for signature</p>
+                  <p className="text-sm font-medium text-emerald-700">{values.signing_status === "Viewed" ? "Customer viewed the agreement" : "Sent for signature"}</p>
                 </div>
                 {values.sent_at && <p className="text-xs text-muted-foreground">Sent {formatSentAt(values.sent_at)}</p>}
                 {publicLink && (
@@ -594,11 +600,22 @@ export default function ServiceAgreement() {
                     </div>
                   </div>
                 )}
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 space-y-0.5">
-                  <p className="font-medium">Internal preview only — do not send this link to a customer yet.</p>
-                  <p>The customer signing page will become available in the next implementation phase.</p>
+                <p className="text-xs text-muted-foreground">{values.signing_status === "Viewed" ? "Customer opened the agreement link — awaiting signature." : "Awaiting customer signature."}</p>
+              </div>
+            )}
+
+            {/* Signed panel */}
+            {isEdit && values.signing_status === "Signed" && (
+              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <p className="text-sm font-medium text-emerald-700">Agreement signed</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Awaiting customer signature.</p>
+                <p className="text-xs text-muted-foreground">Version {values.agreement_version} · Terms {values.terms_version || "—"}</p>
+                {values.signer_name && <p className="text-xs text-muted-foreground">Signed by: {values.signer_name}</p>}
+                {values.signer_email && <p className="text-xs text-muted-foreground">Email: {values.signer_email}</p>}
+                {values.signed_at && <p className="text-xs text-muted-foreground">Signed {formatSentAt(values.signed_at)}</p>}
+                <p className="text-xs text-muted-foreground pt-1">Activation pending — review and activate the service when ready.</p>
               </div>
             )}
 

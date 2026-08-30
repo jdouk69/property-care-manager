@@ -130,8 +130,17 @@ export default function ClientHub() {
   } else if (activeAgreements.length === 0 && pendingAgreements.length === 0) {
     nextStep = { label: "Assign a service package", to: `/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`, button: "Assign Service Package" };
   } else if (activeAgreements.length === 0 && pendingAgreements.length > 0) {
+    const pendingSigned = pendingAgreements.find((a) => a.signing_status === "Signed");
+    const pendingDeclined = pendingAgreements.find((a) => a.signing_status === "Declined");
+    const pendingViewed = pendingAgreements.find((a) => a.signing_status === "Viewed");
     const pendingSent = pendingAgreements.find((a) => a.signing_status === "Sent");
-    if (pendingSent) {
+    if (pendingSigned) {
+      nextStep = { label: "Agreement signed — activation pending", to: `/agreements/${pendingSigned.id}`, button: "View Agreement" };
+    } else if (pendingDeclined) {
+      nextStep = { label: "Customer requested changes / declined the agreement", to: `/agreements/${pendingDeclined.id}`, button: "View Agreement" };
+    } else if (pendingViewed) {
+      nextStep = { label: "Customer viewed the agreement — awaiting signature", to: `/agreements/${pendingViewed.id}`, button: "View Agreement" };
+    } else if (pendingSent) {
       nextStep = { label: "Awaiting customer signature on the service agreement", to: `/agreements/${pendingSent.id}`, button: "View Agreement" };
     } else {
       nextStep = { label: "Complete the pending service agreement draft", to: `/agreements/${pendingAgreements[0].id}`, button: "Review Agreement" };
@@ -266,7 +275,24 @@ export default function ClientHub() {
                     {a.start_date && <span>Start: {a.start_date}</span>}
                     {a.renewal_date && <span>Renewal: {a.renewal_date}</span>}
                   </div>
-                  <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{a.status === "Pending" && a.signing_status === "Sent" ? "Awaiting customer signature" : a.status === "Pending" ? "Review Agreement" : "Edit Agreement"}</Link>
+                  {a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" ? (
+                    <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">
+                      {a.signing_status === "Sent" && "Awaiting customer signature"}
+                      {a.signing_status === "Viewed" && "Customer viewed agreement"}
+                      {a.signing_status === "Signed" && "Agreement signed — activation pending"}
+                      {a.signing_status === "Declined" && "Customer requested changes / declined"}
+                    </Link>
+                  ) : (
+                    <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{a.status === "Pending" ? "Review Agreement" : "Edit Agreement"}</Link>
+                  )}
+                  {a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" && (a.sent_at || a.viewed_at || a.signed_at || a.declined_at) && (
+                    <div className="mt-0.5 text-[11px] text-muted-foreground flex flex-wrap gap-x-2">
+                      {a.sent_at && <span>Sent {new Date(a.sent_at).toLocaleDateString()}</span>}
+                      {a.viewed_at && <span>Viewed {new Date(a.viewed_at).toLocaleDateString()}</span>}
+                      {a.signed_at && <span>Signed {new Date(a.signed_at).toLocaleDateString()}</span>}
+                      {a.declined_at && <span>Declined {new Date(a.declined_at).toLocaleDateString()}</span>}
+                    </div>
+                  )}
                 </div>
               );
             })}
