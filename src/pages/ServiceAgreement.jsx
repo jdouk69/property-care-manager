@@ -489,7 +489,7 @@ export default function ServiceAgreement() {
                 <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</Label>
                 <Select value={values.status} onValueChange={(v) => set("status", v)} disabled={isFrozen}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUSES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  <SelectContent>{STATUSES.filter((o) => o !== "Active" || values.status === "Active").map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                 </Select>
                 {values.status === "Pending" && (
                   <p className="text-xs text-muted-foreground mt-1.5">Pending agreements are drafts awaiting activation. They do not count as active service.</p>
