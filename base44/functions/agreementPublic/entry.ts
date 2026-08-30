@@ -8,6 +8,7 @@ import { snapshotHash } from '../../shared/agreementTerms.js';
 // frozen sent_snapshot.
 const SAFE_ERROR = "This agreement link is invalid or no longer available.";
 const SIGN_BLOCKED = "This agreement cannot currently be signed. Please contact the service provider.";
+const INTEGRITY_ERROR = "This agreement cannot currently be opened. Please contact the service provider.";
 
 function isValidToken(t) {
   return typeof t === "string" && /^[0-9a-f]{64}$/.test(t);
@@ -44,6 +45,31 @@ function clientIp(req) {
   return null;
 }
 
+// Internal-only audit when a valid token points to an agreement whose frozen
+// snapshot fails integrity. Deduped per agreement so repeated GETs of a broken
+// link don't spam the log. Safe fields only: agreement id (internal reference),
+// property id, timestamp, attempted action. No token, no snapshot contents,
+// no hashes, no secrets are logged.
+async function logIntegrityFailure(base44, agreement, action) {
+  try {
+    const propId = agreement.property_id || "";
+    const existing = await base44.asServiceRole.entities.AutomationLog.filter({
+      related_property_id: propId,
+      automation_type: "Agreement snapshot integrity check failed",
+    });
+    const already = (existing || []).some((l) => (l.record_created || "").includes(agreement.id));
+    if (already) return;
+    await base44.asServiceRole.entities.AutomationLog.create({
+      date_time: new Date().toISOString(),
+      automation_type: "Agreement snapshot integrity check failed",
+      record_created: `Agreement ${agreement.id} integrity check failed (${action})`,
+      related_property_id: propId,
+      status: "failure",
+      error_details: "",
+    });
+  } catch (e) {}
+}
+
 export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
@@ -65,7 +91,10 @@ export default async function(req) {
       return Response.json({ error: SAFE_ERROR }, { status: 404 });
     }
 
-    // --- Hash verification (frozen integrity) ---
+    // --- Integrity verification (frozen snapshot) ---
+    // Order: validate token -> load agreement -> validate record -> verify
+    // snapshot exists -> verify hash exists -> recompute + compare. Only after
+    // all pass may the snapshot be displayed or a Viewed transition occur.
     let hashValid = true;
     try {
       if (!agreement.sent_snapshot || !agreement.sent_snapshot_hash) hashValid = false;
@@ -75,10 +104,19 @@ export default async function(req) {
       }
     } catch (e) { hashValid = false; }
 
+    // --- Integrity gate: a corrupted/missing snapshot must NEVER be shown and
+    // must NEVER trigger a Viewed transition. Return a safe public error and
+    // record an internal audit (deduped). Applies to get / sign / decline.
+    if (!hashValid) {
+      await logIntegrityFailure(base44, agreement, action);
+      return Response.json({ error: INTEGRITY_ERROR }, { status: 400 });
+    }
+
     // --- GET ---
     if (action === "get") {
-      // Idempotent Viewed transition (only Sent -> Viewed)
-      if (hashValid && agreement.signing_status === "Sent") {
+      // Idempotent Viewed transition (only Sent -> Viewed), performed ONLY
+      // after integrity has been verified above.
+      if (agreement.signing_status === "Sent") {
         const now = new Date().toISOString();
         await base44.asServiceRole.entities.PropertyServiceAgreement.update(agreement.id, {
           signing_status: "Viewed", viewed_at: now,
@@ -103,22 +141,21 @@ export default async function(req) {
         });
       }
       // No mutation for Viewed/Signed/Declined
-      const signable = hashValid && ["Sent", "Viewed"].includes(agreement.signing_status);
+      const signable = ["Sent", "Viewed"].includes(agreement.signing_status);
       return Response.json({
-        sent_snapshot: agreement.sent_snapshot || null,
+        sent_snapshot: agreement.sent_snapshot,
         signing_status: agreement.signing_status || null,
         sent_at: agreement.sent_at || null,
         viewed_at: agreement.viewed_at || null,
         signed_at: agreement.signed_at || null,
         declined_at: agreement.declined_at || null,
         decline_reason: agreement.decline_reason || null,
-        hash_valid: hashValid,
+        hash_valid: true,
         signable,
       });
     }
 
-    // --- sign / decline require hash integrity + an open signing state ---
-    if (!hashValid) return Response.json({ error: SIGN_BLOCKED }, { status: 400 });
+    // --- sign / decline require an open signing state (integrity already gated) ---
     if (!["Sent", "Viewed"].includes(agreement.signing_status)) {
       if (agreement.signing_status === "Signed") return Response.json({ error: "This agreement has already been signed." }, { status: 409 });
       if (agreement.signing_status === "Declined") return Response.json({ error: "This agreement has been declined and can no longer be signed." }, { status: 409 });

@@ -122,6 +122,7 @@ export default function AgreementPublic() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
         <div className="max-w-md text-center">
           <XCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <h1 className="text-lg font-semibold text-slate-900 mb-1">Agreement unavailable</h1>
           <p className="text-sm text-slate-600">{error}</p>
         </div>
       </div>
