@@ -148,6 +148,10 @@
     "emergency_unreachable_instructions": {
       "type": "string"
     },
+    "emergency_authorization_confirmed": {
+      "type": "boolean",
+      "default": false
+    },
     "archived": {
       "type": "boolean",
       "default": false

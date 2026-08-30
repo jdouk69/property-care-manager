@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { AlertTriangle, Lock, FileWarning } from "lucide-react";
+import { AlertTriangle, Lock, FileWarning, ShieldAlert } from "lucide-react";
 
 // Renders the customer-facing agreement preview from a built snapshot.
 // SECURITY: the snapshot is built by buildSentSnapshot (Phase A), which never
@@ -16,7 +16,7 @@ const SECRET_FIELDS = [
   "security_system",
 ];
 
-export default function AgreementPreview({ snapshot, template, property }) {
+export default function AgreementPreview({ snapshot, template, property, emergencyConfirmed }) {
   const sections = (snapshot && snapshot.sections) || [];
 
   const leakedSecret = useMemo(() => {
@@ -45,6 +45,13 @@ export default function AgreementPreview({ snapshot, template, property }) {
         <div className="px-4 py-2.5 bg-rose-500/5 border-b border-rose-500/15 flex items-center gap-2">
           <FileWarning className="w-4 h-4 text-rose-600 shrink-0" />
           <p className="text-xs font-medium text-rose-700">DRAFT TERMS — LEGAL REVIEW REQUIRED. This template is not yet active and cannot be sent for signature.</p>
+        </div>
+      )}
+
+      {emergencyConfirmed === false && (
+        <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-xs font-medium text-amber-700">Internal notice: Emergency authorization requires staff confirmation before this agreement can be sent.</p>
         </div>
       )}
 

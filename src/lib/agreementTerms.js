@@ -59,6 +59,20 @@ export function renderOptionalCharge(value, mode = "not_applicable") {
 }
 
 /**
+ * Render the emergency pre-approved spending limit as a clean customer-facing
+ * phrase. Never produces malformed text such as "up to  per incident".
+ * @param {number|string|null} amount
+ * @returns {string}
+ */
+export function renderEmergencyMaxAmount(amount) {
+  if (amount === undefined || amount === null || amount === "") return "Not yet confirmed";
+  const n = Number(amount);
+  if (isNaN(n)) return "Not yet confirmed";
+  if (n === 0) return "No spending pre-approved without owner contact";
+  return `up to €${n.toFixed(2)} per incident`;
+}
+
+/**
  * Replace approved dynamic placeholders of the form {{field}} within a string.
  * Only allowlisted keys resolve; forbidden (secret) keys always resolve to "".
  * Unknown keys resolve to "".
@@ -151,10 +165,7 @@ export function buildSentSnapshot(ctx) {
     next_invoice_date: agreement.next_invoice_date || "",
     additional_terms: agreement.additional_terms || "",
     emergency_authorization: agreement.emergency_authorization || "",
-    emergency_max_amount:
-      typeof agreement.emergency_max_amount === "number"
-        ? `€${agreement.emergency_max_amount.toFixed(2)}`
-        : "",
+    emergency_max_amount: renderEmergencyMaxAmount(agreement.emergency_max_amount),
     emergency_unreachable_instructions:
       agreement.emergency_unreachable_instructions || "",
     agreement_version: String(agreement.agreement_version ?? 1),

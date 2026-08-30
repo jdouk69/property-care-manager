@@ -60,7 +60,6 @@ export default function ServiceAgreement() {
   const [latestIntake, setLatestIntake] = useState(null);
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [emergencyConfirmed, setEmergencyConfirmed] = useState(false);
   const [values, setValues] = useState({
     client_id: clientId || "",
     property_id: propertyParam || "",
@@ -81,11 +80,14 @@ export default function ServiceAgreement() {
     emergency_authorization: "",
     emergency_max_amount: "",
     emergency_unreachable_instructions: "",
+    emergency_authorization_confirmed: false,
     terms_template_id: "",
     terms_version: "",
   });
 
   const set = (k, v) => setValues((s) => ({ ...s, [k]: v }));
+  // Changing any emergency field resets the staff confirmation, forcing reconfirm.
+  const setEmergency = (k, v) => setValues((s) => ({ ...s, [k]: v, emergency_authorization_confirmed: false }));
 
   useEffect(() => {
     (async () => {
@@ -135,6 +137,7 @@ export default function ServiceAgreement() {
             emergency_authorization: loaded.emergency_authorization || "",
             emergency_max_amount: loaded.emergency_max_amount ?? "",
             emergency_unreachable_instructions: loaded.emergency_unreachable_instructions || "",
+            emergency_authorization_confirmed: loaded.emergency_authorization_confirmed ?? false,
             terms_template_id: loaded.terms_template_id || "",
             terms_version: loaded.terms_version || "",
           });
@@ -241,6 +244,7 @@ export default function ServiceAgreement() {
         emergency_authorization: values.emergency_authorization || "",
         emergency_max_amount: values.emergency_max_amount === "" ? null : Number(values.emergency_max_amount),
         emergency_unreachable_instructions: values.emergency_unreachable_instructions || "",
+        emergency_authorization_confirmed: !!values.emergency_authorization_confirmed,
         terms_template_id: selectedTemplate?.id || "",
         terms_version: selectedTemplate ? String(selectedTemplate.version) : "",
       };
@@ -387,10 +391,10 @@ export default function ServiceAgreement() {
             <IntakeReferenceCard intake={latestIntake} />
             <EmergencyAuthSection
               values={values}
-              set={set}
+              set={setEmergency}
               frozen={isFrozen}
-              confirmed={emergencyConfirmed}
-              setConfirmed={setEmergencyConfirmed}
+              confirmed={!!values.emergency_authorization_confirmed}
+              setConfirmed={(v) => set("emergency_authorization_confirmed", v)}
             />
 
             {/* Additional Details (optional, collapsible) */}
@@ -463,6 +467,7 @@ export default function ServiceAgreement() {
                     snapshot={snapshot}
                     template={selectedTemplate}
                     property={selectedProperty}
+                    emergencyConfirmed={!!values.emergency_authorization_confirmed}
                   />
                 )}
               </div>
