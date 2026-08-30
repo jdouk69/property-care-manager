@@ -14,4 +14,5 @@ export const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
   "Home Watch Inspection", "Property Care Inspection", "Emergency Visit", "Owner Representative Site Visit",
+  "Initial Property Onboarding Inspection",
 ];

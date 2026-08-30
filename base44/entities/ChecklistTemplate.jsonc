@@ -18,7 +18,8 @@
         "Home Watch Inspection",
         "Property Care Inspection",
         "Emergency Visit",
-        "Owner Representative Site Visit"
+        "Owner Representative Site Visit",
+        "Initial Property Onboarding Inspection"
       ],
       "default": "Monthly Property Watch"
     },
