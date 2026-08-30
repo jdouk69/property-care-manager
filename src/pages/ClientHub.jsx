@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import {
   Phone, MessageCircle, Mail, Pencil, Home, Plus, Package, CalendarClock,
   ClipboardCheck, Wrench, Wallet, FileText, MessageSquare, FileWarning,
-  ArrowRight, ArrowLeft, Globe, Languages, Loader2, MapPin, Sparkles, CheckCircle2,
+  ArrowRight, ArrowLeft, Globe, Languages, Loader2, MapPin, CheckCircle2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -15,6 +15,8 @@ import ClientIntakePanel from "@/components/intake/ClientIntakePanel";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { deriveOnboarding } from "@/lib/onboarding";
+import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -70,6 +72,7 @@ export default function ClientHub() {
   const [agreements, setAgreements] = useState([]);
   const [intakes, setIntakes] = useState([]);
   const [downloadingPdf, setDownloadingPdf] = useState("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
 
   const handleDownloadSigned = async (token) => {
     if (!token) return;
@@ -127,45 +130,8 @@ export default function ClientHub() {
   };
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
-  const activeAgreements = agreements.filter((a) => a.status === "Active");
-  const pendingAgreements = agreements.filter((a) => a.status === "Pending");
-  const liveVisits = visits.filter((v) => v.status === "Scheduled" || v.status === "In Progress");
-  const hasStartedVisit = visits.some((v) => v.status === "In Progress" || v.status === "Completed");
-
-  let nextStep = null;
-  const latestIntake = (intakes || []).slice().sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0] || null;
-  if (latestIntake && (latestIntake.status === "Received" || latestIntake.status === "Reviewed")) {
-    nextStep = { label: "Review the customer's intake submission", to: `/clients/${id}/intake`, button: "Review Intake" };
-  } else if (properties.length === 0) {
-    nextStep = { label: "Add the client's first property", to: `/properties?add=1&owner=${id}`, button: "Add Property" };
-  } else if (activeAgreements.length === 0 && pendingAgreements.length === 0) {
-    nextStep = { label: "Assign a service package", to: `/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`, button: "Assign Service Package" };
-  } else if (activeAgreements.length === 0 && pendingAgreements.length > 0) {
-    const pendingSigned = pendingAgreements.find((a) => a.signing_status === "Signed");
-    const pendingDeclined = pendingAgreements.find((a) => a.signing_status === "Declined");
-    const pendingViewed = pendingAgreements.find((a) => a.signing_status === "Viewed");
-    const pendingSent = pendingAgreements.find((a) => a.signing_status === "Sent");
-    if (pendingSigned) {
-      nextStep = { label: "Agreement signed — activation pending", to: `/agreements/${pendingSigned.id}`, button: "View Agreement" };
-    } else if (pendingDeclined) {
-      nextStep = { label: "Customer requested changes / declined the agreement", to: `/agreements/${pendingDeclined.id}`, button: "View Agreement" };
-    } else if (pendingViewed) {
-      nextStep = { label: "Customer viewed the agreement — awaiting signature", to: `/agreements/${pendingViewed.id}`, button: "View Agreement" };
-    } else if (pendingSent) {
-      nextStep = { label: "Awaiting customer signature on the service agreement", to: `/agreements/${pendingSent.id}`, button: "View Agreement" };
-    } else {
-      nextStep = { label: "Complete the pending service agreement draft", to: `/agreements/${pendingAgreements[0].id}`, button: "Review Agreement" };
-    }
-  } else if (liveVisits.length === 0 && !hasStartedVisit) {
-    const ag = activeAgreements.length === 1 ? activeAgreements[0] : null;
-    const to = ag
-      ? `/visits?start=1&property=${ag.property_id}&agreement=${ag.id}&client=${id}`
-      : `/visits?start=1&client=${id}`;
-    nextStep = { label: "Schedule the first visit", to, button: "Schedule Visit" };
-  } else if (liveVisits.some((v) => v.status === "Scheduled") && !hasStartedVisit) {
-    const scheduled = visits.find((v) => v.status === "Scheduled");
-    nextStep = { label: "First visit scheduled", to: `/visits/${scheduled.id}`, button: "View Visit" };
-  }
+  const selectedProperty = properties.find((p) => p.id === selectedPropertyId) || properties[0] || null;
+  const onboarding = deriveOnboarding({ client, properties, selectedProperty, intakes, agreements, visits, servicePackages });
 
   const upcomingVisits = visits.filter((v) => v.status !== "Completed" && v.status !== "Cancelled");
   const recentVisits = visits.filter((v) => v.status === "Completed");
@@ -206,22 +172,18 @@ export default function ClientHub() {
           </div>
         </div>
 
-        {/* Next step */}
-        {nextStep && (
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0"><Sparkles className="w-5 h-5" /></span>
-              <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wide text-primary">Next step</p>
-                <p className="font-medium text-sm truncate">{nextStep.label}</p>
-              </div>
-            </div>
-            <Link to={nextStep.to}><Button size="sm" className="gap-1.5 shrink-0">{nextStep.button} <ArrowRight className="w-4 h-4" /></Button></Link>
-          </div>
-        )}
+        {/* Onboarding progress */}
+        <OnboardingProgress
+          properties={properties}
+          selectedPropertyId={selectedProperty?.id || null}
+          onSelectProperty={setSelectedPropertyId}
+          onboarding={onboarding}
+        />
 
         {/* Customer intake */}
-        <ClientIntakePanel client={client} intakes={intakes} onChanged={reloadIntakes} />
+        <div id="client-intake" className="mb-4">
+          <ClientIntakePanel client={client} intakes={intakes} onChanged={reloadIntakes} />
+        </div>
 
         {/* Properties */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">

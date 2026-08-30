@@ -207,6 +207,15 @@
         ]
       }
     },
+    "monitoring_plan_confirmed_at": {
+      "type": "string"
+    },
+    "monitoring_plan_visit_type": {
+      "type": "string"
+    },
+    "monitoring_plan_confirmed_by": {
+      "type": "string"
+    },
     "archived": {
       "type": "boolean",
       "default": false
