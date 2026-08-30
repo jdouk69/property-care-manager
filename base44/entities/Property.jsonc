@@ -190,6 +190,13 @@
           "active": {
             "type": "boolean",
             "default": true
+          },
+          "include_in_recurring": {
+            "type": "boolean",
+            "default": false
+          },
+          "recurring_check_text": {
+            "type": "string"
           }
         },
         "required": [
