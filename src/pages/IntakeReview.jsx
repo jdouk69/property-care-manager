@@ -66,17 +66,10 @@ export default function IntakeReview() {
             setIntake({ ...chosen, status: "Reviewed", reviewed_at: upd.reviewed_at });
           } catch (e) { /* non-critical */ }
         }
-        // Default-select fields whose current value is empty (safe to apply).
-        const initial = {};
-        if (chosen) {
-          const payload = chosen.payload || {};
-          MAPPED_FIELDS.forEach((f) => {
-            const cur = currentValue(f, c, clientProps.length === 1 ? clientProps[0] : null);
-            const sub = payload[f.name];
-            if (!cur && sub) initial[f.name] = true;
-          });
-        }
-        setApply(initial);
+        // No fields are pre-selected. Staff must explicitly choose each field so
+        // "Apply Approved Information" is always intentional and ONLY the fields
+        // they select are written to the Client/Property record.
+        setApply({});
       } catch (e) {}
       if (mounted) setLoading(false);
     })();
@@ -211,8 +204,8 @@ export default function IntakeReview() {
                           <div className="flex items-center justify-between gap-2 mb-1.5">
                             <span className="text-xs font-medium text-muted-foreground">{f.label}</span>
                             <button type="button" onClick={() => toggleApply(f.name)}
-                              className={`text-xs px-2 py-1 rounded-full border transition ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>
-                              {checked ? <span className="inline-flex items-center gap-1"><Check className="w-3 h-3" /> Apply</span> : "Apply submitted"}
+                              className={`text-xs px-3 py-1.5 min-h-[40px] inline-flex items-center rounded-full border transition ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                              {checked ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Apply</span> : "Apply submitted"}
                             </button>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
