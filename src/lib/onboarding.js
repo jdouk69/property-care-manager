@@ -10,17 +10,18 @@ const ONBOARDING_VISIT_TYPE = "Initial Property Onboarding Inspection";
 // the Step 6C.1 safety rule: requires a single Active, non-archived agreement;
 // never falls back to Property.service_package_id.
 export function resolvePropertyService(property, agreements, servicePackages) {
-  if (!property) return { status: "no_agreement", visitType: "", agreement: null, package: null };
+  if (!property) return { status: "no_agreement", visitType: "", agreement: null, package: null, isOneTime: false };
   const active = (agreements || []).filter(
     (a) => a.property_id === property.id && a.status === "Active" && !a.archived
   );
-  if (active.length === 0) return { status: "no_agreement", visitType: "", agreement: null, package: null };
-  if (active.length > 1) return { status: "conflict", visitType: "", agreement: null, package: null };
+  if (active.length === 0) return { status: "no_agreement", visitType: "", agreement: null, package: null, isOneTime: false };
+  if (active.length > 1) return { status: "conflict", visitType: "", agreement: null, package: null, isOneTime: false };
   const agreement = active[0];
   const pkg = agreement.service_package_id ? servicePackages?.[agreement.service_package_id] : null;
   const visitType = pkg?.default_visit_type || "";
-  if (!visitType) return { status: "no_visit_type", visitType: "", agreement, package: pkg };
-  return { status: "ok", visitType, agreement, package: pkg };
+  const isOneTime = pkg?.recurring === "One-time" || agreement?.billing_type === "One-time";
+  if (!visitType) return { status: "no_visit_type", visitType: "", agreement, package: pkg, isOneTime };
+  return { status: "ok", visitType, agreement, package: pkg, isOneTime };
 }
 
 function fmtDate(v) {
@@ -102,6 +103,21 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
     s4 = { key: "activation", name: "Service Activation", complete: false, status: "Signed — not active", detail: "Activate the signed agreement", action: { label: "Activate Service", to: `/agreements/${signedAg.id}` } };
   } else {
     s4 = { key: "activation", name: "Service Activation", complete: false, status: "Waiting on agreement", detail: "Complete the service agreement first", action: null };
+  }
+
+  // One-time / on-demand service: no recurring onboarding pipeline. The active
+  // agreement is a one-time service (package.recurring === "One-time" or
+  // agreement.billing_type === "One-time"), so the onboarding visit, monitoring
+  // plan and "Ready for Regular Service" stages do not apply. This prevents an
+  // on-demand-only customer from looking like an incomplete recurring customer.
+  if (svc.isOneTime && singleActive) {
+    const intakeReadyOT = intakeRecords.length === 0 ? true : latest?.status === "Applied";
+    const s5ot = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: true, status: "Not applicable (one-time service)", detail: "One-time service — no recurring onboarding", action: null };
+    const s6ot = { key: "monitoring", name: "Monitoring Plan", complete: true, status: "Not applicable (one-time service)", detail: "One-time service — no monitoring plan", action: null };
+    const s7ot = { key: "ready", name: "Service Active", complete: true, status: "Ready", detail: "On-demand service active", action: null };
+    const stagesOT = [s1, s2, s3, s4, s5ot, s6ot, s7ot];
+    const primaryActionOT = [s1, s2, s3, s4].find((s) => !s.complete && s.action) || null;
+    return { stages: stagesOT, primaryAction: primaryActionOT, ready: !!(selectedProperty && intakeReadyOT), serviceConflict: false, isOneTime: true };
   }
 
   // Stage 5 — Initial Property Onboarding Visit
