@@ -67,7 +67,10 @@ const cleanLabel = (name) => {
 // Owner-visible only: a checklist item is a customer "finding" when it was explicitly
 // flagged owner-visible AND has an owner-facing note or photo. A bare line marked
 // Emergency/Important internally (e.g. a baseline-photo section) is NOT a finding.
-const isOwnerFinding = (it) => !!it && !!it.owner_visible && ((it.notes && String(it.notes).trim()) || (it.photos && it.photos.length));
+// A finding requires an owner-visible OBSERVATION NOTE. Photos alone (no note) are
+// routine documentation, not a concern — so a normal-condition photo never becomes
+// a finding, and a bare Emergency/Important-marked line with no note never becomes one.
+const isOwnerFinding = (it) => !!it && !!it.owner_visible && (it.notes && String(it.notes).trim());
 
 const sevFromChecklistStatus = (st) => (st === "Emergency" ? "urgent" : st === "Important" ? "attention" : "monitor");
 const priorityLabelFor = (k) => (k === "urgent" ? "Urgent" : k === "attention" ? "Attention Recommended" : "Monitor");
@@ -120,7 +123,8 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     priorityLabel: priorityLabelFor(sevFromChecklistStatus(it.status)),
     area: "",
     observed: (it.notes || "").trim(),
-    recommendation: "", // no recommendation field exists in the data model — never fabricated
+    recommendation: (it.recommendation || "").trim(),
+    actionTaken: (it.action_taken || "").trim(),
     photos: it.photos || [],
     source: "checklist",
   }));
@@ -146,9 +150,15 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const order = { urgent: 0, attention: 1, monitor: 2 };
   findings.sort((a, b) => (order[a.severityKey] ?? 2) - (order[b.severityKey] ?? 2));
 
-  // Routine checks = checklist items that are NOT findings (no owner-facing content).
+  // Routine checks = checklist items that are NOT findings (no owner-facing note).
   const routineChecks = cl.filter((it) => !isOwnerFinding(it)).map((it) => ({ name: cleanLabel(it.name) }));
   const routineCount = routineChecks.length;
+
+  // Documentation photos: owner-visible photos on items that are NOT findings (no
+  // observation note). Shown in a Photo Record section, separate from concerns.
+  const docPhotos = cl
+    .filter((it) => !isOwnerFinding(it) && it.owner_visible && (it.photos && it.photos.length))
+    .flatMap((it) => (it.photos || []).map((url) => ({ caption: cleanLabel(it.name), url })));
 
   const hasUrgent = findings.some((f) => f.severityKey === "urgent");
   const hasAny = findings.length > 0;
@@ -193,6 +203,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     findings,
     routineChecks,
     routineCount,
+    docPhotos,
     detailedRecord,
     issues: (issues || []).filter((i) => i && i.status !== "Cancelled").map((i) => ({
       title: i.title, priority: i.priority, status: i.status, category: i.category,
@@ -221,7 +232,7 @@ function drawCheck(doc, x, y, rgb) {
 
 async function buildDoc(visit, ctx = {}) {
   const model = buildOwnerReportModel(visit, ctx);
-  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, summaryText, findings, routineChecks, routineCount, detailedRecord, issues, tasks, nextVisit } = model;
+  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, summaryText, findings, routineChecks, routineCount, docPhotos, detailedRecord, issues, tasks, nextVisit } = model;
 
   const doc = new jsPDF();
   const pageW = doc.internal.pageSize.getWidth();
@@ -309,6 +320,11 @@ async function buildDoc(visit, ctx = {}) {
         doc.setFont(undefined, "normal"); doc.setTextColor(40);
         wrap(f.observed, maxWidth - 4, margin + 4);
       }
+      if (f.actionTaken) {
+        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); ensure(6); text("Action taken:", margin + 2, y); y += 5;
+        doc.setFont(undefined, "normal"); doc.setTextColor(40);
+        wrap(f.actionTaken, maxWidth - 4, margin + 4);
+      }
       if (f.recommendation) {
         doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); ensure(6); text("Recommended next step:", margin + 2, y); y += 5;
         doc.setFont(undefined, "normal"); doc.setTextColor(40);
@@ -363,6 +379,33 @@ async function buildDoc(visit, ctx = {}) {
       text(rc.name, margin + 6, y);
       y += 6;
     }
+    y += 3;
+  }
+
+  // Photo Record — routine documentation photos (owner-visible, non-finding)
+  if (docPhotos && docPhotos.length) {
+    ensure(14);
+    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+    text("Photo Record", margin, y); y += 7;
+    let col = 0; const imgW = (maxWidth - 8) / 2; const imgH = imgW * 0.72; const gap = 8;
+    for (const dp of docPhotos) {
+      try {
+        const dataUrl = await fetchCompressedDataUrl(dp.url);
+        if (col === 0) ensure(imgH + 14);
+        const x = margin + col * (imgW + gap);
+        doc.addImage(dataUrl, "JPEG", x, y, imgW, imgH);
+        doc.setFontSize(7.5); doc.setTextColor(110);
+        const cap = wrapLines(dp.caption, imgW);
+        text(cap[0] || "", x, y + imgH + 4);
+        if (cap.length > 1) text(cap[1] + "...", x, y + imgH + 8);
+        doc.setTextColor(0);
+        col++;
+        if (col >= 2) { col = 0; y += imgH + 14; }
+      } catch (e) {
+        ensure(6); doc.setTextColor(150); text("[photo unavailable]", margin, y); doc.setTextColor(0); y += 6;
+      }
+    }
+    if (col > 0) y += imgH + 14;
     y += 3;
   }
 

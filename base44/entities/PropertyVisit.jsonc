@@ -66,6 +66,12 @@
           "notes": {
             "type": "string"
           },
+          "recommendation": {
+            "type": "string"
+          },
+          "action_taken": {
+            "type": "string"
+          },
           "owner_visible": {
             "type": "boolean",
             "default": false

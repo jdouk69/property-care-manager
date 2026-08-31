@@ -45,7 +45,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
   const {
     business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl,
     overallStatus = { key: "ok", label: "No Concerns Noted" }, summaryText = "",
-    findings = [], routineChecks = [], routineCount = 0, detailedRecord = [],
+    findings = [], routineChecks = [], routineCount = 0, docPhotos = [], detailedRecord = [],
     issues = [], tasks = [], nextVisit,
   } = model;
 
@@ -115,6 +115,12 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
                           <p className="text-sm text-foreground/90 whitespace-pre-wrap mt-0.5">{f.observed}</p>
                         </div>
                       )}
+                      {f.actionTaken && (
+                        <div className="mt-1.5">
+                          <p className="text-xs font-medium text-muted-foreground">Action taken</p>
+                          <p className="text-sm text-foreground/90 mt-0.5">{f.actionTaken}</p>
+                        </div>
+                      )}
                       {f.recommendation && (
                         <div className="mt-1.5">
                           <p className="text-xs font-medium text-muted-foreground">Recommended next step</p>
@@ -149,6 +155,22 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
                   <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {rc.name}
                   </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {docPhotos.length > 0 && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Photo Record</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {docPhotos.map((dp, i) => (
+                  <div key={i}>
+                    <a href={dp.url} target="_blank" rel="noreferrer" className="block aspect-square rounded-lg overflow-hidden">
+                      <UIImage src={dp.url} className="w-full h-full" fittingType="fill" />
+                    </a>
+                    <p className="text-[11px] text-muted-foreground mt-1">{dp.caption}</p>
+                  </div>
                 ))}
               </div>
             </div>
