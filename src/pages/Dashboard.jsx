@@ -18,6 +18,7 @@ import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel } from "@/lib/timezone";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import ActionCard from "@/components/dashboard/ActionCard";
+import { getActionableCounts } from "@/lib/onboardingHandoff";
 
 const today = athensToday;
 const greeting = () => {
@@ -248,14 +249,14 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [] });
+  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [], agreements: [], intakes: [], servicePackages: [] });
   const [settings, setSettings] = useState(null);
   const [draft, setDraft] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, sList] = await Promise.all([
+        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, sList] = await Promise.all([
           base44.entities.Task.list("-date", 200),
           base44.entities.Inspection.list("-date", 200),
           base44.entities.MaintenanceIssue.list("-created_date", 200),
@@ -266,9 +267,12 @@ export default function Dashboard() {
           base44.entities.Key.list("-created_date", 200),
           base44.entities.Invoice.list("-created_date", 200),
           base44.entities.PropertyVisit.list("-start_time", 200),
+          base44.entities.PropertyServiceAgreement.list("-created_date", 200),
+          base44.entities.CustomerIntake.list("-created_date", 200),
+          base44.entities.ServicePackage.list("-created_date", 200),
           base44.entities.BusinessSettings.list("-created_date", 1),
         ]);
-        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits });
+        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages });
         if (sList && sList[0]) setSettings(sList[0]);
       } catch (e) {}
       setLoading(false);
@@ -322,6 +326,14 @@ export default function Dashboard() {
 
   const alertCount = emergency.length + overdue.length + inspToday.length + contractorsToday.length + unreturnedKeys.length + awaitingReimb.length + overdueInspections.length + missedVisits.length;
 
+  // Correction #14 — actionable Home counts (single source of truth). Only
+  // "clients" is wired: recurring customers Ready for Regular Service with no
+  // first regular visit scheduled. Other categories stay 0 (no invented logic).
+  const spMap = {};
+  (data.servicePackages || []).forEach((p) => { spMap[p.id] = p; });
+  const actionable = getActionableCounts({ clients: data.clients, properties: data.properties, intakes: data.intakes, agreements: data.agreements, visits: data.visits, servicePackages: spMap });
+  const badgeFor = (label) => (label === "Clients" ? actionable.clients : 0);
+
   const startVisitTo = draft && draft.propertyId ? "/visits?continue=1" : "/visits?start=1";
   const startVisitLabel = draft && draft.propertyId ? `Continue Visit — ${propName(draft.propertyId)}` : "Start Visit";
 
@@ -360,7 +372,7 @@ export default function Dashboard() {
                    </Link>
                    <div className="grid grid-cols-2 gap-2">
                      {group.items.map((a) => (
-                       <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
+                       <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                      ))}
                    </div>
                  </div>
@@ -372,7 +384,7 @@ export default function Dashboard() {
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {group.items.map((a) => (
-                      <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
+                      <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                     ))}
                   </div>
                 </div>
@@ -383,7 +395,7 @@ export default function Dashboard() {
                 <div key={group.label}>
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
                   {group.items.map((a) => (
-                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
+                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                   ))}
                 </div>
               );
@@ -393,7 +405,7 @@ export default function Dashboard() {
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {group.items.map((a) => (
-                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} />
+                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                   ))}
                 </div>
               </div>

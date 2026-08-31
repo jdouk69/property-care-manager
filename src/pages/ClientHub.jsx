@@ -17,6 +17,9 @@ import ActivateServiceButton from "@/components/agreements/ActivateServiceButton
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { deriveOnboarding } from "@/lib/onboarding";
 import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
+import ScheduleFirstVisitCard from "@/components/onboarding/ScheduleFirstVisitCard";
+import OnboardingCompleteDialog from "@/components/onboarding/OnboardingCompleteDialog";
+import { getReadyHandoff, ensureOnboardingReadyNotification } from "@/lib/onboardingHandoff";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -73,6 +76,7 @@ export default function ClientHub() {
   const [intakes, setIntakes] = useState([]);
   const [downloadingPdf, setDownloadingPdf] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
+  const [readyNotif, setReadyNotif] = useState(null);
 
   const handleDownloadSigned = async (token) => {
     if (!token) return;
@@ -119,6 +123,24 @@ export default function ClientHub() {
     })();
   }, [id]);
 
+  // Correction #14 — handoff hook must run unconditionally (before any early
+  // return) to satisfy rules-of-hooks. selectedProperty + handoff are computed
+  // from state here; the effect idempotently ensures the one-time Ready
+  // notification and drives the completion dialog. Never auto-creates a visit.
+  const selectedProperty = properties.find((p) => p.id === selectedPropertyId) || properties[0] || null;
+  const handoff = getReadyHandoff({ client, property: selectedProperty, intakes, agreements, visits, servicePackages });
+
+  useEffect(() => {
+    if (!handoff) { setReadyNotif(null); return; }
+    let cancelled = false;
+    (async () => {
+      const n = await ensureOnboardingReadyNotification(handoff);
+      if (!cancelled) setReadyNotif(n);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoff?.dedupKey]);
+
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!client) return <AppLayout><div className="p-6"><EmptyState icon={Home} title="Client not found" /></div></AppLayout>;
 
@@ -130,8 +152,14 @@ export default function ClientHub() {
   };
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
-  const selectedProperty = properties.find((p) => p.id === selectedPropertyId) || properties[0] || null;
   const onboarding = deriveOnboarding({ client, properties, selectedProperty, intakes, agreements, visits, servicePackages });
+
+  const dismissReadyDialog = async () => {
+    if (readyNotif?.id) {
+      try { await base44.entities.Notification.update(readyNotif.id, { read: true }); } catch (e) {}
+    }
+    setReadyNotif((n) => (n ? { ...n, read: true } : n));
+  };
 
   const upcomingVisits = visits.filter((v) => v.status !== "Completed" && v.status !== "Cancelled");
   const recentVisits = visits.filter((v) => v.status === "Completed");
@@ -180,6 +208,8 @@ export default function ClientHub() {
           onboarding={onboarding}
           onActivated={() => window.location.reload()}
         />
+
+        {handoff && <ScheduleFirstVisitCard handoff={handoff} />}
 
         {/* Customer intake */}
         <div id="client-intake" className="mb-4">
@@ -316,6 +346,8 @@ export default function ClientHub() {
           <ActivitySection title="Documents" icon={FileWarning} to="/documents" count={documents.length} emptyTitle="No documents"
             items={documents.map((d) => ({ title: d.name, subtitle: d.category, to: "/documents" }))} />
         </div>
+
+        <OnboardingCompleteDialog handoff={handoff} notification={readyNotif} onDismiss={dismissReadyDialog} />
       </div>
     </AppLayout>
   );
