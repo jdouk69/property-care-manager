@@ -12,6 +12,7 @@ import MarkSentExternallyDialog from "@/components/reports/MarkSentExternallyDia
 import { buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPdf } from "@/lib/visitReport";
 import { sendOwnerReportEmail } from "@/lib/visitReportSend";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
 
 const STATUS_TONE = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -34,8 +35,8 @@ const bucketOf = (v) => {
   if (s === "Delivery Failed") return "failed";
   return "needs";
 };
-const fmtDateTime = (iso) => iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
-const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "—";
+const fmtDateTime = (iso) => (iso ? athensMediumDateTime(iso) : "—");
+const fmtDate = (iso) => (iso ? athensMediumDate(iso) : "—");
 
 /**
  * Centralized customer-report delivery queue. Reuses the SAME delivery

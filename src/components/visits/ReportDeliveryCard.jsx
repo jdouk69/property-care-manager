@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import ReportReviewModal from "@/components/visits/ReportReviewModal";
 import { buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPdf } from "@/lib/visitReport";
 import { sendOwnerReportEmail } from "@/lib/visitReportSend";
+import { athensMediumDateTime } from "@/lib/timezone";
 
 const STATUS_TONE = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -128,7 +129,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
 
       {visit.report_sent_at && (
         <p className="text-xs text-muted-foreground">
-          Sent {new Date(visit.report_sent_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+          Sent {athensMediumDateTime(visit.report_sent_at)}
           {visit.report_sent_to ? ` · ${visit.report_sent_to}` : ""}
           {visit.report_delivery_method ? ` · ${visit.report_delivery_method}` : ""}
           {visit.report_sent_by ? ` · by ${visit.report_sent_by}` : ""}

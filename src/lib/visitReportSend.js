@@ -1,8 +1,8 @@
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { athensLongDate } from "@/lib/timezone";
 
 function fmtDay(iso) {
-  if (!iso) return "—";
-  try { return new Date(iso).toLocaleDateString(undefined, { dateStyle: "long" }); } catch (e) { return iso; }
+  return athensLongDate(iso);
 }
 
 /**

@@ -11,6 +11,7 @@ import PageBackButton from "@/components/ui/PageBackButton";
 import { Image as UIImage } from "@/components/ui/image";
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { athensMediumDateTime } from "@/lib/timezone";
 
 const GROUPS = [
   { key: "Emergency", tone: "text-rose-600 bg-rose-500/10 border-rose-500/20" },
@@ -79,7 +80,7 @@ export default function VisitDetail() {
     base44.auth.me().then((u) => setIsAdmin(u?.role === "admin")).catch(() => {});
   }, []);
 
-  const fmt = (iso) => iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
+  const fmt = (iso) => (iso ? athensMediumDateTime(iso) : "—");
 
   const startScheduledVisit = async () => {
     if (!confirm("Start this visit now? It will move to In Progress and open the checklist.")) return;

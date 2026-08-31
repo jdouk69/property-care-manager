@@ -16,6 +16,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import EmptyState from "@/components/ui/EmptyState";
 import PropertyInlineAdd from "@/components/properties/PropertyInlineAdd";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
 import MonitoringPrioritiesEditor from "@/components/properties/MonitoringPrioritiesEditor";
 
 const ISSUE_CATEGORIES = ["Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning", "Heating", "Appliance", "Internet", "Security", "Locksmith", "Cleaning", "Painting", "Building repair", "Pest control", "Storm damage", "Other"];
@@ -100,7 +101,7 @@ export default function PropertyDetail() {
 
   const receipts = expenses.filter((e) => e.receipt_photo);
   const visitReports = visits.filter((v) => v.status !== "Cancelled");
-  const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${(v.start_time || "").slice(0, 10)} · ${visitTypeLabel(v.visit_type) || ""}` }));
+  const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${v.start_time ? athensMediumDate(v.start_time) : ""} · ${visitTypeLabel(v.visit_type) || ""}` }));
   const issueOpts = maintenance.map((m) => ({ value: m.id, label: m.title }));
   const contractorOpts = contractors.map((c) => ({ value: c.id, label: c.company }));
 
@@ -194,7 +195,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="visits">
             <RecordSection title="Visits" icon={MapPin} empty="No visits recorded" moduleLink="/visits"
-              items={visits} render={(v) => ({ primary: visitTypeLabel(v.visit_type), sub: (v.start_time || "").slice(0, 16).replace("T", " "), badge: v.status, to: `/visits/${v.id}` })}
+              items={visits} render={(v) => ({ primary: visitTypeLabel(v.visit_type), sub: athensMediumDateTime(v.start_time), badge: v.status, to: `/visits/${v.id}` })}
               addNode={<LinkLink label="Start a new visit" to="/visits?start=1" />} />
           </TabsContent>
 
@@ -334,7 +335,7 @@ export default function PropertyDetail() {
                   <div key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{visitTypeLabel(v.visit_type)}</p>
-                      <p className="text-xs text-muted-foreground truncate">{(v.start_time || "").slice(0, 10)}</p>
+                      <p className="text-xs text-muted-foreground truncate">{v.start_time ? athensMediumDate(v.start_time) : ""}</p>
                     </div>
                     <Link to={`/visits/${v.id}`} className="text-xs text-primary hover:underline">Open</Link>
                   </div>

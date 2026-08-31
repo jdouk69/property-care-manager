@@ -76,21 +76,38 @@ export function athensLocalToIso(dateStr, timeStr) {
   return new Date(utcGuess - offsetMin * 60000).toISOString();
 }
 
-// Athens-local "medium" date+time, e.g. "Aug 30, 2026, 10:00 AM". For owner-facing
-// report timestamps so they reflect property/local time regardless of the viewer's
-// browser timezone. Stored timestamps remain UTC ISO.
+// Athens-local 12-hour time, e.g. "2:00 PM".
+export function athensTime12h(iso) {
+  if (!iso) return "";
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+  } catch (e) { return ""; }
+}
+
+// Athens-local "medium" date+time, e.g. "Aug 30, 2026 at 2:00 PM". Composed
+// explicitly so every surface (report PDF, Report Review, Visit Detail, Reports
+// list, delivery chips, owner email) shows the identical format — never the
+// viewer's browser timezone. Stored timestamps remain UTC ISO.
 export function athensMediumDateTime(iso) {
   if (!iso) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: TZ, dateStyle: "medium", timeStyle: "short",
-    }).format(new Date(iso));
-  } catch (e) { return String(iso); }
+  const d = athensMediumDate(iso);
+  const t = athensTime12h(iso);
+  return t ? `${d} at ${t}` : d;
 }
 
 export function athensMediumDate(iso) {
   if (!iso) return "—";
   try {
     return new Intl.DateTimeFormat("en-US", { timeZone: TZ, dateStyle: "medium" }).format(new Date(iso));
+  } catch (e) { return String(iso); }
+}
+
+// Athens-local "long" date, e.g. "August 30, 2026". Used in owner-facing email
+// subject/body so the visit date reflects property/local time, not the sender's
+// browser timezone.
+export function athensLongDate(iso) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZone: TZ, dateStyle: "long" }).format(new Date(iso));
   } catch (e) { return String(iso); }
 }

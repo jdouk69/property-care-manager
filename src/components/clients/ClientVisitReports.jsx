@@ -4,6 +4,7 @@ import { ClipboardCheck, FileText, Send, RotateCw, ArrowRight } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/EmptyState";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { athensMediumDate } from "@/lib/timezone";
 
 const STATUS_TONE = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -12,7 +13,7 @@ const STATUS_TONE = {
   "Delivery Failed": "bg-rose-500/10 text-rose-600 border-rose-500/20",
 };
 
-const fmt = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "—";
+const fmt = (iso) => (iso ? athensMediumDate(iso) : "—");
 
 /**
  * Permanent history of completed visits and their owner-report delivery status
@@ -44,7 +45,7 @@ export default function ClientVisitReports({ visits, propName, to = "/visits" })
                     <p className="text-sm font-medium truncate">{propName(v.property_id)} — {visitTypeLabel(v.visit_type)}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {fmt(v.start_time)}
-                      {v.report_sent_at ? ` · Sent ${new Date(v.report_sent_at).toLocaleDateString()}` : ""}
+                      {v.report_sent_at ? ` · Sent ${athensMediumDate(v.report_sent_at)}` : ""}
                     </p>
                   </div>
                   <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{status}</span>

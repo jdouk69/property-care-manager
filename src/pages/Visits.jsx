@@ -10,6 +10,7 @@ import VisitWizard from "@/components/visits/VisitWizard";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { loadDraft, clearDraft } from "@/lib/visitDraft";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { athensMediumDateTime } from "@/lib/timezone";
 
 export default function Visits() {
   const [mode, setMode] = useState("list");
@@ -127,7 +128,7 @@ export default function Visits() {
                       <p className="font-medium text-foreground truncate">{props[v.property_id] || "Property"}</p>
                       <p className="text-xs text-muted-foreground truncate">{visitTypeLabel(v.visit_type)}</p>
                       <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {(v.start_time || "").slice(0, 16).replace("T", " ")}
+                        <Clock className="w-3 h-3" /> {athensMediumDateTime(v.start_time)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
