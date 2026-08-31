@@ -141,7 +141,7 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   } else if (conflict) {
     s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "Agreement conflict", detail: "Resolve agreement conflict first", action: null };
   } else if (singleActive && selectedProperty) {
-    s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "Not scheduled", detail: "Start the initial onboarding visit", action: { label: "Start Initial Onboarding Visit", to: `/visits?start=1&property=${selectedProperty.id}&agreement=${singleActive.id}&client=${clientId}` } };
+    s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "Not scheduled", detail: "Start the initial onboarding visit", action: { label: "Start Initial Onboarding Visit", to: `/visits?start=1&property=${selectedProperty.id}&agreement=${singleActive.id}&client=${clientId}&visit_type=${encodeURIComponent(ONBOARDING_VISIT_TYPE)}` } };
   } else {
     s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "Waiting for active service", detail: "Activate service first", action: null };
   }

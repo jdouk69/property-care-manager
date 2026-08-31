@@ -31,7 +31,7 @@ const AREA = "md:text-base 2xl:text-sm";
 const BTN = "md:h-11 2xl:h-9";
 const BTN_SM = "md:h-10 md:px-4 md:text-sm 2xl:h-8 2xl:px-3 2xl:text-xs";
 
-export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, resumeVisitId, scheduleMode }) {
+export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, ctxVisitType, resumeVisitId, scheduleMode }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const initialStep = scheduleMode ? "select-client" : ctxAgreement ? "first-visit" : resumeVisitId ? "active" : "property";
@@ -107,8 +107,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             try {
               const p = await base44.entities.ServicePackage.get(a.service_package_id);
               setPkg(p);
-              setVisitType(p?.default_visit_type || "");
+              // The onboarding flow passes the intended visit type explicitly
+              // (ctxVisitType). The package still provides context (name,
+              // frequency, duration) but must NOT override the onboarding visit
+              // type with its default_visit_type.
+              setVisitType(ctxVisitType || p?.default_visit_type || "");
             } catch (e) {}
+          } else if (ctxVisitType) {
+            setVisitType(ctxVisitType);
           }
           if (ctxClient) { try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {} }
         } catch (e) {}

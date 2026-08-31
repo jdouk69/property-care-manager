@@ -45,10 +45,12 @@ export default function Visits() {
     const property = params.get("property");
     const agreement = params.get("agreement");
     const client = params.get("client");
+    const visitType = params.get("visit_type");
     const resume = params.get("resume");
     if (property) setCtx((c) => ({ ...c, property }));
     if (agreement) setCtx((c) => ({ ...c, agreement }));
     if (client) setCtx((c) => ({ ...c, client }));
+    if (visitType) setCtx((c) => ({ ...c, visitType }));
     if (resume) setResumeId(resume);
     const schedule = params.get("schedule") === "1";
     if (schedule) setScheduleMode(true);
@@ -73,6 +75,7 @@ export default function Visits() {
             ctxProperty={ctx.property}
             ctxAgreement={ctx.agreement}
             ctxClient={ctx.client}
+            ctxVisitType={ctx.visitType}
             resumeVisitId={resumeId}
             scheduleMode={scheduleMode}
             onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); setScheduleMode(false); load(); setDraft(loadDraft()); }}
