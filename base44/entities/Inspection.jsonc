@@ -23,6 +23,10 @@
       ],
       "default": "Draft"
     },
+    "completed_date": {
+      "type": "string",
+      "format": "date"
+    },
     "summary_notes": {
       "type": "string"
     },

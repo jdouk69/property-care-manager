@@ -1,4 +1,5 @@
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 import { Wrench } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
@@ -39,6 +40,8 @@ const columns = [
 ];
 
 export default function Maintenance() {
+  const [searchParams] = useSearchParams();
+  const openId = searchParams.get("open") || undefined;
   return (
     <AppLayout>
       <ResourceListPage
@@ -50,6 +53,7 @@ export default function Maintenance() {
         columns={columns}
         searchKeys={["title", "description", "completion_notes"]}
         addItemLabel="Log Issue"
+        autoOpenEditId={openId}
         archivable
         defaultValues={{ status: "Reported", priority: "Medium", category: "Other", reported_by: "Jim", owner_approval_status: "Pending", payment_status: "Unpaid" }}
       />

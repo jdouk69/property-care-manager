@@ -84,7 +84,7 @@ export function buildTodayAgenda(data = {}) {
         propertyId: task.property_id, propertyName: propName(task.property_id), clientName: clientFor(task.property_id),
         typeLabel: isArrival ? (task.type === "Departure inspection" ? "Departure Inspection" : "Arrival Preparation") : (task.title || task.type || "Task"),
         status: task.status, date: task.date,
-        to: isArrival ? `/properties/${task.property_id}` : "/tasks",
+        to: `/tasks?open=${task.id}`,
       };
       if (done) {
         push({ ...base, actionLabel: "View Task", actionKind: "view-task", completed: true, overdue: false }, "completed");
@@ -101,7 +101,7 @@ export function buildTodayAgenda(data = {}) {
         id: task.id, kind: "task", time: task.time || "", timeLabel: task.time || "",
         propertyId: task.property_id, propertyName: propName(task.property_id), clientName: clientFor(task.property_id),
         typeLabel: task.title || task.type || "Task", status: task.status, date: task.date,
-        to: "/tasks", actionLabel: "View Task", actionKind: "view-task", completed: false, overdue: true,
+        to: `/tasks?open=${task.id}`, actionLabel: "View Task", actionKind: "view-task", completed: false, overdue: true,
       });
     }
   });
@@ -119,7 +119,7 @@ export function buildTodayAgenda(data = {}) {
       propertyId: m.property_id, propertyName: propName(m.property_id), clientName: clientFor(m.property_id),
       typeLabel: appt && appt === t ? "Maintenance Coordination" : "Follow-up",
       status: m.status, date: appt || fup,
-      to: "/maintenance", actionLabel: "View Issue", actionKind: "view-issue",
+      to: `/maintenance?open=${m.id}`, actionLabel: "View Issue", actionKind: "view-issue",
     };
     if (dueToday) push({ ...base, completed: false, overdue: false }, "today");
     else push({ ...base, completed: false, overdue: true }, "overdue");
@@ -133,32 +133,32 @@ export function buildTodayAgenda(data = {}) {
         id: r.id, kind: "owner-rep", time: "", timeLabel: "",
         propertyId: r.property_id, propertyName: propName(r.property_id), clientName: clientFor(r.property_id),
         typeLabel: "Owner-Rep Site Visit", status: r.status, date: r.visit_date,
-        to: "/rep-reports", actionLabel: "View Report", actionKind: "view-report",
+        to: `/rep-reports?open=${r.id}`, actionLabel: "View Report", actionKind: "view-report",
         completed: false, overdue: false,
       }, "today");
     }
   });
 
-  // Inspections (legacy entity)
+  // Inspections. TODAY reads the real Inspection status — no separate
+  // dashboard completion flag. "Completed Today" uses completed_date (set by
+  // the Finish Inspection action) so an overdue inspection finished today still
+  // surfaces under Completed Today even when its scheduled date is in the past.
   (data.inspections || []).forEach((i) => {
     if (i.recurrence_status === "skipped") return;
-    if (i.date === t) {
-      const done = i.status === "Completed";
-      push({
-        id: i.id, kind: "inspection", time: "", timeLabel: "",
-        propertyId: "", propertyName: "", clientName: "",
-        typeLabel: "Inspection", status: i.status, date: i.date,
-        to: "/inspections", actionLabel: "View Inspection", actionKind: "view-inspection",
-        completed: done, overdue: false,
-      }, done ? "completed" : "today");
-    } else if (i.date && i.date < t && i.status === "Draft") {
-      overdue.push({
-        id: i.id, kind: "inspection", time: "", timeLabel: "",
-        propertyId: "", propertyName: "", clientName: "",
-        typeLabel: "Inspection", status: i.status, date: i.date,
-        to: "/inspections", actionLabel: "View Inspection", actionKind: "view-inspection",
-        completed: false, overdue: true,
-      });
+    const done = i.status === "Completed";
+    const completedToday = done && (i.completed_date === t || i.date === t);
+    const base = {
+      id: i.id, kind: "inspection", time: "", timeLabel: "",
+      propertyId: "", propertyName: "", clientName: "",
+      typeLabel: "Inspection", status: i.status, date: i.date,
+      to: `/inspections?open=${i.id}`, actionLabel: "View Inspection", actionKind: "view-inspection",
+    };
+    if (completedToday) {
+      push({ ...base, completed: true, overdue: false }, "completed");
+    } else if (i.date === t && !done) {
+      push({ ...base, completed: false, overdue: false }, "today");
+    } else if (i.date && i.date < t && !done) {
+      overdue.push({ ...base, completed: false, overdue: true });
     }
   });
 

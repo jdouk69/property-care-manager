@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ListChecks, Repeat } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
@@ -30,6 +30,9 @@ const columns = [
 ];
 
 export default function Tasks() {
+  const [searchParams] = useSearchParams();
+  const openId = searchParams.get("open") || undefined;
+
   const handleCreated = async (values, created) => {
     if (values.is_recurring) {
       const rule = await createRuleFromOccurrence("Task", values, created);
@@ -61,6 +64,7 @@ export default function Tasks() {
         searchKeys={["title", "assigned_to", "notes"]}
         addItemLabel="Add Task"
         defaultValues={{ status: "Pending", priority: "Medium", type: "Custom", is_recurring: false, frequency: "Weekly", interval: 1, days_of_week: [] }}
+        autoOpenEditId={openId}
         onCreated={handleCreated}
         onUpdated={handleUpdated}
         extraDrawerContent={(record, helpers) =>

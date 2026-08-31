@@ -1,4 +1,5 @@
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
@@ -33,6 +34,8 @@ const columns = [
 ];
 
 export default function OwnerRepReports() {
+  const [searchParams] = useSearchParams();
+  const openId = searchParams.get("open") || undefined;
   return (
     <AppLayout>
       <ResourceListPage
@@ -44,6 +47,7 @@ export default function OwnerRepReports() {
         columns={columns}
         searchKeys={["project_name", "observed_progress", "visible_concerns", "recommendations"]}
         addItemLabel="New Report"
+        autoOpenEditId={openId}
         archivable
         defaultValues={{ status: "Draft", visit_date: new Date().toISOString().slice(0, 10) }}
         renderSummary={() => (

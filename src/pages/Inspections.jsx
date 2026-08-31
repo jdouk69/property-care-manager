@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
-  ClipboardCheck, Plus, Loader2, Check, Trash2, Search, Camera, X, MapPin, Calendar, User
+  ClipboardCheck, Plus, Loader2, Check, Trash2, Search, Camera, X, MapPin, Calendar, User, CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,9 @@ export default function Inspections() {
   const [dirty, setDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
   const debounceRef = useRef(null);
+  const [searchParams] = useSearchParams();
+  const openId = searchParams.get("open");
+  const autoOpenDone = useRef(false);
 
   const load = async () => {
     setLoading(true);
@@ -79,6 +83,14 @@ export default function Inspections() {
     setValues({ ...it, checklist: it.checklist?.length ? it.checklist : blankChecklist() });
     setDirty(false); setSaved(false); setOpen(true);
   };
+
+  // Deep-link from Dashboard TODAY: /inspections?open=<id> opens that exact record.
+  useEffect(() => {
+    if (!openId || autoOpenDone.current || loading || items.length === 0) return;
+    const it = items.find((x) => x.id === openId);
+    if (it) { autoOpenDone.current = true; openEdit(it); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, loading, items]);
   const setField = (k, v) => { setValues((s) => ({ ...s, [k]: v })); setDirty(true); setSaved(false); };
 
   const setItem = (idx, patch) => {
@@ -137,6 +149,31 @@ export default function Inspections() {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       return file_url;
     } finally { setUploading(false); }
+  };
+
+  // Finish Inspection: the single, obvious completion action. Enforces that
+  // every checklist item has been answered (none left "Not Checked"), then sets
+  // the real Inspection status to Completed and stamps completed_date so TODAY
+  // can move it into "Completed Today" without a separate dashboard status.
+  const finishInspection = async () => {
+    if (!editing) return;
+    const unchecked = (values.checklist || []).filter((c) => (c.status || "Not Checked") === "Not Checked").length;
+    if (unchecked > 0) {
+      alert(`${unchecked} checklist item(s) are still "Not Checked". Complete every item before finishing the inspection.`);
+      return;
+    }
+    if (!values.property_id) { alert("Select a property before finishing."); return; }
+    const completed = { ...values, status: "Completed", completed_date: new Date().toISOString().slice(0, 10) };
+    setSaving(true);
+    try {
+      await base44.entities.Inspection.update(editing.id, completed);
+      setItems((arr) => arr.map((i) => (i.id === editing.id ? { ...i, ...completed } : i)));
+      if (completed.recurrence_id) {
+        generateNextOccurrence(completed.recurrence_id, completed.occurrence_date || completed.date).then(() => load()).catch(() => {});
+      }
+      setSaving(false); setSaved(true); setDirty(false);
+      setOpen(false);
+    } catch (e) { setSaving(false); alert("Could not complete inspection: " + (e?.message || e)); }
   };
 
   const issuesCount = (values.checklist || []).filter((c) => c.status === "Needs Attention" || c.status === "Critical").length;
@@ -262,6 +299,11 @@ export default function Inspections() {
             {editing ? <Button variant="ghost" className="text-destructive" onClick={remove}><Trash2 className="w-4 h-4 mr-1" /> Delete</Button> : <div />}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+              {editing && values.status !== "Completed" && (
+                <Button onClick={finishInspection} disabled={saving} className="gap-1.5">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Finish Inspection
+                </Button>
+              )}
               {!editing && <Button onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}</Button>}
             </div>
           </SheetFooter>
