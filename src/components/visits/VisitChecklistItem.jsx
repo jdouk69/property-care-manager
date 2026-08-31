@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Loader2, AlertTriangle, Wrench, Camera } from "lucide-react";
+import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
 
@@ -13,6 +13,8 @@ const STATUSES = [
 export default function VisitChecklistItem({ item, index, onChange, onUploadPhoto, onRemovePhoto, uploading, onFlagIssue, flagged }) {
   const setStatus = (status) => onChange({ ...item, status });
   const setNotes = (notes) => onChange({ ...item, notes });
+  const ownerVisible = !!item.owner_visible;
+  const toggleOwnerVisible = () => onChange({ ...item, owner_visible: !ownerVisible });
 
   return (
     <div className="rounded-2xl border border-border bg-card p-3">
@@ -35,6 +37,14 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
       {item.status !== "Not Checked" && (
         <div className="mt-2 space-y-2">
           <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder="Notes…" rows={2} className="resize-none text-sm md:text-base 2xl:text-sm" />
+          <button
+            type="button"
+            onClick={toggleOwnerVisible}
+            className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 md:text-sm md:px-4 md:py-2.5 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border transition ${ownerVisible ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-border text-muted-foreground hover:bg-muted"}`}
+          >
+            {ownerVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {ownerVisible ? "Owner-visible" : "Private (staff only)"}
+          </button>
           <div className="grid grid-cols-4 gap-2">
             {(item.photos || []).map((url, i) => (
               <div key={i} className="relative group aspect-square">

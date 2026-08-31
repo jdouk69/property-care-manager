@@ -20,6 +20,7 @@ import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
 import ScheduleFirstVisitCard from "@/components/onboarding/ScheduleFirstVisitCard";
 import OnboardingCompleteDialog from "@/components/onboarding/OnboardingCompleteDialog";
 import { getReadyHandoff, ensureOnboardingReadyNotification } from "@/lib/onboardingHandoff";
+import ClientVisitReports from "@/components/clients/ClientVisitReports";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -331,8 +332,7 @@ export default function ClientHub() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ActivitySection title="Upcoming Visits" icon={MapPin} to="/visits" count={upcomingVisits.length} emptyTitle="No upcoming visits"
             items={upcomingVisits.map((v) => ({ title: `${propName(v.property_id)} — ${visitTypeLabel(v.visit_type)}`, subtitle: v.start_time, badge: v.status, to: `/visits/${v.id}` }))} />
-          <ActivitySection title="Recent Visits" icon={ClipboardCheck} to="/visits" count={recentVisits.length} emptyTitle="No recent visits"
-            items={recentVisits.map((v) => ({ title: `${propName(v.property_id)} — ${visitTypeLabel(v.visit_type)}`, subtitle: v.start_time, badge: v.status, to: `/visits/${v.id}` }))} />
+          <ClientVisitReports visits={recentVisits} propName={propName} to="/visits" />
           <ActivitySection title="Open Tasks" icon={CalendarClock} to="/tasks" count={openTasks.length} emptyTitle="No open tasks"
             items={openTasks.map((t) => ({ title: t.title, subtitle: `${propName(t.property_id)} · ${t.date || ""}`, badge: t.priority, to: "/tasks" }))} />
           <ActivitySection title="Open Issues / Maintenance" icon={Wrench} to="/maintenance" count={openIssues.length} emptyTitle="No open issues"

@@ -66,6 +66,10 @@
           "notes": {
             "type": "string"
           },
+          "owner_visible": {
+            "type": "boolean",
+            "default": false
+          },
           "photos": {
             "type": "array",
             "items": {
@@ -95,6 +99,9 @@
     "summary": {
       "type": "string"
     },
+    "internal_notes": {
+      "type": "string"
+    },
     "follow_up_task_ids": {
       "type": "array",
       "items": {
@@ -113,6 +120,31 @@
     "report_sent": {
       "type": "boolean",
       "default": false
+    },
+    "report_status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Ready to Send",
+        "Sent",
+        "Delivery Failed"
+      ],
+      "default": "Draft"
+    },
+    "report_pdf_url": {
+      "type": "string"
+    },
+    "report_sent_at": {
+      "type": "string"
+    },
+    "report_sent_to": {
+      "type": "string"
+    },
+    "report_sent_by": {
+      "type": "string"
+    },
+    "report_delivery_method": {
+      "type": "string"
     },
     "property_service_agreement_id": {
       "type": "string"

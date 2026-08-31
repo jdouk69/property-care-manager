@@ -18,6 +18,7 @@ import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel } from "@/lib/timezone";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import ActionCard from "@/components/dashboard/ActionCard";
+import TodayAgenda from "@/components/dashboard/TodayAgenda";
 import { getActionableCounts } from "@/lib/onboardingHandoff";
 
 const today = athensToday;
@@ -249,14 +250,14 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [], agreements: [], intakes: [], servicePackages: [] });
+  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [], agreements: [], intakes: [], servicePackages: [], repReports: [] });
   const [settings, setSettings] = useState(null);
   const [draft, setDraft] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, sList] = await Promise.all([
+        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, repReports, sList] = await Promise.all([
           base44.entities.Task.list("-date", 200),
           base44.entities.Inspection.list("-date", 200),
           base44.entities.MaintenanceIssue.list("-created_date", 200),
@@ -270,9 +271,10 @@ export default function Dashboard() {
           base44.entities.PropertyServiceAgreement.list("-created_date", 200),
           base44.entities.CustomerIntake.list("-created_date", 200),
           base44.entities.ServicePackage.list("-created_date", 200),
+          base44.entities.OwnerRepReport.list("-created_date", 200),
           base44.entities.BusinessSettings.list("-created_date", 1),
         ]);
-        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages });
+        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, repReports });
         if (sList && sList[0]) setSettings(sList[0]);
       } catch (e) {}
       setLoading(false);
@@ -345,6 +347,9 @@ export default function Dashboard() {
           <h1 className="text-2xl font-semibold tracking-tight mt-0.5">{greeting()}, {ownerName}</h1>
           <p className="text-sm text-muted-foreground mt-1">Here's your command center for today.</p>
         </div>
+
+        {/* TODAY agenda — what do I have to do today? */}
+        <TodayAgenda data={data} />
 
         {/* Next action / continue working */}
         <NextActionCard draft={nextAction.draft} propName={propName} openIssuesByProp={nextAction.openIssuesByProp} prepTask={nextAction.prepTask} onCancelDone={() => setDraft(null)} />

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
-import { generateVisitReportPdf } from "@/lib/visitReport";
+import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
@@ -58,11 +58,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [checklist, setChecklist] = useState([]);
   const [meters, setMeters] = useState([{ label: "Electricity meter", value: "", photo: "" }, { label: "Water meter", value: "", photo: "" }]);
   const [summary, setSummary] = useState("");
+  const [internalNotes, setInternalNotes] = useState("");
   const [followUpText, setFollowUpText] = useState("");
   const [uploading, setUploading] = useState(false);
   const [flagged, setFlagged] = useState({});
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(null);
+  const [reportBusiness, setReportBusiness] = useState({});
+  const [reportClient, setReportClient] = useState({});
   const [issueIds, setIssueIds] = useState([]);
   const [taskIds, setTaskIds] = useState([]);
   const [createdIssues, setCreatedIssues] = useState([]);
@@ -160,7 +163,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped });
     }
   }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped]);
 
@@ -194,6 +197,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     setGps(resumable.gps || "");
     setMeters(resumable.meters?.length ? resumable.meters : [{ label: "Electricity meter", value: "", photo: "" }, { label: "Water meter", value: "", photo: "" }]);
     setSummary(resumable.summary || "");
+    setInternalNotes(resumable.internalNotes || "");
     setIssueIds(resumable.issueIds || []);
     setTaskIds(resumable.taskIds || []);
     setCreatedIssues(resumable.createdIssues || []);
@@ -238,13 +242,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const master = live.find((t) => t.visit_type === vtype && (!t.property_id || t.is_master));
     const tmpl = propSpecific || master;
     if (tmpl) {
-      const items = (tmpl.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
+      const items = (tmpl.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [], owner_visible: false }));
       return { items, source: propSpecific ? "Property-Specific" : "Master", found: true };
     }
     // Defensive fallback: built-in defaults only when no template record exists and the seed is non-empty.
     const seed = SEED[vtype] || [];
     if (seed.length > 0) {
-      const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [] }));
+      const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [], owner_visible: false }));
       return { items, source: "Default", found: true };
     }
     return { items: [], source: "None", found: false };
@@ -455,19 +459,6 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     } catch (e) { alert("Could not send owner update: " + (e?.message || e)); }
   };
 
-  const generateReport = async (visitObj) => {
-    setSaving(true);
-    try {
-      const bs = await base44.entities.BusinessSettings.list("-created_date", 1);
-      const business = (bs && bs[0]) || {};
-      const property = properties.find((p) => p.id === propertyId) || {};
-      let client = {};
-      if (property.owner_id) { try { client = await base44.entities.Client.get(property.owner_id); } catch (e) {} }
-      await generateVisitReportPdf(visitObj, { business, property, client, issues: createdIssues, tasks: createdTasks });
-    } catch (e) { alert("Could not generate report: " + (e?.message || e)); }
-    setSaving(false);
-  };
-
   const completeVisit = async () => {
     setSaving(true);
     const end = new Date().toISOString();
@@ -476,8 +467,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       property_id: propertyId, visit_type: visitType, start_time: startTime, end_time: end,
       status: "Completed", gps_location: gps, checklist,
       meter_readings: meters.filter((m) => m.label || m.value),
-      summary, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
-      owner_report: "", report_sent: false,
+      summary, internal_notes: internalNotes, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
+      owner_report: "", report_sent: false, report_status: "Draft",
       property_service_agreement_id: agreementId || "",
     };
     try {
@@ -488,6 +479,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         visit = await base44.entities.PropertyVisit.create(shared);
       }
       setCompleted(visit);
+      // Load business + client context for the report delivery card.
+      try {
+        const bs = await base44.entities.BusinessSettings.list("-created_date", 1);
+        setReportBusiness((bs && bs[0]) || {});
+      } catch (e) {}
+      const prop = properties.find((p) => p.id === propertyId) || {};
+      if (clientObj) setReportClient(clientObj);
+      else if (prop.owner_id) { try { setReportClient(await base44.entities.Client.get(prop.owner_id)); } catch (e) {} }
       clearDraft();
       setStep("done");
     } catch (e) { alert("Could not save visit: " + (e?.message || e)); }
@@ -959,8 +958,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         <div id="step-finish" className="scroll-mt-28">
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Finish</p>
           <div className="mb-4">
-            <Label className="text-xs mb-1.5 block">Visit Summary & Recommendations</Label>
+            <Label className="text-xs mb-1.5 block">Visit Summary & Recommendations <span className="text-emerald-600 font-normal">(shown to owner)</span></Label>
             <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="Overall findings and recommended next steps for the owner…" className={AREA} />
+          </div>
+          <div className="mb-4">
+            <Label className="text-xs mb-1.5 block">Internal Notes <span className="text-rose-600 font-normal">(staff only — never shown to owner)</span></Label>
+            <Textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} placeholder="Private staff notes. These are NOT included in the owner report." className={AREA} />
           </div>
         </div>
 
@@ -1012,24 +1015,30 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // ---- STEP: done ----
   if (step === "done" && completed) {
     return (
-      <div className="max-w-xl mx-auto text-center py-10">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 className="w-8 h-8" />
+      <div className="max-w-xl mx-auto py-6">
+        <div className="text-center mb-5">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-semibold mb-1">Visit Complete ✓</h2>
+          <p className="text-sm text-muted-foreground">{propertyName} · {visitTypeLabel(visitType)}</p>
+          <div className="rounded-2xl border border-border bg-card p-3 text-left text-xs text-muted-foreground space-y-0.5 mt-4 mb-5 inline-block text-left">
+            <p>Duration: {(startTime || "").slice(11, 16)} – {(endTime || "").slice(11, 16)}</p>
+            <p>Checklist items: {checklist.length} · Issues: {issueIds.length} · Follow-ups: {taskIds.length}</p>
+          </div>
         </div>
-        <h2 className="text-xl font-semibold mb-1">Visit Complete</h2>
-        <p className="text-sm text-muted-foreground mb-6">{propertyName} · {visitTypeLabel(visitType)}</p>
-        <div className="rounded-2xl border border-border bg-card p-4 text-left text-sm space-y-1 mb-6">
-          <p>Duration: {(startTime || "").slice(11, 16)} – {(endTime || "").slice(11, 16)}</p>
-          <p>Checklist items: {checklist.length}</p>
-          <p>Issues created: {issueIds.length}</p>
-          <p>Follow-up tasks: {taskIds.length}</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 justify-center">
-          <Button onClick={() => generateReport(completed)} disabled={saving} className="rounded-2xl">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Download className="w-4 h-4 mr-2" /> Download Owner Report (PDF)</>}
-          </Button>
-          <Button variant="outline" onClick={onDone} className="rounded-2xl">Back to Visits</Button>
-        </div>
+        <ReportDeliveryCard
+          visit={completed}
+          property={properties.find((p) => p.id === propertyId) || {}}
+          client={reportClient}
+          business={reportBusiness}
+          issues={createdIssues}
+          tasks={createdTasks}
+          onUpdate={setCompleted}
+          onBackToEdit={() => setStep("active")}
+          variant="done"
+          onDone={onDone}
+        />
       </div>
     );
   }

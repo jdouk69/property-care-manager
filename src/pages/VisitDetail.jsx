@@ -2,15 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
-  ChevronLeft, Clock, MapPin, Gauge, Wrench, ListChecks, Download,
+  ChevronLeft, Clock, MapPin, Gauge, Wrench, ListChecks,
   Loader2, Archive, CheckCircle2, AlertTriangle, Trash2, X, Package, Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { Image as UIImage } from "@/components/ui/image";
-import { generateVisitReportPdf } from "@/lib/visitReport";
+import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 const GROUPS = [
@@ -29,7 +28,6 @@ export default function VisitDetail() {
   const [tasks, setTasks] = useState([]);
   const [business, setBusiness] = useState({});
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteStep, setDeleteStep] = useState(0);
@@ -83,12 +81,6 @@ export default function VisitDetail() {
 
   const fmt = (iso) => iso ? new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
 
-  const toggleReportSent = async (val) => {
-    const updated = { ...visit, report_sent: val };
-    setVisit(updated);
-    try { await base44.entities.PropertyVisit.update(visit.id, { report_sent: val }); } catch (e) {}
-  };
-
   const startScheduledVisit = async () => {
     if (!confirm("Start this visit now? It will move to In Progress and open the checklist.")) return;
     setStarting(true);
@@ -122,14 +114,6 @@ export default function VisitDetail() {
       alert("Could not delete visit: " + (e?.message || e));
     }
     setDeleting(false);
-  };
-
-  const downloadReport = async () => {
-    setGenerating(true);
-    try {
-      await generateVisitReportPdf(visit, { business, property, client, issues, tasks });
-    } catch (e) { alert("Could not generate report: " + (e?.message || e)); }
-    setGenerating(false);
   };
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
@@ -254,19 +238,21 @@ export default function VisitDetail() {
           </div>
         )}
 
-        {/* Actions */}
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div><p className="text-sm font-medium">Owner report</p><p className="text-xs text-muted-foreground">Mark as sent to the owner</p></div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{visit.report_sent ? "Sent" : "Not sent"}</span>
-              <Switch checked={!!visit.report_sent} onCheckedChange={toggleReportSent} />
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-            <Button onClick={downloadReport} disabled={generating} className="rounded-2xl gap-1.5">
-              {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download Owner Report (PDF)
-            </Button>
+        {/* Owner report delivery workflow */}
+        <ReportDeliveryCard
+          visit={visit}
+          property={property}
+          client={client}
+          issues={issues}
+          tasks={tasks}
+          business={business}
+          onUpdate={setVisit}
+          variant="detail"
+        />
+
+        {/* Admin actions */}
+        <div className="rounded-2xl border border-border bg-card p-4 mt-4">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={archive} disabled={archiving} className="rounded-2xl gap-1.5"><Archive className="w-4 h-4" /> Archive</Button>
             {isAdmin && (
               <Button variant="destructive" onClick={() => setDeleteStep(1)} className="rounded-2xl gap-1.5 ml-auto"><Trash2 className="w-4 h-4" /> Delete Permanently</Button>
