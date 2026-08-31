@@ -15,7 +15,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import { generateTimeBasedNotifications } from "@/lib/notifications";
 import { loadDraft } from "@/lib/visitDraft";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
-import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel } from "@/lib/timezone";
+import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel, TZ } from "@/lib/timezone";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import ActionCard from "@/components/dashboard/ActionCard";
 import TodayAgenda from "@/components/dashboard/TodayAgenda";
@@ -343,7 +343,7 @@ export default function Dashboard() {
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6">
         <div className="mb-5">
-          <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</p>
+          <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: TZ })}</p>
           <h1 className="text-2xl font-semibold tracking-tight mt-0.5">{greeting()}, {ownerName}</h1>
           <p className="text-sm text-muted-foreground mt-1">Here's your command center for today.</p>
         </div>
