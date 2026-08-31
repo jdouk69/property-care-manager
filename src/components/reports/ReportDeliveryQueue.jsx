@@ -27,7 +27,7 @@ const FILTERS = [
   { key: "all", label: "All" },
 ];
 
-const statusOf = (v) => v.report_status || (v.report_sent ? "Sent" : "Draft");
+const statusOf = (v) => (v && (v.report_status || (v.report_sent ? "Sent" : "Draft"))) || "Draft";
 const bucketOf = (v) => {
   const s = statusOf(v);
   if (s === "Sent") return "sent";
@@ -319,7 +319,7 @@ export default function ReportDeliveryQueue() {
         model={model}
         generating={generating}
         sending={!!sendingId && sendingId === reviewVisit?.id}
-        canSend={canDispatch && (!!reviewVisit?.report_pdf_url || statusOf(reviewVisit) === "Ready to Send")}
+        canSend={canDispatch && !!reviewVisit && (!!reviewVisit.report_pdf_url || statusOf(reviewVisit) === "Ready to Send")}
         onClose={() => setReviewVisit(null)}
         onSend={() => reviewVisit && doSend(reviewVisit, false)}
         onBackToEdit={() => setReviewVisit(null)}
