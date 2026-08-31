@@ -81,11 +81,21 @@ export default async function(req) {
         errs.push('Visit frequency is required for recurring service.');
       }
     }
-    if (!template) errs.push('No active legally-approved agreement terms template is available.');
-    else {
+    if (!template) {
+      // Production agreements: same message as before. A TEST agreement still
+      // needs a template to build the snapshot, but the legal-approval gate
+      // below is bypassed for it.
+      errs.push(agreement.is_test_agreement === true
+        ? 'No agreement terms template is linked to this test agreement.'
+        : 'No active legally-approved agreement terms template is available.');
+    } else {
       if (template.archived) errs.push('The selected terms template is archived.');
-      if (template.active !== true) errs.push('No active legally-approved agreement terms template is available.');
-      else if (template.legal_approved !== true) errs.push('The selected agreement terms have not been legally approved for customer use.');
+      // Production legal-approval gate — bypassed ONLY for an explicitly-marked
+      // TEST agreement (QA workflow). The template itself is never modified.
+      if (agreement.is_test_agreement !== true) {
+        if (template.active !== true) errs.push('No active legally-approved agreement terms template is available.');
+        else if (template.legal_approved !== true) errs.push('The selected agreement terms have not been legally approved for customer use.');
+      }
       if (!template.language) errs.push('Terms template language is invalid.');
       if (typeof template.version !== 'number') errs.push('Terms template version is invalid.');
     }

@@ -161,6 +161,10 @@
       "type": "boolean",
       "default": false
     },
+    "is_test_agreement": {
+      "type": "boolean",
+      "default": false
+    },
     "archived": {
       "type": "boolean",
       "default": false

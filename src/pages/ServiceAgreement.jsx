@@ -23,6 +23,7 @@ import AgreementPreview from "@/components/agreements/AgreementPreview";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
 import CreateReplacementButton from "@/components/agreements/CreateReplacementButton";
+import TestAgreementControl from "@/components/agreements/TestAgreementControl";
 import AgreementHistory from "@/components/agreements/AgreementHistory";
 
 const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
@@ -124,6 +125,7 @@ export default function ServiceAgreement() {
     signed_at: "",
     activated_at: "",
     activated_by: "",
+    is_test_agreement: false,
   });
 
   const handleDownloadSigned = async () => {
@@ -135,6 +137,17 @@ export default function ServiceAgreement() {
   const set = (k, v) => setValues((s) => ({ ...s, [k]: v }));
   // Changing any emergency field resets the staff confirmation, forcing reconfirm.
   const setEmergency = (k, v) => setValues((s) => ({ ...s, [k]: v, emergency_authorization_confirmed: false }));
+
+  // Persist the test-agreement flag immediately (independent of Save) so the
+  // backend send gate reads the authoritative value. TEST mode is a staff-only
+  // QA toggle; it never marks the terms template active/legal_approved and never
+  // affects production agreements (which stay false).
+  const handleToggleTestMode = async (value) => {
+    set("is_test_agreement", value);
+    if (isEdit && id) {
+      try { await base44.entities.PropertyServiceAgreement.update(id, { is_test_agreement: !!value }); } catch (e) {}
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -194,6 +207,7 @@ export default function ServiceAgreement() {
             signed_at: loaded.signed_at || "",
             activated_at: loaded.activated_at || "",
             activated_by: loaded.activated_by || "",
+            is_test_agreement: loaded.is_test_agreement === true,
           });
           // Auto-open Additional Details if any of those fields already contain data.
           const hasExtra = !!(
@@ -269,17 +283,23 @@ export default function ServiceAgreement() {
     !!(values.emergency_unreachable_instructions || "").trim();
   const emergencyConfirmedEffective = emergencyFieldsComplete && !!values.emergency_authorization_confirmed;
 
+  // Production legal-approval gate: a non-test agreement still requires an
+  // active + legally-approved terms template (UNCHANGED). A TEST agreement
+  // bypasses ONLY the active/legal_approved checks — it still needs a template
+  // to build the snapshot, and the emergency-confirmation gate (#3) still applies.
   const sendDisabledReason = !isEdit
     ? null
     : values.signing_status !== "Draft"
       ? null
       : !emergencyConfirmedEffective
         ? "Confirm the emergency authorization before sending."
-        : selectedTemplate && selectedTemplate.active !== true
-          ? "No active legally-approved agreement terms template is available."
-          : selectedTemplate && selectedTemplate.legal_approved !== true
-            ? "The selected agreement terms have not been legally approved for customer use."
-            : null;
+        : !selectedTemplate
+          ? "No agreement terms template is available."
+          : !values.is_test_agreement && selectedTemplate.active !== true
+            ? "No active legally-approved agreement terms template is available."
+            : !values.is_test_agreement && selectedTemplate.legal_approved !== true
+              ? "The selected agreement terms have not been legally approved for customer use."
+              : null;
   const hasExtra = !!(
     values.included_services_override || values.additional_terms ||
     values.notes || values.next_invoice_date
@@ -414,6 +434,7 @@ export default function ServiceAgreement() {
         emergency_max_amount: values.emergency_max_amount === "" ? null : Number(values.emergency_max_amount),
         emergency_unreachable_instructions: values.emergency_unreachable_instructions || "",
         emergency_authorization_confirmed: !!values.emergency_authorization_confirmed,
+        is_test_agreement: !!values.is_test_agreement,
         terms_template_id: selectedTemplate?.id || "",
         terms_version: selectedTemplate ? String(selectedTemplate.version) : "",
       };
@@ -644,6 +665,14 @@ export default function ServiceAgreement() {
               </div>
             )}
 
+            {/* TEST AGREEMENT control (staff-only QA toggle) — Draft only */}
+            {isEdit && values.signing_status === "Draft" && (
+              <TestAgreementControl
+                value={!!values.is_test_agreement}
+                onToggle={handleToggleTestMode}
+              />
+            )}
+
             {/* Send for Signature (existing Draft agreements only) */}
             {isEdit && values.signing_status === "Draft" && (
               <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
@@ -659,6 +688,9 @@ export default function ServiceAgreement() {
                   <p className="text-xs text-muted-foreground">
                     Terms template: {selectedTemplate.name} · Version {selectedTemplate.version} · {selectedTemplate.active !== true ? "Draft / inactive" : selectedTemplate.legal_approved !== true ? "Active — legal approval pending" : "Active + legally approved"}
                   </p>
+                )}
+                {values.is_test_agreement && (
+                  <p className="text-xs text-amber-600 font-medium">TEST mode active — legal-approval gate bypassed for this test draft only. Customer-facing surfaces and PDF are watermarked.</p>
                 )}
                 {sendDisabledReason && (
                   <p className="text-xs text-amber-600">{sendDisabledReason}</p>

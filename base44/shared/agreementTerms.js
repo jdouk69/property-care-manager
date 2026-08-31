@@ -197,6 +197,11 @@ export function buildSentSnapshot(ctx) {
     terms_template_id: template.id || "",
     terms_version: String(template.version ?? ""),
     language: template.language || "English",
+    is_test_agreement: agreement.is_test_agreement === true,
+    terms_legal_status:
+      template.active === true && template.legal_approved === true
+        ? "active_and_legally_approved"
+        : "draft_or_not_legally_approved",
     business_identity: {
       name: fields.business_name,
       owner_name: fields.business_owner_name,

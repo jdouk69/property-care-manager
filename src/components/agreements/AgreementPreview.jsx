@@ -49,6 +49,12 @@ export default function AgreementPreview({ snapshot, template, property, emergen
 
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      {snapshot?.is_test_agreement && (
+        <div className="px-4 py-3 bg-rose-600 border-b border-rose-700 flex items-center gap-2 flex-wrap">
+          <AlertTriangle className="w-4 h-4 text-white shrink-0" />
+          <p className="text-sm font-bold text-white tracking-wide">TEST AGREEMENT — NOT FOR PRODUCTION USE — NOT LEGALLY APPROVED</p>
+        </div>
+      )}
       {/* Draft banner */}
       <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 flex-wrap">
         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />

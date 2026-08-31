@@ -102,6 +102,7 @@ export default async function(req) {
       emergency_max_amount: original.emergency_max_amount ?? null,
       emergency_unreachable_instructions: original.emergency_unreachable_instructions || '',
       emergency_authorization_confirmed: false,
+      is_test_agreement: original.is_test_agreement === true,
       status: 'Pending',
       signing_status: 'Draft',
       agreement_group_id: groupId,

@@ -83,7 +83,7 @@ export default async function(req) {
       });
       await auditAgreementEvent(base44, {
         automation_type: 'Agreement activated',
-        record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} activated`,
+        record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} activated${agreement.is_test_agreement === true ? ' (TEST)' : ''}`,
         property_id: agreement.property_id || '',
         status: 'success',
       });
@@ -197,7 +197,7 @@ export default async function(req) {
     if (endFailed.length === 0) {
       await auditAgreementEvent(base44, {
         automation_type: 'Agreement activated',
-        record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} activated (replacement)`,
+        record_created: `Agreement ${agreement_id} v${agreement.agreement_version ?? 1} activated (replacement)${agreement.is_test_agreement === true ? ' (TEST)' : ''}`,
         property_id: agreement.property_id || '',
         status: 'success',
       });

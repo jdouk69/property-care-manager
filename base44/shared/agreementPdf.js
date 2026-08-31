@@ -90,6 +90,18 @@ export async function generateSignedAgreementPdf(snapshot, evidence) {
   y += 11; doc.setTextColor(0);
   doc.setDrawColor(200); doc.line(margin, y, pageW - margin, y); y += 14;
 
+  // --- TEST AGREEMENT prominent watermark (page 1) ---
+  if (snapshot && snapshot.is_test_agreement) {
+    ensure(28);
+    doc.setFillColor(220, 38, 38);
+    doc.rect(margin, y, maxWidth, 26, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11); doc.setFont(undefined, "bold");
+    doc.text("TEST AGREEMENT — NOT FOR PRODUCTION USE — NOT LEGALLY APPROVED", margin + 6, y + 17);
+    doc.setTextColor(0); doc.setFont(undefined, "normal"); doc.setFontSize(10);
+    y += 34;
+  }
+
   // --- Summary block ---
   const kv = (label, value) => {
     if (!value) return;
@@ -188,6 +200,10 @@ export async function generateSignedAgreementPdf(snapshot, evidence) {
     `Snapshot ref: ${abbr(ev.snapshot_hash)}`,
     `Signature ref: ${abbr(ev.signature_hash)}`,
   ];
+  if (snapshot && snapshot.is_test_agreement) {
+    tech.push("TEST AGREEMENT — not for production use");
+    tech.push(`Terms legal status: ${val(snapshot.terms_legal_status) || "not legally approved"}`);
+  }
   if (ev.signer_ip) tech.push(`Signer IP: ${val(ev.signer_ip)}`);
   if (ev.signer_user_agent) tech.push(`Recorded request user-agent: ${val(ev.signer_user_agent)}`);
   tech.forEach((l) => {
@@ -200,6 +216,11 @@ export async function generateSignedAgreementPdf(snapshot, evidence) {
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p);
     doc.setFontSize(8); doc.setTextColor(150);
+    if (snapshot && snapshot.is_test_agreement) {
+      doc.setTextColor(220, 38, 38);
+      doc.text("TEST AGREEMENT — NOT FOR PRODUCTION USE", margin, pageH - 36);
+      doc.setTextColor(150);
+    }
     doc.text("This document is a copy of the signed agreement. The canonical legal record is held by the service provider.", margin, pageH - 24);
     doc.text(`Page ${p} of ${pages}`, pageW - margin - 60, pageH - 24);
     doc.setTextColor(0);

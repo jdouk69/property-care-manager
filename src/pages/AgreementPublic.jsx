@@ -190,6 +190,16 @@ export default function AgreementPublic() {
           </div>
         </div>
 
+        {snap.is_test_agreement && (
+          <div className="rounded-2xl border-2 border-rose-600 bg-rose-50 p-4 mb-4 flex items-start gap-2">
+            <AlertTriangle className="w-5 h-5 text-rose-700 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-rose-800 tracking-wide">TEST AGREEMENT — NOT FOR PRODUCTION USE — NOT LEGALLY APPROVED</p>
+              <p className="text-xs text-rose-700 mt-0.5">This is an internal workflow test. It is not a valid production customer agreement.</p>
+            </div>
+          </div>
+        )}
+
         {/* Summary */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <SummaryCard icon={User} label="Customer">

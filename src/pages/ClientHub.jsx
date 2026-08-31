@@ -239,6 +239,9 @@ export default function ClientHub() {
                       <p className="text-xs text-muted-foreground truncate">{propName(a.property_id)} · €{(a.agreed_price || 0).toFixed(2)} · {a.billing_type}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
+                      {a.is_test_agreement && (
+                        <span className="text-xs px-2 py-0.5 rounded-full border bg-rose-100 text-rose-700 border-rose-300 font-semibold">TEST</span>
+                      )}
                       {a.signing_status && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.signing_status)}`}>{a.signing_status}</span>}
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{a.status}</span>
                     </div>
@@ -248,6 +251,9 @@ export default function ClientHub() {
                     {a.start_date && <span>Start: {a.start_date}</span>}
                     {a.renewal_date && <span>Renewal: {a.renewal_date}</span>}
                   </div>
+                  {a.is_test_agreement && (
+                    <p className="text-[11px] text-rose-600 font-medium mt-0.5">Test agreement — not for production use</p>
+                  )}
                   {a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" ? (
                     <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">
                       {a.signing_status === "Sent" && "Awaiting customer signature"}
