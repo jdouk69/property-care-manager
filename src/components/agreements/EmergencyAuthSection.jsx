@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 const SUGGESTED_AMOUNT = 300;
 
-export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed, canConfirm = true }) {
+export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed, canConfirm = true, prefilled = {} }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
       <div className="flex items-center gap-2">
@@ -57,6 +57,11 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
           <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
           €{SUGGESTED_AMOUNT} is only a staff-side suggestion. Review and confirm this amount before sending the agreement to the customer — it is not customer-approved until the customer signs.
         </p>
+        {prefilled.max_amount && (
+          <p className="text-[11px] text-blue-600 flex items-center gap-1.5 mt-1.5">
+            <Info className="w-3 h-3 shrink-0" /> From customer intake — review required
+          </p>
+        )}
       </div>
 
       <div>
@@ -68,6 +73,11 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
           disabled={frozen}
           placeholder="Instructions for what to do if you cannot reach the owner in an emergency."
         />
+        {prefilled.unreachable && (
+          <p className="text-[11px] text-blue-600 flex items-center gap-1.5 mt-1.5">
+            <Info className="w-3 h-3 shrink-0" /> From customer intake — review required
+          </p>
+        )}
       </div>
 
       {!frozen && (

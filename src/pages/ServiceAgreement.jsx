@@ -47,6 +47,26 @@ const addInterval = (dateStr, billingType) => {
   return fmt(dt);
 };
 
+// Resolve the appropriate Applied Customer Intake to prefill emergency fields
+// from, for a NEW agreement draft. Never crosses clients or properties: if the
+// client has multiple properties and the selected one does not match an Applied
+// intake's property_id, returns null (no prefill) to avoid cross-property leakage.
+function resolveAppliedIntakeForPrefill(intakes, selectedPropertyId, clientPropertyCount) {
+  const applied = (intakes || []).filter((i) => !i.archived && i.status === "Applied");
+  if (applied.length === 0) return null;
+  const byNewest = (a, b) => (b.created_date || "").localeCompare(a.created_date || "");
+  if (selectedPropertyId) {
+    const matching = applied.filter((i) => i.property_id === selectedPropertyId);
+    if (matching.length) return matching.sort(byNewest)[0];
+    // Older Applied intakes may not have property_id linked yet; only safe to
+    // use when the client has a single property (no ambiguity).
+    if (clientPropertyCount === 1) return applied.sort(byNewest)[0];
+    return null;
+  }
+  if (clientPropertyCount === 1) return applied.sort(byNewest)[0];
+  return null;
+}
+
 export default function ServiceAgreement() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -63,6 +83,9 @@ export default function ServiceAgreement() {
   const [business, setBusiness] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [latestIntake, setLatestIntake] = useState(null);
+  // Tracks which emergency fields were auto-populated from the customer's
+  // Applied intake (for the "From customer intake — review required" indicator).
+  const [intakePrefill, setIntakePrefill] = useState({ max_amount: false, unreachable: false });
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [sending, setSending] = useState(false);
@@ -189,10 +212,35 @@ export default function ServiceAgreement() {
           } else {
             setGroupVersions([loaded]);
           }
-        } else if (propertyParam) {
-          set("property_id", propertyParam);
-        } else if (clientProps.length === 1) {
-          set("property_id", clientProps[0].id);
+        } else {
+          // NEW draft — prefill emergency max amount + owner-unreachable
+          // instructions from the appropriate Applied Customer Intake. This is a
+          // staff CONVENIENCE copy only — it is NOT confirmation. The €300
+          // company suggestion remains available but the customer's value takes
+          // precedence. Emergency Authorization is never invented from intake
+          // notes; it is left blank for staff to complete. Confirmation stays
+          // unchecked until staff explicitly review and confirm.
+          const draftPropertyId = propertyParam || (clientProps.length === 1 ? clientProps[0].id : "");
+          const prefillIntake = resolveAppliedIntakeForPrefill(clientIntakes, draftPropertyId, clientProps.length);
+          const pf = (prefillIntake && prefillIntake.payload) || {};
+          const intakeMax = pf.max_authorize_amount;
+          const intakeMaxNum =
+            intakeMax !== undefined && intakeMax !== null && intakeMax !== "" && !isNaN(Number(intakeMax))
+              ? Number(intakeMax)
+              : "";
+          const intakeInstr = pf.unreachable_instructions ? String(pf.unreachable_instructions) : "";
+          setValues((s) => ({
+            ...s,
+            property_id: draftPropertyId,
+            emergency_max_amount: intakeMaxNum,
+            emergency_unreachable_instructions: intakeInstr,
+            emergency_authorization: "",
+            emergency_authorization_confirmed: false,
+          }));
+          setIntakePrefill({
+            max_amount: intakeMaxNum !== "",
+            unreachable: !!intakeInstr,
+          });
         }
       } catch (e) {}
       setLoading(false);
@@ -516,6 +564,7 @@ export default function ServiceAgreement() {
               frozen={isFrozen}
               confirmed={!!values.emergency_authorization_confirmed}
               canConfirm={emergencyFieldsComplete}
+              prefilled={intakePrefill}
               setConfirmed={(v) => set("emergency_authorization_confirmed", v)}
             />
 
