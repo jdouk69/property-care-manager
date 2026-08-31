@@ -100,7 +100,13 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   } else if (singleActive) {
     s4 = { key: "activation", name: "Service Activation", complete: true, status: "Active", detail: "Service active", action: null };
   } else if (signedAg) {
-    s4 = { key: "activation", name: "Service Activation", complete: false, status: "Signed — not active", detail: "Activate the signed agreement", action: { label: "Activate Service", to: `/agreements/${signedAg.id}` } };
+    // Activate the SIGNED agreement via the shared ActivateServiceButton (which
+    // calls the secure agreementActivate backend) — NOT a route to the Edit
+    // Agreement page. `activate` carries the agreement id; OnboardingProgress
+    // renders the same confirmation component used on the agreement card so
+    // activation behavior cannot drift between surfaces.
+    const isReplacement = !!(signedAg.agreement_group_id && propAgs.some((x) => x.id !== signedAg.id && x.status === "Active" && x.agreement_group_id === signedAg.agreement_group_id));
+    s4 = { key: "activation", name: "Service Activation", complete: false, status: "Signed — not active", detail: "Activate the signed agreement", action: { label: "Activate Service", activate: signedAg.id, isReplacement } };
   } else {
     s4 = { key: "activation", name: "Service Activation", complete: false, status: "Waiting on agreement", detail: "Complete the service agreement first", action: null };
   }

@@ -2,11 +2,15 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, Circle, CircleDot, ArrowRight, AlertTriangle, Sparkles, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
 
 // Step 7 — Staff onboarding progress workflow for Client Hub. Renders a compact,
 // sequential, property-aware stage list with one primary next action. No
-// business logic lives here; it only displays the derived stages.
-export default function OnboardingProgress({ properties, selectedPropertyId, onSelectProperty, onboarding }) {
+// business logic lives here; it only displays the derived stages. An
+// `action.activate` signal renders the shared ActivateServiceButton (which
+// opens an explicit confirmation and calls the secure agreementActivate
+// backend) instead of routing to the Edit Agreement page.
+export default function OnboardingProgress({ properties, selectedPropertyId, onSelectProperty, onboarding, onActivated }) {
   const { stages, primaryAction, ready, serviceConflict } = onboarding || {};
   if (!stages) return null;
   const currentIdx = stages.findIndex((s) => !s.complete);
@@ -14,6 +18,18 @@ export default function OnboardingProgress({ properties, selectedPropertyId, onS
 
   const renderAction = (action) => {
     if (!action) return null;
+    if (action.activate) {
+      return (
+        <div className="mt-2">
+          <ActivateServiceButton
+            agreementId={action.activate}
+            isReplacement={!!action.isReplacement}
+            onActivated={onActivated || (() => window.location.reload())}
+            label={action.label || "Activate Service"}
+          />
+        </div>
+      );
+    }
     if (action.to) {
       return (
         <Link to={action.to}>

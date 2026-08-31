@@ -178,6 +178,7 @@ export default function ClientHub() {
           selectedPropertyId={selectedProperty?.id || null}
           onSelectProperty={setSelectedPropertyId}
           onboarding={onboarding}
+          onActivated={() => window.location.reload()}
         />
 
         {/* Customer intake */}
