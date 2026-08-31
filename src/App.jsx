@@ -41,6 +41,7 @@ import ServiceAgreement from '@/pages/ServiceAgreement';
 import IntakeForm from '@/pages/IntakeForm';
 import AgreementPublic from '@/pages/AgreementPublic';
 import IntakeReview from '@/pages/IntakeReview';
+import MonitoringPlanReview from '@/pages/MonitoringPlanReview';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -82,6 +83,7 @@ const AuthenticatedApp = () => {
         <Route path="/clients/:id/intake" element={<IntakeReview />} />
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} />
+        <Route path="/properties/:id/monitoring-plan" element={<MonitoringPlanReview />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/inspections" element={<Inspections />} />
         <Route path="/maintenance" element={<Maintenance />} />

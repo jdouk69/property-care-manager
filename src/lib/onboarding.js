@@ -162,9 +162,9 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
     s6 = { key: "monitoring", name: "Monitoring Plan", complete: false, status: "Waiting for active service", detail: "No active agreement for current service", action: null };
   } else if (planConfirmed) {
     const count = ownerCheckCount(selectedProperty, svc.visitType);
-    s6 = { key: "monitoring", name: "Monitoring Plan", complete: true, status: "Confirmed", detail: `${count} owner check${count === 1 ? "" : "s"} · ${visitTypeLabel(svc.visitType)}`, action: { label: "Review Monitoring Plan", to: `/properties/${selectedProperty.id}` } };
+    s6 = { key: "monitoring", name: "Monitoring Plan", complete: true, status: "Confirmed", detail: `${count} owner check${count === 1 ? "" : "s"} · ${visitTypeLabel(svc.visitType)}`, action: { label: "Review Monitoring Plan", to: `/properties/${selectedProperty.id}/monitoring-plan` } };
   } else {
-    s6 = { key: "monitoring", name: "Monitoring Plan", complete: false, status: "Not confirmed", detail: "Confirm the recurring monitoring plan", action: { label: "Review Monitoring Plan", to: `/properties/${selectedProperty.id}` } };
+    s6 = { key: "monitoring", name: "Monitoring Plan", complete: false, status: "Not confirmed", detail: "Confirm the recurring monitoring plan", action: { label: "Review Monitoring Plan", to: `/properties/${selectedProperty.id}/monitoring-plan` } };
   }
 
   // Stage 7 — Ready for Regular Service

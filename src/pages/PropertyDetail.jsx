@@ -122,7 +122,7 @@ export default function PropertyDetail() {
 
         {/* Quick info */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <InfoCard icon={Home} label="Owner" value={owner?.name || "—"} />
+          <InfoCard icon={Home} label="Owner" value={owner?.name || "—"} to={owner?.id ? `/clients/${owner.id}` : undefined} />
           <InfoCard icon={KeyRound} label="Gate Code" value={prop.gate_code || "—"} />
           <InfoCard icon={Wifi} label="Wi-Fi" value={prop.wifi_ssid || "—"} />
           <InfoCard icon={Clock} label="Last Inspection" value={inspections[0]?.date || "—"} />
@@ -380,13 +380,17 @@ function LinkLink({ label, to }) {
   );
 }
 
-function InfoCard({ icon: Icon, label, value }) {
+function InfoCard({ icon: Icon, label, value, to }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-3 flex items-center gap-2.5">
       <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center"><Icon className="w-4 h-4 text-muted-foreground" /></div>
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium truncate">{value}</p>
+        {to ? (
+          <Link to={to} className="text-sm font-medium truncate text-primary hover:underline block">{value}</Link>
+        ) : (
+          <p className="text-sm font-medium truncate">{value}</p>
+        )}
       </div>
     </div>
   );
