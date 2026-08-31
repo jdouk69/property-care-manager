@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MessageSquare, Copy, Check } from "lucide-react";
+import { MessageSquare, Copy, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -41,23 +41,64 @@ const columns = [
 ];
 
 function TemplatesBar({ onUse }) {
+  // Only one template expanded at a time (index or null).
+  const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState("");
   const copy = (t) => {
     navigator.clipboard?.writeText(t);
     setCopied(t);
     setTimeout(() => setCopied(""), 1500);
   };
+  const toggle = (i) => setExpanded((cur) => (cur === i ? null : i));
   return (
     <div className="rounded-2xl border border-border bg-card p-4 mb-4">
       <h3 className="font-medium text-sm mb-2">Message Templates</h3>
-      <p className="text-xs text-muted-foreground mb-3">Tap to copy, then paste into WhatsApp / Email / SMS.</p>
-      <div className="flex flex-wrap gap-2">
-        {TEMPLATES.map((t) => (
-          <button key={t} onClick={() => copy(t)} className="text-xs px-2.5 py-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted hover:border-primary/30 transition inline-flex items-center gap-1 max-w-full">
-            {copied === t ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-            <span className="truncate max-w-[200px]">{t}</span>
-          </button>
-        ))}
+      <p className="text-xs text-muted-foreground mb-3">Tap a template to read the full message, then copy.</p>
+      <div className="flex flex-col gap-2">
+        {TEMPLATES.map((t, i) => {
+          const isOpen = expanded === i;
+          const isCopied = copied === t;
+          return (
+            <div key={i} className="rounded-xl border border-border overflow-hidden">
+              <div className="flex items-stretch">
+                <button
+                  type="button"
+                  onClick={() => toggle(i)}
+                  aria-expanded={isOpen}
+                  className="flex-1 flex items-center gap-2 px-3 py-3 text-left min-w-0 hover:bg-muted/60 transition-colors"
+                >
+                  <span className="text-xs leading-snug flex-1 min-w-0 truncate">{t}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {/* Quick-copy for users who already know the message — does not expand. */}
+                <button
+                  type="button"
+                  onClick={() => copy(t)}
+                  aria-label="Copy template"
+                  className="px-3 py-3 shrink-0 text-muted-foreground hover:bg-muted/60 transition-colors"
+                >
+                  {isCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              {isOpen && (
+                <div className="px-3 pb-3 pt-3 border-t border-border bg-muted/30">
+                  <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">{t}</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => copy(t)}
+                    className="mt-3 rounded-lg gap-1.5 h-9 min-h-[44px]"
+                  >
+                    {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {isCopied ? "Copied" : "Copy Message"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
