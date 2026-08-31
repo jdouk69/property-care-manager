@@ -16,6 +16,9 @@ const SECRET_FIELDS = [
   "security_system",
 ];
 
+// Obvious QA/test contamination markers for the business identity.
+const QA_MARKERS = ["ZZ_MUTATED_", "QA Biz", "QA Owner", "qaqbiz@"];
+
 export default function AgreementPreview({ snapshot, template, property, emergencyConfirmed }) {
   const sections = (snapshot && snapshot.sections) || [];
 
@@ -30,6 +33,17 @@ export default function AgreementPreview({ snapshot, template, property, emergen
     }
     return null;
   }, [snapshot, property]);
+
+  // Defense-in-depth: block the preview if the business identity carries
+  // obvious test/QA data, so it can never silently reach a customer.
+  const qaContaminated = useMemo(() => {
+    if (!snapshot) return false;
+    const biz = snapshot.business_identity || {};
+    const vals = [biz.name, biz.owner_name, biz.address, biz.email]
+      .filter((v) => typeof v === "string" && v)
+      .join(" ");
+    return QA_MARKERS.some((m) => vals.includes(m));
+  }, [snapshot]);
 
   const templateIsDraft = !template || template.active !== true;
 
@@ -55,14 +69,16 @@ export default function AgreementPreview({ snapshot, template, property, emergen
         </div>
       )}
 
-      {leakedSecret ? (
+      {(leakedSecret || qaContaminated) ? (
         <div className="px-4 py-6">
           <div className="flex items-start gap-2 text-rose-700">
             <Lock className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium">Preview redaction failed</p>
+              <p className="font-medium">{qaContaminated ? "Business configuration error" : "Preview redaction failed"}</p>
               <p className="text-sm text-rose-600 mt-1">
-                A property access secret ({leakedSecret.key}) was found in the preview output. Do not send this agreement. Report this issue.
+                {qaContaminated
+                  ? "The business identity contains test/QA data. Do not send this agreement. Restore the legitimate business configuration in Settings before sending."
+                  : `A property access secret (${leakedSecret.key}) was found in the preview output. Do not send this agreement. Report this issue.`}
               </p>
             </div>
           </div>

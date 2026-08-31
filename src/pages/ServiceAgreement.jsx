@@ -210,11 +210,22 @@ export default function ServiceAgreement() {
   const hasActiveSibling = (groupVersions || []).some((a) => a.id !== id && a.status === "Active");
   const canReplace = isEdit && (["Sent", "Viewed", "Signed", "Declined"].includes(values.signing_status) || values.status === "Active");
   const isDeclinedReplace = isEdit && values.signing_status === "Declined";
+  // Emergency authorization is only "confirmed" when staff have actually filled
+  // the material emergency fields. A checked box with blank fields must not
+  // produce a false confirmation state.
+  const emergencyFieldsComplete =
+    !!(values.emergency_authorization || "").trim() &&
+    values.emergency_max_amount !== "" &&
+    values.emergency_max_amount !== null &&
+    !isNaN(Number(values.emergency_max_amount)) &&
+    !!(values.emergency_unreachable_instructions || "").trim();
+  const emergencyConfirmedEffective = emergencyFieldsComplete && !!values.emergency_authorization_confirmed;
+
   const sendDisabledReason = !isEdit
     ? null
     : values.signing_status !== "Draft"
       ? null
-      : !values.emergency_authorization_confirmed
+      : !emergencyConfirmedEffective
         ? "Confirm the emergency authorization before sending."
         : selectedTemplate && selectedTemplate.active !== true
           ? "No active legally-approved agreement terms template is available."
@@ -469,7 +480,7 @@ export default function ServiceAgreement() {
               </div>
 
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Inspection Frequency</Label>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Frequency</Label>
                 <Input value={values.inspection_frequency || ""} onChange={(e) => set("inspection_frequency", e.target.value)} placeholder="e.g. Weekly" list="freq-opts" disabled={isFrozen} />
                 <datalist id="freq-opts">{FREQUENCY_OPTS.map((o) => <option key={o} value={o} />)}</datalist>
               </div>
@@ -504,6 +515,7 @@ export default function ServiceAgreement() {
               set={setEmergency}
               frozen={isFrozen}
               confirmed={!!values.emergency_authorization_confirmed}
+              canConfirm={emergencyFieldsComplete}
               setConfirmed={(v) => set("emergency_authorization_confirmed", v)}
             />
 
@@ -577,7 +589,7 @@ export default function ServiceAgreement() {
                     snapshot={snapshot}
                     template={selectedTemplate}
                     property={selectedProperty}
-                    emergencyConfirmed={!!values.emergency_authorization_confirmed}
+                    emergencyConfirmed={emergencyConfirmedEffective}
                   />
                 )}
               </div>

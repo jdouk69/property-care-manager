@@ -105,7 +105,7 @@ export async function generateSignedAgreementPdf(snapshot, evidence) {
   kv("Service", val(service.package_name));
   if (service.description) kv("Description", val(service.description));
   if (service.included_services) kv("Included services", val(service.included_services));
-  kv("Inspection frequency", val(service.inspection_frequency));
+  kv("Visit frequency", val(service.inspection_frequency));
   if (service.visit_duration) kv("Visit duration", val(service.visit_duration));
   kv("Agreed price", fees.agreed_price ? `€${val(fees.agreed_price)}` : "—");
   kv("Billing", val(fees.billing_frequency));

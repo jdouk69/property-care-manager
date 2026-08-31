@@ -304,6 +304,20 @@ export function scanSnapshotForSecrets(snapshot, property) {
   return leaked;
 }
 
+// Obvious QA/test contamination markers for the business identity. Used as a
+// defense-in-depth guard so test business data can never silently freeze into a
+// NEW customer-facing agreement snapshot. Historical signed snapshots are
+// never rebuilt, so canonical historical evidence is preserved as-is.
+export const QA_MARKERS = ["ZZ_MUTATED_", "QA Biz", "QA Owner", "qaqbiz@"];
+
+export function businessIdentityHasQAMarker(snapshot) {
+  const biz = (snapshot && snapshot.business_identity) || {};
+  const vals = [biz.name, biz.owner_name, biz.address, biz.email, biz.phone, biz.whatsapp]
+    .filter((v) => typeof v === "string" && v)
+    .join(" ");
+  return QA_MARKERS.some((m) => vals.includes(m));
+}
+
 /**
  * Generate a cryptographically strong, unpredictable public token (64 hex chars
  * from 32 random bytes). Never derives from ids/sequentials.

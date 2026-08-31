@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Loader2, Check, ArrowRight, Plus, Home, Package } from "lucide-react";
+import { Loader2, Check, ArrowRight, Plus, Home, Package, CheckCheck, X } from "lucide-react";
 import { INTAKE_SECTIONS, MAPPED_FIELDS } from "@/lib/intakeSchema";
 
 const STATUS_TONE = {
@@ -90,6 +90,20 @@ export default function IntakeReview() {
 
   const toggleApply = (name) => setApply((s) => ({ ...s, [name]: !s[name] }));
   const toggleMonitoringApply = () => setMonitoringApply((s) => !s);
+
+  // Bulk-select ALL eligible submitted mapped fields (only those with a submitted
+  // value). This only changes the SELECTION state — it never writes anything.
+  // Reference-only sections (no f.map) and monitoring priorities are never
+  // bulk-selected; those keep their existing safe, deliberate toggle behavior.
+  const applyAllSubmitted = () => {
+    const next = {};
+    MAPPED_FIELDS.forEach((f) => {
+      const sub = payload[f.name];
+      if (sub != null && sub !== "") next[f.name] = true;
+    });
+    setApply(next);
+  };
+  const clearAll = () => setApply({});
 
   const doApply = async () => {
     if (!intake) return;
@@ -205,6 +219,20 @@ export default function IntakeReview() {
               <SelectContent>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
             </Select>
           )}
+        </div>
+
+        {/* Bulk selection — selects eligible mapped fields only; reference-only
+            sections and monitoring priorities are never bulk-selected. */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-2xl border border-border bg-card p-3 mb-4">
+          <p className="text-xs text-muted-foreground">Bulk-select eligible submitted fields. Reference-only sections are not affected.</p>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={applyAllSubmitted} className="gap-1.5 min-h-[40px]">
+              <CheckCheck className="w-4 h-4" /> Apply All Submitted
+            </Button>
+            <Button size="sm" variant="ghost" onClick={clearAll} className="gap-1.5 min-h-[40px]">
+              <X className="w-4 h-4" /> Clear All
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-4">

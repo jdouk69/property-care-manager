@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 const SUGGESTED_AMOUNT = 300;
 
-export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed }) {
+export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed, canConfirm = true }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
       <div className="flex items-center gap-2">
@@ -71,11 +71,12 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
       </div>
 
       {!frozen && (
-        <label className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/30 p-3 cursor-pointer min-h-[44px]">
+        <label className={`flex items-start gap-2.5 rounded-xl border border-border bg-muted/30 p-3 min-h-[44px] ${canConfirm ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
           <input
             type="checkbox"
             checked={!!confirmed}
             onChange={(e) => setConfirmed(e.target.checked)}
+            disabled={!canConfirm}
             className="mt-0.5 w-4 h-4 shrink-0 accent-primary"
           />
           <span className="text-xs text-foreground">
@@ -83,14 +84,24 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
           </span>
         </label>
       )}
-      {!frozen && !confirmed && (
+      {!frozen && !canConfirm && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <ShieldAlert className="w-3.5 h-3.5" /> Complete all three emergency fields above before confirming.
+        </p>
+      )}
+      {!frozen && canConfirm && !confirmed && (
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <ShieldAlert className="w-3.5 h-3.5" /> Emergency authorization not yet confirmed.
         </p>
       )}
-      {confirmed && !frozen && (
+      {confirmed && !frozen && canConfirm && (
         <p className="text-xs text-emerald-600 flex items-center gap-1.5">
           <CheckCircle2 className="w-3.5 h-3.5" /> Emergency authorization confirmed for this draft.
+        </p>
+      )}
+      {confirmed && !frozen && !canConfirm && (
+        <p className="text-xs text-amber-600 flex items-center gap-1.5">
+          <ShieldAlert className="w-3.5 h-3.5" /> Confirmation invalid — emergency fields are incomplete. Complete them and reconfirm.
         </p>
       )}
     </div>

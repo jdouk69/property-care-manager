@@ -4,6 +4,7 @@ import {
   snapshotHash,
   scanSnapshotForSecrets,
   generatePublicToken,
+  businessIdentityHasQAMarker,
 } from '../../shared/agreementTerms.js';
 
 // Authenticated staff-only "Send for Signature" endpoint.
@@ -77,7 +78,7 @@ export default async function(req) {
       if (!(typeof agreement.agreed_price === 'number' && agreement.agreed_price > 0)) errs.push('Agreed price is missing.');
       if (!agreement.billing_type) errs.push('Billing type is missing.');
       if (servicePackage.recurring !== 'One-time' && !agreement.inspection_frequency) {
-        errs.push('Inspection frequency is required for recurring service.');
+        errs.push('Visit frequency is required for recurring service.');
       }
     }
     if (!template) errs.push('No active legally-approved agreement terms template is available.');
@@ -127,6 +128,14 @@ export default async function(req) {
       return Response.json({
         error: 'Secret scan failed: a property access secret was found in the agreement content. Send aborted.',
         leaked,
+      }, { status: 500 });
+    }
+
+    // --- QA/test business-identity guard (abort; do NOT freeze a contaminated snapshot) ---
+    if (businessIdentityHasQAMarker(snapshot)) {
+      return Response.json({
+        error: 'Business identity contains test/QA data. Send aborted — restore the legitimate business configuration before sending.',
+        status: 'qa_contamination',
       }, { status: 500 });
     }
 
