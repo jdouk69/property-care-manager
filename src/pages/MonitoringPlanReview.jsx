@@ -111,28 +111,26 @@ export default function MonitoringPlanReview() {
   const pkg = serviceStatus?.package || null;
   const canConfirm = !!serviceStatus && serviceStatus.status === "ok" && !saving;
 
+  // Local-only state updates. The Include switch is always tappable so staff can
+  // turn it ON first, reveal the wording field, then enter/edit the wording. Scope
+  // and blank-wording validation is enforced at Confirm time (never on the switch).
   const updateRow = (rowId, patch) => setRows((arr) => arr.map((r) => {
     if (r._id !== rowId) return r;
-    let next = { ...r, ...patch };
-    const text = (next.recurring_check_text || "").trim();
-    // Out-of-scope wording can never be included as a recurring check.
-    if (isOutOfScope(text)) next.include_in_recurring = false;
-    // Including requires non-empty wording.
-    if (next.include_in_recurring && !text) next.include_in_recurring = false;
-    return next;
+    return { ...r, ...patch };
   }));
 
   const toggleInclude = (rowId, on) => {
-    const r = rows.find((x) => x._id === rowId);
-    if (!r) return;
-    const text = (r.recurring_check_text || "").trim();
-    if (on && isOutOfScope(text)) return; // blocked
-    if (on && !text) return; // need wording first
     updateRow(rowId, { include_in_recurring: on });
   };
 
   const onConfirm = async () => {
     if (!canConfirm) return;
+    // Block confirmation while any included item has blank or out-of-scope wording.
+    const invalidIncluded = rows.filter((r) => r.include_in_recurring && (!(r.recurring_check_text || "").trim() || isOutOfScope(r.recurring_check_text)));
+    if (invalidIncluded.length) {
+      setResult({ blocked: true, message: "One or more included items have blank or out-of-scope wording. Edit each to a safe visual check (watch / check / confirm / look for) or turn Include OFF, then confirm." });
+      return;
+    }
     setSaving(true);
     setResult(null);
     try {
@@ -285,7 +283,7 @@ export default function MonitoringPlanReview() {
 
                   <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
                     <span className="text-xs text-muted-foreground">Include in recurring visits</span>
-                    <Switch checked={!!r.include_in_recurring} onCheckedChange={(v) => toggleInclude(r._id, v)} disabled={oos} />
+                    <Switch checked={!!r.include_in_recurring} onCheckedChange={(v) => toggleInclude(r._id, v)} />
                   </div>
 
                   {r.include_in_recurring && (
@@ -302,10 +300,10 @@ export default function MonitoringPlanReview() {
                     </div>
                   )}
 
-                  {oos && (
+                  {r.include_in_recurring && oos && (
                     <div className="flex items-start gap-2 rounded-lg bg-destructive/5 border border-destructive/30 px-3 py-2">
                       <ShieldAlert className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                      <p className="text-xs text-destructive">Outside Property Care scope — do not include as recurring check. Reword to a visual check (watch / check / confirm / look for) or leave it excluded.</p>
+                      <p className="text-xs text-destructive">Outside Property Care scope — reword to a visual check (watch / check / confirm / look for), or turn Include OFF. This item cannot be confirmed as written.</p>
                     </div>
                   )}
                 </div>
