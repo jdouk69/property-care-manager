@@ -32,21 +32,38 @@ function AgendaCard({ item, onAction }) {
   const actionPrimary = item.actionKind === "start-visit" || item.actionKind === "continue-visit" || item.actionKind === "start-service";
   return (
     <div className="flex items-stretch gap-3 px-4 py-3 hover:bg-muted/40 transition">
-      <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+      <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.overdue ? "bg-rose-500/10 text-rose-600" : "bg-primary/10 text-primary"}`}>
         <Icon className="w-5 h-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          {item.timeLabel && <span className="text-sm font-semibold text-foreground">{item.timeLabel}</span>}
-          <span className="text-sm font-medium text-foreground truncate">{item.propertyName || item.typeLabel}</span>
-        </div>
-        <p className="text-xs text-muted-foreground truncate">
-          {item.propertyName ? `${item.typeLabel}` : item.typeLabel}
-          {item.clientName ? ` · Owner: ${item.clientName}` : ""}
-        </p>
-        <div className="flex items-center gap-2 mt-1">
-          <span className={`text-[11px] px-2 py-0.5 rounded-full border ${item.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : item.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : "bg-muted text-muted-foreground border-border"}`}>{item.status}</span>
-        </div>
+        {item.overdue ? (
+          <>
+            <div className="text-sm font-medium text-foreground truncate">{item.propertyName || item.typeLabel}</div>
+            <p className="text-xs text-muted-foreground truncate">
+              {item.propertyName ? item.typeLabel : "Overdue"}
+              {item.clientName ? ` · Owner: ${item.clientName}` : ""}
+            </p>
+            <div className="mt-1">
+              <span className="text-[11px] px-2 py-0.5 rounded-full border bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20 font-medium">
+                {item.overdueLabel}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 flex-wrap">
+              {item.timeLabel && <span className="text-sm font-semibold text-foreground">{item.timeLabel}</span>}
+              <span className="text-sm font-medium text-foreground truncate">{item.propertyName || item.typeLabel}</span>
+            </div>
+            <p className="text-xs text-muted-foreground truncate">
+              {item.typeLabel}
+              {item.clientName ? ` · Owner: ${item.clientName}` : ""}
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-[11px] px-2 py-0.5 rounded-full border ${item.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : item.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : "bg-muted text-muted-foreground border-border"}`}>{item.status}</span>
+            </div>
+          </>
+        )}
       </div>
       <div className="flex items-center shrink-0">
         {actionPrimary ? (
@@ -113,6 +130,11 @@ export default function TodayAgenda({ data }) {
           {/* Today's work */}
           {today.length > 0 && (
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-primary/5">
+                <CalendarClock className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Due Today</p>
+                <span className="text-xs text-muted-foreground ml-auto">{today.length}</span>
+              </div>
               <div className="divide-y divide-border">
                 {today.map((it) => <AgendaCard key={`${it.kind}-${it.id}`} item={it} onAction={handleAction} />)}
               </div>

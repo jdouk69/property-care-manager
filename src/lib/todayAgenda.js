@@ -25,6 +25,32 @@ export function buildTodayAgenda(data = {}) {
   const isCompleted = (s) => s === "Completed" || s === "Cancelled";
   const active = (x) => x.status !== "Completed" && x.status !== "Cancelled" && x.recurrence_status !== "skipped";
 
+  // Formatting helpers for the NEEDS ATTENTION / overdue display. Dates come
+  // straight from the underlying records — never invented, never a dashboard-only
+  // date. "X days overdue" is computed from the record's real due/scheduled date.
+  const fmtDateShort = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso + "T12:00:00Z");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  };
+  const fmtTime12h = (raw) => {
+    if (!raw) return "";
+    if (typeof raw === "string" && raw.includes("T")) return athensTime(raw);
+    const m = /^(\d{1,2}):(\d{2})/.exec(raw);
+    if (!m) return raw;
+    let h = parseInt(m[1], 10);
+    const mm = m[2];
+    const ap = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return `${h}:${mm} ${ap}`;
+  };
+  const daysOverdue = (dateIso, todayIso) => {
+    if (!dateIso) return 0;
+    const a = new Date(dateIso + "T12:00:00Z");
+    const b = new Date(todayIso + "T12:00:00Z");
+    return Math.round((b - a) / 86400000);
+  };
+
   const items = [];
   const completed = [];
   const overdue = [];
@@ -80,7 +106,7 @@ export function buildTodayAgenda(data = {}) {
       const done = task.status === "Completed";
       const base = {
         id: task.id, kind: isArrival ? "arrival-prep" : "task",
-        time: task.time || "", timeLabel: task.time || "",
+        time: task.time || "", timeLabel: fmtTime12h(task.time),
         propertyId: task.property_id, propertyName: propName(task.property_id), clientName: clientFor(task.property_id),
         typeLabel: isArrival ? (task.type === "Departure inspection" ? "Departure Inspection" : "Arrival Preparation") : (task.title || task.type || "Task"),
         status: task.status, date: task.date,
@@ -98,7 +124,7 @@ export function buildTodayAgenda(data = {}) {
       }
     } else if (task.date && task.date < t && active(task)) {
       overdue.push({
-        id: task.id, kind: "task", time: task.time || "", timeLabel: task.time || "",
+        id: task.id, kind: "task", time: task.time || "", timeLabel: fmtTime12h(task.time),
         propertyId: task.property_id, propertyName: propName(task.property_id), clientName: clientFor(task.property_id),
         typeLabel: task.title || task.type || "Task", status: task.status, date: task.date,
         to: `/tasks?open=${task.id}`, actionLabel: "View Task", actionKind: "view-task", completed: false, overdue: true,
@@ -111,14 +137,19 @@ export function buildTodayAgenda(data = {}) {
     if (m.status === "Completed" || m.status === "Cancelled") return;
     const appt = m.scheduled_appointment;
     const fup = m.follow_up_date;
-    const dueToday = (appt && appt === t) || (fup && fup === t);
-    const pastDue = ((appt && appt < t) || (fup && fup < t));
+    const apptToday = appt === t, fupToday = fup === t;
+    const apptPast = appt && appt < t, fupPast = fup && fup < t;
+    const dueToday = apptToday || fupToday;
+    const pastDue = apptPast || fupPast;
     if (!dueToday && !pastDue) return;
+    // Pick the date that matches the bucket so an item can never appear as both
+    // overdue and due today, and the displayed date matches its section.
+    const dueDate = dueToday ? (apptToday ? appt : fup) : (apptPast ? appt : fup);
     const base = {
       id: m.id, kind: "maintenance", time: "", timeLabel: "",
       propertyId: m.property_id, propertyName: propName(m.property_id), clientName: clientFor(m.property_id),
-      typeLabel: appt && appt === t ? "Maintenance Coordination" : "Follow-up",
-      status: m.status, date: appt || fup,
+      typeLabel: dueToday ? "Maintenance Coordination" : "Follow-up",
+      status: m.status, date: dueDate,
       to: `/maintenance?open=${m.id}`, actionLabel: "View Issue", actionKind: "view-issue",
     };
     if (dueToday) push({ ...base, completed: false, overdue: false }, "today");
@@ -162,10 +193,23 @@ export function buildTodayAgenda(data = {}) {
     }
   });
 
+  // TODAY: sort by scheduled time. COMPLETED TODAY: by time.
   const byTime = (a, b) => (a.timeLabel || "").localeCompare(b.timeLabel || "");
   items.sort(byTime);
-  overdue.sort(byTime);
   completed.sort(byTime);
+
+  // NEEDS ATTENTION: stamp each overdue item with its real due date and
+  // "X days overdue" (computed from the underlying record's date), then sort by
+  // oldest / most-overdue first. A bare old scheduled time is never shown here —
+  // only the original due date (with time, if any) so it can't look like today.
+  overdue.forEach((it) => {
+    const days = daysOverdue(it.date, t);
+    it.daysOverdue = days;
+    const datePart = fmtDateShort(it.date);
+    const timePart = it.timeLabel ? ` at ${it.timeLabel}` : "";
+    it.overdueLabel = `Due ${datePart}${timePart} · ${days} day${days === 1 ? "" : "s"} overdue`;
+  });
+  overdue.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
   return { today: items, overdue, completed };
 }
