@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import {
   Plus, CalendarClock, AlertTriangle, ClipboardCheck, Wrench, Home, ListChecks,
   Truck, HardHat, ArrowRight, CheckCircle2, KeyRound, Wallet, Receipt, Package,
-  MessageSquare, MapPin, StickyNote, TrendingUp, FileWarning, Plane,
+  MessageSquare, MapPin, StickyNote, TrendingUp, Plane,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel }
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import ActionCard from "@/components/dashboard/ActionCard";
 import TodayAgenda from "@/components/dashboard/TodayAgenda";
+import ReportsToSendReminder from "@/components/dashboard/ReportsToSendReminder";
 import { getActionableCounts } from "@/lib/onboardingHandoff";
 
 const today = athensToday;
@@ -298,7 +299,6 @@ export default function Dashboard() {
   const arrivals = data.tasks.filter((x) => (x.type === "Arrival preparation" || x.type === "Departure inspection") && x.date >= t).slice(0, 6);
   const openMaintenance = data.maintenance.filter((x) => x.status !== "Completed" && x.status !== "Cancelled");
   const emergency = openMaintenance.filter((x) => x.priority === "Emergency");
-  const reportsWaiting = data.inspections.filter((x) => x.status === "Draft");
   const unreturnedKeys = data.keys.filter((k) => k.date_issued && !k.date_returned);
   const awaitingReimb = data.expenses.filter((e) => e.awaiting_reimbursement && !e.reimbursed);
   const propsNeedingAttention = data.properties.filter((p) => ["Needs Attention", "Poor"].includes(p.condition) || ["Emergency", "Under Maintenance", "Preparing for Arrival"].includes(p.status));
@@ -350,6 +350,9 @@ export default function Dashboard() {
 
         {/* TODAY agenda — what do I have to do today? */}
         <TodayAgenda data={data} />
+
+        {/* Reports waiting to be sent — operational reminder, distinct from property work */}
+        <ReportsToSendReminder visits={data.visits} properties={data.properties} clients={data.clients} />
 
         {/* Next action / continue working */}
         <NextActionCard draft={nextAction.draft} propName={propName} openIssuesByProp={nextAction.openIssuesByProp} prepTask={nextAction.prepTask} onCancelDone={() => setDraft(null)} />
@@ -483,12 +486,6 @@ export default function Dashboard() {
                 {arrivals.slice(0, 3).map((a) => <Row key={a.id} title={a.title} subtitle={`${a.date} · ${a.type}`} badge={a.priority} />)}
               </>
             )}
-          </Section>
-
-          <Section title="Reports Waiting to Send" icon={FileWarning} to="/inspections">
-            {reportsWaiting.length === 0 ? <EmptyState icon={CheckCircle2} title="No pending reports" /> : reportsWaiting.slice(0, 6).map((i) => (
-              <Row key={i.id} title={`Inspection — ${i.date}`} subtitle={i.inspector} badge={i.status} />
-            ))}
           </Section>
         </div>
 

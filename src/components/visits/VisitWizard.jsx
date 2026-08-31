@@ -468,7 +468,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       status: "Completed", gps_location: gps, checklist,
       meter_readings: meters.filter((m) => m.label || m.value),
       summary, internal_notes: internalNotes, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
-      owner_report: "", report_sent: false, report_status: "Draft",
+      owner_report: "", report_sent: false, report_status: "Ready to Send",
       property_service_agreement_id: agreementId || "",
     };
     try {
