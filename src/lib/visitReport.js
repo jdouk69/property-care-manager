@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { athensMediumDateTime } from "@/lib/timezone";
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -11,37 +12,61 @@ function loadImage(src) {
   });
 }
 
-async function fetchCompressedDataUrl(url, maxW = 900, quality = 0.6) {
-  const res = await fetch(url, { mode: "cors" });
-  if (!res.ok) throw new Error("fetch failed");
-  const blob = await res.blob();
-  const dataUrl = await new Promise((resolve, reject) => {
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result);
     r.onerror = reject;
     r.readAsDataURL(blob);
   });
+}
+
+// --- Image pipeline -------------------------------------------------------------
+// Each owner-photo is resized to the maximum dimensions the PDF layout actually
+// needs (never upscaled), re-encoded once as JPEG at a documentation-appropriate
+// quality, and cached. jsPDF reuses the embedded bytes via `alias` when the same
+// URL appears more than once, so duplicate binary copies are not written. Original
+// stored photos are never touched — this only affects the generated PDF.
+const imgCache = new Map();
+let imgAliasSeq = 0;
+
+// maxW in px at the photo's final displayed size (~150-180 DPI target).
+async function getImageForPdf(url, maxW, quality) {
+  const key = `${url}|${maxW}|${quality}`;
+  const cached = imgCache.get(key);
+  if (cached) return cached;
+  const res = await fetch(url, { mode: "cors" });
+  if (!res.ok) throw new Error("fetch failed");
+  const blob = await res.blob();
+  const dataUrl = await blobToDataUrl(blob);
   const img = await loadImage(dataUrl);
+  // Never upscale; only downscale to the target width.
   const scale = Math.min(1, maxW / (img.width || maxW));
   const w = Math.max(1, Math.round(img.width * scale));
   const h = Math.max(1, Math.round(img.height * scale));
   const canvas = document.createElement("canvas");
-  canvas.width = w; canvas.height = h;
+  canvas.width = w;
+  canvas.height = h;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", quality);
+  const out = canvas.toDataURL("image/jpeg", quality);
+  const entry = { dataUrl: out, w, h, alias: `rptimg${imgAliasSeq++}` };
+  imgCache.set(key, entry);
+  return entry;
 }
+
+// Finding photos carry the important detail -> slightly higher resolution/quality.
+// Routine documentation photos can be a touch more aggressive.
+const FINDING_IMG_MAXW = 560;
+const FINDING_IMG_QUALITY = 0.78;
+const ROUTINE_IMG_MAXW = 640;
+const ROUTINE_IMG_QUALITY = 0.70;
 
 function fmtDate(iso) {
-  if (!iso) return "—";
-  try { return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); } catch (e) { return iso; }
+  return athensMediumDateTime(iso);
 }
 
-// --- Customer-facing text safety -------------------------------------------------
-// jsPDF's standard fonts only encode WinAnsi. Unicode glyphs like the middle-dot
-// (·, U+00B7), check (✓), triangle (▲), euro (€), smart quotes, en/em dashes render
-// as garbage (e.g. "%²", stray spacing) in PDF viewers. Map known ones to ASCII and
-// strip anything else outside printable ASCII so the PDF is clean on every device.
+// --- Customer-facing text safety ------------------------------------------------
 const SAFE_MAP = {
   "\u20AC": "EUR", "\u00A3": "GBP", "\u00B7": "-", "\u2022": "-",
   "\u2013": "-", "\u2014": "-", "\u2018": "'", "\u2019": "'", "\u201C": '"', "\u201D": '"',
@@ -56,27 +81,17 @@ const clean = (s) => {
   return out;
 };
 
-// Strip internal prefixes/codes from checklist labels, e.g.
-// "ONBOARDING · Front/general exterior starting condition..." -> "Front/general exterior starting condition..."
 const cleanLabel = (name) => {
   let s = String(name || "").trim();
   s = s.replace(/^\s*[A-Z]{2,}\s*[\u00B7·]\s*/, "");
   return s.trim();
 };
 
-// Owner-visible only: a checklist item is a customer "finding" when it was explicitly
-// flagged owner-visible AND has an owner-facing note or photo. A bare line marked
-// Emergency/Important internally (e.g. a baseline-photo section) is NOT a finding.
-// A finding requires an owner-visible OBSERVATION NOTE. Photos alone (no note) are
-// routine documentation, not a concern — so a normal-condition photo never becomes
-// a finding, and a bare Emergency/Important-marked line with no note never becomes one.
 const isOwnerFinding = (it) => !!it && !!it.owner_visible && (it.notes && String(it.notes).trim());
 
 const sevFromChecklistStatus = (st) => (st === "Emergency" ? "urgent" : st === "Important" ? "attention" : "monitor");
 const priorityLabelFor = (k) => (k === "urgent" ? "Urgent" : k === "attention" ? "Attention Recommended" : "Monitor");
 
-// Factual next-step from a recorded maintenance-issue status. Never a diagnosis —
-// only a plain restatement of the recorded workflow state. Empty when no action yet.
 const nextStepFromStatus = (st) => ({
   "Awaiting Owner Approval": "Awaiting your approval to proceed.",
   "Contractor Contacted": "We have contacted a contractor and will schedule the work.",
@@ -87,49 +102,50 @@ const nextStepFromStatus = (st) => ({
   "Completed": "This has been resolved.",
 }[st] || "");
 
-function buildSummaryText({ visit, property, vtl, findings, routineCount }) {
-  const parts = [];
-  parts.push(`We completed the ${vtl || "property-care visit"} at ${property?.name || "your property"} on ${fmtDate(visit?.start_time)}.`);
-  if (findings.length) {
-    parts.push(findings.length === 1 ? "1 item requires your attention." : `${findings.length} items require your attention.`);
+// Dynamic, grammar-correct owner summary. Monitor findings never imply action is
+// required; an all-clear visit gets a single positive sentence.
+function buildSummaryText({ findings, counts, routineCount }) {
+  const n = findings.length;
+  const u = counts.urgent, a = counts.attention, m = counts.monitor;
+  if (n === 0) {
+    return "All routine checks were completed with no concerns noted during this visit.";
   }
-  if (routineCount) {
-    parts.push(routineCount === 1 ? "1 routine check completed with no concerns noted." : `${routineCount} routine checks completed with no concerns noted.`);
-  }
-  if (!findings.length && !routineCount) parts.push("No concerns were noted during this visit.");
+  const parts = ["Overall, the property appeared secure and generally well maintained."];
+  parts.push(`${n} observation${n === 1 ? "" : "s"} ${n === 1 ? "was" : "were"} documented during this visit.`);
+  const clauses = [];
+  if (u) clauses.push(`${u} ${u === 1 ? "requires" : "require"} prompt attention`);
+  if (a) clauses.push(`${a} ${a === 1 ? "has" : "have"} recommended follow-up`);
+  if (m) clauses.push(`${m} will be monitored`);
+  if (clauses.length === 1) parts.push(clauses[0] + ".");
+  else if (clauses.length > 1) parts.push(clauses.slice(0, -1).join(", ") + ", and " + clauses[clauses.length - 1] + ".");
+  if (routineCount) parts.push(`${routineCount} routine check${routineCount === 1 ? "" : "s"} completed with no concerns noted.`);
   return parts.join(" ");
 }
 
 /**
  * Build a structured, customer-facing report model from the raw visit + context.
- *
- * The internal checklist is the operational record; this model TRANSLATES it into a
- * simple owner-facing report. Internal notes and non-owner-visible item notes/photos
- * are excluded here so the Review screen and the PDF render exactly what the owner
- * receives. A checklist line's internal status alone never produces a customer
- * Emergency — only an actual owner-visible finding (note/photo) or a linked
- * maintenance issue does.
- *
- * ctx: { business, property, client, issues, tasks, nextVisit }
+ * Internal notes and non-owner-visible item notes/photos are excluded here so the
+ * Review screen and the PDF render exactly what the owner receives.
  */
 export function buildOwnerReportModel(visit, ctx = {}) {
   const { business = {}, property = {}, client = {}, issues = [], tasks = [], nextVisit = null } = ctx;
   const cl = visit?.checklist || [];
 
-  // Findings from owner-visible checklist items.
-  const checklistFindings = cl.filter(isOwnerFinding).map((it) => ({
-    title: cleanLabel(it.name),
-    severityKey: sevFromChecklistStatus(it.status),
-    priorityLabel: priorityLabelFor(sevFromChecklistStatus(it.status)),
-    area: "",
-    observed: (it.notes || "").trim(),
-    recommendation: (it.recommendation || "").trim(),
-    actionTaken: (it.action_taken || "").trim(),
-    photos: it.photos || [],
-    source: "checklist",
-  }));
+  const checklistFindings = cl.filter(isOwnerFinding).map((it) => {
+    const sk = sevFromChecklistStatus(it.status);
+    return {
+      title: cleanLabel(it.name),
+      severityKey: sk,
+      priorityLabel: priorityLabelFor(sk),
+      area: "",
+      observed: (it.notes || "").trim(),
+      recommendation: (it.recommendation || "").trim(),
+      actionTaken: (it.action_taken || "").trim(),
+      photos: it.photos || [],
+      source: "checklist",
+    };
+  });
 
-  // Findings from linked maintenance issues (real recorded concerns).
   const issueFindings = (issues || [])
     .filter((i) => i && i.status !== "Cancelled")
     .map((i) => {
@@ -150,29 +166,46 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const order = { urgent: 0, attention: 1, monitor: 2 };
   findings.sort((a, b) => (order[a.severityKey] ?? 2) - (order[b.severityKey] ?? 2));
 
-  // Routine checks = checklist items that are NOT findings (no owner-facing note).
   const routineChecks = cl.filter((it) => !isOwnerFinding(it)).map((it) => ({ name: cleanLabel(it.name) }));
   const routineCount = routineChecks.length;
 
-  // Documentation photos: owner-visible photos on items that are NOT findings (no
-  // observation note). Shown in a Photo Record section, separate from concerns.
   const docPhotos = cl
     .filter((it) => !isOwnerFinding(it) && it.owner_visible && (it.photos && it.photos.length))
     .flatMap((it) => (it.photos || []).map((url) => ({ caption: cleanLabel(it.name), url })));
 
-  const hasUrgent = findings.some((f) => f.severityKey === "urgent");
-  const hasAny = findings.length > 0;
-  const overallStatus = hasUrgent
-    ? { key: "urgent", label: "Urgent Attention Recommended" }
-    : hasAny
-      ? { key: "attention", label: "Attention Needed" }
-      : { key: "ok", label: "No Concerns Noted" };
+  const counts = {
+    urgent: findings.filter((f) => f.severityKey === "urgent").length,
+    attention: findings.filter((f) => f.severityKey === "attention").length,
+    monitor: findings.filter((f) => f.severityKey === "monitor").length,
+  };
+
+  const hasUrgent = counts.urgent > 0;
+  const hasAttention = counts.attention > 0;
+  const hasMonitor = counts.monitor > 0;
+  let overallStatus;
+  if (hasUrgent) overallStatus = { key: "urgent", label: "Attention Required" };
+  else if (hasAttention) overallStatus = { key: "attention", label: "Attention Required" };
+  else if (hasMonitor) overallStatus = { key: "monitor", label: "Observations Noted" };
+  else overallStatus = { key: "ok", label: "No Concerns Noted" };
+
+  const segs = [];
+  if (counts.urgent) segs.push(`${counts.urgent} Urgent`);
+  if (counts.attention) segs.push(`${counts.attention} Attention Recommended`);
+  if (counts.monitor) segs.push(`${counts.monitor} Monitor`);
+  const priorityBreakdown = segs.join(" \u00B7 ");
+  const routineLine = routineCount ? `${routineCount} routine check${routineCount === 1 ? "" : "s"} completed - no concerns noted` : "";
 
   const vtl = visitTypeLabel(visit?.visit_type) || "Property Visit";
-  const summaryText = buildSummaryText({ visit, property, vtl, findings, routineCount });
+  const summaryText = buildSummaryText({ findings, counts, routineCount });
 
-  // Detailed record: clean labels, no internal status jargon. Items that are findings
-  // show their finding label; everything else shows Checked / Not checked.
+  // Compact appendix: routine check names + observations (priority - title). No
+  // descriptions/photos repeated here.
+  const visitChecklist = {
+    routineChecks: routineChecks.map((r) => r.name),
+    observations: findings.map((f) => ({ priorityLabel: f.priorityLabel, severityKey: f.severityKey, title: f.title })),
+  };
+
+  // Kept for backward compatibility (e.g. the delivery email).
   const detailedRecord = cl.map((it) => ({
     name: cleanLabel(it.name),
     label: isOwnerFinding(it)
@@ -182,9 +215,11 @@ export function buildOwnerReportModel(visit, ctx = {}) {
 
   const result = hasUrgent
     ? "Urgent attention recommended."
-    : hasAny
-      ? `${findings.length} item(s) require attention.`
-      : "No concerns noted.";
+    : hasAttention
+      ? "Attention required."
+      : hasMonitor
+        ? "Observations noted."
+        : "No concerns noted.";
 
   return {
     business,
@@ -199,11 +234,15 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     },
     visitTypeLabel: vtl,
     overallStatus,
+    counts,
+    priorityBreakdown,
+    routineLine,
     summaryText,
     findings,
     routineChecks,
     routineCount,
     docPhotos,
+    visitChecklist,
     detailedRecord,
     issues: (issues || []).filter((i) => i && i.status !== "Cancelled").map((i) => ({
       title: i.title, priority: i.priority, status: i.status, category: i.category,
@@ -230,9 +269,21 @@ function drawCheck(doc, x, y, rgb) {
   doc.line(x + 1.2, y + 0.5, x + 3.6, y - 2.2);
 }
 
+// Draw an image preserving aspect ratio inside a box (centered, never stretched).
+function drawImageFit(doc, entry, x, y, boxW, boxH) {
+  const r = entry.w / entry.h;
+  let dw = boxW;
+  let dh = boxW / r;
+  if (dh > boxH) { dh = boxH; dw = boxH * r; }
+  const dx = x + (boxW - dw) / 2;
+  const dy = y + (boxH - dh) / 2;
+  doc.addImage(entry.dataUrl, "JPEG", dx, dy, dw, dh, entry.alias);
+  return boxH;
+}
+
 async function buildDoc(visit, ctx = {}) {
   const model = buildOwnerReportModel(visit, ctx);
-  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, summaryText, findings, routineChecks, routineCount, docPhotos, detailedRecord, issues, tasks, nextVisit } = model;
+  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, findings, routineChecks, routineCount, docPhotos, visitChecklist, issues, tasks, nextVisit } = model;
 
   const doc = new jsPDF();
   const pageW = doc.internal.pageSize.getWidth();
@@ -247,106 +298,155 @@ async function buildDoc(visit, ctx = {}) {
     wrapLines(s, w).forEach((l) => { ensure(lh); text(l, x, y); y += lh; });
   };
 
-  // --- Header ---
-  doc.setFontSize(15); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text(business.business_name || "Property Care", margin, y); y += 6;
+  // --- Header (compact) ---
+  doc.setFontSize(14); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+  text(business.business_name || "Property Care", margin, y); y += 5;
   doc.setFontSize(8); doc.setFont(undefined, "normal"); doc.setTextColor(110);
   const contact = [business.phone, business.email].filter(Boolean).join("   -   ");
   if (contact) { text(contact, margin, y); y += 4; }
-  if (business.address) { wrap(business.address, maxWidth, margin, 4); }
-  y += 1;
-  doc.setDrawColor(210); doc.line(margin, y, pageW - margin, y); y += 6;
+  doc.setDrawColor(210); doc.line(margin, y, pageW - margin, y); y += 5;
   doc.setTextColor(0);
 
   // Title
-  doc.setFontSize(13); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text("PROPERTY CARE VISIT REPORT", margin, y); y += 6;
-  doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(110);
-  text(vtl || "Property Visit", margin, y); y += 6;
+  doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+  text("PROPERTY CARE VISIT REPORT", margin, y); y += 5;
+  doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(110);
+  text(vtl || "Property Visit", margin, y); y += 5;
   doc.setTextColor(0);
 
-  // Property info block
-  doc.setFontSize(10);
-  const infoRows = [
-    ["Property", property.name || "—"],
-    ["Owner", client.name || "—"],
-    ["Visit date", fmtDate(v.start_time)],
-    ["Service type", vtl || "—"],
-  ];
-  infoRows.forEach(([k, val]) => {
-    doc.setFont(undefined, "bold"); doc.setTextColor(90); text(k + ":", margin, y);
-    doc.setFont(undefined, "normal"); doc.setTextColor(30); text(String(val), margin + 32, y);
-    y += 5;
-  });
-  y += 2;
+  // Compact property info (2 columns)
+  doc.setFontSize(9);
+  const colW = maxWidth / 2;
+  const drawKV = (k, val, x) => {
+    doc.setFont(undefined, "bold"); doc.setTextColor(90);
+    text(k + ":", x, y);
+    const lblW = doc.getTextWidth(k + ": ");
+    doc.setFont(undefined, "normal"); doc.setTextColor(30);
+    const lines = doc.splitTextToSize(clean(String(val)), colW - lblW - 2);
+    text(lines[0] || "", x + lblW, y);
+    return lines.length;
+  };
+  drawKV("Property", property.name || "-", margin);
+  drawKV("Owner", client.name || "-", margin + colW);
+  y += 5;
+  drawKV("Visit date", fmtDate(v.start_time), margin);
+  drawKV("Service type", vtl || "-", margin + colW);
+  y += 6;
 
-  // Overall status box
+  // Overall status banner
   const tone = TONE[overallStatus.key] || TONE.ok;
-  ensure(14);
-  doc.setFillColor(tone[0], tone[1], tone[2]); doc.roundedRect(margin, y, maxWidth, 12, 2, 2, "F");
+  ensure(12);
+  doc.setFillColor(tone[0], tone[1], tone[2]); doc.roundedRect(margin, y, maxWidth, 11, 2, 2, "F");
   doc.setTextColor(255); doc.setFontSize(11); doc.setFont(undefined, "bold");
-  text(overallStatus.label.toUpperCase(), margin + 5, y + 8);
-  doc.setTextColor(0); y += 16;
+  text(overallStatus.label.toUpperCase(), margin + 5, y + 7.5);
+  doc.setTextColor(0); y += 14;
+
+  // Priority breakdown (each segment colored)
+  if (priorityBreakdown) {
+    ensure(6);
+    doc.setFontSize(9.5); doc.setFont(undefined, "bold");
+    const segList = [];
+    if (counts.urgent) segList.push({ t: `${counts.urgent} Urgent`, c: TONE.urgent });
+    if (counts.attention) segList.push({ t: `${counts.attention} Attention Recommended`, c: TONE.attention });
+    if (counts.monitor) segList.push({ t: `${counts.monitor} Monitor`, c: TONE.monitor });
+    let xx = margin;
+    for (let si = 0; si < segList.length; si++) {
+      if (si > 0) { doc.setTextColor(170); text(" - ", xx, y); xx += doc.getTextWidth(" - "); }
+      const seg = segList[si];
+      doc.setTextColor(seg.c[0], seg.c[1], seg.c[2]);
+      text(seg.t, xx, y);
+      xx += doc.getTextWidth(seg.t);
+    }
+    doc.setTextColor(0);
+    y += 6;
+  }
+  if (routineLine) {
+    ensure(5);
+    doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(90);
+    text(routineLine, margin, y); y += 6;
+  }
+  y += 1;
 
   // Visit summary
   ensure(12);
-  doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text("Visit Summary", margin, y); y += 6;
-  doc.setFontSize(10); doc.setFont(undefined, "normal"); doc.setTextColor(50);
+  doc.setFontSize(10.5); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+  text("Visit Summary", margin, y); y += 5.5;
+  doc.setFontSize(10); doc.setFont(undefined, "normal"); doc.setTextColor(45);
   wrap(summaryText, maxWidth, margin);
   doc.setTextColor(0); y += 4;
 
-  // Items requiring attention
+  // Visit Observations (findings) — keep each finding together on one page.
   if (findings.length) {
     ensure(10);
     doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Items Requiring Attention", margin, y); y += 8;
+    text("Visit Observations", margin, y); y += 8;
+
+    const fColW = (maxWidth - 6) / 2;
+    const fBoxH = fColW * 0.72;
+    const measure = (s, w) => s ? doc.splitTextToSize(clean(s), w).length : 0;
+    const estFinding = (f) => {
+      let h = 9;
+      if (f.area) h += 5;
+      if (f.observed) h += 5 + measure(f.observed, maxWidth - 4) * 5 + 2;
+      if (f.actionTaken) h += 5 + measure(f.actionTaken, maxWidth - 4) * 5 + 2;
+      if (f.recommendation) h += 5 + measure(f.recommendation, maxWidth - 4) * 5 + 2;
+      if (f.photos && f.photos.length) {
+        const rows = Math.ceil(f.photos.length / 2);
+        h += rows * (fBoxH + 4) + 2;
+      }
+      return h + 4;
+    };
+
     for (let idx = 0; idx < findings.length; idx++) {
       const f = findings[idx];
+      // Move the whole finding to the next page if it won't fit (keeps badge,
+      // title, observed, action, recommendation and first photo together).
+      if (y + estFinding(f) > pageH - 18) { doc.addPage(); y = 16; }
+
       const ft = TONE[f.severityKey] || TONE.monitor;
-      ensure(16);
-      doc.setFillColor(ft[0], ft[1], ft[2]); doc.roundedRect(margin, y, 62, 7, 1.5, 1.5, "F");
+      doc.setFillColor(ft[0], ft[1], ft[2]); doc.roundedRect(margin, y, 64, 7, 1.5, 1.5, "F");
       doc.setTextColor(255); doc.setFontSize(7.5); doc.setFont(undefined, "bold");
       text(f.priorityLabel.toUpperCase(), margin + 3, y + 5);
       doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, "bold");
-      text(f.title, margin + 68, y + 5);
+      text(f.title, margin + 70, y + 5);
       y += 9;
       if (f.area) {
         doc.setFont(undefined, "normal"); doc.setFontSize(8.5); doc.setTextColor(110);
         text("Area: " + f.area, margin + 2, y); y += 5;
       }
       if (f.observed) {
-        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); ensure(6); text("What we observed:", margin + 2, y); y += 5;
+        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); text("What we observed:", margin + 2, y); y += 5;
         doc.setFont(undefined, "normal"); doc.setTextColor(40);
         wrap(f.observed, maxWidth - 4, margin + 4);
       }
       if (f.actionTaken) {
-        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); ensure(6); text("Action taken:", margin + 2, y); y += 5;
+        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); text("Action taken:", margin + 2, y); y += 5;
         doc.setFont(undefined, "normal"); doc.setTextColor(40);
         wrap(f.actionTaken, maxWidth - 4, margin + 4);
       }
       if (f.recommendation) {
-        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); ensure(6); text("Recommended next step:", margin + 2, y); y += 5;
+        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); text("Recommended next step:", margin + 2, y); y += 5;
         doc.setFont(undefined, "normal"); doc.setTextColor(40);
         wrap(f.recommendation, maxWidth - 4, margin + 4);
       }
       if (f.photos && f.photos.length) {
+        let col = 0;
         for (const url of f.photos) {
           try {
-            const dataUrl = await fetchCompressedDataUrl(url);
-            const imgW = 72, imgH = 50;
-            ensure(imgH + 6);
-            doc.addImage(dataUrl, "JPEG", margin + 2, y, imgW, imgH);
-            doc.setFontSize(7.5); doc.setTextColor(120); text(f.title, margin + 2 + imgW + 4, y + 5);
-            doc.setTextColor(0);
-            y += imgH + 4;
+            const entry = await getImageForPdf(url, FINDING_IMG_MAXW, FINDING_IMG_QUALITY);
+            if (col === 0) ensure(fBoxH + 6);
+            const x = margin + 2 + col * (fColW + 6);
+            drawImageFit(doc, entry, x, y, fColW, fBoxH);
+            col++;
+            if (col >= 2) { col = 0; y += fBoxH + 4; }
           } catch (e) {
             ensure(5); doc.setTextColor(150); text("[photo unavailable]", margin + 2, y); doc.setTextColor(0); y += 5;
           }
         }
+        if (col > 0) y += fBoxH + 4;
       }
       y += 3;
-      if (idx < findings.length - 1) { doc.setDrawColor(225); doc.line(margin, y, pageW - margin, y); y += 4; }
+      if (idx < findings.length - 1) { doc.setDrawColor(225); doc.line(margin, y, pageW - margin, y); y += 5; }
     }
     y += 2;
   }
@@ -363,11 +463,11 @@ async function buildDoc(visit, ctx = {}) {
   if (nextVisit && nextVisit.start_time) nextSteps.push(`Next scheduled visit: ${fmtDate(nextVisit.start_time)}.`);
   if (!v.summary && !nextSteps.length) { doc.setTextColor(120); text("No additional next steps recorded.", margin, y); y += 5; doc.setTextColor(0); }
   nextSteps.forEach((s) => { wrap(s, maxWidth, margin); });
-  y += 3;
+  y += 4;
 
-  // --- Page 2+: Routine checks ---
+  // --- Routine checks ---
   if (routineCount) {
-    doc.addPage(); y = 16;
+    ensure(20);
     doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(16, 185, 129);
     text("ROUTINE CHECKS - NO CONCERNS NOTED", margin, y); y += 6;
     doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(70);
@@ -382,55 +482,75 @@ async function buildDoc(visit, ctx = {}) {
     y += 3;
   }
 
-  // Photo Record — routine documentation photos (owner-visible, non-finding)
+  // --- Routine Visit Photos (routine documentation; not findings) ---
   if (docPhotos && docPhotos.length) {
-    ensure(14);
+    ensure(16);
     doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Photo Record", margin, y); y += 7;
-    let col = 0; const imgW = (maxWidth - 8) / 2; const imgH = imgW * 0.72; const gap = 8;
+    text("Routine Visit Photos", margin, y); y += 5;
+    doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(110);
+    text("Documentation photos showing general property conditions during this visit.", margin, y); y += 7;
+    const gColW = (maxWidth - 8) / 2;
+    const gBoxH = gColW * 0.72;
+    let col = 0;
     for (const dp of docPhotos) {
       try {
-        const dataUrl = await fetchCompressedDataUrl(dp.url);
-        if (col === 0) ensure(imgH + 14);
-        const x = margin + col * (imgW + gap);
-        doc.addImage(dataUrl, "JPEG", x, y, imgW, imgH);
+        const entry = await getImageForPdf(dp.url, ROUTINE_IMG_MAXW, ROUTINE_IMG_QUALITY);
+        if (col === 0) ensure(gBoxH + 12);
+        const x = margin + col * (gColW + 8);
+        drawImageFit(doc, entry, x, y, gColW, gBoxH);
         doc.setFontSize(7.5); doc.setTextColor(110);
-        const cap = wrapLines(dp.caption, imgW);
-        text(cap[0] || "", x, y + imgH + 4);
-        if (cap.length > 1) text(cap[1] + "...", x, y + imgH + 8);
+        const cap = wrapLines(dp.caption, gColW);
+        text(cap[0] || "", x, y + gBoxH + 4);
         doc.setTextColor(0);
         col++;
-        if (col >= 2) { col = 0; y += imgH + 14; }
+        if (col >= 2) { col = 0; y += gBoxH + 12; }
       } catch (e) {
         ensure(6); doc.setTextColor(150); text("[photo unavailable]", margin, y); doc.setTextColor(0); y += 6;
       }
     }
-    if (col > 0) y += imgH + 14;
+    if (col > 0) y += gBoxH + 12;
     y += 3;
   }
 
-  // Detailed visit record (transparency, clean labels, no internal status jargon)
-  if (detailedRecord.length) {
-    ensure(14);
-    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Detailed Visit Record", margin, y); y += 7;
-    doc.setFontSize(9); doc.setFont(undefined, "normal");
-    for (const d of detailedRecord) {
-      const nameLines = wrapLines(d.name, maxWidth - 38);
-      ensure(6 + (nameLines.length - 1) * 5);
-      doc.setTextColor(110); text(d.label, margin, y);
-      doc.setTextColor(40);
-      for (let li = 0; li < nameLines.length; li++) {
-        text(nameLines[li], margin + 38, y);
-        if (li < nameLines.length - 1) y += 5;
+  // --- Visit Checklist (compact appendix) ---
+  if (visitChecklist && (visitChecklist.routineChecks.length || visitChecklist.observations.length)) {
+    ensure(16);
+    doc.setFontSize(10.5); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+    text("Visit Checklist", margin, y); y += 6;
+    doc.setFontSize(9);
+    if (visitChecklist.routineChecks.length) {
+      doc.setFont(undefined, "bold"); doc.setTextColor(70); text("Routine Checks", margin + 2, y); y += 5;
+      doc.setFont(undefined, "normal"); doc.setTextColor(50);
+      for (const name of visitChecklist.routineChecks) {
+        ensure(5);
+        drawCheck(doc, margin + 2, y, TONE.ok);
+        text(name, margin + 8, y);
+        y += 5;
       }
-      y += 6;
+      y += 2;
     }
-    y += 3;
+    if (visitChecklist.observations.length) {
+      doc.setFont(undefined, "bold"); doc.setTextColor(70); ensure(6); text("Observations", margin + 2, y); y += 5;
+      doc.setFont(undefined, "normal"); doc.setTextColor(50);
+      for (const o of visitChecklist.observations) {
+        ensure(7);
+        const ft = TONE[o.severityKey] || TONE.monitor;
+        const lbl = `${o.priorityLabel} -`;
+        doc.setFont(undefined, "bold"); doc.setTextColor(ft[0], ft[1], ft[2]);
+        text(lbl, margin + 2, y);
+        const lblW = doc.getTextWidth(lbl) + 2;
+        doc.setFont(undefined, "normal"); doc.setTextColor(50);
+        const lines = doc.splitTextToSize(clean(o.title), maxWidth - 4 - lblW);
+        text(lines[0] || "", margin + 2 + lblW, y);
+        for (let li = 1; li < lines.length; li++) { y += 5; ensure(5); text(lines[li], margin + 2 + lblW, y); }
+        y += 6;
+      }
+      y += 2;
+    }
   }
 
   // Scope footer
-  ensure(20);
+  ensure(18);
   doc.setDrawColor(210); doc.line(margin, y, pageW - margin, y); y += 5;
   doc.setFontSize(8); doc.setTextColor(120);
   wrap("This Property Care Visit Report documents visual observations made during a routine property-care visit. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.", maxWidth, margin, 4);
@@ -438,7 +558,7 @@ async function buildDoc(visit, ctx = {}) {
 
   // Footer (page numbers)
   const pages = doc.internal.getNumberOfPages();
-  const genDate = new Date().toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const genDate = athensMediumDateTime(new Date().toISOString());
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p);
     doc.setFontSize(8); doc.setTextColor(150);
@@ -454,22 +574,16 @@ function fileSlug(property) {
   return (property?.name || "property").replace(/\s+/g, "-").toLowerCase();
 }
 
-/** Existing behavior preserved: generate and immediately download the PDF. */
 export async function generateVisitReportPdf(visit, ctx = {}) {
   const doc = await buildDoc(visit, ctx);
   doc.save(`visit-report-${fileSlug(ctx.property)}.pdf`);
 }
 
-/** Generate the PDF and return it as a Blob (for upload / manual share). */
 export async function generateVisitReportPdfBlob(visit, ctx = {}) {
   const doc = await buildDoc(visit, ctx);
   return doc.output("blob");
 }
 
-/**
- * Generate the customer-facing PDF, upload it to app storage, and return its
- * { file_url }. Used to persist a report artifact the owner can be linked to.
- */
 export async function generateAndStoreReportPdf(visit, ctx = {}) {
   const { base44 } = await import("@/api/base44Client");
   const blob = await generateVisitReportPdfBlob(visit, ctx);

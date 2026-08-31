@@ -1,21 +1,16 @@
 import React from "react";
 import {
-  X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, Wrench,
-  ListChecks, MapPin, Camera,
+  X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, AlertOctagon,
+  ListChecks, MapPin, Camera, Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
+import { athensMediumDateTime } from "@/lib/timezone";
 
 /**
  * Renders the customer-facing report EXACTLY as the owner will receive it (and
- * exactly as the PDF renders). Consumes the model produced by buildOwnerReportModel:
- *  - overallStatus, summaryText
- *  - findings[]  (owner-visible checklist findings + linked maintenance issues)
- *  - routineChecks[] (no owner-facing content -> secondary)
- *  - detailedRecord[] (clean-label transparency)
- *  - issues[], tasks[], nextVisit
- * Internal notes and non-owner-visible item notes/photos are never present in the
- * model, so they can never appear here.
+ * exactly as the PDF renders). Consumes buildOwnerReportModel. Internal notes and
+ * non-owner-visible item notes/photos are never present in the model.
  */
 const SEV = {
   urgent: { tone: "bg-rose-500/10 text-rose-600 border-rose-500/20", dot: "bg-rose-500", Icon: AlertTriangle, label: "Urgent" },
@@ -25,8 +20,26 @@ const SEV = {
 const OVERALL = {
   ok: { tone: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", Icon: CheckCircle2 },
   attention: { tone: "bg-amber-500/10 text-amber-600 border-amber-500/30", Icon: AlertTriangle },
-  urgent: { tone: "bg-rose-500/10 text-rose-600 border-rose-500/30", Icon: AlertTriangle },
+  urgent: { tone: "bg-rose-500/10 text-rose-600 border-rose-500/30", Icon: AlertOctagon },
+  monitor: { tone: "bg-slate-500/10 text-slate-600 border-slate-500/30", Icon: Eye },
 };
+
+function PriorityBreakdown({ counts }) {
+  const segs = [];
+  if (counts.urgent) segs.push({ n: counts.urgent, label: "Urgent", cls: "text-rose-600" });
+  if (counts.attention) segs.push({ n: counts.attention, label: "Attention Recommended", cls: "text-amber-600" });
+  if (counts.monitor) segs.push({ n: counts.monitor, label: "Monitor", cls: "text-slate-500" });
+  return (
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
+      {segs.map((s, i) => (
+        <React.Fragment key={s.label}>
+          {i > 0 && <span className="text-muted-foreground/60">·</span>}
+          <span className={`font-semibold ${s.cls}`}>{s.n} {s.label}</span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
 
 export default function ReportReviewModal({ open, model, generating, sending, canSend, onClose, onSend, onBackToEdit }) {
   if (!open) return null;
@@ -44,8 +57,9 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
 
   const {
     business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl,
-    overallStatus = { key: "ok", label: "No Concerns Noted" }, summaryText = "",
-    findings = [], routineChecks = [], routineCount = 0, docPhotos = [], detailedRecord = [],
+    overallStatus = { key: "ok", label: "No Concerns Noted" }, counts = { urgent: 0, attention: 0, monitor: 0 },
+    priorityBreakdown = "", routineLine = "", summaryText = "",
+    findings = [], routineChecks = [], routineCount = 0, docPhotos = [], visitChecklist,
     issues = [], tasks = [], nextVisit,
   } = model;
 
@@ -53,52 +67,52 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
   const nextSteps = [];
   if (issues.length) nextSteps.push(`${issues.length} maintenance item${issues.length === 1 ? "" : "s"} recorded — we will coordinate as agreed.`);
   if (tasks.length) nextSteps.push(`${tasks.length} follow-up task${tasks.length === 1 ? "" : "s"} scheduled.`);
-  if (nextVisit && nextVisit.start_time) nextSteps.push(`Next scheduled visit: ${new Date(nextVisit.start_time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.`);
+  if (nextVisit && nextVisit.start_time) nextSteps.push(`Next scheduled visit: ${athensMediumDateTime(nextVisit.start_time)}.`);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-card rounded-2xl border border-border max-w-2xl w-full shadow-xl max-h-[92vh] flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold text-sm">Report Review — as the owner will receive it</h3>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-card rounded-2xl border border-border max-w-2xl w-full shadow-xl max-h-[94vh] flex flex-col">
+        {/* Compact header */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+            <h3 className="font-semibold text-sm truncate">Report Review</h3>
           </div>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground p-1"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground p-1.5 -mr-1 shrink-0"><X className="w-5 h-5" /></button>
         </div>
 
-        <div className="overflow-y-auto px-4 py-4 space-y-4">
-          {/* Header */}
+        <div className="overflow-y-auto px-3 py-3 space-y-3">
+          {/* Business + compact property info (one small line) */}
           <div>
-            <p className="text-base font-semibold">{business.business_name || "Property Care"}</p>
-            <p className="text-xs text-muted-foreground">{[business.phone, business.email].filter(Boolean).join(" · ")}</p>
-          </div>
-          <div className="border-t border-border pt-3">
-            <h4 className="text-sm font-semibold mb-2">Property Care Visit Report</h4>
-            <div className="text-sm space-y-0.5">
-              <p><span className="text-muted-foreground">Property:</span> <span className="font-medium">{property.name || "—"}</span></p>
-              {property.address && <p className="text-muted-foreground">{property.address}</p>}
-              {client.name && <p><span className="text-muted-foreground">Owner:</span> <span className="font-medium">{client.name}</span></p>}
-              <p><span className="text-muted-foreground">Service type:</span> <span className="font-medium">{vtl}</span></p>
-              <p className="text-muted-foreground">{new Date(visit.start_time || Date.now()).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
-            </div>
+            <p className="text-sm font-semibold leading-tight">{business.business_name || "Property Care"}</p>
+            <p className="text-[11px] text-muted-foreground leading-tight">{[business.phone, business.email].filter(Boolean).join(" · ")}</p>
+            <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+              {[property.name, client.name, athensMediumDateTime(visit.start_time), vtl].filter(Boolean).map((s, i) => (
+                <React.Fragment key={i}>{i > 0 && <span className="text-muted-foreground/50"> · </span>}{s}</React.Fragment>
+              ))}
+            </p>
           </div>
 
-          {/* Overall status */}
-          <div className={`flex items-center gap-2 rounded-xl border p-3 ${ov.tone}`}>
+          {/* Overall status (prominent, near top) */}
+          <div className={`flex items-center gap-2 rounded-xl border p-2.5 ${ov.tone}`}>
             <ov.Icon className="w-5 h-5 shrink-0" />
             <p className="text-sm font-semibold">{overallStatus.label}</p>
           </div>
 
+          {/* Priority breakdown + routine line */}
+          {priorityBreakdown && <PriorityBreakdown counts={counts} />}
+          {routineLine && <p className="text-xs text-muted-foreground">{routineLine}</p>}
+
           {/* Visit summary */}
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Visit Summary</p>
-            <p className="text-sm text-foreground/90">{summaryText}</p>
+            <p className="text-sm text-foreground/90 leading-relaxed">{summaryText}</p>
           </div>
 
-          {/* Items requiring attention */}
+          {/* Visit Observations (findings) */}
           {findings.length > 0 && (
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Items Requiring Attention ({findings.length})</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Visit Observations ({findings.length})</p>
               <div className="space-y-3">
                 {findings.map((f, i) => {
                   const s = SEV[f.severityKey] || SEV.monitor;
@@ -106,7 +120,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
                     <div key={i} className="rounded-xl border border-border p-3">
                       <div className="flex items-start gap-2 mb-1.5">
                         <span className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${s.tone}`}>{f.priorityLabel}</span>
-                        <p className="text-sm font-semibold">{f.title}</p>
+                        <p className="text-sm font-semibold leading-snug">{f.title}</p>
                       </div>
                       {f.area && <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {f.area}</p>}
                       {f.observed && (
@@ -128,7 +142,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
                         </div>
                       )}
                       {f.photos?.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2 mt-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                           {f.photos.map((url, pi) => (
                             <a key={pi} href={url} target="_blank" rel="noreferrer" className="aspect-square rounded-lg overflow-hidden">
                               <UIImage src={url} className="w-full h-full" fittingType="fill" />
@@ -160,9 +174,11 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             </div>
           )}
 
+          {/* Routine Visit Photos */}
           {docPhotos.length > 0 && (
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Photo Record</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Routine Visit Photos</p>
+              <p className="text-[11px] text-muted-foreground mb-2">Documentation photos showing general property conditions during this visit.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {docPhotos.map((dp, i) => (
                   <div key={i}>
@@ -191,12 +207,11 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             )}
           </div>
 
-          {/* Maintenance coordination / follow-ups (factual) */}
           {(issues.length > 0 || tasks.length > 0) && (
             <div className="space-y-2">
               {issues.length > 0 && (
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1"><Wrench className="w-3.5 h-3.5" /> Maintenance Coordination ({issues.length})</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Maintenance Coordination ({issues.length})</p>
                   <div className="text-sm space-y-0.5">
                     {issues.map((iss, i) => <p key={i}>• {iss.title}{iss.priority ? ` [${iss.priority}]` : ""}{iss.status ? ` — ${iss.status}` : ""}</p>)}
                   </div>
@@ -204,7 +219,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
               )}
               {tasks.length > 0 && (
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1"><ListChecks className="w-3.5 h-3.5" /> Follow-up Tasks ({tasks.length})</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Follow-up Tasks ({tasks.length})</p>
                   <div className="text-sm space-y-0.5">
                     {tasks.map((t, i) => <p key={i}>• {t.title}</p>)}
                   </div>
@@ -213,22 +228,38 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             </div>
           )}
 
-          {/* Detailed visit record */}
-          {detailedRecord.length > 0 && (
+          {/* Visit Checklist (compact appendix) */}
+          {visitChecklist && (visitChecklist.routineChecks.length > 0 || visitChecklist.observations.length > 0) && (
             <div className="rounded-xl border border-border p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Detailed Visit Record</p>
-              <div className="space-y-1">
-                {detailedRecord.map((d, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs">
-                    <span className="text-muted-foreground w-28 shrink-0">{d.label}</span>
-                    <span className="text-foreground/80">{d.name}</span>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Visit Checklist</p>
+              {visitChecklist.routineChecks.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[11px] font-medium text-muted-foreground mb-1">Routine Checks</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5">
+                    {visitChecklist.routineChecks.map((name, i) => (
+                      <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {name}
+                      </p>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+              {visitChecklist.observations.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-medium text-muted-foreground mb-1">Observations</p>
+                  <div className="space-y-0.5">
+                    {visitChecklist.observations.map((o, i) => (
+                      <p key={i} className="text-xs text-foreground/80">
+                        <span className="font-medium">{o.priorityLabel}</span> — {o.title}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          <p className="text-[11px] text-muted-foreground italic">
+          <p className="text-[11px] text-muted-foreground italic leading-relaxed">
             This Property Care Visit Report documents visual observations made during a routine property-care visit. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.
           </p>
 
@@ -238,9 +269,10 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
           </div>
         </div>
 
-        <div className="px-4 py-3 border-t border-border flex flex-col sm:flex-row gap-2 justify-end">
-          <Button variant="outline" onClick={onBackToEdit} className="rounded-xl">Back to Edit</Button>
-          <Button onClick={onSend} disabled={!canSend || sending} className="rounded-xl gap-1.5">
+        {/* Compact action footer (single row, safe-area aware) */}
+        <div className="px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-border flex flex-row gap-2">
+          <Button variant="outline" onClick={onBackToEdit} className="rounded-xl flex-1 sm:flex-none h-9">Back to Edit</Button>
+          <Button onClick={onSend} disabled={!canSend || sending} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
             {sending ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {sending ? "Sending…" : "Send to Owner"}
           </Button>

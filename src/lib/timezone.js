@@ -75,3 +75,22 @@ export function athensLocalToIso(dateStr, timeStr) {
   const offsetMin = athensOffsetMin(utcGuess);
   return new Date(utcGuess - offsetMin * 60000).toISOString();
 }
+
+// Athens-local "medium" date+time, e.g. "Aug 30, 2026, 10:00 AM". For owner-facing
+// report timestamps so they reflect property/local time regardless of the viewer's
+// browser timezone. Stored timestamps remain UTC ISO.
+export function athensMediumDateTime(iso) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: TZ, dateStyle: "medium", timeStyle: "short",
+    }).format(new Date(iso));
+  } catch (e) { return String(iso); }
+}
+
+export function athensMediumDate(iso) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZone: TZ, dateStyle: "medium" }).format(new Date(iso));
+  } catch (e) { return String(iso); }
+}
