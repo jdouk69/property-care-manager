@@ -1039,6 +1039,21 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           variant="done"
           onDone={onDone}
         />
+        <div className="flex flex-wrap gap-2 justify-center mt-5">
+          <Button asChild variant="outline" className="rounded-xl gap-1.5 h-10">
+            <Link to={`/visits/${completed.id}`}><MapPin className="w-4 h-4" /> View Completed Visit</Link>
+          </Button>
+          {propertyId && (
+            <Button asChild variant="outline" className="rounded-xl gap-1.5 h-10">
+              <Link to={`/properties/${propertyId}`}>Back to Property</Link>
+            </Button>
+          )}
+          {reportClient?.id && (
+            <Button asChild variant="outline" className="rounded-xl gap-1.5 h-10">
+              <Link to={`/clients/${reportClient.id}`}>Back to Client</Link>
+            </Button>
+          )}
+        </div>
       </div>
     );
   }

@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import {
   Plus, CalendarClock, AlertTriangle, ClipboardCheck, Wrench, Home, ListChecks,
   Truck, HardHat, ArrowRight, CheckCircle2, KeyRound, Wallet, Receipt, Package,
-  MessageSquare, MapPin, StickyNote, TrendingUp, Plane, Zap,
+  MessageSquare, MapPin, StickyNote, TrendingUp, Plane, Zap, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,7 +43,8 @@ const ACTION_GROUPS = [
     items: [
       { label: "Add Task", to: "/tasks", icon: Plus, color: "bg-violet-500" },
       { label: "Prep Arrival", to: "/properties", icon: Plane, color: "bg-fuchsia-500" },
-      { label: "One-Time Service", to: "/one-time", icon: Zap, color: "bg-cyan-500" },
+      { label: "One-Time", to: "/one-time", icon: Zap, color: "bg-cyan-500" },
+      { label: "Visits", to: "/visits", icon: History, color: "bg-blue-500" },
     ],
   },
   {

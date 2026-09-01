@@ -69,6 +69,9 @@ function DoneView({ visit, property, client, business, onDone }) {
           Open property
         </Link>
       )}
+      <Link to="/visits" className="block text-center text-sm text-muted-foreground hover:underline">
+        View in Visits
+      </Link>
     </div>
   );
 }
