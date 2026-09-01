@@ -57,7 +57,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
             ))}
             <label className="aspect-square rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary/40 hover:bg-muted/50 transition">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : <Camera className="w-4 h-4 text-muted-foreground" />}
-              <input type="file" accept="image/*" multiple capture="environment" className="hidden"
+              <input type="file" accept="image/*" multiple className="hidden"
                 onChange={(e) => onUploadPhoto(index, Array.from(e.target.files || []))} />
             </label>
           </div>
