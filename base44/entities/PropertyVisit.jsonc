@@ -19,7 +19,8 @@
         "Property Care Inspection",
         "Emergency Visit",
         "Owner Representative Site Visit",
-        "Initial Property Onboarding Inspection"
+        "Initial Property Onboarding Inspection",
+        "Property Assistance"
       ],
       "default": "Monthly Property Watch"
     },
@@ -154,6 +155,22 @@
     },
     "property_service_agreement_id": {
       "type": "string"
+    },
+    "agreed_price": {
+      "type": "number"
+    },
+    "travel_charge": {
+      "type": "number",
+      "default": 0
+    },
+    "request_description": {
+      "type": "string"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "archived": {
       "type": "boolean",
