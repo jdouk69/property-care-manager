@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { athensMediumDateTime } from "@/lib/timezone";
-import { assistanceTotalBeforeVat } from "@/lib/propertyAssistance";
+import { assistanceChargeBreakdown } from "@/lib/propertyAssistance";
 import AssistanceCreateForm from "@/components/property-assistance/AssistanceCreateForm";
 import AssistancePerformer from "@/components/property-assistance/AssistancePerformer";
 
@@ -21,9 +21,16 @@ function Row({ label, value, bold }) {
 }
 
 function DoneView({ visit, property, client, business, onDone }) {
-  const total = assistanceTotalBeforeVat(visit.agreed_price, visit.travel_charge);
-  const vatRate = business?.vat_rate || 0;
-  const vat = vatRate ? (total * vatRate) / 100 : 0;
+  const base = Number(visit.agreed_price) || 0;
+  const minutes = Number(visit.additional_minutes) || 0;
+  const additionalLabor = Number(visit.additional_labor_charge) || 0;
+  const travel = Number(visit.travel_charge) || 0;
+  const materials = Number(visit.materials_charge) || 0;
+  const hasFrozen = visit.final_total != null;
+  const breakdown = assistanceChargeBreakdown({ base, additionalLabor, travel, materials, vatRate: hasFrozen ? visit.vat_rate_snapshot : business?.vat_rate });
+  const total = hasFrozen ? Number(visit.final_total) : breakdown.total;
+  const vat = hasFrozen ? Number(visit.vat_amount) : breakdown.vat;
+  const vatRate = hasFrozen ? Number(visit.vat_rate_snapshot) : business?.vat_rate || 0;
   const photos = visit.photos || [];
   return (
     <div className="space-y-4">
@@ -36,11 +43,15 @@ function DoneView({ visit, property, client, business, onDone }) {
         <Row label="Completed" value={athensMediumDateTime(visit.end_time)} />
         <Row label="Property" value={property?.name || "—"} />
         <Row label="Owner" value={client?.name || "—"} />
-        <Row label="Service charge" value={`€${(visit.agreed_price || 0).toFixed(2)}`} />
-        <Row label="Travel charge" value={`€${(visit.travel_charge || 0).toFixed(2)}`} />
-        <Row label="Total before VAT" value={`€${total.toFixed(2)}`} />
+        <Row label="Base service" value={`€${base.toFixed(2)}`} />
+        {minutes > 0 || additionalLabor > 0 ? (
+          <Row label={`Additional labor (${minutes} min)`} value={`€${additionalLabor.toFixed(2)}`} />
+        ) : null}
+        <Row label="Travel charge" value={`€${travel.toFixed(2)}`} />
+        {materials > 0 ? <Row label="Materials" value={`€${materials.toFixed(2)}`} /> : null}
+        <Row label="Subtotal" value={`€${breakdown.subtotal.toFixed(2)}`} />
         {vatRate ? <Row label={`VAT (${vatRate}%)`} value={`€${vat.toFixed(2)}`} /> : null}
-        {vatRate ? <Row label="Total" value={`€${(total + vat).toFixed(2)}`} bold /> : null}
+        {vatRate ? <Row label="Total" value={`€${total.toFixed(2)}`} bold /> : null}
         <Row label="Photos" value={String(photos.length)} />
       </div>
       {photos.length > 0 && (
