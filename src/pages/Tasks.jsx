@@ -1,10 +1,11 @@
-import React from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import React, { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ListChecks, Repeat } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
 import RecurrencePanel from "@/components/recurrence/RecurrencePanel";
+import QuickTaskSheet from "@/components/tasks/QuickTaskSheet";
 import { createRuleFromOccurrence, generateNextOccurrence } from "@/lib/recurrence";
 
 const fields = [
@@ -32,6 +33,11 @@ const columns = [
 export default function Tasks() {
   const [searchParams] = useSearchParams();
   const openId = searchParams.get("open") || undefined;
+  const preProperty = searchParams.get("property") || "";
+
+  // Quick-task entry (Add). Editing existing tasks stays in the resource engine.
+  const [addOpen, setAddOpen] = useState(false);
+  const [reloadSignal, setReloadSignal] = useState(0);
 
   const handleCreated = async (values, created) => {
     if (values.is_recurring) {
@@ -65,6 +71,8 @@ export default function Tasks() {
         addItemLabel="Add Task"
         defaultValues={{ status: "Pending", priority: "Medium", type: "Custom", is_recurring: false, frequency: "Weekly", interval: 1, days_of_week: [] }}
         autoOpenEditId={openId}
+        onAdd={() => setAddOpen(true)}
+        reloadSignal={reloadSignal}
         onCreated={handleCreated}
         onUpdated={handleUpdated}
         extraDrawerContent={(record, helpers) =>
@@ -77,6 +85,12 @@ export default function Tasks() {
             </span>
           ) : null
         }
+      />
+      <QuickTaskSheet
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        preProperty={preProperty}
+        onCreated={() => setReloadSignal((n) => n + 1)}
       />
     </AppLayout>
   );

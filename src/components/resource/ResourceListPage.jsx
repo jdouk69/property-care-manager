@@ -69,6 +69,7 @@ export default function ResourceListPage({
   onCreated, onUpdated, extraDrawerContent, archivable = false,
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
   showBack = true, sections = [],
+  onAdd, reloadSignal,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +115,9 @@ export default function ResourceListPage({
   };
 
   useEffect(() => { load(); }, [entityName]);
+
+  // Optional external reload trigger (used by custom Add forms living outside the engine).
+  useEffect(() => { if (reloadSignal) load(); }, [reloadSignal]);
 
   useEffect(() => {
     const rels = fields.filter((f) => f.type === "entity-select").map((f) => f.entity);
@@ -567,7 +571,7 @@ export default function ResourceListPage({
             <Button onClick={() => exportCsv(filtered, columns, `${title.toLowerCase()}.csv`)} variant="outline" size="sm" className="rounded-full gap-1.5 h-9 px-3" title="Export CSV">
               <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
             </Button>
-            <Button onClick={openNew} size="sm" className="rounded-full gap-1.5 h-9 px-4">
+            <Button onClick={onAdd || openNew} size="sm" className="rounded-full gap-1.5 h-9 px-4">
               <Plus className="w-4 h-4" /> {addItemLabel}
             </Button>
           </div>
@@ -584,7 +588,7 @@ export default function ResourceListPage({
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Icon} title={`No ${title.toLowerCase()} yet`} description={subtitle} action={<Button onClick={openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {addItemLabel}</Button>} />
+        <EmptyState icon={Icon} title={`No ${title.toLowerCase()} yet`} description={subtitle} action={<Button onClick={onAdd || openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {addItemLabel}</Button>} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map((item) => (
