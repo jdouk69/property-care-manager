@@ -6,6 +6,7 @@ import ResourceListPage from "@/components/resource/ResourceListPage";
 import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
 import RecurrencePanel from "@/components/recurrence/RecurrencePanel";
 import QuickTaskSheet from "@/components/tasks/QuickTaskSheet";
+import TaskCard from "@/components/tasks/TaskCard";
 import { createRuleFromOccurrence, generateNextOccurrence } from "@/lib/recurrence";
 
 const fields = [
@@ -68,6 +69,7 @@ export default function Tasks() {
         fields={fields}
         columns={columns}
         searchKeys={["title", "assigned_to", "notes"]}
+        renderCard={(item, lookups, helpers) => <TaskCard item={item} lookups={lookups} helpers={helpers} />}
         addItemLabel="Add Task"
         defaultValues={{ status: "Pending", priority: "Medium", type: "Custom", is_recurring: false, frequency: "Weekly", interval: 1, days_of_week: [] }}
         autoOpenEditId={openId}

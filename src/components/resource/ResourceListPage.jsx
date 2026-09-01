@@ -70,6 +70,7 @@ export default function ResourceListPage({
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
   showBack = true, sections = [],
   onAdd, reloadSignal,
+  renderCard,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -405,6 +406,10 @@ export default function ResourceListPage({
 
   const runUpdate = (record, vals) => persistRecord(record, vals, { updateUI: true });
 
+  // Exposed to a custom renderCard so a card can change status (e.g. quick complete)
+  // through the same persistence path that fires onUpdated (recurrence generation, etc.).
+  const updateStatus = (record, status) => persistRecord(record, { status }, { updateUI: true });
+
   // Route-leave / unmount autosave guard. The flush is deferred by one tick and gated
   // on leaveGuardActiveRef so React 18 StrictMode's synthetic cleanup→remount cycle
   // cancels it (setup clears the flag + timer), while a real unmount lets it fire.
@@ -592,34 +597,42 @@ export default function ResourceListPage({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map((item) => (
-            <button
-              key={item.id}
-              onClick={onOpenItem ? () => onOpenItem(item) : () => openEdit(item)}
-              className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.99] group"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="font-medium text-foreground truncate flex-1">
-                  {columns.find((c) => c.primary) ? renderCellValue(columns.find((c) => c.primary), item) : item.name || "Untitled"}
-                </div>
-                <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition shrink-0" />
-              </div>
-              <div className="mt-2 space-y-1">
-                {columns.filter((c) => !c.primary && !c.badge).slice(0, 3).map((c) => (
-                  <div key={c.key} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    {c.icon && <c.icon className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="truncate">{renderCellValue(c, item)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {columns.filter((c) => c.badge).map((c) => {
-                  const v = renderCellValue(c, item);
-                  if (!v || v === "—") return null;
-                  return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{v}</span>;
-                })}
-                {cardExtra && cardExtra(item, lookups)}
-              </div>
-            </button>
+            <React.Fragment key={item.id}>
+              {renderCard
+                ? renderCard(item, lookups, {
+                    open: onOpenItem ? () => onOpenItem(item) : () => openEdit(item),
+                    updateStatus,
+                  })
+                : (
+                  <button
+                    onClick={onOpenItem ? () => onOpenItem(item) : () => openEdit(item)}
+                    className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.99] group"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-medium text-foreground truncate flex-1">
+                        {columns.find((c) => c.primary) ? renderCellValue(columns.find((c) => c.primary), item) : item.name || "Untitled"}
+                      </div>
+                      <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition shrink-0" />
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {columns.filter((c) => !c.primary && !c.badge).slice(0, 3).map((c) => (
+                        <div key={c.key} className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          {c.icon && <c.icon className="w-3.5 h-3.5 shrink-0" />}
+                          <span className="truncate">{renderCellValue(c, item)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {columns.filter((c) => c.badge).map((c) => {
+                        const v = renderCellValue(c, item);
+                        if (!v || v === "—") return null;
+                        return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{v}</span>;
+                      })}
+                      {cardExtra && cardExtra(item, lookups)}
+                    </div>
+                  </button>
+                )}
+            </React.Fragment>
           ))}
         </div>
       )}
