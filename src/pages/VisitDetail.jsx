@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, Navigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
   ChevronLeft, Clock, MapPin, Gauge, Wrench, ListChecks,
@@ -119,6 +119,7 @@ export default function VisitDetail() {
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!visit) return <AppLayout><div className="p-6"><p className="text-muted-foreground">Visit not found.</p><Link to="/visits"><Button variant="outline" className="mt-3">Back to Visits</Button></Link></div></AppLayout>;
+  if (visit.visit_type === "Property Assistance") return <Navigate to={`/property-assistance/${visit.id}`} replace />;
 
   const checklist = visit.checklist || [];
   const grouped = GROUPS.map((g) => ({ ...g, items: checklist.filter((i) => (i.status || "Not Checked") === g.key) }));

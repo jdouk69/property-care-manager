@@ -79,6 +79,34 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   const conflict = svc.status === "conflict";
   const singleActive = svc.status === "ok" ? svc.agreement : null;
 
+  // Correction #15 — One-time Property Assistance WITHOUT an agreement. A
+  // property that has no active agreement but does have a Property Assistance
+  // visit is a one-time customer, not an incomplete recurring customer. Short-
+  // circuit the recurring stages so the Client Hub does not tell staff to
+  // complete intake/agreement/onboarding/monitoring for a simple one-time job.
+  // The existing one-time-via-agreement branch below is unchanged.
+  const propIdForAssistance = selectedProperty?.id;
+  const hasAssistanceVisit = propIdForAssistance
+    ? (visits || []).some(
+        (v) =>
+          v.property_id === propIdForAssistance &&
+          v.visit_type === "Property Assistance" &&
+          v.status !== "Cancelled" &&
+          !v.archived
+      )
+    : false;
+  if (svc.status === "no_agreement" && hasAssistanceVisit && !signedAg) {
+    const intakeReadyOT = intakeRecords.length === 0 ? true : latest?.status === "Applied";
+    const s3ot = { key: "agreement", name: "Service Agreement", complete: true, status: "Not applicable (one-time)", detail: "One-time Property Assistance — no recurring agreement", action: null };
+    const s4ot = { key: "activation", name: "Service Activation", complete: true, status: "Not applicable (one-time)", detail: "One-time service", action: null };
+    const s5ot = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: true, status: "Not applicable (one-time service)", detail: "One-time service — no recurring onboarding", action: null };
+    const s6ot = { key: "monitoring", name: "Monitoring Plan", complete: true, status: "Not applicable (one-time service)", detail: "One-time service — no monitoring plan", action: null };
+    const s7ot = { key: "ready", name: "Service Active", complete: true, status: "Ready", detail: "One-time service", action: null };
+    const stagesOT = [s1, s2, s3ot, s4ot, s5ot, s6ot, s7ot];
+    const primaryActionOT = [s1, s2].find((s) => !s.complete && s.action) || null;
+    return { stages: stagesOT, primaryAction: primaryActionOT, ready: !!(selectedProperty && intakeReadyOT), serviceConflict: false, isOneTime: true };
+  }
+
   // Stage 3 — Service Agreement (complete when signed)
   let s3;
   if (!latestAg) {

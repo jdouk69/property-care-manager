@@ -196,7 +196,10 @@ export default function PropertyDetail() {
           <TabsContent value="visits">
             <RecordSection title="Visits" icon={MapPin} empty="No visits recorded" moduleLink="/visits"
               items={visits} render={(v) => ({ primary: visitTypeLabel(v.visit_type), sub: athensMediumDateTime(v.start_time), badge: v.status, to: `/visits/${v.id}` })}
-              addNode={<LinkLink label="Start a new visit" to="/visits?start=1" />} />
+              addNode={<>
+                <LinkLink label="Property Assistance" to={`/property-assistance?client=${prop.owner_id || ""}&property=${id}`} />
+                <LinkLink label="Start a new visit" to="/visits?start=1" />
+              </>} />
           </TabsContent>
 
           <TabsContent value="inspections">

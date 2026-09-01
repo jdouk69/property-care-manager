@@ -36,7 +36,9 @@ export default function ClientVisitReports({ visits, propName, to = "/visits" })
       ) : (
         <div className="divide-y divide-border">
           {completed.map((v) => {
-            const status = v.report_status || (v.report_sent ? "Sent" : "Draft");
+            const isAssistance = v.visit_type === "Property Assistance";
+            const linkTo = isAssistance ? `/property-assistance/${v.id}` : `/visits/${v.id}`;
+            const status = isAssistance ? "Completed" : (v.report_status || (v.report_sent ? "Sent" : "Draft"));
             const sent = status === "Sent";
             return (
               <div key={v.id} className="px-4 py-3">
@@ -45,18 +47,21 @@ export default function ClientVisitReports({ visits, propName, to = "/visits" })
                     <p className="text-sm font-medium truncate">{propName(v.property_id)} — {visitTypeLabel(v.visit_type)}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {fmt(v.start_time)}
-                      {v.report_sent_at ? ` · Sent ${athensMediumDate(v.report_sent_at)}` : ""}
+                      {isAssistance && v.agreed_price != null ? ` · €${Number(v.agreed_price || 0).toFixed(0)}` : ""}
+                      {!isAssistance && v.report_sent_at ? ` · Sent ${athensMediumDate(v.report_sent_at)}` : ""}
                     </p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{status}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${isAssistance ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : STATUS_TONE[status] || STATUS_TONE.Draft}`}>{status}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Button asChild size="sm" variant="outline" className="rounded-xl gap-1.5 h-8 px-3">
-                    <Link to={`/visits/${v.id}`}><FileText className="w-3.5 h-3.5" /> View Report</Link>
+                    <Link to={linkTo}><FileText className="w-3.5 h-3.5" /> {isAssistance ? "View Job" : "View Report"}</Link>
                   </Button>
-                  <Button asChild size="sm" className="rounded-xl gap-1.5 h-8 px-3">
-                    <Link to={`/visits/${v.id}`}>{sent ? <><RotateCw className="w-3.5 h-3.5" /> Resend Report</> : <><Send className="w-3.5 h-3.5" /> Send Report</>}</Link>
-                  </Button>
+                  {!isAssistance && (
+                    <Button asChild size="sm" className="rounded-xl gap-1.5 h-8 px-3">
+                      <Link to={linkTo}>{sent ? <><RotateCw className="w-3.5 h-3.5" /> Resend Report</> : <><Send className="w-3.5 h-3.5" /> Send Report</>}</Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             );

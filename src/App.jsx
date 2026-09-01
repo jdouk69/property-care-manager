@@ -42,6 +42,8 @@ import IntakeForm from '@/pages/IntakeForm';
 import AgreementPublic from '@/pages/AgreementPublic';
 import IntakeReview from '@/pages/IntakeReview';
 import MonitoringPlanReview from '@/pages/MonitoringPlanReview';
+import PropertyAssistance from '@/pages/PropertyAssistance';
+import OneTimeServices from '@/pages/OneTimeServices';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -106,6 +108,9 @@ const AuthenticatedApp = () => {
         <Route path="/checklist-templates" element={<ChecklistTemplates />} />
         <Route path="/agreements/new" element={<ServiceAgreement />} />
         <Route path="/agreements/:id" element={<ServiceAgreement />} />
+        <Route path="/property-assistance" element={<PropertyAssistance />} />
+        <Route path="/property-assistance/:id" element={<PropertyAssistance />} />
+        <Route path="/one-time" element={<OneTimeServices />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

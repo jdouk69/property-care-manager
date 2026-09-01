@@ -69,6 +69,14 @@ export function buildTodayAgenda(data = {}) {
     const isToday = day === t;
     const completedVisit = v.status === "Completed";
     const cancelled = v.status === "Cancelled";
+    // Correction #15 — Property Assistance jobs open in their own lightweight
+    // flow (not the checklist wizard). "continue-visit" simply navigates to
+    // item.to, so it never triggers the wizard's startScheduledVisit.
+    const isAssistance = v.visit_type === "Property Assistance";
+    const visitTo = isAssistance ? `/property-assistance/${v.id}` : `/visits/${v.id}`;
+    const assistanceStart = { actionKind: "continue-visit", actionLabel: "Start" };
+    const normalStart = { actionKind: "start-visit", actionLabel: "Start Visit" };
+    const startAction = isAssistance ? assistanceStart : normalStart;
     if (!isToday && !completedVisit) {
       // also detect overdue scheduled visits (past, still scheduled)
       if (v.status === "Scheduled" && st && new Date(st).getTime() < Date.now() - 3600000) {
@@ -76,7 +84,7 @@ export function buildTodayAgenda(data = {}) {
           id: v.id, kind: "visit", time: st, timeLabel: athensTime(st),
           propertyId: v.property_id, propertyName: propName(v.property_id), clientName: clientFor(v.property_id),
           typeLabel: visitTypeLabel(v.visit_type), status: v.status, date: day,
-          to: `/visits/${v.id}`, actionLabel: "Start Visit", actionKind: "start-visit",
+          to: visitTo, ...startAction,
           completed: false, overdue: true,
         });
       }
@@ -87,14 +95,14 @@ export function buildTodayAgenda(data = {}) {
       id: v.id, kind: "visit", time: st, timeLabel: athensTime(st),
       propertyId: v.property_id, propertyName: propName(v.property_id), clientName: clientFor(v.property_id),
       typeLabel: visitTypeLabel(v.visit_type), status: v.status, date: day,
-      to: `/visits/${v.id}`,
+      to: visitTo,
     };
     if (completedVisit && isToday) {
-      push({ ...base, actionLabel: "View Report", actionKind: "view-report", completed: true, overdue: false }, "completed");
+      push({ ...base, actionLabel: isAssistance ? "View" : "View Report", actionKind: "view-report", completed: true, overdue: false }, "completed");
     } else if (v.status === "In Progress") {
-      push({ ...base, actionLabel: "Continue Visit", actionKind: "continue-visit", to: `/visits?resume=${v.id}`, completed: false, overdue: false }, "today");
+      push({ ...base, actionLabel: isAssistance ? "Continue" : "Continue Visit", actionKind: "continue-visit", to: isAssistance ? visitTo : `/visits?resume=${v.id}`, completed: false, overdue: false }, "today");
     } else {
-      push({ ...base, actionLabel: "Start Visit", actionKind: "start-visit", completed: false, overdue: false }, "today");
+      push({ ...base, ...startAction, completed: false, overdue: false }, "today");
     }
   });
 

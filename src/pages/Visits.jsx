@@ -121,7 +121,7 @@ export default function Visits() {
             {visits.map((v) => {
               const flagged = (v.checklist || []).filter((i) => i.status === "Important" || i.status === "Emergency").length;
               return (
-                <Link key={v.id} to={`/visits/${v.id}`}
+                <Link key={v.id} to={v.visit_type === "Property Assistance" ? `/property-assistance/${v.id}` : `/visits/${v.id}`}
                   className="block rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
