@@ -41,8 +41,8 @@ const ACTION_GROUPS = [
   {
     label: "Plan",
     items: [
-      { label: "Add Task", to: "/tasks", icon: Plus, color: "bg-violet-500" },
-      { label: "Prep Arrival", to: "/properties", icon: Plane, color: "bg-fuchsia-500" },
+      { label: "Add Task", to: "/tasks?add=1", icon: Plus, color: "bg-violet-500" },
+      { label: "Prep Arrival", to: "/visits?schedule=1&visit_type=Owner%20Arrival%20Preparation", icon: Plane, color: "bg-fuchsia-500" },
       { label: "One-Time", to: "/one-time", icon: Zap, color: "bg-cyan-500" },
       { label: "Visits", to: "/visits", icon: History, color: "bg-blue-500" },
     ],
@@ -57,16 +57,16 @@ const ACTION_GROUPS = [
   {
     label: "Follow-Up",
     items: [
-      { label: "Log Issue", to: "/maintenance", icon: Wrench, color: "bg-amber-500" },
+      { label: "Log Issue", to: "/maintenance?add=1", icon: Wrench, color: "bg-amber-500" },
       { label: "Contractor Visit", to: "/deliveries", icon: Truck, color: "bg-orange-500" },
-      { label: "Add Expense", to: "/expenses", icon: Wallet, color: "bg-emerald-500" },
-      { label: "Add Receipt", to: "/expenses", icon: Receipt, color: "bg-teal-500" },
+      { label: "Add Expense", to: "/expenses?add=1", icon: Wallet, color: "bg-emerald-500" },
+      { label: "Add Receipt", to: "/expenses?add=1", icon: Receipt, color: "bg-teal-500" },
     ],
   },
   {
     label: "Communication",
     items: [
-      { label: "Owner Update", to: "/communications", icon: MessageSquare, color: "bg-blue-500" },
+      { label: "Owner Update", to: "/communications?add=1", icon: MessageSquare, color: "bg-blue-500" },
     ],
   },
 ];

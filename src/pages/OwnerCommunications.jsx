@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { MessageSquare, Copy, Check, ChevronDown } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -105,6 +106,9 @@ function TemplatesBar({ onUse }) {
 }
 
 export default function OwnerCommunications() {
+  // Phase 1: /communications?add=1 (Home "Owner Update") opens the log form immediately.
+  const [params] = useSearchParams();
+  const autoOpen = params.get("add") === "1";
   return (
     <AppLayout>
       <ResourceListPage
@@ -115,6 +119,7 @@ export default function OwnerCommunications() {
         fields={fields}
         columns={columns}
         searchKeys={["subject", "message", "owner_response"]}
+        autoOpen={autoOpen}
         addItemLabel="Log Communication"
         defaultValues={{ communication_type: "WhatsApp", follow_up_required: false, date: new Date().toISOString().slice(0, 10) }}
         renderSummary={() => <TemplatesBar />}

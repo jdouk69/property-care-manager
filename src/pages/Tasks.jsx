@@ -37,7 +37,9 @@ export default function Tasks() {
   const preProperty = searchParams.get("property") || "";
 
   // Quick-task entry (Add). Editing existing tasks stays in the resource engine.
-  const [addOpen, setAddOpen] = useState(false);
+  // Phase 1: /tasks?add=1 (Home "Add Task") opens the quick-task sheet immediately.
+  const autoAdd = searchParams.get("add") === "1";
+  const [addOpen, setAddOpen] = useState(autoAdd);
   const [reloadSignal, setReloadSignal] = useState(0);
 
   const handleCreated = async (values, created) => {

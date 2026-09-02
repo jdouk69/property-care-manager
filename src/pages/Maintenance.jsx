@@ -42,6 +42,8 @@ const columns = [
 export default function Maintenance() {
   const [searchParams] = useSearchParams();
   const openId = searchParams.get("open") || undefined;
+  // Phase 1: /maintenance?add=1 (Home "Log Issue") opens the form immediately.
+  const autoOpen = searchParams.get("add") === "1";
   return (
     <AppLayout>
       <ResourceListPage
@@ -53,6 +55,7 @@ export default function Maintenance() {
         columns={columns}
         searchKeys={["title", "description", "completion_notes"]}
         addItemLabel="Log Issue"
+        autoOpen={autoOpen}
         autoOpenEditId={openId}
         archivable
         defaultValues={{ status: "Reported", priority: "Medium", category: "Other", reported_by: "Jim", owner_approval_status: "Pending", payment_status: "Unpaid" }}

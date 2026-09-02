@@ -1,5 +1,6 @@
 import React from "react";
 import { Wallet, Loader2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import { base44 } from "@/api/base44Client";
@@ -65,6 +66,9 @@ function TotalsSummary({ items }) {
 }
 
 export default function Expenses() {
+  // Phase 1: /expenses?add=1 (Home "Add Expense" / "Add Receipt") opens the form immediately.
+  const [params] = useSearchParams();
+  const autoOpen = params.get("add") === "1";
   return (
     <AppLayout>
       <ResourceListPage
@@ -75,6 +79,7 @@ export default function Expenses() {
         fields={fields}
         columns={columns}
         searchKeys={["vendor", "paid_by", "notes"]}
+        autoOpen={autoOpen}
         addItemLabel="Add Expense"
         renderSummary={(items) => <TotalsSummary items={items} />}
         defaultValues={{ awaiting_reimbursement: false, reimbursed: false, amount: 0 }}

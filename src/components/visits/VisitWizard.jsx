@@ -51,7 +51,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [agreementPackages, setAgreementPackages] = useState({});
   const [properties, setProperties] = useState([]);
   const [propertyId, setPropertyId] = useState(null);
-  const [visitType, setVisitType] = useState(VISIT_TYPES[0]);
+  // Phase 1: preselect a visit type passed via /visits?visit_type=... (Prep Arrival, One-Time services).
+  const [visitType, setVisitType] = useState(VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : VISIT_TYPES[0]);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const [gps, setGps] = useState("");
@@ -256,7 +257,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   const loadAgreementContext = async (ag, cid) => {
     setAgreement(ag); setAgreementId(ag.id);
-    if (ag.service_package_id) { try { const p = await base44.entities.ServicePackage.get(ag.service_package_id); setPkg(p); setVisitType(p?.default_visit_type || ""); } catch (e) {} }
+    if (ag.service_package_id) { try { const p = await base44.entities.ServicePackage.get(ag.service_package_id); setPkg(p); setVisitType(ctxVisitType || p?.default_visit_type || ""); } catch (e) {} }
     if (cid) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
   };
 
@@ -284,7 +285,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         if (cid && !clientObj) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
         setStep("select-agreement");
       } else {
-        setAgreement(null); setPkg(null); setAgreementId(""); setVisitType("");
+        setAgreement(null); setPkg(null); setAgreementId(""); setVisitType(VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : "");
         if (cid && !clientObj) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
         goNextAfterProperty();
       }
