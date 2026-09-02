@@ -31,8 +31,12 @@ const imgCache = new Map();
 let imgAliasSeq = 0;
 
 // maxW in px at the photo's final displayed size (~150-180 DPI target).
-async function getImageForPdf(url, maxW, quality) {
-  const key = `${url}|${maxW}|${quality}`;
+// Optional `bg`: flatten transparent pixels onto this solid color. JPEG (the
+// embedded format) has no alpha channel, and canvas.toDataURL renders
+// transparency as BLACK in JPEG — so transparent PNG logos must be flattened
+// onto white to blend into the white report page.
+async function getImageForPdf(url, maxW, quality, bg = null) {
+  const key = `${url}|${maxW}|${quality}|${bg || ""}`;
   const cached = imgCache.get(key);
   if (cached) return cached;
   const res = await fetch(url, { mode: "cors" });
@@ -48,6 +52,7 @@ async function getImageForPdf(url, maxW, quality) {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
+  if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); }
   ctx.drawImage(img, 0, 0, w, h);
   const out = canvas.toDataURL("image/jpeg", quality);
   const entry = { dataUrl: out, w, h, alias: `rptimg${imgAliasSeq++}` };
@@ -312,7 +317,7 @@ async function buildDoc(visit, ctx = {}) {
   let nameX = margin;
   if (business.logo) {
     try {
-      const entry = await getImageForPdf(business.logo, 320, 0.85);
+      const entry = await getImageForPdf(business.logo, 320, 0.85, "#ffffff");
       const r = entry.w / entry.h;
       let dh = 9, dw = dh * r;
       if (dw > 22) { dw = 22; dh = dw / r; }
