@@ -366,7 +366,7 @@ export default function Dashboard() {
             if (group.label === "Property Visit") {
                return (
                  <div key={group.label}>
-                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
+                   <p className="text-xs font-semibold uppercase tracking-wider text-foreground px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
                    <Link to="/visits?schedule=1" className="block mb-2">
                      <div className="flex items-center gap-3 h-16 rounded-xl bg-primary text-primary-foreground px-3.5 hover:bg-primary/90 shadow-sm transition">
                        <span className="w-11 h-11 rounded-lg bg-primary-foreground/15 flex items-center justify-center shrink-0"><CalendarClock className="w-5 h-5" /></span>
@@ -392,7 +392,7 @@ export default function Dashboard() {
             if (group.label === "Follow-Up") {
               return (
                 <div key={group.label}>
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-foreground px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {group.items.map((a) => (
                       <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
@@ -404,7 +404,7 @@ export default function Dashboard() {
             if (group.label === "Communication") {
               return (
                 <div key={group.label}>
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-foreground px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
                   {group.items.map((a) => (
                     <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                   ))}
@@ -413,7 +413,7 @@ export default function Dashboard() {
             }
             return (
               <div key={group.label}>
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground px-1 mb-1.5">{group.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-foreground px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
                 <div className="grid grid-cols-2 gap-2">
                   {group.items.map((a) => (
                     <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
