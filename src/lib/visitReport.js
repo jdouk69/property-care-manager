@@ -306,8 +306,22 @@ async function buildDoc(visit, ctx = {}) {
   };
 
   // --- Header (compact) ---
+  // Company logo from BusinessSettings (optional). Drawn small, aspect-ratio
+  // preserved, next to the business name; a failed/missing logo falls back to
+  // the existing text-only header.
+  let nameX = margin;
+  if (business.logo) {
+    try {
+      const entry = await getImageForPdf(business.logo, 320, 0.85);
+      const r = entry.w / entry.h;
+      let dh = 9, dw = dh * r;
+      if (dw > 22) { dw = 22; dh = dw / r; }
+      doc.addImage(entry.dataUrl, "JPEG", margin, y - 2 - dh / 2, dw, dh, entry.alias);
+      nameX = margin + dw + 3.5;
+    } catch (e) { /* no logo available — text-only header */ }
+  }
   doc.setFontSize(14); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text(business.business_name || "Property Care", margin, y); y += 5;
+  text(business.business_name || "Property Care", nameX, y); y += 5;
   doc.setFontSize(8); doc.setFont(undefined, "normal"); doc.setTextColor(110);
   const contact = [business.phone, business.email].filter(Boolean).join("   -   ");
   if (contact) { text(contact, margin, y); y += 4; }

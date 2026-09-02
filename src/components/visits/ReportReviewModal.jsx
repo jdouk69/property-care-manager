@@ -84,8 +84,15 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
         <div className="overflow-y-auto px-3 py-3 space-y-3">
           {/* Business + compact property info (one small line) */}
           <div>
-            <p className="text-sm font-semibold leading-tight">{business.business_name || "Property Care"}</p>
-            <p className="text-[11px] text-muted-foreground leading-tight">{[business.phone, business.email].filter(Boolean).join(" · ")}</p>
+            <div className="flex items-center gap-2.5">
+              {business.logo && (
+                <UIImage src={business.logo} className="w-9 h-9 rounded-md shrink-0" fittingType="fit" />
+              )}
+              <div className="min-w-0">
+                <p className="text-sm font-semibold leading-tight">{business.business_name || "Property Care"}</p>
+                <p className="text-[11px] text-muted-foreground leading-tight">{[business.phone, business.email].filter(Boolean).join(" · ")}</p>
+              </div>
+            </div>
             <p className="text-[11px] text-muted-foreground leading-snug mt-1">
               {[property.name, client.name, athensMediumDateTime(visit.start_time), vtl].filter(Boolean).map((s, i) => (
                 <React.Fragment key={i}>{i > 0 && <span className="text-muted-foreground/50"> · </span>}{s}</React.Fragment>
