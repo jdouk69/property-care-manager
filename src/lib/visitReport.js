@@ -81,10 +81,17 @@ const clean = (s) => {
   return out;
 };
 
+// Owner-facing display rewording only. Underlying checklist item names and
+// stored data are untouched; this is a presentation-level clarification.
+const DISPLAY_LABELS = {
+  "Immediate follow-up items identified": "Immediate follow-up needs reviewed",
+};
+
 const cleanLabel = (name) => {
   let s = String(name || "").trim();
   s = s.replace(/^\s*[A-Z]{2,}\s*[\u00B7·]\s*/, "");
-  return s.trim();
+  s = s.trim();
+  return DISPLAY_LABELS[s] || s;
 };
 
 const isOwnerFinding = (it) => !!it && !!it.owner_visible && (it.notes && String(it.notes).trim());
@@ -283,7 +290,7 @@ function drawImageFit(doc, entry, x, y, boxW, boxH) {
 
 async function buildDoc(visit, ctx = {}) {
   const model = buildOwnerReportModel(visit, ctx);
-  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, findings, routineChecks, routineCount, docPhotos, visitChecklist, issues, tasks, nextVisit } = model;
+  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, findings, routineChecks, routineCount, docPhotos, issues, tasks, nextVisit } = model;
 
   const doc = new jsPDF();
   const pageW = doc.internal.pageSize.getWidth();
@@ -368,7 +375,7 @@ async function buildDoc(visit, ctx = {}) {
   y += 1;
 
   // Visit summary
-  ensure(12);
+  ensure(18);
   doc.setFontSize(10.5); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
   text("Visit Summary", margin, y); y += 5.5;
   doc.setFontSize(10); doc.setFont(undefined, "normal"); doc.setTextColor(45);
@@ -377,7 +384,7 @@ async function buildDoc(visit, ctx = {}) {
 
   // Visit Observations (findings) — keep each finding together on one page.
   if (findings.length) {
-    ensure(10);
+    ensure(18);
     doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
     text("Visit Observations", margin, y); y += 8;
 
@@ -452,7 +459,7 @@ async function buildDoc(visit, ctx = {}) {
   }
 
   // Summary & Next Steps
-  ensure(12);
+  ensure(18);
   doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
   text("Summary & Next Steps", margin, y); y += 6;
   doc.setFontSize(10); doc.setFont(undefined, "normal"); doc.setTextColor(40);
@@ -465,13 +472,13 @@ async function buildDoc(visit, ctx = {}) {
   nextSteps.forEach((s) => { wrap(s, maxWidth, margin); });
   y += 4;
 
-  // --- Routine checks ---
+  // --- Routine Checks (each completed check appears exactly once) ---
+  // The banner above already states the overall status and the routine-check
+  // count, so the section is a single clean list with no repeated summary line.
   if (routineCount) {
-    ensure(20);
-    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(16, 185, 129);
-    text("ROUTINE CHECKS - NO CONCERNS NOTED", margin, y); y += 6;
-    doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(70);
-    text(`${routineCount} routine check${routineCount === 1 ? "" : "s"} completed with no concerns noted.`, margin, y); y += 7;
+    ensure(30); // keep the heading with at least the first few checks
+    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+    text("Routine Checks", margin, y); y += 6.5;
     for (const rc of routineChecks) {
       ensure(6);
       drawCheck(doc, margin, y, TONE.ok);
@@ -484,7 +491,7 @@ async function buildDoc(visit, ctx = {}) {
 
   // --- Routine Visit Photos (routine documentation; not findings) ---
   if (docPhotos && docPhotos.length) {
-    ensure(16);
+    ensure(20);
     doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
     text("Routine Visit Photos", margin, y); y += 5;
     doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(110);
@@ -510,43 +517,6 @@ async function buildDoc(visit, ctx = {}) {
     }
     if (col > 0) y += gBoxH + 12;
     y += 3;
-  }
-
-  // --- Visit Checklist (compact appendix) ---
-  if (visitChecklist && (visitChecklist.routineChecks.length || visitChecklist.observations.length)) {
-    ensure(16);
-    doc.setFontSize(10.5); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Visit Checklist", margin, y); y += 6;
-    doc.setFontSize(9);
-    if (visitChecklist.routineChecks.length) {
-      doc.setFont(undefined, "bold"); doc.setTextColor(70); text("Routine Checks", margin + 2, y); y += 5;
-      doc.setFont(undefined, "normal"); doc.setTextColor(50);
-      for (const name of visitChecklist.routineChecks) {
-        ensure(5);
-        drawCheck(doc, margin + 2, y, TONE.ok);
-        text(name, margin + 8, y);
-        y += 5;
-      }
-      y += 2;
-    }
-    if (visitChecklist.observations.length) {
-      doc.setFont(undefined, "bold"); doc.setTextColor(70); ensure(6); text("Observations", margin + 2, y); y += 5;
-      doc.setFont(undefined, "normal"); doc.setTextColor(50);
-      for (const o of visitChecklist.observations) {
-        ensure(7);
-        const ft = TONE[o.severityKey] || TONE.monitor;
-        const lbl = `${o.priorityLabel} -`;
-        doc.setFont(undefined, "bold"); doc.setTextColor(ft[0], ft[1], ft[2]);
-        text(lbl, margin + 2, y);
-        const lblW = doc.getTextWidth(lbl) + 2;
-        doc.setFont(undefined, "normal"); doc.setTextColor(50);
-        const lines = doc.splitTextToSize(clean(o.title), maxWidth - 4 - lblW);
-        text(lines[0] || "", margin + 2 + lblW, y);
-        for (let li = 1; li < lines.length; li++) { y += 5; ensure(5); text(lines[li], margin + 2 + lblW, y); }
-        y += 6;
-      }
-      y += 2;
-    }
   }
 
   // Scope footer

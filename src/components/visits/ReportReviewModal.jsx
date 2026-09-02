@@ -59,7 +59,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
     business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl,
     overallStatus = { key: "ok", label: "No Concerns Noted" }, counts = { urgent: 0, attention: 0, monitor: 0 },
     priorityBreakdown = "", routineLine = "", summaryText = "",
-    findings = [], routineChecks = [], routineCount = 0, docPhotos = [], visitChecklist,
+    findings = [], routineChecks = [], routineCount = 0, docPhotos = [],
     issues = [], tasks = [], nextVisit,
   } = model;
 
@@ -161,7 +161,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
           {routineCount > 0 && (
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
               <p className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-500 mb-1 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Routine Checks — No Concerns Noted
+                <CheckCircle2 className="w-3.5 h-3.5" /> Routine Checks
               </p>
               <p className="text-xs text-muted-foreground mb-2">{routineCount} routine check{routineCount === 1 ? "" : "s"} completed with no concerns noted.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
@@ -222,37 +222,6 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
                   <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Follow-up Tasks ({tasks.length})</p>
                   <div className="text-sm space-y-0.5">
                     {tasks.map((t, i) => <p key={i}>• {t.title}</p>)}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Visit Checklist (compact appendix) */}
-          {visitChecklist && (visitChecklist.routineChecks.length > 0 || visitChecklist.observations.length > 0) && (
-            <div className="rounded-xl border border-border p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Visit Checklist</p>
-              {visitChecklist.routineChecks.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-[11px] font-medium text-muted-foreground mb-1">Routine Checks</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5">
-                    {visitChecklist.routineChecks.map((name, i) => (
-                      <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {name}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {visitChecklist.observations.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-medium text-muted-foreground mb-1">Observations</p>
-                  <div className="space-y-0.5">
-                    {visitChecklist.observations.map((o, i) => (
-                      <p key={i} className="text-xs text-foreground/80">
-                        <span className="font-medium">{o.priorityLabel}</span> — {o.title}
-                      </p>
-                    ))}
                   </div>
                 </div>
               )}
