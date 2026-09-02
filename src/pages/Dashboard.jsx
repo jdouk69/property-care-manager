@@ -51,6 +51,7 @@ const ACTION_GROUPS = [
     label: "Property Visit",
     items: [
       { label: "New Inspection", to: "/inspections", icon: ClipboardCheck, color: "bg-sky-500" },
+      { label: "Visits", to: "/visits", icon: MapPin, color: "bg-blue-500" },
       { label: "Key Activity", to: "/keys", icon: KeyRound, color: "bg-cyan-500" },
     ],
   },
