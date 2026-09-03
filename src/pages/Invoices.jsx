@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Receipt, FileDown, Loader2 } from "lucide-react";
+import { Receipt, FileDown, Loader2, CheckCircle2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
+import MarkInvoicePaidDialog from "@/components/invoices/MarkInvoicePaidDialog";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
 
 const STATUSES = ["Draft", "Sent", "Partially Paid", "Paid", "Overdue", "Cancelled"];
@@ -36,6 +37,8 @@ const columns = [
 export default function Invoices() {
   const [business, setBusiness] = useState({});
   const [downloadingId, setDownloadingId] = useState(null);
+  const [paidDialog, setPaidDialog] = useState(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     base44.entities.BusinessSettings.list().then((l) => setBusiness((l || [])[0] || {})).catch(() => {});
@@ -65,6 +68,7 @@ export default function Invoices() {
         searchKeys={["invoice_number", "services", "notes"]}
         addItemLabel="Add Invoice"
         archivable
+        reloadSignal={reloadTick}
         defaultValues={{ status: "Draft", total: 0, amount_paid: 0, vat: 0, expenses_total: 0, reimbursements_total: 0 }}
         renderSummary={(items) => {
           const outstanding = items
@@ -80,11 +84,24 @@ export default function Invoices() {
           );
         }}
         cardExtra={(item, lookups) => (
-          <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item, lookups); }} disabled={downloadingId === item.id}
-            className="text-[11px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1 disabled:opacity-50">
-            {downloadingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileDown className="w-3 h-3" />} PDF
-          </button>
+          <div className="flex gap-1.5">
+            {!["Paid", "Cancelled"].includes(item.status) && (
+              <button onClick={(e) => { e.stopPropagation(); setPaidDialog(item); }}
+                className="text-[11px] px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-600 border-emerald-500/20 inline-flex items-center gap-1 min-h-[32px]">
+                <CheckCircle2 className="w-3 h-3" /> Mark Paid
+              </button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item, lookups); }} disabled={downloadingId === item.id}
+              className="text-[11px] px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1 min-h-[32px] disabled:opacity-50">
+              {downloadingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileDown className="w-3 h-3" />} PDF
+            </button>
+          </div>
         )}
+      />
+      <MarkInvoicePaidDialog
+        invoice={paidDialog}
+        onClose={() => setPaidDialog(null)}
+        onPaid={() => setReloadTick((t) => t + 1)}
       />
     </AppLayout>
   );
