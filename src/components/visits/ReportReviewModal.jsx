@@ -1,7 +1,7 @@
 import React from "react";
 import {
   X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, AlertOctagon,
-  ListChecks, MapPin, Camera, Eye,
+  ListChecks, MapPin, Camera, Eye, EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
@@ -59,7 +59,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
     business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl,
     overallStatus = { key: "ok", label: "No Concerns Noted" }, counts = { urgent: 0, attention: 0, monitor: 0 },
     priorityBreakdown = "", routineLine = "", summaryText = "",
-    findings = [], routineChecks = [], routineCount = 0, docPhotos = [],
+    findings = [], routineChecks = [], routineCount = 0, unableToCheck = [], naCount = 0, docPhotos = [],
     issues = [], tasks = [], nextVisit,
   } = model;
 
@@ -179,6 +179,26 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Unable to Check — shown to the owner; excluded from routine checks */}
+          {unableToCheck.length > 0 && (
+            <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3">
+              <p className="text-xs uppercase tracking-wide text-sky-700 dark:text-sky-400 mb-1 flex items-center gap-1">
+                <EyeOff className="w-3.5 h-3.5" /> Unable to Check This Visit
+              </p>
+              <div className="space-y-1">
+                {unableToCheck.map((u, i) => (
+                  <p key={i} className="text-xs text-foreground/80">
+                    <span className="font-medium">{u.name}</span>
+                    {u.reason ? ` — Unable to check during this visit — ${u.reason}` : " — Unable to check during this visit."}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {naCount > 0 && (
+            <p className="text-[11px] text-muted-foreground">{naCount} checklist item{naCount === 1 ? "" : "s"} not applicable to this property.</p>
           )}
 
           {/* Routine Visit Photos */}

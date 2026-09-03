@@ -60,6 +60,8 @@
               "Normal",
               "Important",
               "Emergency",
+              "Unable to Check",
+              "N/A",
               "Not Checked"
             ],
             "default": "Not Checked"

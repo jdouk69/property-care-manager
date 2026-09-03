@@ -143,7 +143,9 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const { business = {}, property = {}, client = {}, issues = [], tasks = [], nextVisit = null } = ctx;
   const cl = visit?.checklist || [];
 
-  const checklistFindings = cl.filter(isOwnerFinding).map((it) => {
+  // Unable to Check / N/A are surfaced in their own report sections — never as
+  // concern findings and never as completed routine checks.
+  const checklistFindings = cl.filter((it) => it.status !== "Unable to Check" && it.status !== "N/A" && isOwnerFinding(it)).map((it) => {
     const sk = sevFromChecklistStatus(it.status);
     return {
       title: cleanLabel(it.name),
@@ -178,8 +180,17 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const order = { urgent: 0, attention: 1, monitor: 2 };
   findings.sort((a, b) => (order[a.severityKey] ?? 2) - (order[b.severityKey] ?? 2));
 
-  const routineChecks = cl.filter((it) => !isOwnerFinding(it)).map((it) => ({ name: cleanLabel(it.name) }));
+  // Routine checks = actually checked, no concern noted. Unable to Check and
+  // N/A are excluded — they were not completed checks.
+  const routineChecks = cl
+    .filter((it) => it.status !== "Unable to Check" && it.status !== "N/A" && !isOwnerFinding(it))
+    .map((it) => ({ name: cleanLabel(it.name) }));
   const routineCount = routineChecks.length;
+  const unableToCheck = cl
+    .filter((it) => it.status === "Unable to Check")
+    .map((it) => ({ name: cleanLabel(it.name), reason: (it.notes || "").trim() }));
+  const naCount = cl.filter((it) => it.status === "N/A").length;
+  const naLine = naCount ? `${naCount} checklist item${naCount === 1 ? "" : "s"} not applicable to this property` : "";
 
   const docPhotos = cl
     .filter((it) => !isOwnerFinding(it) && it.owner_visible && (it.photos && it.photos.length))
@@ -222,7 +233,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     name: cleanLabel(it.name),
     label: isOwnerFinding(it)
       ? (it.status === "Emergency" ? "Urgent attention" : it.status === "Important" ? "Needs attention" : "Monitor")
-      : ((it.status === "Not Checked" || !it.status) ? "Not checked" : "Checked"),
+      : (it.status === "N/A" ? "Not applicable" : it.status === "Unable to Check" ? "Unable to check" : ((it.status === "Not Checked" || !it.status) ? "Not checked" : "Checked")),
   }));
 
   const result = hasUrgent
@@ -253,6 +264,9 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     findings,
     routineChecks,
     routineCount,
+    unableToCheck,
+    naCount,
+    naLine,
     docPhotos,
     visitChecklist,
     detailedRecord,
@@ -295,7 +309,7 @@ function drawImageFit(doc, entry, x, y, boxW, boxH) {
 
 async function buildDoc(visit, ctx = {}) {
   const model = buildOwnerReportModel(visit, ctx);
-  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, findings, routineChecks, routineCount, docPhotos, issues, tasks, nextVisit } = model;
+  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, findings, routineChecks, routineCount, unableToCheck, naLine, docPhotos, issues, tasks, nextVisit } = model;
 
   const doc = new jsPDF();
   const pageW = doc.internal.pageSize.getWidth();
@@ -506,6 +520,27 @@ async function buildDoc(visit, ctx = {}) {
       y += 6;
     }
     y += 3;
+  }
+
+  // --- Unable to Check This Visit (concise; excluded from routine checks) ---
+  if (unableToCheck && unableToCheck.length) {
+    ensure(16);
+    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+    text("Unable to Check This Visit", margin, y); y += 6.5;
+    for (const uc of unableToCheck) {
+      ensure(10);
+      doc.setFont(undefined, "bold"); doc.setFontSize(9.5); doc.setTextColor(40);
+      text(uc.name, margin + 2, y); y += 5;
+      doc.setFont(undefined, "normal"); doc.setTextColor(90); doc.setFontSize(9);
+      wrap(uc.reason ? `Unable to check during this visit — ${uc.reason}` : "Unable to check during this visit.", maxWidth - 6, margin + 4, 4.5);
+    }
+    y += 2;
+  }
+  if (naLine) {
+    ensure(5);
+    doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(120);
+    text(naLine, margin, y); y += 5;
+    doc.setTextColor(0);
   }
 
   // --- Routine Visit Photos (routine documentation; not findings) ---

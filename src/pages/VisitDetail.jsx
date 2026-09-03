@@ -17,6 +17,8 @@ const GROUPS = [
   { key: "Emergency", tone: "text-rose-600 bg-rose-500/10 border-rose-500/20" },
   { key: "Important", tone: "text-amber-600 bg-amber-500/10 border-amber-500/20" },
   { key: "Normal", tone: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" },
+  { key: "Unable to Check", tone: "text-sky-600 bg-sky-500/10 border-sky-500/20" },
+  { key: "N/A", tone: "text-muted-foreground bg-muted border-border" },
   { key: "Not Checked", tone: "text-muted-foreground bg-muted border-border" },
 ];
 

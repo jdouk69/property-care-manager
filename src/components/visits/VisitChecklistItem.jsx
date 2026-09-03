@@ -1,17 +1,28 @@
-import React from "react";
+import React, { useState } from "react";
 import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
 
+// "Not Checked" stays the stored default (item not yet answered) but is no
+// longer a deliberate field choice — workers pick Unable to Check or N/A instead.
 const STATUSES = [
   { value: "Normal", label: "Normal", cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
   { value: "Important", label: "Important", cls: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
   { value: "Emergency", label: "Emergency", cls: "bg-rose-500/10 text-rose-600 border-rose-500/30" },
-  { value: "Not Checked", label: "Skip", cls: "bg-muted text-muted-foreground border-border" },
+  { value: "Unable to Check", label: "Unable to Check", cls: "bg-sky-500/10 text-sky-600 border-sky-500/30" },
+  { value: "N/A", label: "N/A", cls: "bg-muted text-muted-foreground border-border" },
 ];
+// Statuses that open the detail area automatically (concerns need documenting,
+// Unable to Check needs a reason). Normal and N/A stay collapsed for fast
+// tap-through; they can always be expanded manually via the toggle.
+const AUTO_OPEN = ["Important", "Emergency", "Unable to Check"];
 
 export default function VisitChecklistItem({ item, index, onChange, onUploadPhoto, onRemovePhoto, uploading, onFlagIssue, flagged }) {
-  const setStatus = (status) => onChange({ ...item, status });
+  const [expanded, setExpanded] = useState(AUTO_OPEN.includes(item.status));
+  const setStatus = (status) => {
+    onChange({ ...item, status });
+    setExpanded(AUTO_OPEN.includes(status));
+  };
   const setNotes = (notes) => onChange({ ...item, notes });
   const ownerVisible = !!item.owner_visible;
   const toggleOwnerVisible = () => onChange({ ...item, owner_visible: !ownerVisible });
@@ -35,8 +46,19 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
       </div>
 
       {item.status !== "Not Checked" && (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+        >
+          {expanded ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          {expanded ? "Hide" : "Add note / photo"}
+        </button>
+      )}
+
+      {expanded && (
         <div className="mt-2 space-y-2">
-          <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder="Notes…" rows={2} className="resize-none text-sm md:text-base 2xl:text-sm" />
+          <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder={item.status === "Unable to Check" ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…" : "Notes…"} rows={2} className="resize-none text-sm md:text-base 2xl:text-sm" />
           <button
             type="button"
             onClick={toggleOwnerVisible}

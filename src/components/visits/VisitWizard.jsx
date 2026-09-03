@@ -746,7 +746,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // ---- STEP: active visit ----
   if (step === "active") {
     const flaggedCount = checklist.filter((i) => i.status === "Important" || i.status === "Emergency").length;
-    const isAnswered = (it, idx) => it.status === "Normal" || it.status === "Important" || it.status === "Emergency" || !!answered[idx];
+    // Both new statuses are deliberate answers; only "Not Checked" (untouched) is unanswered.
+    const isAnswered = (it, idx) => it.status === "Normal" || it.status === "Important" || it.status === "Emergency" || it.status === "Unable to Check" || it.status === "N/A" || !!answered[idx];
+    const missingReasons = checklist.filter((i) => i.status === "Unable to Check" && !(i.notes || "").trim());
     const inspectionDone = checklist.length > 0 && checklist.every((it, idx) => isAnswered(it, idx));
     const issuesDone = inspectionDone && (flaggedCount === 0 || issueIds.length > 0);
     const tasksDone = inspectionDone && issuesDone && (taskIds.length > 0 || !!skipped.tasks);
@@ -1010,7 +1012,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <Button variant="outline" onClick={backFromActive} className={`rounded-2xl ${BTN}`}>Back</Button>
               <Button
                 variant={canComplete ? "default" : "outline"}
-                onClick={() => (canComplete ? completeVisit() : setShowIncomplete(true))}
+                onClick={() => ((canComplete && missingReasons.length === 0) ? completeVisit() : setShowIncomplete(true))}
                 disabled={saving}
                 className="flex-1 h-12 rounded-2xl text-base">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-5 h-5 mr-2" /> Complete Visit</>}
@@ -1026,7 +1028,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 <h3 className="font-semibold">Visit incomplete</h3>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">There are still unanswered checklist items.</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                {inspectionDone
+                  ? `${missingReasons.length} Unable to Check item${missingReasons.length === 1 ? "" : "s"} have no reason noted. The owner report will show the check could not be completed, but not why.`
+                  : "There are still unanswered checklist items."}
+              </p>
               <div className="flex flex-col gap-2">
                 <Button onClick={() => { setShowIncomplete(false); goToStep("step-inspection"); }} className="rounded-2xl h-11">Continue Checklist</Button>
                 <Button variant="outline" onClick={() => { setShowIncomplete(false); completeVisit(); }} className="rounded-2xl h-11">Complete Anyway</Button>
