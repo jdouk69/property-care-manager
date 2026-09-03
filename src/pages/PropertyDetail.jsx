@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, Home, ListChecks, ClipboardCheck, Wrench, Wallet, Clock,
   MapPin, KeyRound, Wifi, Image as ImageIcon, Calendar, Truck, MessageSquare,
-  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2
+  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2, Navigation, CalendarClock, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -121,6 +121,21 @@ export default function PropertyDetail() {
           <Badge variant="outline" className={badgeTone(prop.status)}>{prop.status}</Badge>
         </div>
 
+        {/* Property actions: care work first, admin second */}
+        <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:flex-wrap">
+          <Link to={`/visits?start=1&property=${id}`} className="sm:flex-1">
+            <Button className="w-full h-12 rounded-2xl text-base gap-2"><Navigation className="w-5 h-5" /> Start Visit</Button>
+          </Link>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <Link to={`/visits?schedule=1&property=${id}`}>
+              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><CalendarClock className="w-4 h-4 sm:w-5 sm:h-5" /> Schedule Visit</Button>
+            </Link>
+            <Link to={`/properties?edit=${id}`}>
+              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><Pencil className="w-4 h-4 sm:w-5 sm:h-5" /> Edit Property</Button>
+            </Link>
+          </div>
+        </div>
+
         {/* Quick info */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <InfoCard icon={Home} label="Owner" value={owner?.name || "—"} to={owner?.id ? `/clients/${owner.id}` : undefined} />
@@ -198,7 +213,7 @@ export default function PropertyDetail() {
               items={visits} render={(v) => ({ primary: visitTypeLabel(v.visit_type), sub: athensMediumDateTime(v.start_time), badge: v.status, to: `/visits/${v.id}` })}
               addNode={<>
                 <LinkLink label="Property Assistance" to={`/property-assistance?client=${prop.owner_id || ""}&property=${id}`} />
-                <LinkLink label="Start a new visit" to="/visits?start=1" />
+                <LinkLink label="Start a new visit" to={`/visits?start=1&property=${id}`} />
               </>} />
           </TabsContent>
 

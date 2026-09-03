@@ -123,6 +123,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           if (ctxClient) { try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {} }
         } catch (e) {}
       })();
+    } else if (ctxProperty && !scheduleMode) {
+      // Launched from Property Detail ("Start Visit") with the property already
+      // chosen: reuse the standard selection path so the user never picks the
+      // property twice. If an unfinished visit draft exists, keep the property
+      // step so the existing Resume / Continue-Visit safeguard is presented
+      // instead of silently starting a duplicate visit.
+      if (!(d && d.propertyId && d.checklist && d.checklist.length > 0)) {
+        handleSelectProperty(ctxProperty);
+      }
     } else if (resumeVisitId) {
       // Resume / start an existing (scheduled) visit record.
       (async () => {
@@ -520,6 +529,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           {list.map((c) => (
             <button key={c.id} onClick={() => {
               setSelectedClient(c.id); setClientObj(c);
+              if (ctxProperty) { handleSelectProperty(ctxProperty, c.id); return; }
               const clientProps = properties.filter((p) => p.owner_id === c.id && !p.archived);
               if (clientProps.length === 1) handleSelectProperty(clientProps[0].id, c.id);
               else setStep("select-property");

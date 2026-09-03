@@ -1,6 +1,6 @@
 import React from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { Home, LayoutDashboard } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Home } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import PropertyLocationFields from "@/components/properties/PropertyLocationFields";
@@ -90,12 +90,7 @@ export default function Properties() {
         onCreated={(values) => {
           if (autoOpen && ownerId) navigate(`/clients/${ownerId}`);
         }}
-        cardExtra={(item) => (
-          <Link to={`/properties/${item.id}`} onClick={(e) => e.stopPropagation()}
-            className="text-[11px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1">
-            <LayoutDashboard className="w-3 h-3" /> Dashboard
-          </Link>
-        )}
+        onOpenItem={(item) => navigate(`/properties/${item.id}`)}
       />
     </AppLayout>
   );
