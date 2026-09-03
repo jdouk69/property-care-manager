@@ -31,6 +31,21 @@ const AREA = "md:text-base 2xl:text-sm";
 const BTN = "md:h-11 2xl:h-9";
 const BTN_SM = "md:h-10 md:px-4 md:text-sm 2xl:h-8 2xl:px-3 2xl:text-xs";
 
+// ---- Compact step-by-step checklist (presentation only) ----
+// Same answered rule as the active-step completion validation, shared with the
+// guided expand/collapse focus logic.
+const itemAnswered = (it, idx, answeredMap) =>
+  it.status === "Normal" || it.status === "Important" || it.status === "Emergency" ||
+  it.status === "Unable to Check" || it.status === "N/A" || !!answeredMap[idx];
+
+// First item the field user should land on: an "Unable to Check" item still
+// missing its reason (the existing completion warning) takes priority, else the
+// first unanswered item.
+const focusIdx = (list, answeredMap) => {
+  const unfinished = list.findIndex((it) => it.status === "Unable to Check" && !(it.notes || "").trim());
+  return unfinished >= 0 ? unfinished : list.findIndex((it, idx) => !itemAnswered(it, idx, answeredMap));
+};
+
 export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, ctxVisitType, resumeVisitId, scheduleMode }) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -90,6 +105,36 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [skipped, setSkipped] = useState({});
   const [showIncomplete, setShowIncomplete] = useState(false);
   const [checklistLoadError, setChecklistLoadError] = useState("");
+  // Which checklist rows are expanded (compact step-by-step interaction).
+  const [openItems, setOpenItems] = useState({});
+  const itemRefs = useRef({});
+  const guidedInitDone = useRef(false);
+
+  // Collapse the just-answered routine item and auto-open the next unanswered
+  // one, bringing it into a comfortable visible position (not under the sticky bars).
+  const advanceFrom = (idx, list, answeredMap) => {
+    const next = list.findIndex((it, i) => i > idx && !itemAnswered(it, i, answeredMap));
+    setOpenItems((m) => {
+      const nm = { ...m, [idx]: false };
+      if (next >= 0) nm[next] = true;
+      return nm;
+    });
+    if (next >= 0) setTimeout(() => itemRefs.current[next]?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+  };
+
+  // On entering/resuming an active visit: keep answered routine items collapsed,
+  // auto-expand only the first item needing attention, and bring it into view.
+  useEffect(() => {
+    if (step !== "active") { guidedInitDone.current = false; return; }
+    if (guidedInitDone.current || checklist.length === 0) return;
+    guidedInitDone.current = true;
+    const idx = focusIdx(checklist, answered);
+    if (idx >= 0) {
+      setOpenItems({ [idx]: true });
+      setTimeout(() => itemRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, checklist]);
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((p) => setProperties((p || []).filter((x) => !x.archived))).catch(() => {});
@@ -416,8 +461,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   };
 
   const updateItem = (idx, updated) => {
+    const prev = checklist[idx];
     setChecklist((arr) => arr.map((it, i) => (i === idx ? updated : it)));
     setAnswered((a) => ({ ...a, [idx]: true }));
+    // Normal / N/A: collapse and auto-advance to the next unanswered item.
+    // Important / Emergency / Unable to Check stay open for their existing
+    // documentation workflows. Notes-only edits (status unchanged) never collapse.
+    if (updated.status !== prev.status && (updated.status === "Normal" || updated.status === "N/A")) {
+      advanceFrom(idx, checklist.map((it, i) => (i === idx ? updated : it)), answered);
+    }
   };
 
   const uploadPhotos = async (idx, files) => {
@@ -781,7 +833,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   if (step === "active") {
     const flaggedCount = checklist.filter((i) => i.status === "Important" || i.status === "Emergency").length;
     // Both new statuses are deliberate answers; only "Not Checked" (untouched) is unanswered.
-    const isAnswered = (it, idx) => it.status === "Normal" || it.status === "Important" || it.status === "Emergency" || it.status === "Unable to Check" || it.status === "N/A" || !!answered[idx];
+    const isAnswered = (it, idx) => itemAnswered(it, idx, answered);
     const missingReasons = checklist.filter((i) => i.status === "Unable to Check" && !(i.notes || "").trim());
     const inspectionDone = checklist.length > 0 && checklist.every((it, idx) => isAnswered(it, idx));
     const issuesDone = inspectionDone && (flaggedCount === 0 || issueIds.length > 0);
@@ -862,9 +914,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           )}
           <div className="space-y-2 mb-6">
             {checklist.map((it, i) => (
-              <VisitChecklistItem key={i} item={it} index={i} onChange={(u) => updateItem(i, u)}
-                onUploadPhoto={uploadPhotos} onRemovePhoto={removePhoto} uploading={uploading}
-                onFlagIssue={flagIssue} flagged={!!flagged[i]} />
+              <div key={i} ref={(el) => { itemRefs.current[i] = el; }}>
+                <VisitChecklistItem item={it} index={i} onChange={(u) => updateItem(i, u)}
+                  onUploadPhoto={uploadPhotos} onRemovePhoto={removePhoto} uploading={uploading}
+                  onFlagIssue={flagIssue} flagged={!!flagged[i]}
+                  expanded={!!openItems[i]} onToggle={() => setOpenItems((m) => ({ ...m, [i]: !m[i]}))} />
+              </div>
             ))}
             {checklist.length === 0 && (
               checklistLoadError ? (
