@@ -107,19 +107,24 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           setAgreementId(a.id);
           if (ctxProperty) setPropertyId(ctxProperty);
           else if (a.property_id) setPropertyId(a.property_id);
+          // The onboarding flow passes the intended visit type explicitly
+          // (ctxVisitType). The package still provides context (name,
+          // frequency, duration) but must NOT override the onboarding visit
+          // type with its default_visit_type.
+          let resolvedType = ctxVisitType || "";
           if (a.service_package_id) {
             try {
               const p = await base44.entities.ServicePackage.get(a.service_package_id);
               setPkg(p);
-              // The onboarding flow passes the intended visit type explicitly
-              // (ctxVisitType). The package still provides context (name,
-              // frequency, duration) but must NOT override the onboarding visit
-              // type with its default_visit_type.
-              setVisitType(ctxVisitType || p?.default_visit_type || "");
+              resolvedType = ctxVisitType || p?.default_visit_type || "";
             } catch (e) {}
-          } else if (ctxVisitType) {
-            setVisitType(ctxVisitType);
           }
+          setVisitType(resolvedType);
+          // Agreement/package provides no visit type: keep the existing Choose
+          // Visit Type screen (agreement context stays loaded so the visit is
+          // still linked). If an unfinished visit draft exists, stay on the
+          // guarded first-visit screen instead.
+          if (!resolvedType && !(d && d.propertyId && d.checklist && d.checklist.length > 0)) setStep("type");
           if (ctxClient) { try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {} }
         } catch (e) {}
       })();
@@ -749,14 +754,23 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const ownerDone = inspectionDone && issuesDone && (commSent.length > 0 || !!skipped.owner);
     const canComplete = inspectionDone;
     const STEPS = [
-      { key: "inspection", label: "Inspection", icon: ClipboardCheck, target: "step-inspection", done: inspectionDone },
+      { key: "inspection", label: "Checklist", icon: ClipboardCheck, target: "step-inspection", done: inspectionDone },
       { key: "issues", label: "Issues", icon: Wrench, target: "step-issues", done: issuesDone },
       { key: "tasks", label: "Tasks", icon: ListChecks, target: "step-tasks", done: tasksDone },
       { key: "expenses", label: "Expenses", icon: Wallet, target: "step-expenses", done: expensesDone },
       { key: "owner", label: "Owner", icon: MessageSquare, target: "step-owner", done: ownerDone },
       { key: "finish", label: "Finish", icon: CheckCircle2, target: "step-finish", done: false },
     ];
-    const nextStep = STEPS.find((s) => !s.done) || STEPS[STEPS.length - 1];
+    // Guidance reflects what the worker still needs to do — not a forced walk
+    // through every optional section: Checklist while items remain, Issues only
+    // when flagged items exist without a logged issue, then Finish. No
+    // scroll-position tracking; Go keeps using the existing section anchors.
+    const needsIssues = inspectionDone && flaggedCount > 0 && issueIds.length === 0;
+    const nextStep = checklist.length > 0 && !inspectionDone
+      ? { key: "inspection", label: "Checklist", icon: ClipboardCheck, target: "step-inspection", hint: `${checklist.filter((it, idx) => !isAnswered(it, idx)).length} of ${checklist.length} remaining` }
+      : needsIssues
+        ? STEPS.find((s) => s.key === "issues")
+        : STEPS.find((s) => s.key === "finish");
     const goToStep = (target) => { const el = document.getElementById(target); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
     const issueOptions = issueIds.map((id, i) => [id, createdIssues[i]?.title || "Issue"]);
 
@@ -987,6 +1001,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 <div className="min-w-0">
                   <p className="text-[11px] uppercase tracking-wide text-primary/80">Next step</p>
                   <p className="text-sm font-medium text-foreground truncate">{nextStep.label}{nextStep.key === "finish" ? " — complete the visit" : ""}</p>
+                  {nextStep.hint && <p className="text-[11px] text-muted-foreground">{nextStep.hint}</p>}
                 </div>
               </div>
               <span className="text-xs text-primary shrink-0">Go →</span>
@@ -1011,9 +1026,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
                 <h3 className="font-semibold">Visit incomplete</h3>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">There are still unanswered inspection items.</p>
+              <p className="text-sm text-muted-foreground mb-4">There are still unanswered checklist items.</p>
               <div className="flex flex-col gap-2">
-                <Button onClick={() => { setShowIncomplete(false); goToStep("step-inspection"); }} className="rounded-2xl h-11">Continue Inspection</Button>
+                <Button onClick={() => { setShowIncomplete(false); goToStep("step-inspection"); }} className="rounded-2xl h-11">Continue Checklist</Button>
                 <Button variant="outline" onClick={() => { setShowIncomplete(false); completeVisit(); }} className="rounded-2xl h-11">Complete Anyway</Button>
               </div>
             </div>

@@ -104,6 +104,18 @@ export default function PropertyDetail() {
   const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${v.start_time ? athensMediumDate(v.start_time) : ""} · ${visitTypeLabel(v.visit_type) || ""}` }));
   const issueOpts = maintenance.map((m) => ({ value: m.id, label: m.title }));
   const contractorOpts = contractors.map((c) => ({ value: c.id, label: c.company }));
+  // "Current operational service agreement" — same rule as the Service Agreement
+  // section below (status Active + signing_status Signed). Start Visit carries
+  // this context into the Visit Wizard; multiple operational agreements fall
+  // back to the wizard's existing agreement-selection step (no guessing).
+  const operationalAgreements = agreements.filter((a) => a.status === "Active" && a.signing_status === "Signed");
+  const clientParam = prop.owner_id ? `&client=${prop.owner_id}` : "";
+  const startVisitUrl =
+    operationalAgreements.length === 1
+      ? `/visits?start=1&property=${id}&agreement=${operationalAgreements[0].id}${clientParam}`
+      : operationalAgreements.length > 1
+        ? `/visits?start=1&property=${id}${clientParam}`
+        : `/visits?start=1&property=${id}`;
 
   return (
     <AppLayout>
@@ -123,7 +135,7 @@ export default function PropertyDetail() {
 
         {/* Property actions: care work first, admin second */}
         <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:flex-wrap">
-          <Link to={`/visits?start=1&property=${id}`} className="sm:flex-1">
+          <Link to={startVisitUrl} className="sm:flex-1">
             <Button className="w-full h-12 rounded-2xl text-base gap-2"><Navigation className="w-5 h-5" /> Start Visit</Button>
           </Link>
           <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -213,7 +225,7 @@ export default function PropertyDetail() {
               items={visits} render={(v) => ({ primary: visitTypeLabel(v.visit_type), sub: athensMediumDateTime(v.start_time), badge: v.status, to: `/visits/${v.id}` })}
               addNode={<>
                 <LinkLink label="Property Assistance" to={`/property-assistance?client=${prop.owner_id || ""}&property=${id}`} />
-                <LinkLink label="Start a new visit" to={`/visits?start=1&property=${id}`} />
+                <LinkLink label="Start a new visit" to={startVisitUrl} />
               </>} />
           </TabsContent>
 
