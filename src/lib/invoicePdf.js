@@ -98,26 +98,27 @@ export async function generateInvoicePdf(invoice, ctx = {}) {
     ["Invoice Date", invoice.invoice_date ? athensLongDate(invoice.invoice_date) : "-"],
     ["Due Date", invoice.due_date ? athensLongDate(invoice.due_date) : "-"],
   ];
-  const kvW = maxWidth / 2;
-  facts.forEach(([k, v], i) => {
-    const x = margin + (i % 2) * kvW;
-    const yy = y + Math.floor(i / 2) * 5;
+  const valueX = margin + 34;
+  facts.forEach(([k, v]) => {
     doc.setFont(undefined, "bold"); doc.setTextColor(110);
-    text(`${k}:`, x, yy);
+    text(`${k}:`, margin, y);
     doc.setFont(undefined, "normal"); doc.setTextColor(30);
-    text(v, x + 30, yy);
+    text(v, valueX, y);
+    y += 5;
   });
-  y += Math.ceil(facts.length / 2) * 5 + 5;
+  y += 3;
   doc.setTextColor(0);
 
   // --- Bill To ---
   doc.setFontSize(8); doc.setFont(undefined, "bold"); doc.setTextColor(120);
   text("BILL TO", margin, y); y += 5;
   doc.setFontSize(11); doc.setTextColor(20);
-  text(nameOf(client) || "-", margin, y); y += 5;
+  text(nameOf(client) || "-", margin, y); y += 6;
   doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(80);
-  if (!nameOf(client) && client?.billing_address) { text(client.billing_address, margin, y); y += 5; }
-  if (typeof client === "object" && client?.billing_address) { text(client.billing_address, margin, y); y += 5; }
+  if (typeof client === "object" && client?.billing_address) {
+    doc.splitTextToSize(clean(client.billing_address), maxWidth).forEach((l) => { text(l, margin, y); y += 4.5; });
+    y += 1.5;
+  }
   if (nameOf(property)) { text(`Property: ${nameOf(property)}`, margin, y); y += 5; }
   y += 4;
 

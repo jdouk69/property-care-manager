@@ -113,12 +113,12 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
           </div>
 
           {/* Invoice facts */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <div>
               <Label className="text-xs">Invoice number</Label>
               <Input className="h-11" value={number} onChange={(e) => setNumber(e.target.value)} disabled={!!saved} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Invoice date</Label>
                 <Input type="date" className="h-11" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} disabled={!!saved} />
