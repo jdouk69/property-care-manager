@@ -178,9 +178,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId });
     }
-  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped]);
+  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId]);
 
   // Safety net: if a visit is active but the checklist failed to load (a transient list failure, or a
   // stale draft left over from before a Master template existed), re-attempt the lookup once so a
@@ -208,6 +208,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const vtype = resumable.visitType || VISIT_TYPES[0];
     setPropertyId(pid);
     setVisitType(vtype);
+    // Restore the agreement context the visit was started under, so completing a
+    // resumed draft still records the same service agreement (old drafts without
+    // an agreementId simply resolve to none, exactly as before).
+    setAgreementId(resumable.agreementId || "");
+    if (resumable.agreementId) {
+      base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then((a) => {
+        setAgreement(a);
+        if (a?.service_package_id) base44.entities.ServicePackage.get(a.service_package_id).then(setPkg).catch(() => {});
+      }).catch(() => {});
+    }
     setStartTime(resumable.startTime);
     setGps(resumable.gps || "");
     setMeters(resumable.meters?.length ? resumable.meters : [{ label: "Electricity meter", value: "", photo: "" }, { label: "Water meter", value: "", photo: "" }]);
@@ -269,15 +279,29 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     return { items: [], source: "None", found: false };
   };
 
+  // Loads agreement + package context. Returns true when a visit type was
+  // resolved (explicit ctxVisitType or the package's valid default_visit_type).
+  // Callers use the flag to route to the EXISTING Choose Visit Type screen
+  // instead of silently defaulting to "Monthly Property Watch".
   const loadAgreementContext = async (ag, cid) => {
     setAgreement(ag); setAgreementId(ag.id);
-    if (ag.service_package_id) { try { const p = await base44.entities.ServicePackage.get(ag.service_package_id); setPkg(p); setVisitType(ctxVisitType || p?.default_visit_type || ""); } catch (e) {} }
+    let resolvedType = VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : "";
+    if (ag.service_package_id) {
+      try {
+        const p = await base44.entities.ServicePackage.get(ag.service_package_id);
+        setPkg(p);
+        resolvedType = VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : (VISIT_TYPES.includes(p?.default_visit_type) ? p.default_visit_type : "");
+      } catch (e) {}
+    }
+    setVisitType(resolvedType);
     if (cid) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
+    return !!resolvedType;
   };
 
-  const goNextAfterProperty = () => {
-    if (scheduleMode) setStep("schedule");
-    else if (ctxClient) setStep("first-visit");
+  const goNextAfterProperty = (hasType = true) => {
+    if (scheduleMode) { setStep("schedule"); return; } // the schedule screen includes its own Visit Type picker
+    if (!hasType) { setStep("type"); return; }         // no default visit type → existing Choose Visit Type screen
+    if (ctxClient) setStep("first-visit");
     else setStep("type");
   };
 
@@ -287,10 +311,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     if (!cid) { setStep("type"); return; }
     try {
       const all = await base44.entities.PropertyServiceAgreement.list("-created_date", 500);
-      const propAgs = (all || []).filter((a) => !a.archived && a.status === "Active" && a.property_id === pid);
+      // Operational agreement = status Active AND signing_status Signed — same rule as Property Detail.
+      const propAgs = (all || []).filter((a) => !a.archived && a.status === "Active" && a.signing_status === "Signed" && a.property_id === pid);
       if (propAgs.length === 1) {
-        await loadAgreementContext(propAgs[0], cid);
-        goNextAfterProperty();
+        const hasType = await loadAgreementContext(propAgs[0], cid);
+        goNextAfterProperty(hasType);
       } else if (propAgs.length > 1) {
         const pkgs = await Promise.all(propAgs.map(async (a) => { try { return a.service_package_id ? await base44.entities.ServicePackage.get(a.service_package_id) : null; } catch (e) { return null; } }));
         const map = {}; propAgs.forEach((a, i) => { map[a.id] = pkgs[i]; });
@@ -299,9 +324,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         if (cid && !clientObj) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
         setStep("select-agreement");
       } else {
-        setAgreement(null); setPkg(null); setAgreementId(""); setVisitType(VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : "");
+        setAgreement(null); setPkg(null); setAgreementId("");
+        const vt0 = VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : "";
+        setVisitType(vt0);
         if (cid && !clientObj) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
-        goNextAfterProperty();
+        goNextAfterProperty(!!vt0);
       }
     } catch (e) { setStep("type"); }
   };
@@ -563,10 +590,17 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         <p className="text-sm text-muted-foreground mb-3 px-1">This property has multiple active service agreements. Which is this visit for?</p>
         <div className="space-y-2">
           {(propertyAgreements || []).map((a) => (
-            <button key={a.id} onClick={async () => { await loadAgreementContext(a, ctxClient || selectedClient); goNextAfterProperty(); }}
+            <button key={a.id} onClick={async () => { const hasType = await loadAgreementContext(a, ctxClient || selectedClient); goNextAfterProperty(hasType); }}
               className="w-full text-left rounded-2xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition">
               <p className="font-medium text-foreground">{agreementPackages[a.id]?.name || "Service agreement"}</p>
-              <p className="text-xs text-muted-foreground">{a.billing_type}{a.inspection_frequency ? ` · ${a.inspection_frequency}` : ""}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {[
+                  a.inspection_frequency || agreementPackages[a.id]?.inspection_frequency,
+                  agreementPackages[a.id]?.visit_duration,
+                  a.agreed_price != null ? `€${a.agreed_price.toFixed(2)}` : (agreementPackages[a.id]?.standard_price != null ? `€${agreementPackages[a.id].standard_price.toFixed(2)}` : ""),
+                  a.billing_type,
+                ].filter(Boolean).join(" · ")}
+              </p>
             </button>
           ))}
         </div>
