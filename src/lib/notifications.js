@@ -63,11 +63,10 @@ export async function generateTimeBasedNotifications() {
     ? 1
     : 0;
 
-  let tasks = [], inspections = [], maintenance = [], expenses = [], keys = [], props = [], visits = [], clients = [];
+  let tasks = [], maintenance = [], expenses = [], keys = [], props = [], visits = [], clients = [];
   try {
-    [tasks, inspections, maintenance, expenses, keys, props, visits, clients] = await Promise.all([
+    [tasks, maintenance, expenses, keys, props, visits, clients] = await Promise.all([
       base44.entities.Task.list("-date", 500),
-      base44.entities.Inspection.list("-date", 500),
       base44.entities.MaintenanceIssue.list("-created_date", 500),
       base44.entities.Expense.list("-date", 500),
       base44.entities.Key.list("-created_date", 500),
@@ -115,26 +114,8 @@ export async function generateTimeBasedNotifications() {
       );
   }
 
-  if (cat("Inspections")) {
-    inspections
-      .filter((i) => i.status !== "Completed" && i.recurrence_status !== "skipped" && i.date === today)
-      .forEach((i) =>
-        push(desired, {
-          title: "Upcoming inspection", message: `Inspection — ${i.date}`, type: "Inspection", priority: "High",
-          related_entity: "Inspection", related_record_id: i.id, related_property_id: i.property_id,
-          related_path: "/inspections", dedup_key: `insp_today:${i.id}:${today}`,
-        })
-      );
-    inspections
-      .filter((i) => i.status === "Draft" && i.recurrence_status !== "skipped" && i.date && i.date < today)
-      .forEach((i) =>
-        push(desired, {
-          title: "Inspection overdue", message: `Inspection — ${i.date}`, type: "Inspection", priority: "Urgent",
-          related_entity: "Inspection", related_record_id: i.id, related_property_id: i.property_id,
-          related_path: "/inspections", dedup_key: `insp_overdue:${i.id}:${i.date}`,
-        })
-      );
-  }
+  // Standalone Inspection notifications retired (Phase 3) — field work now runs
+  // exclusively through Property Visits, which have their own reminders above.
 
   if (cat("Contractors")) {
     tasks

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
-  LayoutDashboard, Users, Home, ListChecks, ClipboardCheck, Wrench, HardHat,
+  LayoutDashboard, Users, Home, ListChecks, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
   MapPin, FolderOpen, ClipboardList, ScrollText
@@ -17,7 +17,6 @@ export const NAV_ITEMS = [
   { to: "/clients", label: "Clients", icon: Users },
   { to: "/properties", label: "Properties", icon: Home },
   { to: "/tasks", label: "Tasks", icon: ListChecks },
-  { to: "/inspections", label: "Inspections", icon: ClipboardCheck },
   { to: "/visits", label: "Property Visits", icon: MapPin },
   { to: "/checklist-templates", label: "Checklist Templates", icon: ScrollText },
   { to: "/maintenance", label: "Maintenance", icon: Wrench },

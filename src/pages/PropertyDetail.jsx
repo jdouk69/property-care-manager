@@ -204,8 +204,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="inspections">
             <RecordSection title="Inspections" icon={ClipboardCheck} empty="No inspections yet" moduleLink="/inspections"
-              items={inspections} render={(i) => ({ primary: `Inspection — ${i.date}`, sub: i.inspector, badge: i.status, to: "/inspections" })}
-              addNode={<LinkLink label="New inspection" to="/inspections" />} />
+              items={inspections} render={(i) => ({ primary: `Inspection — ${i.date}`, sub: i.inspector, badge: i.status, to: `/inspections?open=${i.id}` })} />
           </TabsContent>
 
           <TabsContent value="issues">

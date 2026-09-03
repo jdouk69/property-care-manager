@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
-  ClipboardCheck, Plus, Loader2, Check, Trash2, Search, Camera, X, MapPin, Calendar, User, CheckCircle2
+  ClipboardCheck, Loader2, Check, Trash2, Search, Camera, X, MapPin, Calendar, User, CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import PageBackButton from "@/components/ui/PageBackButton";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
 import RecurrencePanel from "@/components/recurrence/RecurrencePanel";
-import { createRuleFromOccurrence, generateNextOccurrence } from "@/lib/recurrence";
+import { generateNextOccurrence } from "@/lib/recurrence";
 
 const DEFAULT_CHECKLIST = [
   "Gates", "Doors", "Windows", "Roof", "Pool", "Garden", "Irrigation", "Water leaks",
@@ -73,11 +73,8 @@ export default function Inspections() {
     return items.filter((i) => (properties[i.property_id] || "").toLowerCase().includes(q) || (i.inspector || "").toLowerCase().includes(q));
   }, [items, query, properties]);
 
-  const openNew = () => {
-    setEditing(null);
-    setValues({ status: "Draft", checklist: blankChecklist(), date: new Date().toISOString().slice(0, 10), is_recurring: false, frequency: "Weekly", interval: 1, days_of_week: [] });
-    setDirty(false); setSaved(false); setOpen(true);
-  };
+  // Phase 3: creating NEW standalone inspections is retired. This page is a
+  // read-only historical view; field work happens through Property Visits.
   const openEdit = (it) => {
     setEditing(it);
     setValues({ ...it, checklist: it.checklist?.length ? it.checklist : blankChecklist() });
@@ -118,23 +115,6 @@ export default function Inspections() {
     }, 1000);
     return () => clearTimeout(debounceRef.current);
   }, [values]);
-
-  const saveNew = async () => {
-    setSaving(true);
-    try {
-      const created = await base44.entities.Inspection.create(values);
-      if (values.is_recurring) {
-        await createRuleFromOccurrence("Inspection", values, created);
-        const reloaded = await base44.entities.Inspection.get(created.id);
-        setItems((arr) => [{ ...created, ...reloaded }, ...arr]);
-        setEditing({ ...created, ...reloaded });
-      } else {
-        setItems((arr) => [created, ...arr]);
-        setEditing(created);
-      }
-      setSaving(false); setSaved(true); setDirty(false);
-    } catch (e) { setSaving(false); }
-  };
 
   const remove = async () => {
     if (!editing || !confirm("Delete this inspection?")) return;
@@ -184,9 +164,8 @@ export default function Inspections() {
         <PageBackButton fallback="/" className="mb-3" />
         <PageHeader
           title="Inspections"
-          subtitle="Customizable property checklists and photo reports"
+          subtitle="Historical inspection records — read only. New field work starts from a Property Visit."
           icon={ClipboardCheck}
-          actions={<Button onClick={openNew} size="sm" className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> New Inspection</Button>}
         >
           <div className="relative mt-4 max-w-md">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -197,7 +176,7 @@ export default function Inspections() {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
         ) : filtered.length === 0 ? (
-          <EmptyState icon={ClipboardCheck} title="No inspections yet" description="Create your first property inspection." action={<Button onClick={openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> New Inspection</Button>} />
+          <EmptyState icon={ClipboardCheck} title="No inspections recorded" description="New field work is done through Property Visits." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.map((insp) => {
@@ -304,7 +283,6 @@ export default function Inspections() {
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Finish Inspection
                 </Button>
               )}
-              {!editing && <Button onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}</Button>}
             </div>
           </SheetFooter>
         </SheetContent>
