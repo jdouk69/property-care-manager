@@ -3,36 +3,50 @@ import { buildRecurringCharges } from '../../shared/recurringCharges.js';
 import { athensToday } from '../../shared/timezone.js';
 
 // Generates the current month's recurring billing charges from Active + Signed
-// service agreements. Idempotent: one charge per agreement per billing period,
-// protected by source_key (`agreement:<id>:<YYYY-MM>`), so it can safely run daily.
-// Optional payload { "dryRun": true } computes and returns the charges WITHOUT creating them.
+// service agreements. Policies (approved 2026-09):
+//   - Net 14: due_date = billing_date + 14 days (matches signed agreement terms).
+//   - Duplicate protection: at most ONE charge per agreement per billing month.
+//     ALL existing charges (manual or automatic, Due/Paid/Waived, archived
+//     included) block regeneration — see shared/recurringCharges.js.
+//   - Mid-month starts (start day > 1) are never auto-billed for the start month.
+// Idempotent, so it can safely run daily.
+// Optional payload { "dryRun": true } computes and returns the charges WITHOUT
+// creating them; a dry run may also pass { "period": "YYYY-MM" } to target a
+// specific billing month for verification (live runs always use the current month).
 
 export default async function(req) {
   const base44 = createClientFromRequest(req);
   let body = {};
   try { body = await req.json(); } catch (e) { body = {}; }
   const dryRun = !!(body && body.dryRun);
+  // Verification affordance: a dry run may target a specific billing period (YYYY-MM).
+  // Live runs ALWAYS use the current Athens month — the override is dry-run only.
+  const overridePeriod =
+    dryRun && typeof (body && body.period) === "string" && /^\d{4}-\d{2}$/.test(body.period)
+      ? body.period
+      : "";
 
   try {
-    const todayStr = athensToday();
+    const todayStr = overridePeriod ? `${overridePeriod}-01` : athensToday();
     const period = todayStr.slice(0, 7);
 
     const [agreements, pkgs, existingCharges] = await Promise.all([
       base44.asServiceRole.entities.PropertyServiceAgreement.list("-created_date", 500),
       base44.asServiceRole.entities.ServicePackage.list("-created_date", 500),
-      // Duplicate protection: charges already created for THIS billing period.
-      // Only automation sets billing_period, so this set stays small and precise.
-      base44.asServiceRole.entities.BillingCharge.filter({ billing_period: period }, "-created_date", 500),
+      // Duplicate protection: ALL charges, not just this period's. The shared
+      // builder derives each charge's billing month (billing_period, else
+      // billing_date) and blocks regeneration for any agreement+month that
+      // already has a charge — manual or automatic, any status, archived included.
+      base44.asServiceRole.entities.BillingCharge.list("-created_date", 500),
     ]);
 
     const packages = {};
     (pkgs || []).forEach((p) => { packages[p.id] = p; });
-    const existingSourceKeys = new Set((existingCharges || []).map((c) => c.source_key).filter(Boolean));
 
     const desired = buildRecurringCharges({
       agreements: agreements || [],
       packages,
-      existingSourceKeys,
+      existingCharges: existingCharges || [],
       todayStr,
     });
 

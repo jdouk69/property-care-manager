@@ -68,7 +68,7 @@ export default function Billing() {
     { name: "description", label: "Description", required: true, placeholder: "e.g. Standard Property Care — September" },
     { name: "charge_type", label: "Charge type", type: "select", options: CHARGE_TYPES, placeholder: "Select type" },
     { name: "amount", label: "Amount (€)", type: "number", required: true },
-    { name: "billing_date", label: "Billing date", type: "date" },
+    { name: "billing_date", label: "Billing date", type: "date", required: true },
     { name: "due_date", label: "Due date", type: "date" },
     {
       name: "property_service_agreement_id", label: "Service agreement (optional)", type: "entity-select",

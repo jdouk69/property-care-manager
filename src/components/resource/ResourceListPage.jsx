@@ -80,6 +80,7 @@ export default function ResourceListPage({
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState("");
   const [dirty, setDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lookups, setLookups] = useState({});
@@ -149,8 +150,8 @@ export default function ResourceListPage({
     );
   }, [items, query, filterFn]);
 
-  const openNew = () => { flushPendingEdit(); destructiveRef.current = false; setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setDrawerOpen(true); };
-  const openEdit = (it) => { flushPendingEdit(); destructiveRef.current = false; setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setDrawerOpen(true); };
+  const openNew = () => { flushPendingEdit(); destructiveRef.current = false; setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setFormError(""); setDrawerOpen(true); };
+  const openEdit = (it) => { flushPendingEdit(); destructiveRef.current = false; setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setFormError(""); setDrawerOpen(true); };
   const setField = (k, v) => { setValues((s) => ({ ...s, [k]: v })); setDirty(true); setSaved(false); };
 
   const autoOpenDone = useRef(false);
@@ -182,6 +183,11 @@ export default function ResourceListPage({
   }, [values]);
 
   const saveNew = async () => {
+    // Required-field enforcement: fields marked required must have a value
+    // (0 counts as filled) before a new record can be created.
+    const missing = fields.filter((f) => f.required && values[f.name] !== 0 && !values[f.name]);
+    if (missing.length) { setFormError(`Please fill in: ${missing.map((f) => f.label || f.name).join(", ")}`); return; }
+    setFormError("");
     setSaving(true);
     try {
       const created = await base44.entities[entityName].create(values);
@@ -501,6 +507,7 @@ export default function ResourceListPage({
 
   const actionButtons = (
     <>
+      {formError && <p className="w-full text-xs text-destructive">{formError}</p>}
       {editing ? (
         <div className="flex gap-1">
           {archivable && (
