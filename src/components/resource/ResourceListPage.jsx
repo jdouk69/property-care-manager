@@ -70,7 +70,7 @@ export default function ResourceListPage({
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
   showBack = true, sections = [],
   onAdd, reloadSignal,
-  renderCard,
+  renderCard, filterFn,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -141,13 +141,13 @@ export default function ResourceListPage({
   }, [entityName]);
 
   const filtered = useMemo(() => {
-    const visible = items.filter((it) => !it.archived);
+    const visible = items.filter((it) => !it.archived && (!filterFn || filterFn(it)));
     if (!query.trim()) return visible;
     const q = query.toLowerCase();
     return visible.filter((it) =>
       searchKeys.some((k) => (it[k] || "").toString().toLowerCase().includes(q))
     );
-  }, [items, query]);
+  }, [items, query, filterFn]);
 
   const openNew = () => { flushPendingEdit(); destructiveRef.current = false; setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setDrawerOpen(true); };
   const openEdit = (it) => { flushPendingEdit(); destructiveRef.current = false; setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setDrawerOpen(true); };

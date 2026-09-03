@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, Home, ListChecks, ClipboardCheck, Wrench, Wallet, Clock,
   MapPin, KeyRound, Wifi, Image as ImageIcon, Calendar, Truck, MessageSquare,
-  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2, Navigation, CalendarClock, Pencil
+  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2, Navigation, CalendarClock, Pencil, Euro
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -43,6 +43,7 @@ export default function PropertyDetail() {
   const [repReports, setRepReports] = useState([]);
   const [agreements, setAgreements] = useState([]);
   const [pkgMap, setPkgMap] = useState({});
+  const [charges, setCharges] = useState([]);
   const [tick, setTick] = useState(0);
 
   const reload = () => setTick((x) => x + 1);
@@ -52,7 +53,7 @@ export default function PropertyDetail() {
       try {
         const p = await base44.entities.Property.get(id);
         setProp(p);
-        const [t, i, m, e, v, c, cm, k, d, docs, rep, pkgs, ags] = await Promise.all([
+        const [t, i, m, e, v, c, cm, k, d, docs, rep, pkgs, ags, bc] = await Promise.all([
           base44.entities.Task.list("-date", 200),
           base44.entities.Inspection.list("-date", 200),
           base44.entities.MaintenanceIssue.list("-created_date", 200),
@@ -66,6 +67,7 @@ export default function PropertyDetail() {
           base44.entities.OwnerRepReport.list("-created_date", 200),
           base44.entities.ServicePackage.list("-created_date", 200),
           base44.entities.PropertyServiceAgreement.list("-created_date", 200),
+          base44.entities.BillingCharge.list("-created_date", 200),
         ]);
         const byProp = (arr) => (arr || []).filter((x) => x.property_id === id && !x.archived);
         setTasks(byProp(t));
@@ -80,6 +82,7 @@ export default function PropertyDetail() {
         setDocuments(byProp(docs));
         setRepReports(byProp(rep));
         setAgreements((ags || []).filter((x) => x.property_id === id && !x.archived));
+        setCharges(byProp(bc));
         const pm = {};
         (pkgs || []).forEach((p) => { pm[p.id] = p; });
         setPkgMap(pm);
@@ -99,6 +102,7 @@ export default function PropertyDetail() {
     ...expenses.map((e) => ({ date: e.date, type: "Expense", title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, icon: Wallet, detail: e.reimbursed ? "Reimbursed" : "" })),
   ].filter((x) => x.date).sort((a, b) => (a.date < b.date ? 1 : -1));
 
+  const outstandingCharges = charges.filter((ch) => ch.status === "Due").reduce((s, ch) => s + (ch.amount || 0), 0);
   const receipts = expenses.filter((e) => e.receipt_photo);
   const visitReports = visits.filter((v) => v.status !== "Cancelled");
   const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${v.start_time ? athensMediumDate(v.start_time) : ""} · ${visitTypeLabel(v.visit_type) || ""}` }));
@@ -154,6 +158,7 @@ export default function PropertyDetail() {
           <InfoCard icon={KeyRound} label="Gate Code" value={prop.gate_code || "—"} />
           <InfoCard icon={Wifi} label="Wi-Fi" value={prop.wifi_ssid || "—"} />
           <InfoCard icon={Clock} label="Last Inspection" value={inspections[0]?.date || "—"} />
+          <InfoCard icon={Euro} label="Billing" value={`€${outstandingCharges.toFixed(2)} outstanding`} to="/billing" />
         </div>
 
         <Tabs defaultValue="overview">

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Home, ListChecks, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
-  MapPin, FolderOpen, ClipboardList, ScrollText
+  MapPin, FolderOpen, ClipboardList, ScrollText, Euro
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -26,6 +26,7 @@ export const NAV_ITEMS = [
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/invoices", label: "Invoices", icon: Receipt },
+  { to: "/billing", label: "Billing", icon: Euro },
   { to: "/services", label: "Service Packages", icon: Package },
   { to: "/communications", label: "Communications", icon: MessageSquare },
   { to: "/documents", label: "Documents", icon: FolderOpen },

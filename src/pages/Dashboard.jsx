@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import {
   Plus, CalendarClock, AlertTriangle, ClipboardCheck, Wrench, Home, ListChecks,
   Truck, HardHat, ArrowRight, CheckCircle2, KeyRound, Wallet, Receipt, Package,
-  MessageSquare, MapPin, StickyNote, TrendingUp, Plane, Zap, History,
+  MessageSquare, MapPin, StickyNote, Plane, Zap, History, Euro,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -253,14 +253,14 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [], agreements: [], intakes: [], servicePackages: [], repReports: [] });
+  const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [], agreements: [], intakes: [], servicePackages: [], repReports: [], billing: [] });
   const [settings, setSettings] = useState(null);
   const [draft, setDraft] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, repReports, sList] = await Promise.all([
+        const [tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, repReports, billingCharges, sList] = await Promise.all([
           base44.entities.Task.list("-date", 200),
           base44.entities.Inspection.list("-date", 200),
           base44.entities.MaintenanceIssue.list("-created_date", 200),
@@ -275,9 +275,10 @@ export default function Dashboard() {
           base44.entities.CustomerIntake.list("-created_date", 200),
           base44.entities.ServicePackage.list("-created_date", 200),
           base44.entities.OwnerRepReport.list("-created_date", 200),
+          base44.entities.BillingCharge.list("-created_date", 200),
           base44.entities.BusinessSettings.list("-created_date", 1),
         ]);
-        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, repReports });
+        setData({ tasks, inspections, maintenance, properties, clients, contractors, expenses, keys, invoices, visits, agreements, intakes, servicePackages, repReports, billing: billingCharges });
         if (sList && sList[0]) setSettings(sList[0]);
       } catch (e) {}
       setLoading(false);
@@ -319,13 +320,16 @@ export default function Dashboard() {
   const prepTask = prepTasks.length ? { propertyId: prepTasks[0].property_id, when: prepTasks[0].date === t ? "today" : "tomorrow" } : null;
   const nextAction = { draft: draft && draft.propertyId ? draft : null, openIssuesByProp, prepTask };
 
-  const monthNow = new Date().toISOString().slice(0, 7);
-  const monthlyRevenue = data.invoices
-    .filter((i) => (i.payment_date || "").slice(0, 7) === monthNow)
-    .reduce((s, i) => s + (i.amount_paid || 0), 0);
-  const outstandingInvoices = data.invoices
-    .filter((i) => !["Paid", "Cancelled"].includes(i.status))
-    .reduce((s, i) => s + ((i.total || 0) - (i.amount_paid || 0)), 0);
+  // Billing ledger totals. "Overdue" is derived (Due + past due date), never stored.
+  const billingOutstanding = data.billing
+    .filter((c) => c.status === "Due" && !c.archived)
+    .reduce((s, c) => s + (c.amount || 0), 0);
+  const billingOverdue = data.billing
+    .filter((c) => c.status === "Due" && !c.archived && c.due_date && c.due_date < t)
+    .reduce((s, c) => s + (c.amount || 0), 0);
+  const billingPaidMonth = data.billing
+    .filter((c) => c.status === "Paid" && !c.archived && String(c.paid_date || "").slice(0, 7) === t.slice(0, 7))
+    .reduce((s, c) => s + (c.amount || 0), 0);
   const outstandingReimb = awaitingReimb.reduce((s, e) => s + (e.amount || 0), 0);
 
   const alertCount = emergency.length + overdue.length + inspToday.length + contractorsToday.length + unreturnedKeys.length + awaitingReimb.length + overdueInspections.length + missedVisits.length;
@@ -426,10 +430,11 @@ export default function Dashboard() {
         {/* Next 3 days schedule */}
         <Next3Days visits={data.visits} properties={data.properties} clients={data.clients} />
 
-        {/* Financial summary */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <StatCard icon={TrendingUp} label="Revenue this month" value={`€${monthlyRevenue.toFixed(2)}`} tone="success" />
-          <StatCard icon={Receipt} label="Outstanding invoices" value={`€${outstandingInvoices.toFixed(2)}`} tone={outstandingInvoices ? "warning" : "success"} />
+        {/* Financial summary — billing ledger + reimbursements */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+          <StatCard icon={Euro} label="Outstanding" value={`€${billingOutstanding.toFixed(2)}`} tone={billingOutstanding ? "warning" : "success"} />
+          <StatCard icon={AlertTriangle} label="Overdue" value={`€${billingOverdue.toFixed(2)}`} tone={billingOverdue ? "danger" : "success"} />
+          <StatCard icon={CheckCircle2} label="Paid this month" value={`€${billingPaidMonth.toFixed(2)}`} tone="success" />
           <StatCard icon={Wallet} label="Awaiting reimbursement" value={`€${outstandingReimb.toFixed(2)}`} tone={outstandingReimb ? "warning" : "success"} />
           <StatCard icon={Home} label="Properties" value={data.properties.length} tone="primary" />
         </div>

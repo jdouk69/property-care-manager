@@ -21,6 +21,7 @@ import ScheduleFirstVisitCard from "@/components/onboarding/ScheduleFirstVisitCa
 import OnboardingCompleteDialog from "@/components/onboarding/OnboardingCompleteDialog";
 import { getReadyHandoff, ensureOnboardingReadyNotification } from "@/lib/onboardingHandoff";
 import ClientVisitReports from "@/components/clients/ClientVisitReports";
+import ClientBillingCard from "@/components/billing/ClientBillingCard";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -75,6 +76,7 @@ export default function ClientHub() {
   const [documents, setDocuments] = useState([]);
   const [agreements, setAgreements] = useState([]);
   const [intakes, setIntakes] = useState([]);
+  const [charges, setCharges] = useState([]);
   const [downloadingPdf, setDownloadingPdf] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
   const [readyNotif, setReadyNotif] = useState(null);
@@ -89,7 +91,7 @@ export default function ClientHub() {
   useEffect(() => {
     (async () => {
       try {
-        const [c, allProps, pkgs, allVisits, allTasks, allMaint, allExp, allInv, allComm, allDocs, allAgs, allIntakes] = await Promise.all([
+        const [c, allProps, pkgs, allVisits, allTasks, allMaint, allExp, allInv, allComm, allDocs, allAgs, allIntakes, allCharges] = await Promise.all([
           base44.entities.Client.get(id),
           base44.entities.Property.list("-created_date", 500),
           base44.entities.ServicePackage.list("-created_date", 200),
@@ -102,6 +104,7 @@ export default function ClientHub() {
           base44.entities.PropertyDocument.list("-created_date", 200),
           base44.entities.PropertyServiceAgreement.list("-created_date", 200),
           base44.entities.CustomerIntake.list("-created_date", 200),
+          base44.entities.BillingCharge.list("-created_date", 200),
         ]);
         setClient(c);
         const props = (allProps || []).filter((p) => p.owner_id === id && !p.archived);
@@ -119,6 +122,7 @@ export default function ClientHub() {
         setDocuments((allDocs || []).filter((d) => d.client_id === id || propIds.has(d.property_id)));
         setAgreements((allAgs || []).filter((a) => (a.client_id === id || propIds.has(a.property_id)) && !a.archived));
         setIntakes((allIntakes || []).filter((i) => i.client_id === id && !i.archived));
+        setCharges((allCharges || []).filter((ch) => !ch.archived && (ch.client_id === id || propIds.has(ch.property_id))));
       } catch (e) {}
       setLoading(false);
     })();
@@ -342,6 +346,7 @@ export default function ClientHub() {
             items={openIssues.map((m) => ({ title: m.title, subtitle: `${propName(m.property_id)} · ${m.category}`, badge: m.priority, to: "/maintenance" }))} />
           <ActivitySection title="Expenses / Reimbursements" icon={Wallet} to="/expenses" count={expenses.length} emptyTitle="No expenses"
             items={expenses.map((e) => ({ title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, subtitle: `${propName(e.property_id)} · ${e.date || ""}${e.awaiting_reimbursement && !e.reimbursed ? " · Awaiting reimbursement" : ""}`, badge: e.reimbursed ? "Reimbursed" : e.awaiting_reimbursement ? "Pending" : null, to: "/expenses" }))} />
+          <ClientBillingCard charges={charges} propName={propName} />
           <ActivitySection title="Invoices" icon={FileText} to="/invoices" count={invoices.length} emptyTitle="No invoices"
             items={invoices.map((i) => ({ title: i.invoice_number, subtitle: `${i.invoice_date || ""} · €${(i.total || 0).toFixed(2)}`, badge: i.status, to: "/invoices" }))} />
           <ActivitySection title="Communications" icon={MessageSquare} to="/communications" count={communications.length} emptyTitle="No communications"

@@ -44,6 +44,7 @@ import IntakeReview from '@/pages/IntakeReview';
 import MonitoringPlanReview from '@/pages/MonitoringPlanReview';
 import PropertyAssistance from '@/pages/PropertyAssistance';
 import OneTimeServices from '@/pages/OneTimeServices';
+import Billing from '@/pages/Billing';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -98,6 +99,7 @@ const AuthenticatedApp = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/automation" element={<AutomationLog />} />
         <Route path="/invoices" element={<Invoices />} />
+        <Route path="/billing" element={<Billing />} />
         <Route path="/services" element={<ServicePackages />} />
         <Route path="/communications" element={<OwnerCommunications />} />
         <Route path="/deliveries" element={<Deliveries />} />

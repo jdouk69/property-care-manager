@@ -1,0 +1,88 @@
+{
+  "name": "BillingCharge",
+  "type": "object",
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "property_service_agreement_id": {
+      "type": "string"
+    },
+    "visit_id": {
+      "type": "string"
+    },
+    "expense_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "charge_type": {
+      "type": "string",
+      "enum": [
+        "Service",
+        "Visit",
+        "Reimbursement",
+        "Other"
+      ],
+      "default": "Service"
+    },
+    "billing_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Due",
+        "Paid",
+        "Waived"
+      ],
+      "default": "Due"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Bank Transfer",
+        "Cash",
+        "Wise",
+        "Revolut",
+        "Other"
+      ]
+    },
+    "payment_reference": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "source_key": {
+      "type": "string"
+    },
+    "billing_period": {
+      "type": "string"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "description",
+    "amount"
+  ]
+}
