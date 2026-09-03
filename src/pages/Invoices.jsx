@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Receipt, FileDown, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import jsPDF from "jspdf";
+import { base44 } from "@/api/base44Client";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
+import { generateInvoicePdf } from "@/lib/invoicePdf";
 
 const STATUSES = ["Draft", "Sent", "Partially Paid", "Paid", "Overdue", "Cancelled"];
 
@@ -33,33 +33,26 @@ const columns = [
   { key: "status", label: "Status", badge: true },
 ];
 
-function downloadInvoicePdf(item, lookups) {
-  const doc = new jsPDF();
-  let y = 20;
-  doc.setFontSize(18); doc.setFont(undefined, "bold");
-  doc.text("Invoice", 14, y); y += 8;
-  doc.setFontSize(11); doc.setFont(undefined, "normal");
-  doc.text(`Invoice #: ${item.invoice_number || "—"}`, 14, y); y += 6;
-  doc.text(`Client: ${lookups?.Client?.[item.client_id] || "—"}`, 14, y); y += 6;
-  doc.text(`Property: ${lookups?.Property?.[item.property_id] || "—"}`, 14, y); y += 6;
-  doc.text(`Date: ${item.invoice_date || "—"}   Due: ${item.due_date || "—"}`, 14, y); y += 10;
-  doc.text("Services:", 14, y); y += 6;
-  const services = (item.services || "—").split("\n");
-  services.forEach((s) => { doc.text(`  ${s}`, 14, y); y += 5; });
-  y += 4;
-  doc.text(`Expenses: €${(item.expenses_total || 0).toFixed(2)}`, 14, y); y += 5;
-  doc.text(`Reimbursements: €${(item.reimbursements_total || 0).toFixed(2)}`, 14, y); y += 5;
-  doc.text(`VAT: €${(item.vat || 0).toFixed(2)}`, 14, y); y += 5;
-  doc.setFont(undefined, "bold");
-  doc.text(`Total: €${(item.total || 0).toFixed(2)}`, 14, y); y += 6;
-  doc.setFont(undefined, "normal");
-  doc.text(`Amount Paid: €${(item.amount_paid || 0).toFixed(2)}`, 14, y); y += 6;
-  doc.text(`Outstanding: €${((item.total || 0) - (item.amount_paid || 0)).toFixed(2)}`, 14, y); y += 6;
-  doc.text(`Status: ${item.status || "—"}`, 14, y);
-  doc.save(`${item.invoice_number || "invoice"}.pdf`);
-}
-
 export default function Invoices() {
+  const [business, setBusiness] = useState({});
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  useEffect(() => {
+    base44.entities.BusinessSettings.list().then((l) => setBusiness((l || [])[0] || {})).catch(() => {});
+  }, []);
+
+  const downloadInvoicePdf = async (item, lookups) => {
+    setDownloadingId(item.id);
+    try {
+      await generateInvoicePdf(item, {
+        business,
+        client: { name: lookups?.Client?.[item.client_id] || "" },
+        property: { name: lookups?.Property?.[item.property_id] || "" },
+      });
+    } catch (e) {}
+    setDownloadingId(null);
+  };
+
   return (
     <AppLayout>
       <ResourceListPage
@@ -87,9 +80,9 @@ export default function Invoices() {
           );
         }}
         cardExtra={(item, lookups) => (
-          <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item, lookups); }}
-            className="text-[11px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1">
-            <FileDown className="w-3 h-3" /> PDF
+          <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item, lookups); }} disabled={downloadingId === item.id}
+            className="text-[11px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1 disabled:opacity-50">
+            {downloadingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileDown className="w-3 h-3" />} PDF
           </button>
         )}
       />

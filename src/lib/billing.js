@@ -51,3 +51,32 @@ const STATUS_BADGE_TONES = {
 export function statusBadgeClass(status) {
   return `text-xs px-2 py-0.5 rounded-full border ${STATUS_BADGE_TONES[status] || STATUS_BADGE_TONES.Due}`;
 }
+
+// --- Monthly ledger grouping helpers (display-only; never modify stored data) ---
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"];
+
+// Billing month key: billing_period when available, else YYYY-MM from billing_date.
+export function chargeMonthKey(charge) {
+  if (charge?.billing_period) return String(charge.billing_period).slice(0, 7);
+  if (charge?.billing_date) return String(charge.billing_date).slice(0, 7);
+  return "";
+}
+
+// "2026-10" -> "October 2026"
+export function monthLabel(key) {
+  const [y, m] = String(key || "").split("-");
+  const mi = Number(m) - 1;
+  if (!y || mi < 0 || mi > 11) return "";
+  return `${MONTH_NAMES[mi]} ${y}`;
+}
+
+// Drop a trailing "— <Month Year>" from a description when it exactly matches
+// the displayed billing month. Display/snapshot purpose only.
+export function stripMonthSuffix(desc, label) {
+  const s = desc || "";
+  if (!label) return s;
+  const re = new RegExp(`\\s*[—–-]\\s*${label}\\s*$`, "i");
+  return s.replace(re, "") || s;
+}

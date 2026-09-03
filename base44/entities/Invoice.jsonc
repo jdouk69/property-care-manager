@@ -62,6 +62,32 @@
     "archived": {
       "type": "boolean",
       "default": false
+    },
+    "billing_period": {
+      "type": "string"
+    },
+    "line_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "description"
+        ]
+      }
+    },
+    "charge_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

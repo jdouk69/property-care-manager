@@ -1,31 +1,19 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Euro, ArrowRight } from "lucide-react";
+import { Euro, ArrowRight, FilePlus2 } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
-import { displayStatus, statusBadgeClass, outstandingTotal, eur } from "@/lib/billing";
-
-// Display-only helpers — nothing here touches stored records.
-
-const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"];
-const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-// Billing month key: billing_period when available, else YYYY-MM from billing_date.
-export function chargeMonthKey(charge) {
-  if (charge.billing_period) return String(charge.billing_period).slice(0, 7);
-  if (charge.billing_date) return String(charge.billing_date).slice(0, 7);
-  return "";
-}
-
-// "2026-10" -> "October 2026"
-export function monthLabel(key) {
-  const [y, m] = key.split("-");
-  const mi = Number(m) - 1;
-  if (!y || mi < 0 || mi > 11) return "";
-  return `${MONTH_NAMES[mi]} ${y}`;
-}
+import { useToast } from "@/components/ui/use-toast";
+import InvoiceReviewModal from "@/components/invoices/InvoiceReviewModal";
+import {
+  displayStatus, statusBadgeClass, outstandingTotal, eur,
+  chargeMonthKey, monthLabel, stripMonthSuffix,
+} from "@/lib/billing";
+import {
+  buildInvoiceDraft, findInvoiceForPeriod, findInvoiceContainingCharge,
+} from "@/lib/invoiceGeneration";
 
 // "2026-10-15" -> "Oct 15"
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 function shortDate(dateStr) {
   const [y, m, d] = String(dateStr || "").slice(0, 10).split("-");
   const mi = Number(m) - 1;
@@ -33,20 +21,17 @@ function shortDate(dateStr) {
   return `${MONTH_SHORT[mi]} ${Number(d)}`;
 }
 
-// Display description: drop a trailing "— <Month Year>" only when it exactly
-// matches this group's month label. Stored data is never modified.
-function displayDescription(charge, groupLabel) {
-  const desc = charge.description || "Charge";
-  if (!groupLabel) return desc;
-  const re = new RegExp(`\\s*[—–-]\\s*${groupLabel}\\s*$`, "i");
-  return desc.replace(re, "") || desc;
-}
-
 // Compact summary limits — "View all" handles the complete history.
 const MAX_MONTHS = 2;
 const MAX_ROWS_PER_MONTH = 5;
 
-export default function ClientBillingCard({ charges }) {
+// Client Hub billing card: monthly ledger (Property → Month → Charges → Total)
+// with a compact Generate Invoice action per month. Nothing here sends or
+// marks anything paid.
+export default function ClientBillingCard({ charges, invoices = [], client = null, properties = [], onInvoiceSaved }) {
+  const { toast } = useToast();
+  const [review, setReview] = useState(null);
+
   const list = (charges || []).filter((c) => !c.archived);
   const openCount = list.filter((c) => c.status === "Due").length;
   const outstanding = outstandingTotal(list);
@@ -66,7 +51,6 @@ export default function ClientBillingCard({ charges }) {
           String(a.billing_date || "").localeCompare(String(b.billing_date || "")) ||
           String(a.description || "").localeCompare(String(b.description || ""))
         );
-        // Month total = that month's open (Due) charges.
         const openTotal = items.filter((c) => c.status === "Due").reduce((s, c) => s + (c.amount || 0), 0);
         return { key, label: monthLabel(key), items, openTotal };
       });
@@ -75,11 +59,32 @@ export default function ClientBillingCard({ charges }) {
   const shownGroups = groups.slice(0, MAX_MONTHS);
   const hiddenGroups = groups.length - shownGroups.length;
 
+  const onGenerate = (group) => {
+    const propertyId = group.items[0]?.property_id;
+    const existing = findInvoiceForPeriod(invoices, propertyId, group.key);
+    if (existing) {
+      toast({
+        title: `Invoice already exists for ${group.label || "this month"}`,
+        description: `${existing.invoice_number} · ${eur(existing.total)} — open it from the Invoices section below.`,
+      });
+      return;
+    }
+    const conflict = group.items.map((c) => findInvoiceContainingCharge(invoices, c.id)).find(Boolean);
+    if (conflict) {
+      toast({
+        title: "These charges are already invoiced",
+        description: `${conflict.invoice_number} already includes one or more charges from ${group.label || "this month"}.`,
+      });
+      return;
+    }
+    setReview({ draft: buildInvoiceDraft({ charges: group.items, propertyId, client, invoices }) });
+  };
+
   const rowSecondary = (ch) => {
     const st = displayStatus(ch);
     const dateStr = st === "Paid" ? ch.paid_date : ch.due_date;
     const sd = shortDate(dateStr);
-    return { st, dateText: sd ? `${st === "Waived" ? "Waived" : st === "Paid" ? "Paid" : "Due"} ${sd}` : "" };
+    return { st, dateText: sd ? `${st === "Paid" ? "Paid" : "Due"} ${sd}` : "" };
   };
 
   return (
@@ -109,10 +114,19 @@ export default function ClientBillingCard({ charges }) {
             const hidden = group.items.length - shown.length;
             return (
               <div key={group.key || "undated"} className="border-b border-border last:border-b-0">
-                <div className="px-4 pt-3 pb-1">
+                <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     {group.label || "Other charges"}
                   </p>
+                  {group.key && (
+                    <button
+                      type="button"
+                      onClick={() => onGenerate(group)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline min-h-[40px] -my-2 px-1"
+                    >
+                      <FilePlus2 className="w-3.5 h-3.5 shrink-0" /> Generate Invoice
+                    </button>
+                  )}
                 </div>
                 <div className="divide-y divide-border">
                   {shown.map((ch) => {
@@ -125,7 +139,7 @@ export default function ClientBillingCard({ charges }) {
                       >
                         <div className="min-w-0">
                           <p className="text-sm font-medium leading-snug break-words">
-                            {displayDescription(ch, group.label)}
+                            {stripMonthSuffix(ch.description || "Charge", group.label)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
                             {dateText && <span>{dateText}</span>}
@@ -158,6 +172,15 @@ export default function ClientBillingCard({ charges }) {
           )}
         </div>
       )}
+
+      <InvoiceReviewModal
+        open={!!review}
+        onOpenChange={(o) => !o && setReview(null)}
+        draft={review?.draft}
+        client={client}
+        properties={properties}
+        onSaved={onInvoiceSaved}
+      />
     </div>
   );
 }

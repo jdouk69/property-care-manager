@@ -346,7 +346,13 @@ export default function ClientHub() {
             items={openIssues.map((m) => ({ title: m.title, subtitle: `${propName(m.property_id)} · ${m.category}`, badge: m.priority, to: "/maintenance" }))} />
           <ActivitySection title="Expenses / Reimbursements" icon={Wallet} to="/expenses" count={expenses.length} emptyTitle="No expenses"
             items={expenses.map((e) => ({ title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, subtitle: `${propName(e.property_id)} · ${e.date || ""}${e.awaiting_reimbursement && !e.reimbursed ? " · Awaiting reimbursement" : ""}`, badge: e.reimbursed ? "Reimbursed" : e.awaiting_reimbursement ? "Pending" : null, to: "/expenses" }))} />
-          <ClientBillingCard charges={charges} propName={propName} />
+          <ClientBillingCard
+            charges={charges}
+            invoices={invoices}
+            client={client}
+            properties={properties}
+            onInvoiceSaved={(inv) => setInvoices((prev) => [inv, ...prev])}
+          />
           <ActivitySection title="Invoices" icon={FileText} to="/invoices" count={invoices.length} emptyTitle="No invoices"
             items={invoices.map((i) => ({ title: i.invoice_number, subtitle: `${i.invoice_date || ""} · €${(i.total || 0).toFixed(2)}`, badge: i.status, to: "/invoices" }))} />
           <ActivitySection title="Communications" icon={MessageSquare} to="/communications" count={communications.length} emptyTitle="No communications"
