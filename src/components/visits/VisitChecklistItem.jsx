@@ -39,7 +39,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
       <div className="flex flex-wrap gap-1.5 mt-2">
         {STATUSES.map((s) => (
           <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-            className={`text-xs px-2.5 py-1 md:text-sm md:px-4 md:py-2.5 2xl:text-xs 2xl:px-2.5 2xl:py-1 rounded-full border transition ${item.status === s.value ? s.cls + " font-medium" : "border-border text-muted-foreground hover:bg-muted"}`}>
+            className={`min-h-[44px] flex items-center justify-center px-4 py-2 text-[13px] leading-none rounded-full border transition md:px-5 md:py-2.5 md:text-sm 2xl:min-h-9 2xl:px-2.5 2xl:py-1 2xl:text-xs ${item.status === s.value ? s.cls + " font-medium" : "border-border text-muted-foreground hover:bg-muted"}`}>
             {s.label}
           </button>
         ))}
