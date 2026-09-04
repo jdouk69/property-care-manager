@@ -226,7 +226,7 @@ export default function ClientHub() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2 font-medium text-sm"><Home className="w-4 h-4 text-muted-foreground" /> Properties <span className="text-xs text-muted-foreground">({properties.length})</span></div>
             <div className="flex gap-2">
-              <Link to={`/property-assistance?client=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Wrench className="w-4 h-4" /> Property Assistance</Button></Link>
+              <Link to={`/property-assistance?client=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Wrench className="w-4 h-4" /> On-Demand Assistance</Button></Link>
               <Link to={`/properties?add=1&owner=${id}`}><Button size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Add Property</Button></Link>
             </div>
           </div>

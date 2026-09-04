@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Image as UIImage } from "@/components/ui/image";
 import { Loader2, Camera, CheckCircle2, X, Play, Pencil } from "lucide-react";
 import { athensMediumDateTime } from "@/lib/timezone";
-import { assistanceChargeBreakdown } from "@/lib/propertyAssistance";
+import { assistanceChargeBreakdown, assistanceHourlyRate, assistanceServiceName, ON_DEMAND_ASSISTANCE_TYPE } from "@/lib/propertyAssistance";
+import { ensureOnDemandAssistanceCharge } from "@/lib/visitBilling";
 import AdjustChargesSheet from "./AdjustChargesSheet";
 import ChargeReviewDialog from "./ChargeReviewDialog";
 
@@ -55,6 +56,7 @@ function ChargesCard({ visit, vatRate, onAdjust }) {
 
 export default function AssistancePerformer({ visit, property, client, business, onVisitUpdated, onCompleted }) {
   const [notes, setNotes] = useState(visit.summary || "");
+  const [internalNotes, setInternalNotes] = useState(visit.internal_notes || "");
   const [photos, setPhotos] = useState(visit.photos || []);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -108,6 +110,7 @@ export default function AssistancePerformer({ visit, property, client, business,
         status: "Completed",
         end_time: new Date().toISOString(),
         summary: notes.trim(),
+        internal_notes: internalNotes.trim(),
         photos,
         additional_minutes: minutes,
         additional_labor_charge: additionalLabor,
@@ -117,6 +120,17 @@ export default function AssistancePerformer({ visit, property, client, business,
         final_total: total,
       });
       setReviewOpen(false);
+      // Consolidated On-Demand Property Assistance: exactly ONE Due ledger
+      // charge on completion (duplicate-protected — re-completion never
+      // creates a second charge). Historical "Property Assistance" jobs keep
+      // their existing manual-ledger behavior.
+      try {
+        if (visit.visit_type === ON_DEMAND_ASSISTANCE_TYPE) {
+          await ensureOnDemandAssistanceCharge(updated, { clientId: client?.id || property?.owner_id || "" });
+        }
+      } catch (e) {
+        alert("Job completed, but the ledger charge could not be created: " + (e?.message || e));
+      }
       onCompleted(updated);
     } catch (e) {
       alert("Could not complete: " + (e?.message || e));
@@ -144,6 +158,7 @@ export default function AssistancePerformer({ visit, property, client, business,
       onOpenChange={setAdjustOpen}
       visit={visit}
       vatRate={vatRate}
+      hourlyRate={assistanceHourlyRate(visit.visit_type)}
       onSaved={onVisitUpdated}
     />
   );
@@ -168,12 +183,22 @@ export default function AssistancePerformer({ visit, property, client, business,
       <div className="space-y-4">
         {RequestCard}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-          <Label>Notes (optional)</Label>
+          <Label>Findings &amp; actions <span className="text-xs font-normal text-muted-foreground">(owner update)</span></Label>
           <Textarea
-            placeholder="What you did / anything the owner should know…"
+            placeholder="What you found and what you did…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
+            className="resize-none"
+          />
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+          <Label>Internal notes <span className="text-xs font-normal text-muted-foreground">(staff only)</span></Label>
+          <Textarea
+            placeholder="Anything worth recording for staff records…"
+            value={internalNotes}
+            onChange={(e) => setInternalNotes(e.target.value)}
+            rows={2}
             className="resize-none"
           />
         </div>
@@ -217,6 +242,7 @@ export default function AssistancePerformer({ visit, property, client, business,
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         visit={visit}
+        serviceLabel={assistanceServiceName(visit.visit_type)}
         vatRate={vatRate}
         onConfirm={confirmComplete}
         onAdjust={() => {

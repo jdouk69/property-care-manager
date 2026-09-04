@@ -20,7 +20,7 @@ function Row({ label, value, bold }) {
 // Compact bottom sheet to adjust all Property Assistance charges mid-job
 // (works while Scheduled or In Progress). Selecting an additional-time option
 // sets a suggested additional-labor charge, but staff can override the amount.
-export default function AdjustChargesSheet({ open, onOpenChange, visit, vatRate, onSaved }) {
+export default function AdjustChargesSheet({ open, onOpenChange, visit, vatRate, hourlyRate = 40, onSaved }) {
   const [base, setBase] = useState(Number(visit.agreed_price) || 0);
   const [minutes, setMinutes] = useState(Number(visit.additional_minutes) || 0);
   const [additionalLabor, setAdditionalLabor] = useState(Number(visit.additional_labor_charge) || 0);
@@ -41,7 +41,7 @@ export default function AdjustChargesSheet({ open, onOpenChange, visit, vatRate,
 
   const onMinutesChange = (m) => {
     setMinutes(m);
-    setAdditionalLabor(computeAdditionalLabor(m));
+    setAdditionalLabor(computeAdditionalLabor(m, hourlyRate));
   };
 
   const { subtotal, vat, total } = assistanceChargeBreakdown({ base, additionalLabor, travel, materials, vatRate });
@@ -82,12 +82,12 @@ export default function AdjustChargesSheet({ open, onOpenChange, visit, vatRate,
               <SelectContent>
                 {ADDITIONAL_TIME_OPTIONS.map((m) => (
                   <SelectItem key={m} value={String(m)}>
-                    {m} min{m > 0 ? ` · €${computeAdditionalLabor(m).toFixed(0)}` : ""}
+                    {m} min{m > 0 ? ` · €${computeAdditionalLabor(m, hourlyRate).toFixed(0)}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">€40/hour, 15-min increments.</p>
+            <p className="text-xs text-muted-foreground">€{hourlyRate}/hour, 15-min increments.</p>
           </div>
           <div className="space-y-1.5">
             <Label>Additional labor charge</Label>

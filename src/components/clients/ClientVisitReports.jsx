@@ -36,7 +36,7 @@ export default function ClientVisitReports({ visits, propName, to = "/visits" })
       ) : (
         <div className="divide-y divide-border">
           {completed.map((v) => {
-            const isAssistance = v.visit_type === "Property Assistance";
+            const isAssistance = v.visit_type === "Property Assistance" || v.visit_type === "On-Demand Property Assistance";
             const linkTo = isAssistance ? `/property-assistance/${v.id}` : `/visits/${v.id}`;
             const status = isAssistance ? "Completed" : (v.report_status || (v.report_sent ? "Sent" : "Draft"));
             const sent = status === "Sent";

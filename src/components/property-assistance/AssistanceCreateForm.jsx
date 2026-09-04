@@ -10,7 +10,7 @@ import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
 import { createNotification } from "@/lib/notifications";
 import {
   fetchAssistanceDefaultPrice,
-  PROPERTY_ASSISTANCE_TYPE,
+  ON_DEMAND_ASSISTANCE_TYPE,
   DEFAULT_TRAVEL_CHARGE,
 } from "@/lib/propertyAssistance";
 
@@ -37,7 +37,7 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
   const [propertyId, setPropertyId] = useState(preProperty || "");
   const [clientSearch, setClientSearch] = useState("");
   const [request, setRequest] = useState("");
-  const [price, setPrice] = useState(40);
+  const [price, setPrice] = useState(70);
   const [travel, setTravel] = useState(DEFAULT_TRAVEL_CHARGE);
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
@@ -125,7 +125,7 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
     try {
       const visit = await base44.entities.PropertyVisit.create({
         property_id: propertyId,
-        visit_type: PROPERTY_ASSISTANCE_TYPE,
+        visit_type: ON_DEMAND_ASSISTANCE_TYPE,
         status,
         start_time: timeIso,
         scheduled_time: status === "Scheduled" ? timeIso : "",
@@ -142,7 +142,7 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
           if (cats.includes("Visits")) {
             const prop = properties.find((p) => p.id === propertyId);
             await createNotification({
-              title: "Property Assistance scheduled",
+              title: "On-Demand Property Assistance scheduled",
               message: `${selectedClient?.name || "Client"} · ${prop?.name || "Property"} · ${athensVisitWhen(timeIso)}`,
               type: "Visit",
               priority: "Medium",
@@ -301,6 +301,9 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-2xl border border-border bg-card p-4">
               <Label>Agreed price (€)</Label>
+              <p className="text-[11px] text-muted-foreground mb-1">
+                €70 + VAT — first 30 minutes included. Additional time €45/hour + VAT.
+              </p>
               <Input
                 type="number"
                 min="0"

@@ -1,41 +1,64 @@
-// Property Assistance — small one-time customer requests (no recurring setup).
-// Reuses the PropertyVisit entity (visit_type "Property Assistance") rather than
-// a parallel job system. No Service Agreement / intake / onboarding is required.
+// One-time request-driven assistance (no recurring setup). Reuses the
+// PropertyVisit entity rather than a parallel job system. No Service
+// Agreement / intake / onboarding is required.
+//
+// CONSOLIDATION: the old "Property Assistance" (€50 + €40/h) and
+// "On-Demand Property Care Visit" (€70) services are now ONE customer-facing
+// service — "On-Demand Property Assistance" (€70 + VAT, first 30 minutes
+// included, additional time €45/hour + VAT). Historical "Property Assistance"
+// records are preserved untouched and keep their original pricing.
 
-export const PROPERTY_ASSISTANCE_TYPE = "Property Assistance";
-export const PROPERTY_ASSISTANCE_PACKAGE_NAME = "Property Assistance";
+export const PROPERTY_ASSISTANCE_TYPE = "Property Assistance";          // historical records only
+export const PROPERTY_ASSISTANCE_PACKAGE_NAME = "Property Assistance"; // retired package (inactive)
 export const DEFAULT_ASSISTANCE_PRICE = 50;
 export const DEFAULT_TRAVEL_CHARGE = 0;
 
-// Pricing model (Correction #16):
-//   Minimum service call €50 — includes the first 30 minutes.
-//   Additional labor €40/hour, billed in 15-minute increments.
-//   Travel + materials are optional staff-entered amounts.
+// Legacy pricing model — applies only to historical "Property Assistance"
+// records. Never used for new work.
 export const MIN_BASE_SERVICE = 50;
 export const ADDITIONAL_LABOR_RATE = 40; // € / hour
 export const INCREMENT_MINUTES = 15;
 
+// Consolidated service (all NEW work).
+export const ON_DEMAND_ASSISTANCE_TYPE = "On-Demand Property Assistance";
+export const ON_DEMAND_ASSISTANCE_PACKAGE_NAME = "On-Demand Property Assistance";
+export const DEFAULT_ON_DEMAND_PRICE = 70;  // includes first 30 minutes
+export const ON_DEMAND_HOURLY_RATE = 45;    // € / hour
+
 // Additional-time select options (minutes), 15-min increments up to 4 hours.
 export const ADDITIONAL_TIME_OPTIONS = [0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 210, 240];
 
-// additional_labor_charge = minutes / 60 × €40, rounded to 2 decimals.
-// 15 min → €10, 30 → €20, 45 → €30, 60 → €40.
-export function computeAdditionalLabor(minutes) {
+// additional_labor_charge = minutes / 60 × rate, rounded to 2 decimals.
+// The rate defaults to the legacy €40/h so historical record edits keep their
+// original pricing; the consolidated On-Demand flow passes €45 explicitly.
+export function computeAdditionalLabor(minutes, rate = ADDITIONAL_LABOR_RATE) {
   const m = Number(minutes) || 0;
-  return Math.round(((m / 60) * ADDITIONAL_LABOR_RATE) * 100) / 100;
+  const r = Number(rate) || ADDITIONAL_LABOR_RATE;
+  return Math.round(((m / 60) * r) * 100) / 100;
 }
 
-// Staff-side default price comes from the Property Assistance ServicePackage.
-// Staff can always override per job; this is only the starting value and is
-// never forced onto historical jobs.
+// Staff-side default price for NEW requests comes from the consolidated
+// On-Demand Property Assistance ServicePackage (€70). Historical jobs are
+// never re-priced — their agreed price is stored on the visit record.
 export async function fetchAssistanceDefaultPrice(base44) {
   try {
     const pkgs = await base44.entities.ServicePackage.list("-created_date", 200);
-    const pkg = (pkgs || []).find((p) => p.name === PROPERTY_ASSISTANCE_PACKAGE_NAME && p.active);
-    return pkg?.standard_price ?? DEFAULT_ASSISTANCE_PRICE;
+    const pkg = (pkgs || []).find((p) => p.name === ON_DEMAND_ASSISTANCE_PACKAGE_NAME && p.active);
+    return pkg?.standard_price ?? DEFAULT_ON_DEMAND_PRICE;
   } catch (e) {
-    return DEFAULT_ASSISTANCE_PRICE;
+    return DEFAULT_ON_DEMAND_PRICE;
   }
+}
+
+// Additional-time suggestion rate for the Adjust Charges sheet: €45/hour for
+// the consolidated On-Demand service, legacy €40/hour for historical records.
+export function assistanceHourlyRate(visitType) {
+  return visitType === ON_DEMAND_ASSISTANCE_TYPE ? ON_DEMAND_HOURLY_RATE : ADDITIONAL_LABOR_RATE;
+}
+
+// Customer-facing service name for a record (consolidated vs historical).
+export function assistanceServiceName(visitType) {
+  return visitType === ON_DEMAND_ASSISTANCE_TYPE ? ON_DEMAND_ASSISTANCE_PACKAGE_NAME : PROPERTY_ASSISTANCE_PACKAGE_NAME;
 }
 
 // Charge breakdown from explicit stored charge values. VAT uses the passed

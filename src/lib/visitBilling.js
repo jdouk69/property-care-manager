@@ -11,6 +11,7 @@
 // Owner Representative visits are never auto-charged by this module.
 import { base44 } from "@/api/base44Client";
 import { athensToday, athensDateOffset } from "@/lib/timezone";
+import { ON_DEMAND_ASSISTANCE_TYPE } from "@/lib/propertyAssistance";
 
 const ONE_TIME_TIERS = ["Basic", "Standard", "Premium"];
 
@@ -55,4 +56,40 @@ export async function ensureOneTimeVisitCharge(visit, { clientId = "" } = {}) {
     source_key: `visit:${visit.id}`,
   });
   return charge;
+}
+
+// Consolidated On-Demand Property Assistance (request-driven one-time
+// service). On completion, exactly ONE Due ledger charge is created for the
+// final approved service amount: base €70 + any approved additional-time
+// charge (plus any staff-entered travel/materials that were part of the
+// approved total in the charge review). Ledger amounts exclude VAT, matching
+// the tiered one-time rule — VAT is added at invoice time.
+// DUPLICATE PROTECTION: if any charge already references this visit, nothing
+// is created — safe on re-completion or double-fired completion logic.
+// Historical "Property Assistance" visits are never auto-charged here.
+export async function ensureOnDemandAssistanceCharge(visit, { clientId = "" } = {}) {
+  if (!visit || visit.status !== "Completed" || visit.visit_type !== ON_DEMAND_ASSISTANCE_TYPE) return null;
+  const amount = Math.round((
+    (Number(visit.agreed_price) || 0) +
+    (Number(visit.additional_labor_charge) || 0) +
+    (Number(visit.travel_charge) || 0) +
+    (Number(visit.materials_charge) || 0)
+  ) * 100) / 100;
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  const existing = await base44.entities.BillingCharge.filter({ visit_id: visit.id });
+  if (existing && existing.length > 0) return null;
+
+  return base44.entities.BillingCharge.create({
+    client_id: clientId || "",
+    property_id: visit.property_id || "",
+    visit_id: visit.id,
+    description: "On-Demand Property Assistance — one-time service",
+    amount,
+    charge_type: "Visit",
+    billing_date: athensToday(),
+    due_date: athensDateOffset(NET_DUE_DAYS),
+    status: "Due",
+    source_key: `visit:${visit.id}`,
+  });
 }

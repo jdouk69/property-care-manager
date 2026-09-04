@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
 import {
-  Eye, Wrench, MapPin, ClipboardList, ArrowRight, ShoppingBasket, Loader2, Search, Home as HomeIcon, ClipboardCheck,
+  Wrench, MapPin, ClipboardList, ArrowRight, ShoppingBasket, Loader2, Search, Home as HomeIcon, ClipboardCheck,
 } from "lucide-react";
 
 // Tiered one-time property care — routes into the EXISTING governed
@@ -20,20 +20,6 @@ const TIERS = [
 ];
 
 const SERVICES = [
-  {
-    label: "Property Assistance",
-    desc: "Small one-time request — camera, shutters, deliveries, resets.",
-    to: "/property-assistance",
-    icon: Wrench,
-    color: "bg-violet-500",
-  },
-  {
-    label: "On-Demand Property Care Visit",
-    desc: "One-time visual property check while the owner is away.",
-    to: "/visits?schedule=1&visit_type=Property%20Care%20Inspection",
-    icon: Eye,
-    color: "bg-sky-500",
-  },
   {
     label: "Grocery Stocking",
     desc: "From €45 + VAT — shopping, delivery, basic putting-away. Groceries paid separately by the owner.",
@@ -101,6 +87,7 @@ export default function OneTimeServices() {
             Selecting a level opens the existing Service &amp; Pricing Assessment for the property — size, complexity and
             additional units (+€40 each) are reviewed, custom-pricing rules still apply, and the final price always
             requires staff approval. Exactly one visit is created; no recurring agreement.
+            For a single small request instead of a complete whole-property check, use On-Demand Property Assistance below.
           </p>
           <div className="space-y-2">
             {TIERS.map((t) => (
@@ -154,6 +141,31 @@ export default function OneTimeServices() {
             </div>
           )}
         </div>
+
+        {/* Consolidated request-driven service — replaces the old Property Assistance
+            and On-Demand Property Care Visit cards. Request-driven, NOT a whole-property check. */}
+        <Link
+          to="/property-assistance"
+          className="flex items-start gap-3 rounded-2xl border border-violet-500/30 bg-violet-500/5 p-4 hover:border-violet-500/50 hover:shadow-md transition"
+        >
+          <span className="w-10 h-10 rounded-xl bg-violet-500 text-white flex items-center justify-center shrink-0">
+            <Wrench className="w-5 h-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-foreground">On-Demand Property Assistance</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Need something checked or handled while you're away? For individual property-related requests —
+              checking a specific concern, taking requested photos, providing access, meeting a technician,
+              contractor or delivery, securing the property, or other reasonable non-specialist assistance.
+            </p>
+            <p className="text-sm font-semibold text-primary mt-1.5">€70 + VAT</p>
+            <p className="text-[11px] text-muted-foreground">First 30 minutes included · Additional time €45/hour + VAT</p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Not a full property check — for a complete whole-property visit, use the levels above.
+            </p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" />
+        </Link>
 
         <div className="space-y-2">
           {SERVICES.map((s) => (

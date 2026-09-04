@@ -72,7 +72,7 @@ export function buildTodayAgenda(data = {}) {
     // Correction #15 — Property Assistance jobs open in their own lightweight
     // flow (not the checklist wizard). "continue-visit" simply navigates to
     // item.to, so it never triggers the wizard's startScheduledVisit.
-    const isAssistance = v.visit_type === "Property Assistance";
+    const isAssistance = v.visit_type === "Property Assistance" || v.visit_type === "On-Demand Property Assistance";
     const visitTo = isAssistance ? `/property-assistance/${v.id}` : `/visits/${v.id}`;
     const assistanceStart = { actionKind: "continue-visit", actionLabel: "Start" };
     const normalStart = { actionKind: "start-visit", actionLabel: "Start Visit" };

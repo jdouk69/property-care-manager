@@ -16,7 +16,7 @@ function Row({ label, value, bold }) {
 // Final charge review shown when staff taps "Complete Job". Does NOT complete
 // the job — only onConfirm() finalizes it. "Go Back / Adjust" reopens the
 // Adjust Charges sheet without completing.
-export default function ChargeReviewDialog({ open, onOpenChange, visit, vatRate, onConfirm, onAdjust, saving }) {
+export default function ChargeReviewDialog({ open, onOpenChange, visit, serviceLabel = "Property Assistance", vatRate, onConfirm, onAdjust, saving }) {
   const base = Number(visit.agreed_price) || 0;
   const minutes = Number(visit.additional_minutes) || 0;
   const additionalLabor = Number(visit.additional_labor_charge) || 0;
@@ -28,7 +28,7 @@ export default function ChargeReviewDialog({ open, onOpenChange, visit, vatRate,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm rounded-2xl">
         <DialogHeader>
-          <DialogTitle>Complete Property Assistance</DialogTitle>
+          <DialogTitle>Complete {serviceLabel}</DialogTitle>
           <DialogDescription className="whitespace-pre-wrap">{visit.request_description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2 text-sm">

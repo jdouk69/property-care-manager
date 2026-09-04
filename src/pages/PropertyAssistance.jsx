@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { athensMediumDateTime } from "@/lib/timezone";
-import { assistanceChargeBreakdown } from "@/lib/propertyAssistance";
+import { assistanceChargeBreakdown, assistanceServiceName } from "@/lib/propertyAssistance";
 import AssistanceCreateForm from "@/components/property-assistance/AssistanceCreateForm";
 import AssistancePerformer from "@/components/property-assistance/AssistancePerformer";
 
@@ -36,7 +36,7 @@ function DoneView({ visit, property, client, business, onDone }) {
     <div className="space-y-4">
       <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 text-center">
         <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
-        <h2 className="font-semibold text-lg">Property Assistance Complete</h2>
+        <h2 className="font-semibold text-lg">{assistanceServiceName(visit.visit_type)} Complete</h2>
         <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{visit.request_description}</p>
       </div>
       <div className="rounded-2xl border border-border bg-card p-4 space-y-2 text-sm">
@@ -150,9 +150,9 @@ export default function PropertyAssistance() {
         <PageBackButton fallback="/" className="mb-3" />
         {step === "create" && (
           <>
-            <h1 className="text-2xl font-semibold tracking-tight mb-1">Property Assistance</h1>
+            <h1 className="text-2xl font-semibold tracking-tight mb-1">On-Demand Property Assistance</h1>
             <p className="text-sm text-muted-foreground mb-4">
-              Small one-time request — no recurring setup needed.
+              One-time owner request — €70 + VAT, first 30 minutes included, additional time €45/hour + VAT.
             </p>
             <AssistanceCreateForm
               preClient={searchParams.get("client")}
@@ -163,7 +163,7 @@ export default function PropertyAssistance() {
         )}
         {step === "perform" && visit && (
           <>
-            <h1 className="text-xl font-semibold tracking-tight mb-3">Property Assistance</h1>
+            <h1 className="text-xl font-semibold tracking-tight mb-3">{assistanceServiceName(visit.visit_type)}</h1>
             <AssistancePerformer
               visit={visit}
               property={property}
@@ -179,7 +179,7 @@ export default function PropertyAssistance() {
         )}
         {step === "done" && visit && (
           <>
-            <h1 className="text-xl font-semibold tracking-tight mb-3">Property Assistance</h1>
+            <h1 className="text-xl font-semibold tracking-tight mb-3">{assistanceServiceName(visit.visit_type)}</h1>
             <DoneView
               visit={visit}
               property={property}

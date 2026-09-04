@@ -207,7 +207,7 @@ export default function Visits() {
           <div className="space-y-2">
             {filtered.map((v) => {
               const flagged = (v.checklist || []).filter((i) => i.status === "Important" || i.status === "Emergency").length;
-              const isAssistance = v.visit_type === "Property Assistance";
+              const isAssistance = v.visit_type === "Property Assistance" || v.visit_type === "On-Demand Property Assistance";
               const cn = clientName(v);
               const dateLabel = v.status === "Completed"
                 ? athensMediumDate(v.end_time || v.start_time)

@@ -110,7 +110,7 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
     ? (visits || []).some(
         (v) =>
           v.property_id === propIdForAssistance &&
-          v.visit_type === "Property Assistance" &&
+          (v.visit_type === "Property Assistance" || v.visit_type === "On-Demand Property Assistance") &&
           v.status !== "Cancelled" &&
           !v.archived
       )
