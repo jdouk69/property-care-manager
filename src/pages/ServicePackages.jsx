@@ -5,6 +5,7 @@ import ResourceListPage from "@/components/resource/ResourceListPage";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { VISIT_TYPES } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { formatPricePlusVat } from "@/lib/servicePricing";
 
 const fields = [
   { name: "name", label: "Service Name", type: "text", required: true, placeholder: "e.g. Standard property care" },
@@ -39,7 +40,15 @@ const fields = [
 
 const columns = [
   { key: "name", label: "Service", primary: true },
-  { key: "standard_price", label: "Price", render: (it) => `€${(it.standard_price || 0).toFixed(2)}` },
+  {
+    key: "standard_price",
+    label: "Price",
+    render: (it) =>
+      it.vat_setting === "Standard 24%"
+        ? formatPricePlusVat(it.standard_price, { perMonth: it.billing_type !== "One-time" })
+        : `€${(it.standard_price || 0).toFixed(2)}`,
+  },
+  { key: "one_time_price", label: "One-Time", render: (it) => (it.one_time_price != null ? formatPricePlusVat(it.one_time_price) : "—") },
   { key: "billing_type", label: "Billing", badge: true },
   { key: "active", label: "Active", badge: true, render: (it) => (it.active ? "Yes" : "No") },
 ];

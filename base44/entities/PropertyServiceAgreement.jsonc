@@ -62,6 +62,39 @@
     "created_from_package_price": {
       "type": "number"
     },
+    "purchase_type": {
+      "type": "string",
+      "enum": [
+        "Recurring",
+        "One-time"
+      ],
+      "default": "Recurring"
+    },
+    "recommended_price": {
+      "type": "number"
+    },
+    "unit_adjustment_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "price_override_reason": {
+      "type": "string"
+    },
+    "price_approved_at": {
+      "type": "string"
+    },
+    "price_approved_by": {
+      "type": "string"
+    },
+    "pricing_review_status": {
+      "type": "string",
+      "enum": [
+        "Recommended",
+        "Custom Review",
+        "Manual Override"
+      ],
+      "default": "Recommended"
+    },
     "signing_status": {
       "type": "string",
       "enum": [

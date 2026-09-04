@@ -216,6 +216,77 @@
     "monitoring_plan_confirmed_by": {
       "type": "string"
     },
+    "assessment_interior_size": {
+      "type": "string",
+      "enum": [
+        "Under 100 m\u00b2",
+        "100\u2013200 m\u00b2",
+        "200\u2013300 m\u00b2",
+        "300+ m\u00b2"
+      ]
+    },
+    "assessment_additional_units": {
+      "type": "number",
+      "default": 0
+    },
+    "assessment_complexity": {
+      "type": "string",
+      "enum": [
+        "Simple",
+        "Standard",
+        "Complex"
+      ]
+    },
+    "assessment_pool_spa": {
+      "type": "boolean",
+      "default": false
+    },
+    "assessment_multiple_floors": {
+      "type": "boolean",
+      "default": false
+    },
+    "assessment_outbuilding": {
+      "type": "boolean",
+      "default": false
+    },
+    "assessment_extensive_grounds": {
+      "type": "boolean",
+      "default": false
+    },
+    "assessment_difficult_access": {
+      "type": "boolean",
+      "default": false
+    },
+    "assessment_special_monitoring": {
+      "type": "boolean",
+      "default": false
+    },
+    "assessment_visit_time": {
+      "type": "string",
+      "enum": [
+        "Up to 15 minutes",
+        "30\u201345 minutes",
+        "Up to 60 minutes",
+        "More than 60 minutes"
+      ]
+    },
+    "assessment_note": {
+      "type": "string"
+    },
+    "assessment_service_area": {
+      "type": "string",
+      "enum": [
+        "Within normal service area",
+        "Outside normal service area / review required"
+      ],
+      "default": "Within normal service area"
+    },
+    "assessment_completed_at": {
+      "type": "string"
+    },
+    "assessment_completed_by": {
+      "type": "string"
+    },
     "archived": {
       "type": "boolean",
       "default": false

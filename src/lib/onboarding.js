@@ -79,6 +79,26 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   const conflict = svc.status === "conflict";
   const singleActive = svc.status === "ok" ? svc.agreement : null;
 
+  // Stage 2b — Service & Pricing Assessment (additive V1). Advises pricing only;
+  // never blocks `ready` and never re-prices anything — an existing agreement
+  // already carries its locked price, so those customers show as complete.
+  const assessmentDone = !!selectedProperty?.assessment_completed_at;
+  const assessmentPriced = !!latestAg; // existing service already priced on its agreement
+  const sA = selectedProperty
+    ? {
+        key: "assessment",
+        name: "Service & Pricing Assessment",
+        complete: assessmentDone || assessmentPriced,
+        status: assessmentDone ? "Completed" : assessmentPriced ? "Existing service" : "Not completed",
+        detail: assessmentDone
+          ? "Assessment & pricing recommendation on file"
+          : assessmentPriced
+            ? "Pricing captured on the existing agreement"
+            : "Assess property size & complexity for a pricing recommendation",
+        action: { label: assessmentDone ? "View Assessment" : "Complete Assessment", to: `/properties/${selectedProperty.id}/service-setup` },
+      }
+    : { key: "assessment", name: "Service & Pricing Assessment", complete: false, status: "No property", detail: "Add a property first", action: null };
+
   // Correction #15 — One-time Property Assistance WITHOUT an agreement. A
   // property that has no active agreement but does have a Property Assistance
   // visit is a one-time customer, not an incomplete recurring customer. Short-
@@ -149,8 +169,8 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
     const s5ot = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: true, status: "Not applicable (one-time service)", detail: "One-time service — no recurring onboarding", action: null };
     const s6ot = { key: "monitoring", name: "Monitoring Plan", complete: true, status: "Not applicable (one-time service)", detail: "One-time service — no monitoring plan", action: null };
     const s7ot = { key: "ready", name: "Service Active", complete: true, status: "Ready", detail: "On-demand service active", action: null };
-    const stagesOT = [s1, s2, s3, s4, s5ot, s6ot, s7ot];
-    const primaryActionOT = [s1, s2, s3, s4].find((s) => !s.complete && s.action) || null;
+    const stagesOT = [s1, s2, sA, s3, s4, s5ot, s6ot, s7ot];
+    const primaryActionOT = [s1, s2, sA, s3, s4].find((s) => !s.complete && s.action) || null;
     return { stages: stagesOT, primaryAction: primaryActionOT, ready: !!(selectedProperty && intakeReadyOT), serviceConflict: false, isOneTime: true };
   }
 
@@ -200,8 +220,9 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   const ready = !!(selectedProperty && signedAg && singleActive && s5.complete && planConfirmed && intakeReady);
   const s7 = { key: "ready", name: "Ready for Regular Service", complete: ready, status: ready ? "Ready" : "In progress", detail: ready ? "All onboarding stages complete" : "Complete the remaining stages", action: null };
 
-  const stages = [s1, s2, s3, s4, s5, s6, s7];
-  const primaryAction = conflict ? null : [s1, s2, s3, s4, s5, s6].find((s) => !s.complete && s.action) || null;
+  const stages = [s1, s2, sA, s3, s4, s5, s6, s7];
+
+  const primaryAction = conflict ? null : [s1, s2, sA, s3, s4, s5, s6].find((s) => !s.complete && s.action) || null;
 
   return { stages, primaryAction, ready, serviceConflict: conflict };
 }

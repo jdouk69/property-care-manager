@@ -38,6 +38,7 @@ import PropertyDocuments from '@/pages/PropertyDocuments';
 import ChecklistTemplates from '@/pages/ChecklistTemplates';
 import ClientHub from '@/pages/ClientHub';
 import ServiceAgreement from '@/pages/ServiceAgreement';
+import ServiceSetup from '@/pages/ServiceSetup';
 import IntakeForm from '@/pages/IntakeForm';
 import AgreementPublic from '@/pages/AgreementPublic';
 import IntakeReview from '@/pages/IntakeReview';
@@ -87,6 +88,7 @@ const AuthenticatedApp = () => {
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} />
         <Route path="/properties/:id/monitoring-plan" element={<MonitoringPlanReview />} />
+        <Route path="/properties/:id/service-setup" element={<ServiceSetup />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/inspections" element={<Inspections />} />
         <Route path="/maintenance" element={<Maintenance />} />

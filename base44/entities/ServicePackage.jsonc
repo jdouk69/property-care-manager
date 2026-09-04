@@ -11,6 +11,17 @@
     "standard_price": {
       "type": "number"
     },
+    "service_tier": {
+      "type": "string",
+      "enum": [
+        "Basic",
+        "Standard",
+        "Premium"
+      ]
+    },
+    "one_time_price": {
+      "type": "number"
+    },
     "billing_type": {
       "type": "string",
       "enum": [
