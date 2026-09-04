@@ -11,6 +11,7 @@ import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -21,7 +22,7 @@ const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
   "Home Watch Inspection", "Property Care Inspection", "Emergency Visit", "Owner Representative Site Visit",
-  "Initial Property Onboarding Inspection",
+  "Initial Property Onboarding Inspection", "Grocery Stocking",
 ];
 
 // iPad touch-sizing helpers. Tablet range md–xl (768–1535) gets larger touch targets;
@@ -80,6 +81,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [flagged, setFlagged] = useState({});
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(null);
+  // Grocery Stocking (one-time service) — captured at completion, stored on the visit.
+  const [groceryList, setGroceryList] = useState("");
+  const [groceryCost, setGroceryCost] = useState("");
   const [reportBusiness, setReportBusiness] = useState({});
   const [reportClient, setReportClient] = useState({});
   const [issueIds, setIssueIds] = useState([]);
@@ -564,6 +568,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       summary, internal_notes: internalNotes, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
       owner_report: "", report_sent: false, report_status: "Ready to Send",
       property_service_agreement_id: agreementId || "",
+      ...(visitType === "Grocery Stocking" ? { shopping_list: groceryList.trim(), grocery_cost: parseFloat(groceryCost) || 0 } : {}),
     };
     try {
       let visit;
@@ -573,6 +578,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         visit = await base44.entities.PropertyVisit.create(shared);
       }
       setCompleted(visit);
+      // Completed tiered one-time property-care visit → create the single Due
+      // ledger charge at the locked agreed price (duplicate-safe). Other visit
+      // types (recurring plans, Property Assistance, On-Demand, Grocery, etc.)
+      // are never auto-charged — see visitBilling.js.
+      try {
+        const prop0 = properties.find((p) => p.id === propertyId) || {};
+        const charge = await ensureOneTimeVisitCharge(visit, { clientId: (clientObj?.id) || prop0.owner_id || "" });
+        if (charge) toast({ description: `Ledger charge created: €${Number(charge.amount).toFixed(2)} (excl. VAT)` });
+      } catch (e) {}
       // Load business + client context for the report delivery card.
       try {
         const bs = await base44.entities.BusinessSettings.list("-created_date", 1);
@@ -649,7 +663,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 {[
                   a.inspection_frequency || agreementPackages[a.id]?.inspection_frequency,
                   agreementPackages[a.id]?.visit_duration,
-                  a.agreed_price != null ? `€${a.agreed_price.toFixed(2)}` : (agreementPackages[a.id]?.standard_price != null ? `€${agreementPackages[a.id].standard_price.toFixed(2)}` : ""),
+                  a.agreed_price != null ? `€${a.agreed_price.toFixed(2)} + VAT` : (agreementPackages[a.id]?.standard_price != null ? `€${agreementPackages[a.id].standard_price.toFixed(2)} + VAT` : ""),
                   a.billing_type,
                 ].filter(Boolean).join(" · ")}
               </p>
@@ -1073,6 +1087,20 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         {/* Finish */}
         <div id="step-finish" className="scroll-mt-28">
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Finish</p>
+          {visitType === "Grocery Stocking" && (
+            <div className="mb-4 rounded-2xl border border-border bg-card p-4 space-y-3">
+              <p className="text-sm font-medium">Grocery details</p>
+              <div>
+                <Label className="text-xs mb-1.5 block">Owner shopping list / request</Label>
+                <Textarea value={groceryList} onChange={(e) => setGroceryList(e.target.value)} rows={2} placeholder="Items requested by the owner…" className={AREA} />
+              </div>
+              <div>
+                <Label className="text-xs mb-1.5 block">Grocery / receipt cost (€)</Label>
+                <Input type="number" step="0.01" min="0" value={groceryCost} onChange={(e) => setGroceryCost(e.target.value)} placeholder="Actual cost of groceries — separate from the €45 service fee" className={FIELD} />
+              </div>
+              <p className="text-xs text-muted-foreground">Groceries are paid separately by the owner — keep this cost separate from the €45 + VAT service fee. Attach the receipt photo on the checklist item below.</p>
+            </div>
+          )}
           <div className="mb-4">
             <Label className="text-xs mb-1.5 block">Visit Summary & Recommendations <span className="text-emerald-600 font-normal">(shown to owner)</span></Label>
             <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder="Overall findings and recommended next steps for the owner…" className={AREA} />

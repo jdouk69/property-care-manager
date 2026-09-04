@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -41,6 +41,7 @@ const TIER_CARD_LABELS = {
 export default function ServiceSetup() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [prop, setProp] = useState(null);
@@ -75,6 +76,12 @@ export default function ServiceSetup() {
         if (p.owner_id) { try { setClient(await base44.entities.Client.get(p.owner_id)); } catch (e) {} }
         const pkgs = await base44.entities.ServicePackage.list("-created_date", 500);
         setPackages((pkgs || []).filter((x) => TIERS.includes(x.service_tier) && x.active !== false));
+        // One-Time Services entry point: preselect purchase type / tier from
+        // the query string. Pricing governance (assessment, +€40 units,
+        // custom-review rules, manual staff approval) is fully unchanged.
+        if (params.get("purchase") === "One-time") setPurchaseType("One-time");
+        const qTier = params.get("tier");
+        if (TIERS.includes(qTier)) setTier(qTier);
         const ags = await base44.entities.PropertyServiceAgreement.filter({ property_id: id });
         setExistingAgreements((ags || []).filter((a) => !a.archived && !["Ended", "Cancelled"].includes(a.status)));
       } catch (e) {
@@ -291,6 +298,12 @@ export default function ServiceSetup() {
                   <p className="text-xs text-muted-foreground mt-1">
                     {purchaseType === "One-time" ? "One visit" : p.inspection_frequency || "Monthly"} · {p.visit_duration || ""}
                   </p>
+                  {purchaseType === "One-time" && t === "Premium" && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Compared with Standard one-time: longer visit allowance, more time for owner-selected monitoring
+                      priorities, more detailed documentation where appropriate, and a more detailed owner update/follow-up.
+                    </p>
+                  )}
                 </button>
               );
             })}

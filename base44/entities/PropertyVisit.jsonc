@@ -20,7 +20,8 @@
         "Emergency Visit",
         "Owner Representative Site Visit",
         "Initial Property Onboarding Inspection",
-        "Property Assistance"
+        "Property Assistance",
+        "Grocery Stocking"
       ],
       "default": "Monthly Property Watch"
     },
@@ -200,6 +201,13 @@
     "pricing_snapshot": {
       "type": "object",
       "additionalProperties": true
+    },
+    "shopping_list": {
+      "type": "string"
+    },
+    "grocery_cost": {
+      "type": "number",
+      "default": 0
     },
     "archived": {
       "type": "boolean",

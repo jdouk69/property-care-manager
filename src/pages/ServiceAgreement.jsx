@@ -16,6 +16,7 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import EmptyState from "@/components/ui/EmptyState";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { buildSentSnapshot } from "@/lib/agreementTerms";
 import EmergencyAuthSection from "@/components/agreements/EmergencyAuthSection";
 import IntakeReferenceCard from "@/components/agreements/IntakeReferenceCard";
@@ -94,6 +95,12 @@ export default function ServiceAgreement() {
   const [sendError, setSendError] = useState("");
   const [copied, setCopied] = useState("");
   const [downloadingSigned, setDownloadingSigned] = useState(false);
+  // Deliberate price-change capture (price lock, post-audit cleanup).
+  const [priceChangeOpen, setPriceChangeOpen] = useState(false);
+  const [newPrice, setNewPrice] = useState("");
+  const [priceChangeReason, setPriceChangeReason] = useState("");
+  const [priceChangeError, setPriceChangeError] = useState("");
+  const [approving, setApproving] = useState(false);
   const [groupVersions, setGroupVersions] = useState([]);
   const [values, setValues] = useState({
     client_id: clientId || "",
@@ -194,6 +201,12 @@ export default function ServiceAgreement() {
             notes: loaded.notes || "",
             next_invoice_date: loaded.next_invoice_date || "",
             created_from_package_price: loaded.created_from_package_price ?? 0,
+            previous_agreed_price: loaded.previous_agreed_price ?? null,
+            recommended_price: loaded.recommended_price ?? null,
+            price_override_reason: loaded.price_override_reason || "",
+            price_approved_at: loaded.price_approved_at || "",
+            price_approved_by: loaded.price_approved_by || "",
+            pricing_review_status: loaded.pricing_review_status || "",
             emergency_authorization: loaded.emergency_authorization || "",
             emergency_max_amount: loaded.emergency_max_amount ?? "",
             emergency_unreachable_instructions: loaded.emergency_unreachable_instructions || "",
@@ -381,16 +394,52 @@ export default function ServiceAgreement() {
       const nextInvoice = billingChanged
         ? (s.start_date && newBilling !== "One-time" ? addInterval(s.start_date, newBilling) : (newBilling === "One-time" ? "" : s.next_invoice_date))
         : s.next_invoice_date;
+      // PRICE LOCK: an EXISTING agreement's agreed price is never replaced by
+      // the package's CURRENT price — selecting/changing the package keeps the
+      // customer's locked price. Only the explicit "Change Price" action can
+      // change it (with reason/approver/timestamp captured). New drafts still
+      // prefill from the package as a starting point.
       return {
         ...s,
         service_package_id: pid,
-        agreed_price: pkg.standard_price ?? s.agreed_price,
+        agreed_price: isEdit ? s.agreed_price : (pkg.standard_price ?? s.agreed_price),
         billing_type: newBilling,
         inspection_frequency: pkg.inspection_frequency || s.inspection_frequency,
-        created_from_package_price: pkg.standard_price ?? 0,
+        created_from_package_price: isEdit ? s.created_from_package_price : (pkg.standard_price ?? 0),
         next_invoice_date: nextInvoice,
       };
     });
+  };
+
+  // ---- Deliberate price change (explicit staff action) ----
+  // The only way an existing agreement's locked price changes. Records the
+  // previous price, new price, reason, approver and date/time using the
+  // agreement's existing pricing-approval fields — no second approval system.
+  const openPriceChange = () => {
+    setNewPrice(values.agreed_price != null ? String(values.agreed_price) : "");
+    setPriceChangeReason("");
+    setPriceChangeError("");
+    setPriceChangeOpen(true);
+  };
+
+  const confirmPriceChange = async () => {
+    const final = parseFloat(newPrice);
+    if (!Number.isFinite(final) || final <= 0) { setPriceChangeError("Enter a valid price above €0."); return; }
+    if (!priceChangeReason.trim()) { setPriceChangeError("A reason is required for a price change."); return; }
+    setApproving(true);
+    let meName = "";
+    try { const me = await base44.auth.me(); meName = me?.full_name || me?.email || ""; } catch (e) {}
+    setValues((s) => ({
+      ...s,
+      previous_agreed_price: Number(values.agreed_price) || 0,
+      agreed_price: final,
+      price_override_reason: priceChangeReason.trim(),
+      price_approved_at: new Date().toISOString(),
+      price_approved_by: meName,
+      pricing_review_status: "Manual Override",
+    }));
+    setApproving(false);
+    setPriceChangeOpen(false);
   };
 
   const onStartDateChange = (v) => {
@@ -442,6 +491,13 @@ export default function ServiceAgreement() {
       if (isEdit) {
         if (values.signing_status) payload.signing_status = values.signing_status;
         if (values.agreement_version) payload.agreement_version = values.agreement_version;
+        // Pricing-approval fields round-trip on edit; they only change when a
+        // deliberate price change was recorded via the Change Price dialog.
+        if (values.previous_agreed_price != null) payload.previous_agreed_price = Number(values.previous_agreed_price) || 0;
+        if (values.price_override_reason) payload.price_override_reason = values.price_override_reason;
+        if (values.price_approved_at) payload.price_approved_at = values.price_approved_at;
+        if (values.price_approved_by) payload.price_approved_by = values.price_approved_by;
+        if (values.pricing_review_status) payload.pricing_review_status = values.pricing_review_status;
       } else {
         payload.signing_status = "Draft";
         payload.agreement_version = 1;
@@ -522,7 +578,7 @@ export default function ServiceAgreement() {
                 <p className="text-sm font-medium">{selectedPackage.name}</p>
                 {selectedPackage.description && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{selectedPackage.description}</p>}
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div>Standard price: <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)}</span></div>
+                  <div>Standard price: <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)} + VAT</span></div>
                   <div>Billing: <span className="text-foreground">{selectedPackage.billing_type}</span></div>
                   <div>Visit duration: <span className="text-foreground">{selectedPackage.visit_duration || "—"}</span></div>
                   <div>Frequency: <span className="text-foreground">{selectedPackage.inspection_frequency || "—"}</span></div>
@@ -537,7 +593,25 @@ export default function ServiceAgreement() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Agreed Price (€)</Label>
-                  <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} disabled={isFrozen} />
+                  {isEdit ? (
+                    <>
+                      <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm flex items-center justify-between gap-2 min-h-[44px]">
+                        <span className="font-medium truncate">€{(Number(values.agreed_price) || 0).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">+ VAT</span></span>
+                        {!isFrozen && (
+                          <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={openPriceChange}>Change Price</Button>
+                        )}
+                      </div>
+                      {values.previous_agreed_price != null && Number(values.previous_agreed_price) > 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">Previous agreed price: €{Number(values.previous_agreed_price).toFixed(2)}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">Locked at approval — changing the package never changes this price.</p>
+                    </>
+                  ) : (
+                    <>
+                      <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} disabled={isFrozen} />
+                      <p className="text-xs text-muted-foreground mt-1">Base price before VAT. Prefer the Service &amp; Pricing Assessment flow for governed pricing.</p>
+                    </>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Billing Type</Label>
@@ -780,6 +854,41 @@ export default function ServiceAgreement() {
             {/* Version history */}
             {isEdit && groupVersions.length > 0 && (
               <AgreementHistory versions={groupVersions} currentId={id} />
+            )}
+
+            {/* Deliberate price-change capture (existing agreements only) */}
+            {isEdit && (
+              <Dialog open={priceChangeOpen} onOpenChange={setPriceChangeOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Change Agreed Price</DialogTitle>
+                    <DialogDescription>
+                      This is a deliberate, approved price change for this customer. The previous price, new price,
+                      reason, approver and date/time are recorded on the agreement.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 py-1">
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                      Current agreed price: <span className="font-medium">€{(Number(values.agreed_price) || 0).toFixed(2)} + VAT</span>
+                    </div>
+                    <div>
+                      <Label className="mb-1.5 block">New agreed price (€, excl. VAT) *</Label>
+                      <Input className="h-11" type="number" min="0" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="mb-1.5 block">Reason for the price change *</Label>
+                      <Textarea rows={2} value={priceChangeReason} onChange={(e) => setPriceChangeReason(e.target.value)} placeholder="e.g. Package change agreed with owner; annual price review…" />
+                    </div>
+                    {priceChangeError && <p className="text-xs text-destructive">{priceChangeError}</p>}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" className="h-11" onClick={() => setPriceChangeOpen(false)}>Cancel</Button>
+                    <Button className="h-11" onClick={confirmPriceChange} disabled={approving}>
+                      {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Record Approved Change"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             )}
 
             <div className="flex items-center justify-between gap-2 pt-1">

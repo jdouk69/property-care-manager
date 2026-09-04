@@ -19,7 +19,8 @@
         "Property Care Inspection",
         "Emergency Visit",
         "Owner Representative Site Visit",
-        "Initial Property Onboarding Inspection"
+        "Initial Property Onboarding Inspection",
+        "Grocery Stocking"
       ],
       "default": "Monthly Property Watch"
     },

@@ -105,9 +105,15 @@ export function buildRecurringCharges({ agreements, packages, existingCharges, t
 
     if (billedMonths.has(`${a.id}:${period}`)) continue; // already billed this month — manual or automatic
 
+    // PRICE LOCK (post-audit cleanup): recurring agreements are billed ONLY at
+    // their LOCKED agreed_price. The old fallback to the package's CURRENT
+    // standard_price was removed — it could silently reprice an existing
+    // customer when a master package price changed. An agreement without an
+    // agreed_price is skipped instead (verified 2026-09: zero agreements lack
+    // an agreed_price, so nothing legitimate is affected).
+    if (a.agreed_price == null) continue; // nothing locked to bill
+    const amount = a.agreed_price;
     const pkg = packages[a.service_package_id] || {};
-    const amount = a.agreed_price != null ? a.agreed_price : pkg.standard_price;
-    if (amount == null) continue; // nothing to bill
 
     out.push({
       client_id: a.client_id || "",
