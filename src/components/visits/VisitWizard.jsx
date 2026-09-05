@@ -137,7 +137,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       if (next >= 0) nm[next] = true;
       return nm;
     });
-    if (next >= 0) setTimeout(() => itemRefs.current[next]?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+    if (next >= 0) setTimeout(() => itemRefs.current[next]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   };
 
   // On entering/resuming an active visit: keep answered routine items collapsed,
@@ -149,7 +149,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const idx = focusIdx(checklist, answered);
     if (idx >= 0) {
       setOpenItems({ [idx]: true });
-      setTimeout(() => itemRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+      setTimeout(() => itemRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, checklist]);
@@ -980,7 +980,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           )}
           <div className="space-y-2 mb-6">
             {checklist.map((it, i) => (
-              <div key={i} ref={(el) => { itemRefs.current[i] = el; }}>
+              <div key={i} ref={(el) => { itemRefs.current[i] = el; }} className="scroll-mt-28">
                 <VisitChecklistItem item={it} index={i} onChange={(u) => updateItem(i, u)}
                   onUploadPhoto={uploadPhotos} onRemovePhoto={removePhoto} uploading={uploading}
                   onFlagIssue={flagIssue} flagged={!!flagged[i]}

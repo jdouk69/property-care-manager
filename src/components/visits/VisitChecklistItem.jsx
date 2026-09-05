@@ -34,10 +34,10 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
   const answered = item.status !== "Not Checked";
 
   return (
-    <div className="rounded-2xl border border-border bg-card">
+    <div className={`rounded-2xl border bg-card transition-shadow ${expanded ? "border-primary/40 shadow-md" : "border-border"}`}>
       <button type="button" onClick={() => onToggle && onToggle()} aria-expanded={expanded}
         className="w-full flex items-start justify-between gap-2 p-3 min-h-[56px] text-left touch-manipulation">
-        <p className="text-sm md:text-base 2xl:text-sm font-medium text-foreground flex-1 leading-snug">
+        <p className={`text-foreground flex-1 leading-snug ${expanded ? "text-lg md:text-xl 2xl:text-base font-semibold" : "text-sm md:text-base 2xl:text-sm font-medium"}`}>
           {index + 1}. {item.name}
           {(item.status === "Important" || item.status === "Emergency") && (
             <AlertTriangle className={`w-4 h-4 inline ml-1.5 -mt-0.5 ${item.status === "Emergency" ? "text-rose-500" : "text-amber-500"}`} />
@@ -56,11 +56,21 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
       </button>
 
       {expanded && (
-        <div className="px-3 pb-3">
-          <div className="flex flex-wrap gap-1.5">
-            {STATUSES.map((s) => (
+        <div className="px-4 pb-4 space-y-3">
+          {/* Big field-work status targets — Row 1: Normal | Important | Emergency,
+              Row 2: Unable to Check | N/A. Same statuses, same logic. */}
+          <div className="grid grid-cols-3 gap-2">
+            {STATUSES.slice(0, 3).map((s) => (
               <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-                className={`min-h-[44px] flex items-center justify-center px-4 py-2 text-[13px] leading-none rounded-full border transition md:px-5 md:py-2.5 md:text-sm 2xl:min-h-9 2xl:px-2.5 2xl:py-1 2xl:text-xs ${item.status === s.value ? s.cls + " font-medium" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                className={`min-h-[52px] flex items-center justify-center px-2 py-2 text-sm leading-tight rounded-xl border transition md:min-h-12 md:px-4 md:py-2.5 2xl:min-h-9 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {STATUSES.slice(3).map((s) => (
+              <button key={s.value} type="button" onClick={() => setStatus(s.value)}
+                className={`min-h-[52px] flex items-center justify-center px-2 py-2 text-sm leading-tight rounded-xl border transition md:min-h-12 md:px-4 md:py-2.5 2xl:min-h-9 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
                 {s.label}
               </button>
             ))}
@@ -70,20 +80,20 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
             <button
               type="button"
               onClick={() => setDetailOpen(!detailOpen)}
-              className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition 2xl:min-h-9 2xl:px-3 2xl:py-1.5 2xl:text-xs"
             >
-              {detailOpen ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              {detailOpen ? "Hide" : "Add note / photo"}
+              {detailOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {detailOpen ? "Hide notes / photos" : "Add note / photo"}
             </button>
           )}
 
           {detailOpen && (
-            <div className="mt-2 space-y-2">
-              <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder={item.status === "Unable to Check" ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…" : "Notes…"} rows={2} className="resize-none text-sm md:text-base 2xl:text-sm" />
+            <div className="space-y-2">
+              <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder={item.status === "Unable to Check" ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…" : "Notes…"} rows={item.status === "Unable to Check" ? 4 : 3} className="resize-none min-h-[96px] text-base leading-relaxed py-3 2xl:text-sm 2xl:min-h-60 2xl:py-2" />
               <button
                 type="button"
                 onClick={toggleOwnerVisible}
-                className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 md:text-sm md:px-4 md:py-2.5 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border transition ${ownerVisible ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-border text-muted-foreground hover:bg-muted"}`}
+                className={`inline-flex items-center gap-1.5 min-h-[44px] text-sm px-4 py-2 md:px-4 md:py-2.5 2xl:min-h-9 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border transition ${ownerVisible ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-border text-muted-foreground hover:bg-muted"}`}
               >
                 {ownerVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                 {ownerVisible ? "Owner-visible" : "Private (staff only)"}
@@ -107,7 +117,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
               {(item.status === "Important" || item.status === "Emergency") && (
                 <button type="button" onClick={() => onFlagIssue(index)}
                   disabled={flagged}
-                  className={`text-xs px-3 py-1.5 md:text-sm md:px-4 md:py-2.5 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border inline-flex items-center gap-1.5 transition ${flagged ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-primary/30 text-primary hover:bg-primary/10"}`}>
+                  className={`min-h-[44px] text-sm px-4 py-2 md:px-4 md:py-2.5 2xl:min-h-9 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border inline-flex items-center gap-1.5 transition ${flagged ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-primary/30 text-primary hover:bg-primary/10"}`}>
                   <Wrench className="w-3.5 h-3.5" /> {flagged ? "Issue created" : "Create maintenance issue"}
                 </button>
               )}
