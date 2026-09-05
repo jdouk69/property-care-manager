@@ -4,6 +4,7 @@ import { exportCsv } from "@/lib/exportCsv";
 import {
   Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive, FileText, Upload, ArrowLeft
 } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
 
 function formatBytes(b) {
   if (!b && b !== 0) return "";
@@ -74,6 +75,8 @@ export default function ResourceListPage({
   onAdd, reloadSignal,
   renderCard, filterFn, dictation,
 }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -542,9 +545,11 @@ export default function ResourceListPage({
           {archivable && (
             <Button variant="ghost" className="sm:h-11" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> Archive</Button>
           )}
-          <Button variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => remove(editing)}>
-            <Trash2 className="w-4 h-4 mr-1" /> Delete
-          </Button>
+          {isAdmin && (
+            <Button variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => remove(editing)}>
+              <Trash2 className="w-4 h-4 mr-1" /> Delete
+            </Button>
+          )}
         </div>
       ) : <div />}
       <div className="flex gap-2">

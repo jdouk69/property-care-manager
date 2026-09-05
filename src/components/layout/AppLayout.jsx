@@ -8,6 +8,7 @@ import {
   MapPin, FolderOpen, ClipboardList, ScrollText, Euro, ChevronLeft
 } from "lucide-react";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -36,6 +37,10 @@ export const NAV_ITEMS = [
   { to: "/automation", label: "Automation Log", icon: History },
 ];
 
+// Owner/Admin-only navigation entries. Hidden for staff, and also while the
+// user role is still loading (no privileged items flash for partial loads).
+const ADMIN_ONLY_NAV = new Set(["/services", "/checklist-templates", "/billing", "/invoices", "/automation"]);
+
 const MOBILE_NAV = [
   { to: "/", label: "Home", icon: LayoutDashboard, end: true },
   { to: "/tasks", label: "Tasks", icon: ListChecks },
@@ -44,10 +49,10 @@ const MOBILE_NAV = [
   { to: "__more__", label: "More", icon: Menu },
 ];
 
-function SidebarContent({ onNavigate }) {
+function SidebarContent({ onNavigate, isAdmin = false }) {
   return (
     <nav className="flex flex-col gap-1 px-3 py-4">
-      {NAV_ITEMS.map((item) => (
+      {NAV_ITEMS.filter((item) => isAdmin || !ADMIN_ONLY_NAV.has(item.to)).map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -67,15 +72,19 @@ function SidebarContent({ onNavigate }) {
       <NavLink to="/search" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
         <Search className="w-[18px] h-[18px]" /> Search
       </NavLink>
-      <NavLink to="/settings" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
-        <SettingsIcon className="w-[18px] h-[18px]" /> Settings
-      </NavLink>
+      {isAdmin && (
+        <NavLink to="/settings" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
+          <SettingsIcon className="w-[18px] h-[18px]" /> Settings
+        </NavLink>
+      )}
     </nav>
   );
 }
 
 export default function AppLayout({ businessName = "Property Care Manager", children, defaultCollapsed = false }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   // Session-level sidebar collapse (lg+ only — below lg the sidebar never shows
   // and mobile sheet navigation is untouched).
   const [collapsed, setCollapsed] = useState(false);
@@ -103,7 +112,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <SidebarContent />
+          <SidebarContent isAdmin={isAdmin} />
         </div>
       </aside>
 
@@ -121,7 +130,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
               <span className="font-semibold text-sm">{businessName}</span>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <SidebarContent onNavigate={() => setMobileOpen(false)} />
+              <SidebarContent isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} />
             </div>
           </SheetContent>
         </Sheet>

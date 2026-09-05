@@ -3,7 +3,6 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Login from '@/pages/Login';
-import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 import { ThemeProvider } from 'next-themes';
@@ -12,6 +11,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import AdminRoute from '@/components/AdminRoute';
 import Dashboard from '@/pages/Dashboard';
 import Clients from '@/pages/Clients';
 import Properties from '@/pages/Properties';
@@ -75,7 +75,6 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       {/* Public customer intake — NOT protected. Gated by secure token server-side. */}
@@ -85,11 +84,15 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientHub />} />
-        <Route path="/clients/:id/intake" element={<IntakeReview />} />
+        <Route element={<AdminRoute />}>
+          <Route path="/clients/:id/intake" element={<IntakeReview />} />
+        </Route>
         <Route path="/properties" element={<Properties />} />
         <Route path="/properties/:id" element={<PropertyDetail />} />
-        <Route path="/properties/:id/monitoring-plan" element={<MonitoringPlanReview />} />
-        <Route path="/properties/:id/service-setup" element={<ServiceSetup />} />
+        <Route element={<AdminRoute />}>
+          <Route path="/properties/:id/monitoring-plan" element={<MonitoringPlanReview />} />
+          <Route path="/properties/:id/service-setup" element={<ServiceSetup />} />
+        </Route>
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/inspections" element={<Inspections />} />
         <Route path="/maintenance" element={<Maintenance />} />
@@ -100,20 +103,24 @@ const AuthenticatedApp = () => {
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/search" element={<Search />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/automation" element={<AutomationLog />} />
-        <Route path="/invoices" element={<Invoices />} />
-        <Route path="/billing" element={<Billing />} />
-        <Route path="/services" element={<ServicePackages />} />
+        <Route element={<AdminRoute />}>
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/automation" element={<AutomationLog />} />
+          <Route path="/invoices" element={<Invoices />} />
+          <Route path="/billing" element={<Billing />} />
+          <Route path="/services" element={<ServicePackages />} />
+        </Route>
         <Route path="/communications" element={<OwnerCommunications />} />
         <Route path="/deliveries" element={<Deliveries />} />
         <Route path="/visits" element={<Visits />} />
         <Route path="/visits/:id" element={<VisitDetail />} />
         <Route path="/rep-reports" element={<OwnerRepReports />} />
         <Route path="/documents" element={<PropertyDocuments />} />
-        <Route path="/checklist-templates" element={<ChecklistTemplates />} />
-        <Route path="/agreements/new" element={<ServiceAgreement />} />
-        <Route path="/agreements/:id" element={<ServiceAgreement />} />
+        <Route element={<AdminRoute />}>
+          <Route path="/checklist-templates" element={<ChecklistTemplates />} />
+          <Route path="/agreements/new" element={<ServiceAgreement />} />
+          <Route path="/agreements/:id" element={<ServiceAgreement />} />
+        </Route>
         <Route path="/property-assistance" element={<PropertyAssistance />} />
         <Route path="/property-assistance/:id" element={<PropertyAssistance />} />
         <Route path="/one-time" element={<OneTimeServices />} />

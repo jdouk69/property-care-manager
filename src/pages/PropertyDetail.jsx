@@ -18,6 +18,7 @@ import PropertyInlineAdd from "@/components/properties/PropertyInlineAdd";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
 import MonitoringPrioritiesEditor from "@/components/properties/MonitoringPrioritiesEditor";
+import { useAuth } from "@/lib/AuthContext";
 
 const ISSUE_CATEGORIES = ["Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning", "Heating", "Appliance", "Internet", "Security", "Locksmith", "Cleaning", "Painting", "Building repair", "Pest control", "Storm damage", "Other"];
 const ISSUE_PRIORITIES = ["Routine", "Medium", "High", "Emergency"];
@@ -27,6 +28,8 @@ const DELIVERY_PURPOSES = ["Furniture", "Appliance", "Parcel", "Building materia
 
 export default function PropertyDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [prop, setProp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [owner, setOwner] = useState(null);
@@ -158,7 +161,7 @@ export default function PropertyDetail() {
           <InfoCard icon={KeyRound} label="Gate Code" value={prop.gate_code || "—"} />
           <InfoCard icon={Wifi} label="Wi-Fi" value={prop.wifi_ssid || "—"} />
           <InfoCard icon={Clock} label="Last Inspection" value={inspections[0]?.date || "—"} />
-          <InfoCard icon={Euro} label="Billing" value={`€${outstandingCharges.toFixed(2)} outstanding`} to="/billing" />
+          {isAdmin && (<InfoCard icon={Euro} label="Billing" value={`€${outstandingCharges.toFixed(2)} outstanding`} to="/billing" />)}
         </div>
 
         <Tabs defaultValue="overview">
@@ -192,12 +195,14 @@ export default function PropertyDetail() {
                   <p className="text-xs text-muted-foreground mt-0.5">€{(a.agreed_price || 0).toFixed(2)} · {a.billing_type}{a.inspection_frequency ? ` · ${a.inspection_frequency}` : ""}{a.start_date ? ` · Start ${a.start_date}` : ""}{a.renewal_date ? ` · Renew ${a.renewal_date}` : ""}</p>
                   {a.status === "Active" && a.signing_status === "Signed"
                     ? <p className="text-xs text-emerald-700 font-medium mt-1">Current operational service agreement</p>
-                    : <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Open Agreement</Link>}
+                    : isAdmin
+                      ? <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Open Agreement</Link>
+                      : <p className="text-xs text-muted-foreground mt-1">Managed by Owner/Admin</p>}
                 </div>
               )) : (
                 <div className="px-4 py-4">
                   <p className="text-sm text-muted-foreground mb-2">No active service agreement for this property.</p>
-                  <Link to={`/agreements/new?client=${prop.owner_id || ""}&property=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-4 h-4" /> Assign Service Package</Button></Link>
+                  {isAdmin && (<Link to={`/agreements/new?client=${prop.owner_id || ""}&property=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-4 h-4" /> Assign Service Package</Button></Link>)}
                 </div>
               )}
             </Section>
@@ -209,13 +214,15 @@ export default function PropertyDetail() {
               <Detail label="Garden Details" value={prop.garden_details} />
               <Detail label="Special Notes" value={prop.special_notes} />
             </Section>
-            <Section title="Monitoring Priorities">
-              <MonitoringPrioritiesEditor
-                propertyId={id}
-                initial={prop.monitoring_priorities}
-                onChanged={(cleaned) => setProp((p) => ({ ...p, monitoring_priorities: cleaned }))}
-              />
-            </Section>
+            {isAdmin && (
+              <Section title="Monitoring Priorities">
+                <MonitoringPrioritiesEditor
+                  propertyId={id}
+                  initial={prop.monitoring_priorities}
+                  onChanged={(cleaned) => setProp((p) => ({ ...p, monitoring_priorities: cleaned }))}
+                />
+              </Section>
+            )}
             {(prop.photos || []).length > 0 && (
               <Section title="Photos">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">

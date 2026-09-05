@@ -22,6 +22,7 @@ import OnboardingCompleteDialog from "@/components/onboarding/OnboardingComplete
 import { getReadyHandoff, ensureOnboardingReadyNotification } from "@/lib/onboardingHandoff";
 import ClientVisitReports from "@/components/clients/ClientVisitReports";
 import ClientBillingCard from "@/components/billing/ClientBillingCard";
+import { useAuth } from "@/lib/AuthContext";
 
 function InfoChip({ icon: Icon, label, value }) {
   if (!value) return null;
@@ -63,6 +64,8 @@ function ActivitySection({ title, icon: Icon, to, count, items, emptyTitle }) {
 
 export default function ClientHub() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState(null);
   const [properties, setProperties] = useState([]);
@@ -216,10 +219,12 @@ export default function ClientHub() {
 
         {handoff && <ScheduleFirstVisitCard handoff={handoff} />}
 
-        {/* Customer intake */}
-        <div id="client-intake" className="mb-4">
-          <ClientIntakePanel client={client} intakes={intakes} onChanged={reloadIntakes} />
-        </div>
+        {/* Customer intake — Owner/Admin only (client lifecycle administration) */}
+        {isAdmin && (
+          <div id="client-intake" className="mb-4">
+            <ClientIntakePanel client={client} intakes={intakes} onChanged={reloadIntakes} />
+          </div>
+        )}
 
         {/* Properties */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">
@@ -257,7 +262,7 @@ export default function ClientHub() {
         <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2 font-medium text-sm"><Package className="w-4 h-4 text-muted-foreground" /> Service Agreement</div>
-            {properties.length > 0 && (
+            {isAdmin && properties.length > 0 && (
               <Link to={`/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`}>
                 <Button variant="outline" size="sm" className="gap-1.5"><Package className="w-4 h-4" /> Assign Service Package</Button>
               </Link>
@@ -293,16 +298,16 @@ export default function ClientHub() {
                   {a.is_test_agreement && (
                     <p className="text-[11px] text-rose-600 font-medium mt-0.5">Test agreement — not for production use</p>
                   )}
-                  {a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" ? (
+                  {isAdmin && a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" ? (
                     <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">
                       {a.signing_status === "Sent" && "Awaiting customer signature"}
                       {a.signing_status === "Viewed" && "Customer viewed agreement"}
                       {a.signing_status === "Signed" && "Agreement signed — activation pending"}
                       {a.signing_status === "Declined" && "Customer requested changes / declined"}
                     </Link>
-                  ) : (
+                  ) : isAdmin ? (
                     <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{a.status === "Pending" ? "Review Agreement" : "Edit Agreement"}</Link>
-                  )}
+                  ) : null}
                   {a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" && (a.sent_at || a.viewed_at || a.signed_at || a.declined_at) && (
                     <div className="mt-0.5 text-[11px] text-muted-foreground flex flex-wrap gap-x-2">
                       {a.sent_at && <span>Sent {new Date(a.sent_at).toLocaleDateString()}</span>}
@@ -311,7 +316,7 @@ export default function ClientHub() {
                       {a.declined_at && <span>Declined {new Date(a.declined_at).toLocaleDateString()}</span>}
                     </div>
                   )}
-                  {a.signed_pdf_url && a.public_token && (
+                  {isAdmin && a.signed_pdf_url && a.public_token && (
                     <button type="button" onClick={() => handleDownloadSigned(a.public_token)} disabled={downloadingPdf === a.public_token} className="mt-0.5 text-[11px] text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-50">
                       {downloadingPdf === a.public_token ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />} View Signed PDF
                     </button>
@@ -319,7 +324,7 @@ export default function ClientHub() {
                   {a.status === "Active" && a.signing_status === "Signed" && (
                     <p className="mt-1 text-[11px] text-emerald-700 font-medium inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Service active</p>
                   )}
-                  {a.status === "Pending" && a.signing_status === "Signed" && (
+                  {isAdmin && a.status === "Pending" && a.signing_status === "Signed" && (
                     <div className="mt-1.5">
                       <ActivateServiceButton
                         agreementId={a.id}
@@ -346,15 +351,19 @@ export default function ClientHub() {
             items={openIssues.map((m) => ({ title: m.title, subtitle: `${propName(m.property_id)} · ${m.category}`, badge: m.priority, to: "/maintenance" }))} />
           <ActivitySection title="Expenses / Reimbursements" icon={Wallet} to="/expenses" count={expenses.length} emptyTitle="No expenses"
             items={expenses.map((e) => ({ title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, subtitle: `${propName(e.property_id)} · ${e.date || ""}${e.awaiting_reimbursement && !e.reimbursed ? " · Awaiting reimbursement" : ""}`, badge: e.reimbursed ? "Reimbursed" : e.awaiting_reimbursement ? "Pending" : null, to: "/expenses" }))} />
-          <ClientBillingCard
-            charges={charges}
-            invoices={invoices}
-            client={client}
-            properties={properties}
-            onInvoiceSaved={(inv) => setInvoices((prev) => [inv, ...prev])}
-          />
-          <ActivitySection title="Invoices" icon={FileText} to="/invoices" count={invoices.length} emptyTitle="No invoices"
-            items={invoices.map((i) => ({ title: i.invoice_number, subtitle: `${i.invoice_date || ""} · €${(i.total || 0).toFixed(2)}`, badge: i.status, to: "/invoices" }))} />
+          {isAdmin && (
+            <>
+              <ClientBillingCard
+                charges={charges}
+                invoices={invoices}
+                client={client}
+                properties={properties}
+                onInvoiceSaved={(inv) => setInvoices((prev) => [inv, ...prev])}
+              />
+              <ActivitySection title="Invoices" icon={FileText} to="/invoices" count={invoices.length} emptyTitle="No invoices"
+                items={invoices.map((i) => ({ title: i.invoice_number, subtitle: `${i.invoice_date || ""} · €${(i.total || 0).toFixed(2)}`, badge: i.status, to: "/invoices" }))} />
+            </>
+          )}
           <ActivitySection title="Communications" icon={MessageSquare} to="/communications" count={communications.length} emptyTitle="No communications"
             items={communications.map((co) => ({ title: co.subject, subtitle: `${co.date || ""} · ${co.communication_type}`, badge: co.follow_up_required ? "Follow-up" : null, to: "/communications" }))} />
           <ActivitySection title="Documents" icon={FileWarning} to="/documents" count={documents.length} emptyTitle="No documents"
