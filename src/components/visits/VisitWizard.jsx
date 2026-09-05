@@ -13,6 +13,7 @@ import { SEED } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
+import { useSidebar } from "@/components/layout/SidebarContext";
 import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -60,9 +61,10 @@ const focusIdx = (list, answeredMap) => {
   return unfinished >= 0 ? unfinished : list.findIndex((it, idx) => !itemAnswered(it, idx, answeredMap));
 };
 
-export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, ctxVisitType, resumeVisitId, scheduleMode }) {
+export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreement, ctxClient, ctxVisitType, resumeVisitId, scheduleMode, onActiveVisitStart }) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { collapsed: sidebarCollapsed } = useSidebar();
   const initialStep = scheduleMode ? "select-client" : ctxAgreement ? "first-visit" : resumeVisitId ? "active" : "property";
   const [step, setStep] = useState(initialStep);
   const [agreement, setAgreement] = useState(null);
@@ -153,6 +155,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, checklist]);
+
+  // Notify the page shell when the actual on-site visit begins (step "active"),
+  // so it can maximize the working area on iPad. UI-only — no visit state touched.
+  useEffect(() => {
+    if (step === "active" && onActiveVisitStart) onActiveVisitStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((p) => setProperties((p || []).filter((x) => !x.archived))).catch(() => {});
@@ -1164,7 +1173,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         </div>
 
         {/* Next action card + bottom bar */}
-        <div className="fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 lg:left-64">
+        <div className={`fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 ${sidebarCollapsed ? "lg:left-0" : "lg:left-64"}`}>
           <div className="max-w-2xl mx-auto space-y-2">
             <button onClick={() => goToStep(nextStep.target)} className="w-full flex items-center justify-between gap-2 rounded-2xl bg-primary/10 border border-primary/20 px-3 py-2.5 text-left hover:bg-primary/15 transition">
               <div className="flex items-center gap-2 min-w-0">

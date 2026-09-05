@@ -1,12 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Users, Home, ListChecks, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
-  MapPin, FolderOpen, ClipboardList, ScrollText, Euro
+  MapPin, FolderOpen, ClipboardList, ScrollText, Euro, ChevronLeft
 } from "lucide-react";
+import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
@@ -73,19 +74,34 @@ function SidebarContent({ onNavigate }) {
   );
 }
 
-export default function AppLayout({ businessName = "Property Care Manager", children }) {
+export default function AppLayout({ businessName = "Property Care Manager", children, defaultCollapsed = false }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Session-level sidebar collapse (lg+ only — below lg the sidebar never shows
+  // and mobile sheet navigation is untouched).
+  const [collapsed, setCollapsed] = useState(false);
+  const toggleCollapsed = () => setCollapsed((c) => !c);
+  // Reset the collapse only when the page context changes (e.g. entering or
+  // leaving an active visit). While the context stays the same, manual
+  // toggles by the staff member persist.
+  useEffect(() => { setCollapsed(!!defaultCollapsed); }, [defaultCollapsed]);
 
   return (
+    <SidebarProvider value={{ collapsed, toggleCollapsed }}>
     <div className="min-h-screen bg-background text-foreground">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-sidebar-border bg-sidebar">
-        <Link to="/" className="flex items-center gap-2.5 px-5 h-16 border-b border-sidebar-border">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Home className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <span className="font-semibold text-sm leading-tight">{businessName}</span>
-        </Link>
+      <aside className={`hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out ${collapsed ? "-translate-x-full" : ""}`}>
+        <div className="flex items-center h-16 border-b border-sidebar-border">
+          <Link to="/" className="flex items-center gap-2.5 flex-1 min-w-0 px-5">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+              <Home className="w-4 h-4 text-primary-foreground" />
+            </div>
+            <span className="font-semibold text-sm leading-tight truncate">{businessName}</span>
+          </Link>
+          <button type="button" onClick={() => setCollapsed(true)} aria-label="Collapse sidebar" title="Collapse sidebar"
+            className="w-8 h-8 mr-3 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
         <div className="flex-1 overflow-y-auto">
           <SidebarContent />
         </div>
@@ -121,8 +137,15 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
         </div>
       </header>
 
+      {/* Compact restore control while the sidebar is collapsed (lg+ only) */}
+      {collapsed && (
+        <button type="button" onClick={() => setCollapsed(false)} aria-label="Open sidebar" title="Open sidebar"
+          className="hidden lg:flex fixed top-2 left-2 z-30 w-9 h-9 items-center justify-center rounded-lg border border-border bg-background/90 backdrop-blur text-muted-foreground hover:text-foreground hover:bg-muted transition">
+          <Menu className="w-4 h-4" />
+        </button>
+      )}
       {/* Main */}
-      <main className="lg:pl-64 min-h-screen">
+      <main className={`min-h-screen transition-[padding] duration-300 ease-in-out ${collapsed ? "lg:pl-0" : "lg:pl-64"}`}>
         <div className="hidden lg:flex items-center justify-end h-14 px-6 border-b border-border">
           <div className="flex items-center gap-1">
             <NotificationBell />
@@ -162,5 +185,6 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
         )}
       </nav>
     </div>
+    </SidebarProvider>
   );
 }

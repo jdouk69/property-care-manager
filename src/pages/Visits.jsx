@@ -8,6 +8,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import EmptyState from "@/components/ui/EmptyState";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import VisitWizard from "@/components/visits/VisitWizard";
+import { useSidebar } from "@/components/layout/SidebarContext";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { loadDraft, clearDraft } from "@/lib/visitDraft";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
@@ -36,6 +37,8 @@ export default function Visits() {
   const [scheduleMode, setScheduleMode] = useState(false);
   const [filter, setFilter] = useState("ALL");
   const [query, setQuery] = useState("");
+  const [wizardActive, setWizardActive] = useState(false);
+  const { collapsed: sidebarCollapsed } = useSidebar();
 
   const load = async () => {
     setLoading(true);
@@ -126,8 +129,8 @@ export default function Visits() {
 
   if (mode === "wizard") {
     return (
-      <AppLayout>
-        <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <AppLayout defaultCollapsed={wizardActive}>
+        <div className={`p-4 sm:p-6 mx-auto pb-24 lg:pb-6 ${sidebarCollapsed ? "max-w-4xl xl:max-w-5xl" : "max-w-3xl"}`}>
           <VisitWizard
             autoResume={autoResume}
             ctxProperty={ctx.property}
@@ -136,7 +139,8 @@ export default function Visits() {
             ctxVisitType={ctx.visitType}
             resumeVisitId={resumeId}
             scheduleMode={scheduleMode}
-            onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); setScheduleMode(false); load(); setDraft(loadDraft()); }}
+            onActiveVisitStart={() => setWizardActive(window.innerWidth >= 1024 && window.innerWidth < 1536)}
+            onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); setScheduleMode(false); setWizardActive(false); load(); setDraft(loadDraft()); }}
           />
         </div>
       </AppLayout>
