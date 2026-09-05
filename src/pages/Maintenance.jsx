@@ -72,6 +72,7 @@ export default function Maintenance() {
         archivable
         filterFn={propertyFilter ? (it) => it.property_id === propertyFilter && it.status !== "Completed" && it.status !== "Cancelled" : undefined}
         defaultValues={{ status: "Reported", priority: "Medium", category: "Other", reported_by: "Jim", owner_approval_status: "Pending", payment_status: "Unpaid" }}
+        dictation={{ label: "Dictate", fields: ["title", "category", "priority", "status", "description", "reported_by", "cost_estimate", "final_cost", "completion_notes", "warranty_info"] }}
       />
     </AppLayout>
   );

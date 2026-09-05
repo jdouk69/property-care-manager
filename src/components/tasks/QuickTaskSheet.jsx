@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Plus, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import DictateButton from "@/components/dictation/DictateButton";
+import DictateFormDialog from "@/components/dictation/DictateFormDialog";
 import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
 import { createRuleFromOccurrence, isoDate } from "@/lib/recurrence";
 
@@ -25,6 +27,15 @@ const TASK_TYPES = [
 ];
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 const STATUSES = ["Pending", "In Progress", "Completed", "Cancelled"];
+
+// Voice may propose values ONLY for these existing quick-task fields.
+const DICTATE_FIELDS = [
+  { key: "title", label: "Task", kind: "textarea" },
+  { key: "type", label: "Type", kind: "enum", options: TASK_TYPES },
+  { key: "priority", label: "Priority", kind: "enum", options: PRIORITIES },
+  { key: "assigned_to", label: "Assigned To", kind: "text" },
+  { key: "notes", label: "Notes", kind: "textarea" },
+];
 
 /**
  * Simplified quick-task entry. Property + Task + (optional) due date + (optional)
@@ -61,6 +72,16 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
   const [reminderTime, setReminderTime] = useState("");
 
   const [saving, setSaving] = useState(false);
+  const [dictateOpen, setDictateOpen] = useState(false);
+
+  // Dictation may propose values only — review happens in the shared dialog.
+  const applyDictation = (patch) => {
+    if (patch.title !== undefined) setTask(patch.title);
+    if (patch.type !== undefined) setType(patch.type);
+    if (patch.priority !== undefined) setPriority(patch.priority);
+    if (patch.assigned_to !== undefined) setAssignedTo(patch.assigned_to);
+    if (patch.notes !== undefined) setNotes(patch.notes);
+  };
 
   useEffect(() => { setPropertyId(preProperty || ""); }, [preProperty]);
 
@@ -158,6 +179,9 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
         </Select>
       </div>
 
+      {/* Dictate — optional voice entry for this task form */}
+      <DictateButton label="Dictate" onClick={() => setDictateOpen(true)} />
+
       {/* Task (maps to existing title) */}
       <div>
         <Label htmlFor="qt-task" className="text-sm font-medium text-foreground mb-2 block">Task <span className="text-destructive">*</span></Label>
@@ -251,6 +275,20 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
           </div>
         )}
       </div>
+
+      {/* Shared dictation service — operates only on this open form */}
+      <DictateFormDialog
+        open={dictateOpen}
+        onOpenChange={setDictateOpen}
+        context={{
+          propertyId,
+          propertyName: properties.find((p) => p.id === propertyId)?.name || "",
+          recordLabel: "New Task",
+        }}
+        fields={DICTATE_FIELDS}
+        values={{ title: task, type, priority, assigned_to: assignedTo, notes }}
+        onApply={applyDictation}
+      />
     </div>
   );
 

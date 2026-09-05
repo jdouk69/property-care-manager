@@ -1,8 +1,9 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { Mic, Square, Loader2, AlertTriangle, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import useDictationRecorder from "@/hooks/useDictationRecorder";
 import { dictationProposalsFromAudio } from "@/lib/inspectionDictation";
 
 const statusTone = {
@@ -22,20 +23,15 @@ const UNANSWERED = "Not Checked";
 // Reusable Dictate Inspection dialog — an OPTIONAL voice shortcut for filling
 // the EXISTING checklist of whichever inspection/checklist is currently open.
 // Not a separate mode: the caller passes the active inspection's checklist,
-// its own status vocabulary, and the inspection's context name. The user
-// records observations, reviews the PROPOSED updates, and only approved ones
-// are applied — unmentioned items stay untouched, manual answers are never
+// its own status vocabulary, and the inspection's context. The user records
+// observations, reviews the PROPOSED updates, and only approved ones are
+// applied — unmentioned items stay untouched, manual answers are never
 // silently overwritten, and dictation can never complete/submit/send/bill
 // the inspection.
 export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, context, title = "Dictate Inspection", onApply }) {
-  const [phase, setPhase] = useState("idle"); // idle | recording | processing | review
-  const [transcript, setTranscript] = useState("");
-  const [proposals, setProposals] = useState([]);
+  const recorder = useDictationRecorder();
+  const [result, setResult] = useState(null); // { transcript, proposals }
   const [selected, setSelected] = useState({});
-  const [error, setError] = useState("");
-  const recRef = useRef(null);
-  const mediaRef = useRef(null);
-  const chunksRef = useRef([]);
 
   // Context lock: dictation runs ONLY for the inspection the user already
   // opened in the app. The active inspection ID, property ID, property name,
@@ -49,69 +45,30 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
   );
   const contextLabel = [context?.propertyName, context?.inspectionLabel].filter(Boolean).join(" · ") || "Current inspection";
 
-  const cleanup = () => {
-    try { recRef.current?.state === "recording" && recRef.current.stop(); } catch (e) {}
-    recRef.current = null;
-    if (mediaRef.current) { mediaRef.current.getTracks().forEach((t) => t.stop()); mediaRef.current = null; }
-    chunksRef.current = [];
-  };
-
   const reset = () => {
-    cleanup();
-    setPhase("idle"); setTranscript(""); setProposals([]); setSelected({}); setError("");
+    recorder.reset();
+    setResult(null);
+    setSelected({});
   };
 
-  const startRecording = async () => {
-    if (!validContext) return;
-    setError("");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRef.current = stream;
-      const rec = new MediaRecorder(stream);
-      chunksRef.current = [];
-      rec.ondataavailable = (e) => { if (e.data?.size) chunksRef.current.push(e.data); };
-      rec.onstop = processAudio;
-      recRef.current = rec;
-      rec.start();
-      setPhase("recording");
-    } catch (e) {
-      setError("Microphone unavailable — check permissions, or simply fill the checklist manually.");
-    }
+  const interpret = async (blob) => {
+    const r = await dictationProposalsFromAudio({ checklist, statuses, contextLabel, audioBlob: blob });
+    setResult(r);
+    // No silent overwrites and no guessed ambiguities: items the user
+    // already answered manually AND items flagged "needs review" default to
+    // UNSELECTED and must be explicitly approved.
+    const sel = {};
+    (r.proposals || []).forEach((p) => {
+      const it = checklist[p.item_index];
+      const manual = !!(it && ((it.status || UNANSWERED) !== UNANSWERED || (it.notes || "").trim()));
+      sel[p.item_index] = !p.needs_review && !manual;
+    });
+    setSelected(sel);
   };
 
-  const stopRecording = () => { try { recRef.current?.stop(); } catch (e) {} };
+  const startRecording = () => { if (!validContext) return; recorder.start(interpret); };
 
-  const processAudio = async () => {
-    const chunks = [...chunksRef.current];
-    cleanup();
-    if (!chunks.length) { setError("No audio captured — try again or continue manually."); setPhase("idle"); return; }
-    setPhase("processing");
-    try {
-      const { transcript: text, proposals: props } = await dictationProposalsFromAudio({
-        checklist,
-        statuses,
-        contextLabel,
-        audioBlob: new Blob(chunks, { type: chunks[0]?.type || "audio/webm" }),
-      });
-      setTranscript(text);
-      setProposals(props);
-      // No silent overwrites and no guessed ambiguities: items the user
-      // already answered manually AND items flagged "needs review" default to
-      // UNSELECTED and must be explicitly approved.
-      const sel = {};
-      props.forEach((p) => {
-        const it = checklist[p.item_index];
-        const manual = !!(it && ((it.status || UNANSWERED) !== UNANSWERED || (it.notes || "").trim()));
-        sel[p.item_index] = !p.needs_review && !manual;
-      });
-      setSelected(sel);
-      setPhase("review");
-    } catch (e) {
-      setError("Could not process the dictation — try again or continue manually. (" + (e?.message || e) + ")");
-      setPhase("idle");
-    }
-  };
-
+  const proposals = result?.proposals || [];
   const selectedCount = proposals.filter((p) => selected[p.item_index]).length;
 
   const apply = () => {
@@ -120,6 +77,8 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
     reset();
     onOpenChange(false);
   };
+
+  const showReview = recorder.phase === "idle" && result;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
@@ -147,14 +106,33 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
           </div>
         )}
 
-        {error && (
+        {recorder.error && (
           <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-2.5">
             <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-            <p className="text-xs text-destructive">{error}</p>
+            <p className="text-xs text-destructive">{recorder.error}</p>
           </div>
         )}
 
-        {phase === "idle" && (
+        {recorder.phase === "recording" && (
+          <div className="space-y-3 text-center py-2">
+            <span className="inline-flex w-16 h-16 rounded-full bg-rose-500/10 text-rose-600 items-center justify-center animate-pulse">
+              <Mic className="w-7 h-7" />
+            </span>
+            <p className="text-sm text-muted-foreground">Recording… speak your observations, then tap Stop.</p>
+            <Button variant="destructive" onClick={recorder.stop} className="rounded-2xl h-12 px-6 gap-2 mx-auto">
+              <Square className="w-4 h-4" /> Stop
+            </Button>
+          </div>
+        )}
+
+        {recorder.phase === "processing" && (
+          <div className="space-y-3 text-center py-4">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Transcribing your observations…</p>
+          </div>
+        )}
+
+        {!showReview && recorder.phase === "idle" && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               Speak your observations for this inspection, e.g. <span className="italic">"Front gate is broken, the pool pump is leaking, windows are all fine."</span>
@@ -165,31 +143,12 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
           </div>
         )}
 
-        {phase === "recording" && (
-          <div className="space-y-3 text-center py-2">
-            <span className="inline-flex w-16 h-16 rounded-full bg-rose-500/10 text-rose-600 items-center justify-center animate-pulse">
-              <Mic className="w-7 h-7" />
-            </span>
-            <p className="text-sm text-muted-foreground">Recording… speak your observations, then tap Stop.</p>
-            <Button variant="destructive" onClick={stopRecording} className="rounded-2xl h-12 px-6 gap-2 mx-auto">
-              <Square className="w-4 h-4" /> Stop
-            </Button>
-          </div>
-        )}
-
-        {phase === "processing" && (
-          <div className="space-y-3 text-center py-4">
-            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Transcribing your observations…</p>
-          </div>
-        )}
-
-        {phase === "review" && (
+        {showReview && (
           <div className="space-y-3">
-            {transcript && (
+            {result.transcript && (
               <div className="rounded-xl border border-border bg-muted/30 p-3">
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">What we heard</p>
-                <p className="text-xs text-foreground whitespace-pre-wrap">{transcript}</p>
+                <p className="text-xs text-foreground whitespace-pre-wrap">{result.transcript}</p>
               </div>
             )}
             {proposals.length === 0 ? (
@@ -242,7 +201,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
           <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }} className="flex-1 rounded-xl h-12">
             Cancel
           </Button>
-          {phase === "review" && proposals.length > 0 && (
+          {showReview && proposals.length > 0 && (
             <Button onClick={apply} disabled={!selectedCount} className="flex-1 rounded-xl h-12">
               Apply {selectedCount} Update{selectedCount === 1 ? "" : "s"}
             </Button>

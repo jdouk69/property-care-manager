@@ -50,6 +50,7 @@ export default function OwnerRepReports() {
         autoOpenEditId={openId}
         archivable
         defaultValues={{ status: "Draft", visit_date: new Date().toISOString().slice(0, 10) }}
+        dictation={{ label: "Dictate", fields: ["project_name", "expected_work", "observed_progress", "work_completed", "visible_concerns", "delays", "questions_for_owner", "questions_for_contractor", "recommendations"] }}
         renderSummary={() => (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-4">
             <p className="text-xs text-amber-700 dark:text-amber-500 leading-relaxed">{DISCLAIMER}</p>

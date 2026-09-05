@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import PhotoPicker from "@/components/maintenance/PhotoPicker";
+import DictateButton from "@/components/dictation/DictateButton";
+import DictateFormDialog from "@/components/dictation/DictateFormDialog";
 
 const CATEGORIES = [
   "Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning",
@@ -15,6 +17,14 @@ const CATEGORIES = [
   "Painting", "Building repair", "Pest control", "Storm damage", "Other",
 ];
 const PRIORITIES = ["Routine", "Medium", "High", "Emergency"];
+
+// Voice may propose values ONLY for these existing Report Issue fields.
+const DICTATE_FIELDS = [
+  { key: "title", label: "What is the problem?", kind: "text" },
+  { key: "priority", label: "Priority", kind: "enum", options: PRIORITIES },
+  { key: "category", label: "Category", kind: "enum", options: CATEGORIES },
+  { key: "description", label: "What was observed or reported?", kind: "textarea" },
+];
 
 // Fast field entry point for reporting a new problem — creates ONE normal
 // Maintenance Issue on the EXISTING entity (no second system). No source visit
@@ -29,6 +39,15 @@ export default function ReportIssueSheet({ open, onOpenChange, properties, onCre
   const [photos, setPhotos] = useState([]);
   const [saving, setSaving] = useState(false);
   const [staff, setStaff] = useState("");
+  const [dictateOpen, setDictateOpen] = useState(false);
+
+  // Dictation may propose values only — the worker reviews in the shared dialog.
+  const applyDictation = (patch) => {
+    if (patch.title !== undefined) setTitle(patch.title);
+    if (patch.priority !== undefined) setPriority(patch.priority);
+    if (patch.category !== undefined) setCategory(patch.category);
+    if (patch.description !== undefined) setDescription(patch.description);
+  };
 
   useEffect(() => {
     if (open) {
@@ -73,6 +92,8 @@ export default function ReportIssueSheet({ open, onOpenChange, properties, onCre
           <SheetDescription>Record a new problem or concern for a property.</SheetDescription>
         </SheetHeader>
         <div className="space-y-3 mt-2">
+          {/* Dictate — optional voice entry for this Report Issue form */}
+          <DictateButton label="Dictate" onClick={() => setDictateOpen(true)} />
           <div>
             <Label className="mb-1.5 block">Property</Label>
             <Select value={propertyId} onValueChange={setPropertyId}>
@@ -115,6 +136,21 @@ export default function ReportIssueSheet({ open, onOpenChange, properties, onCre
           <Button onClick={save} disabled={saving || !propertyId || !title.trim()} className="w-full rounded-2xl h-14 text-base">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save
           </Button>
+
+          {/* Shared dictation service — operates only on this open form; the
+              property is already chosen in the form, never inferred from speech. */}
+          <DictateFormDialog
+            open={dictateOpen}
+            onOpenChange={setDictateOpen}
+            context={{
+              propertyId,
+              propertyName: properties.find((p) => p.id === propertyId)?.name || "",
+              recordLabel: "Report Issue",
+            }}
+            fields={DICTATE_FIELDS}
+            values={{ title, priority, category, description }}
+            onApply={applyDictation}
+          />
         </div>
       </SheetContent>
     </Sheet>

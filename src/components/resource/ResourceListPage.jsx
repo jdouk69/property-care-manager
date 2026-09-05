@@ -25,6 +25,8 @@ import PageHeader from "@/components/ui/PageHeader";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import EmptyState from "@/components/ui/EmptyState";
+import DictateButton from "@/components/dictation/DictateButton";
+import DictateFormDialog from "@/components/dictation/DictateFormDialog";
 
 const ENTITY_LABEL = { Client: "name", Property: "name", Contractor: "company", MaintenanceIssue: "title" };
 
@@ -70,7 +72,7 @@ export default function ResourceListPage({
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
   showBack = true, sections = [],
   onAdd, reloadSignal,
-  renderCard, filterFn,
+  renderCard, filterFn, dictation,
 }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -390,6 +392,32 @@ export default function ResourceListPage({
   const singular = title.replace(/s$/, "");
   const isMobile = useIsMobile();
 
+  // Optional shared Dictation capability (opt-in per page). Fields the engine
+  // may propose values for are listed by name; kinds and allowed values are
+  // derived from the form's own field definitions, and the property context
+  // comes from the form's selected property — never from speech.
+  const [dictateOpen, setDictateOpen] = useState(false);
+  const DICTATE_KIND = { text: "text", textarea: "textarea", select: "enum", number: "number", date: "date" };
+  const dictateFields = dictation
+    ? dictation.fields
+        .map((name) => {
+          const f = fields.find((x) => x.name === name);
+          const kind = f && DICTATE_KIND[f.type];
+          if (!kind) return null;
+          return { key: f.name, label: f.label || f.name, kind, ...(kind === "enum" ? { options: f.options || [] } : {}) };
+        })
+        .filter(Boolean)
+    : [];
+  const dictateContext = dictation
+    ? {
+        propertyId: values.property_id || "",
+        propertyName: lookups.Property?.[values.property_id] || "",
+        recordLabel: `${editing ? "Edit" : "New"} ${singular}`,
+        recordId: editing?.id || "",
+      }
+    : null;
+  const applyDictation = (patch) => { setValues((s) => ({ ...s, ...patch })); setDirty(true); setSaved(false); };
+
   // Single shared persistence primitive. `updateUI` controls whether React state
   // (setItems/onUpdated) is touched — true for live edits while mounted, false for
   // the unmount/route-leave flush so we never update state after the component is gone.
@@ -485,6 +513,7 @@ export default function ResourceListPage({
   (sections || []).forEach((s) => (s.fields || []).forEach((n) => assignedNames.add(n)));
   const renderFormFields = (
     <>
+      {dictation && <DictateButton label={dictation.label || "Dictate"} onClick={() => setDictateOpen(true)} />}
       {(sections || []).map((sec) => (
         <section key={sec.title} className="space-y-4">
           <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-2">{sec.title}</h2>
@@ -560,6 +589,18 @@ export default function ResourceListPage({
           </div>
 
           <div className="mt-6 space-y-6">{renderFormFields}</div>
+
+          {dictation && (
+            <DictateFormDialog
+              open={dictateOpen}
+              onOpenChange={setDictateOpen}
+              context={dictateContext}
+              fields={dictateFields}
+              values={values}
+              title={dictation.label || "Dictate"}
+              onApply={applyDictation}
+            />
+          )}
 
           <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-border pt-6">
             <div className="mr-auto">{savingIndicator}</div>
@@ -662,6 +703,18 @@ export default function ResourceListPage({
             </SheetFooter>
           </SheetContent>
         </Sheet>
+      )}
+
+      {dictation && (
+        <DictateFormDialog
+          open={dictateOpen}
+          onOpenChange={setDictateOpen}
+          context={dictateContext}
+          fields={dictateFields}
+          values={values}
+          title={dictation.label || "Dictate"}
+          onApply={applyDictation}
+        />
       )}
     </div>
   );

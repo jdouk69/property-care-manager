@@ -79,6 +79,7 @@ export default function Tasks() {
         reloadSignal={reloadSignal}
         onCreated={handleCreated}
         onUpdated={handleUpdated}
+        dictation={{ label: "Dictate", fields: ["title", "type", "priority", "assigned_to", "notes"] }}
         extraDrawerContent={(record, helpers) =>
           record.is_recurring ? <RecurrencePanel entityType="Task" record={record} reload={helpers.reload} /> : null
         }
