@@ -2,6 +2,12 @@ import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import AccessNotApproved from '@/components/AccessNotApproved';
+
+// Only these roles may enter the operational application. Everything else —
+// including an authenticated-but-unapproved role or a missing role — is
+// blocked (fail-closed).
+const APPROVED_ROLES = ['admin', 'staff'];
 
 const DefaultFallback = () => (
   <div className="fixed inset-0 flex items-center justify-center">
@@ -10,7 +16,7 @@ const DefaultFallback = () => (
 );
 
 export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthenticatedElement }) {
-  const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth, user } = useAuth();
 
   useEffect(() => {
     if (!authChecked && !isLoadingAuth) {
@@ -31,6 +37,14 @@ export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthe
 
   if (!isAuthenticated) {
     return unauthenticatedElement;
+  }
+
+  // Fail-closed approval gate: until the user's role is known and is an
+  // approved role, the operational application never mounts. The spinner
+  // above covers the loading window, and any other role (including "user"
+  // or a missing role) gets the Access Not Approved screen — never the app.
+  if (!user || !APPROVED_ROLES.includes(user.role)) {
+    return <AccessNotApproved />;
   }
 
   return <Outlet />;

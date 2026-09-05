@@ -2,9 +2,10 @@
   "properties": {
     "role": {
       "type": "string",
-      "description": "The role of the user in the app",
+      "description": "The role of the user in the app: admin = Owner/Admin (operational + administrative access), staff = explicitly approved staff (operational access only), user = authenticated but not approved (no operational access)",
       "enum": [
         "admin",
+        "staff",
         "user"
       ]
     }
