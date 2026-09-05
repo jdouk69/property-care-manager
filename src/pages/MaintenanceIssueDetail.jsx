@@ -128,7 +128,7 @@ export default function MaintenanceIssueDetail() {
                 <CheckCircle2 className="w-5 h-5" /> Mark Resolved
               </Button>
               <Button variant="outline" onClick={() => setFollowUpOpen(true)} className="rounded-2xl h-14 text-base gap-2">
-                <MessageSquarePlus className="w-5 h-5" /> Add Follow-Up
+                <MessageSquarePlus className="w-5 h-5" /> Add Update
               </Button>
             </div>
             <Button variant="ghost" onClick={() => navigate(`/maintenance?open=${issue.id}&edit=1`)} className="rounded-xl gap-1.5 h-11 text-muted-foreground">
@@ -193,7 +193,7 @@ export default function MaintenanceIssueDetail() {
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <MessageSquarePlus className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Follow-Up</h2>
+            <h2 className="text-sm font-semibold">Updates</h2>
           </div>
           {coordRows}
           {followUps.length > 0 ? (
@@ -214,7 +214,7 @@ export default function MaintenanceIssueDetail() {
           )}
           {unresolved && issue.during_photos?.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs text-muted-foreground mb-0.5">Follow-up photos</p>
+              <p className="text-xs text-muted-foreground mb-0.5">Update photos</p>
               <PhotoGrid photos={issue.during_photos} />
             </div>
           )}

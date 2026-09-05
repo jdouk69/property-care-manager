@@ -92,10 +92,10 @@ test('6-7: Add Follow-Up and Mark Resolved are explicit — neither resolves by 
   await expect(page.getByText('Resolved', { exact: true })).toHaveCount(0);
   console.log('✓ Mark Resolved requires explicit confirmation');
 
-  // TEST 6: Add Follow-Up opens a note dialog and never resolves
-  await page.getByText('Add Follow-Up', { exact: true }).click();
+  // TEST 6: Add Update opens a note dialog and never resolves
+  await page.getByText('Add Update', { exact: true }).click();
   await page.waitForTimeout(500);
-  await expect(page.getByText('Save Follow-Up')).toBeVisible();
+  await expect(page.getByText('Save Update')).toBeVisible();
   await page.getByText('Cancel', { exact: true }).last().click();
   await page.waitForTimeout(500);
   await expect(page.getByText('Resolved', { exact: true })).toHaveCount(0);

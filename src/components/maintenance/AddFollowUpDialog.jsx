@@ -30,7 +30,7 @@ export default function AddFollowUpDialog({ open, onOpenChange, issue, staff, on
       reset();
       onOpenChange(false);
     } catch (e) {
-      alert("Could not save follow-up: " + (e?.message || e));
+      alert("Could not save update: " + (e?.message || e));
       setSaving(false);
     }
   };
@@ -39,12 +39,12 @@ export default function AddFollowUpDialog({ open, onOpenChange, issue, staff, on
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <DialogContent className="max-w-sm sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Follow-Up</DialogTitle>
+          <DialogTitle>Add Update</DialogTitle>
           <DialogDescription className="text-left truncate">{issue?.title}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label className="mb-1.5 block">Follow-up note</Label>
+            <Label className="mb-1.5 block">Update note</Label>
             <Textarea
               rows={3}
               value={note}
@@ -66,7 +66,7 @@ export default function AddFollowUpDialog({ open, onOpenChange, issue, staff, on
             Cancel
           </Button>
           <Button onClick={confirm} disabled={saving || !note.trim()} className="flex-1 rounded-xl h-12 gap-1.5">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquarePlus className="w-4 h-4" />} Save Follow-Up
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquarePlus className="w-4 h-4" />} Save Update
           </Button>
         </DialogFooter>
       </DialogContent>
