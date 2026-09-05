@@ -215,18 +215,26 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
     );
   }
   if (openIssuesByProp) {
+    // Exactly one unresolved issue → open that issue's detail/edit screen
+    // directly (/maintenance?open=<id>). Two or more → the Maintenance list
+    // filtered to that property's open issues. Opening an issue never changes
+    // its status — staff mark it Completed only when actually resolved.
+    const single = openIssuesByProp.count === 1;
+    const to = single
+      ? `/maintenance?open=${openIssuesByProp.issueIds[0]}`
+      : `/maintenance?property=${openIssuesByProp.propertyId}`;
     return (
-      <Link to="/maintenance" className="block rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-5 hover:bg-amber-500/10 transition">
+      <Link to={to} className="block rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-5 hover:bg-amber-500/10 transition">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0"><Wrench className="w-5 h-5" /></span>
             <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-wide text-amber-600">Next action</p>
               <p className="font-semibold truncate">{propName(openIssuesByProp.propertyId)}</p>
-              <p className="text-xs text-muted-foreground truncate">{openIssuesByProp.count} open issue{openIssuesByProp.count !== 1 ? "s" : ""} need follow-up</p>
+              <p className="text-xs text-muted-foreground truncate">{single ? "1 open issue needs follow-up" : `${openIssuesByProp.count} open issues need follow-up`}</p>
             </div>
           </div>
-          <span className="text-sm font-medium text-amber-700 dark:text-amber-500 shrink-0 flex items-center gap-1">View Issues <ArrowRight className="w-4 h-4" /></span>
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-500 shrink-0 flex items-center gap-1">{single ? "View Issue" : "View Issues"} <ArrowRight className="w-4 h-4" /></span>
         </div>
       </Link>
     );
@@ -300,7 +308,8 @@ export default function Dashboard() {
   const contractorsToday = data.tasks.filter((x) => x.type === "Contractor Meeting" && x.date === t && active(x));
   const deliveries = data.tasks.filter((x) => x.type === "Delivery" && x.date === t && active(x));
   const arrivals = data.tasks.filter((x) => (x.type === "Arrival preparation" || x.type === "Departure inspection") && x.date >= t).slice(0, 6);
-  const openMaintenance = data.maintenance.filter((x) => x.status !== "Completed" && x.status !== "Cancelled");
+  // Open/unresolved = existing status model: not Completed, not Cancelled, not archived.
+  const openMaintenance = data.maintenance.filter((x) => !x.archived && x.status !== "Completed" && x.status !== "Cancelled");
   const emergency = openMaintenance.filter((x) => x.priority === "Emergency");
   const unreturnedKeys = data.keys.filter((k) => k.date_issued && !k.date_returned);
   const awaitingReimb = data.expenses.filter((e) => e.awaiting_reimbursement && !e.reimbursed);
@@ -308,13 +317,19 @@ export default function Dashboard() {
   // Missed scheduled visits: scheduled time passed (by >1h grace) and still Scheduled.
   const missedVisits = (data.visits || []).filter((v) => v.status === "Scheduled" && !v.archived && (v.scheduled_time || v.start_time) && new Date(v.scheduled_time || v.start_time).getTime() < Date.now() - 3600000);
 
-  // Next Action computation
-  const followUpStatuses = ["Reported", "Awaiting Owner Approval", "Contractor Contacted", "Approved"];
-  const followUpIssues = openMaintenance.filter((x) => followUpStatuses.includes(x.status));
+  // Next Action computation. ALL unresolved statuses count (existing status
+  // model — no second system): resolved/cancelled/archived issues never appear.
   const issueCounts = {};
-  followUpIssues.forEach((m) => { if (m.property_id) issueCounts[m.property_id] = (issueCounts[m.property_id] || 0) + 1; });
+  const issueIdsByProp = {};
+  openMaintenance.forEach((m) => {
+    if (!m.property_id) return;
+    issueCounts[m.property_id] = (issueCounts[m.property_id] || 0) + 1;
+    (issueIdsByProp[m.property_id] = issueIdsByProp[m.property_id] || []).push(m.id);
+  });
   const topIssueProp = Object.entries(issueCounts).sort((a, b) => b[1] - a[1])[0];
-  const openIssuesByProp = topIssueProp ? { propertyId: topIssueProp[0], count: topIssueProp[1] } : null;
+  const openIssuesByProp = topIssueProp
+    ? { propertyId: topIssueProp[0], count: topIssueProp[1], issueIds: issueIdsByProp[topIssueProp[0]] }
+    : null;
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   const prepTasks = data.tasks.filter((x) => x.type === "Arrival preparation" && (x.date === t || x.date === tomorrow) && x.status !== "Completed");
   const prepTask = prepTasks.length ? { propertyId: prepTasks[0].property_id, when: prepTasks[0].date === t ? "today" : "tomorrow" } : null;

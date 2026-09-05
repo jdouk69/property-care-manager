@@ -44,6 +44,9 @@ export default function Maintenance() {
   const openId = searchParams.get("open") || undefined;
   // Phase 1: /maintenance?add=1 (Home "Log Issue") opens the form immediately.
   const autoOpen = searchParams.get("add") === "1";
+  // /maintenance?property=<id> (Dashboard "View Issues") filters the list to
+  // that property's open/unresolved issues.
+  const propertyFilter = searchParams.get("property");
   return (
     <AppLayout>
       <ResourceListPage
@@ -58,6 +61,7 @@ export default function Maintenance() {
         autoOpen={autoOpen}
         autoOpenEditId={openId}
         archivable
+        filterFn={propertyFilter ? (it) => it.property_id === propertyFilter && it.status !== "Completed" && it.status !== "Cancelled" : undefined}
         defaultValues={{ status: "Reported", priority: "Medium", category: "Other", reported_by: "Jim", owner_approval_status: "Pending", payment_status: "Unpaid" }}
       />
     </AppLayout>
