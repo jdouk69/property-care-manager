@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import NotificationBell from "@/components/layout/NotificationBell";
+import AccountMenu from "@/components/layout/AccountMenu";
 
 export const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -132,6 +133,9 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
             <div className="flex-1 overflow-y-auto">
               <SidebarContent isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} />
             </div>
+            <div className="border-t border-sidebar-border p-4">
+              <AccountMenu variant="block" />
+            </div>
           </SheetContent>
         </Sheet>
         <Link to="/" className="flex items-center gap-2">
@@ -159,6 +163,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           <div className="flex items-center gap-1">
             <NotificationBell />
             <ThemeToggle />
+            <AccountMenu />
           </div>
         </div>
         <div className="min-h-[calc(100vh-3.5rem)]">{children}</div>
