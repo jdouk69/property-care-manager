@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
-  ClipboardCheck, Loader2, Check, Trash2, Search, Camera, X, MapPin, Calendar, User, CheckCircle2
+  ClipboardCheck, Loader2, Check, Trash2, Search, Camera, X, MapPin, Calendar, User, CheckCircle2, Mic
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
 import RecurrencePanel from "@/components/recurrence/RecurrencePanel";
 import { generateNextOccurrence } from "@/lib/recurrence";
+import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 
 const DEFAULT_CHECKLIST = [
   "Gates", "Doors", "Windows", "Roof", "Pool", "Garden", "Irrigation", "Water leaks",
@@ -50,6 +51,7 @@ export default function Inspections() {
   const [searchParams] = useSearchParams();
   const openId = searchParams.get("open");
   const autoOpenDone = useRef(false);
+  const [dictateOpen, setDictateOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -94,6 +96,23 @@ export default function Inspections() {
     setValues((s) => {
       const cl = [...(s.checklist || [])];
       cl[idx] = { ...cl[idx], ...patch };
+      return { ...s, checklist: cl };
+    });
+    setDirty(true); setSaved(false);
+  };
+
+  // Apply APPROVED Dictate Inspection proposals to THIS inspection's checklist —
+  // voice is only an optional shortcut. Unmentioned items are untouched, existing
+  // notes are appended (never overwritten), and the existing autosave/finish
+  // validation behave exactly as with manual edits.
+  const applyDictation = (updates) => {
+    setValues((s) => {
+      const cl = [...(s.checklist || [])];
+      updates.forEach((u) => {
+        const prev = cl[u.item_index] || {};
+        const mergedNotes = [prev.notes || "", u.notes || ""].filter((t) => t.trim()).join("\n").trim();
+        cl[u.item_index] = { ...prev, status: u.status, notes: mergedNotes };
+      });
       return { ...s, checklist: cl };
     });
     setDirty(true); setSaved(false);
@@ -234,6 +253,16 @@ export default function Inspections() {
                 <Label className="text-sm font-medium">Checklist</Label>
                 {issuesCount > 0 && <span className="text-xs text-amber-600">{issuesCount} need attention</span>}
               </div>
+              {/* Dictate Inspection — optional voice shortcut for filling THIS inspection's checklist */}
+              {editing && (values.checklist || []).length > 0 && (
+                <button type="button" onClick={() => setDictateOpen(true)} className="w-full flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-3.5 py-3 mb-2.5 hover:bg-primary/10 transition min-h-[48px] text-left">
+                  <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><Mic className="w-4 h-4" /></span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-foreground">Dictate Inspection</span>
+                    <span className="block text-xs text-muted-foreground">Optional — dictate observations, review them, then apply to this checklist</span>
+                  </span>
+                </button>
+              )}
               <div className="space-y-2.5">
                 {(values.checklist || []).map((c, idx) => (
                   <div key={idx} className="rounded-xl border border-border p-3">
@@ -287,6 +316,17 @@ export default function Inspections() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      {/* Dictate Inspection — shared reusable dialog; operates only on the open inspection */}
+      <DictateInspectionDialog
+        open={dictateOpen}
+        onOpenChange={setDictateOpen}
+        checklist={values.checklist || []}
+        statuses={ITEM_STATUS}
+        contextName={properties[values.property_id] || (editing ? `Inspection record${values.date ? " · " + values.date : ""}` : "")}
+        title="Dictate Inspection"
+        onApply={applyDictation}
+      />
     </AppLayout>
   );
 }

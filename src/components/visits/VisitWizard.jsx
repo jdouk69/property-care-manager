@@ -13,7 +13,7 @@ import { SEED } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
-import DictateVisitDialog from "@/components/visits/DictateVisitDialog";
+import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
@@ -953,7 +953,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         {/* Inspection */}
         <div id="step-inspection" className="scroll-mt-28">
           {/* Dictate Visit — optional voice shortcut for filling the SAME checklist */}
-          {checklist.length > 0 && (
+          {checklist.length > 0 && propertyId && (
             <button type="button" onClick={() => setDictateOpen(true)} className="w-full flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-3.5 py-3 mb-3 hover:bg-primary/10 transition min-h-[48px] text-left">
               <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><Mic className="w-4 h-4" /></span>
               <span className="min-w-0">
@@ -1211,7 +1211,17 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         )}
 
         {/* Dictate Visit — optional voice entry; returns the user to this same checklist */}
-        <DictateVisitDialog open={dictateOpen} onOpenChange={setDictateOpen} checklist={checklist} onApply={applyDictation} />
+        {propertyId && checklist.length > 0 && (
+          <DictateInspectionDialog
+            open={dictateOpen}
+            onOpenChange={setDictateOpen}
+            checklist={checklist}
+            statuses={["Normal", "Important", "Emergency", "Unable to Check", "N/A"]}
+            contextName={propertyName}
+            title="Dictate Visit"
+            onApply={applyDictation}
+          />
+        )}
       </div>
     );
   }

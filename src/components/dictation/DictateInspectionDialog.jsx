@@ -1,24 +1,33 @@
 import React, { useRef, useState } from "react";
-import { Mic, Square, Loader2, AlertTriangle } from "lucide-react";
+import { Mic, Square, Loader2, AlertTriangle, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { dictationProposalsFromAudio } from "@/lib/visitDictation";
+import { dictationProposalsFromAudio } from "@/lib/inspectionDictation";
 
 const statusTone = {
   Normal: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+  Pass: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   Important: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  "Needs Attention": "bg-amber-500/10 text-amber-600 border-amber-500/20",
   Emergency: "bg-rose-500/10 text-rose-600 border-rose-500/20",
-  "Unable to Check": "bg-muted text-muted-foreground border-border",
+  Critical: "bg-rose-500/10 text-rose-600 border-rose-500/20",
+  "Unable to Check": "bg-sky-500/10 text-sky-600 border-sky-500/20",
   "N/A": "bg-muted text-muted-foreground border-border",
+  "Not Checked": "bg-muted text-muted-foreground border-border",
 };
+const toneFor = (s) => statusTone[s] || "bg-muted text-muted-foreground border-border";
+const UNANSWERED = "Not Checked";
 
-// Dictate Visit — OPTIONAL voice shortcut for filling the EXISTING checklist.
-// Not a separate mode: the user records observations, reviews the proposed
-// updates, and only approved proposals are applied. Unmentioned items stay
-// untouched (Not Checked), the user returns to the same Visit Wizard, and
-// every item remains manually editable. Can be used again later in the visit.
-export default function DictateVisitDialog({ open, onOpenChange, checklist, onApply }) {
+// Reusable Dictate Inspection dialog — an OPTIONAL voice shortcut for filling
+// the EXISTING checklist of whichever inspection/checklist is currently open.
+// Not a separate mode: the caller passes the active inspection's checklist,
+// its own status vocabulary, and the inspection's context name. The user
+// records observations, reviews the PROPOSED updates, and only approved ones
+// are applied — unmentioned items stay untouched, manual answers are never
+// silently overwritten, and dictation can never complete/submit/send/bill
+// the inspection.
+export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, contextName, title = "Dictate Inspection", onApply }) {
   const [phase, setPhase] = useState("idle"); // idle | recording | processing | review
   const [transcript, setTranscript] = useState("");
   const [proposals, setProposals] = useState([]);
@@ -65,18 +74,22 @@ export default function DictateVisitDialog({ open, onOpenChange, checklist, onAp
     if (!chunks.length) { setError("No audio captured — try again or continue manually."); setPhase("idle"); return; }
     setPhase("processing");
     try {
-      const { transcript: text, proposals: props } = await dictationProposalsFromAudio(
+      const { transcript: text, proposals: props } = await dictationProposalsFromAudio({
         checklist,
-        new Blob(chunks, { type: chunks[0]?.type || "audio/webm" })
-      );
+        statuses,
+        contextLabel: contextName || "Current inspection",
+        audioBlob: new Blob(chunks, { type: chunks[0]?.type || "audio/webm" }),
+      });
       setTranscript(text);
       setProposals(props);
-      // No silent overwrites: items the user already answered manually default
-      // to UNSELECTED and must be explicitly re-approved.
+      // No silent overwrites and no guessed ambiguities: items the user
+      // already answered manually AND items flagged "needs review" default to
+      // UNSELECTED and must be explicitly approved.
       const sel = {};
       props.forEach((p) => {
         const it = checklist[p.item_index];
-        sel[p.item_index] = it && it.status === "Not Checked" && !(it.notes || "").trim();
+        const manual = !!(it && ((it.status || UNANSWERED) !== UNANSWERED || (it.notes || "").trim()));
+        sel[p.item_index] = !p.needs_review && !manual;
       });
       setSelected(sel);
       setPhase("review");
@@ -86,10 +99,6 @@ export default function DictateVisitDialog({ open, onOpenChange, checklist, onAp
     }
   };
 
-  const answeredManually = (idx) => {
-    const it = checklist[idx];
-    return !!(it && (it.status !== "Not Checked" || (it.notes || "").trim()));
-  };
   const selectedCount = proposals.filter((p) => selected[p.item_index]).length;
 
   const apply = () => {
@@ -103,11 +112,22 @@ export default function DictateVisitDialog({ open, onOpenChange, checklist, onAp
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <DialogContent className="max-w-sm sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Dictate Visit</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="text-left">
             An optional shortcut for the checklist below — nothing changes until you review and apply.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Context lock — the worker always sees WHERE the notes are being applied */}
+        {contextName && (
+          <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+            <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+            <p className="text-xs text-foreground min-w-0">
+              <span className="text-muted-foreground">Applying to: </span>
+              <span className="font-medium truncate">{contextName}</span>
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-2.5">
@@ -119,7 +139,7 @@ export default function DictateVisitDialog({ open, onOpenChange, checklist, onAp
         {phase === "idle" && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Speak your observations for this property, e.g. <span className="italic">"Front gate is broken, the pool pump is leaking, windows are all fine."</span>
+              Speak your observations for this inspection, e.g. <span className="italic">"Front gate is broken, the pool pump is leaking, windows are all fine."</span>
             </p>
             <Button onClick={startRecording} className="w-full rounded-2xl h-14 text-base gap-2">
               <Mic className="w-5 h-5" /> Start Recording
@@ -166,7 +186,7 @@ export default function DictateVisitDialog({ open, onOpenChange, checklist, onAp
                 <div className="space-y-2">
                   {proposals.map((p) => {
                     const it = checklist[p.item_index] || {};
-                    const manual = answeredManually(p.item_index);
+                    const manual = (it.status || UNANSWERED) !== UNANSWERED || !!(it.notes || "").trim();
                     return (
                       <label key={p.item_index} className="flex items-start gap-2.5 rounded-xl border border-border p-3 cursor-pointer">
                         <Checkbox
@@ -177,10 +197,15 @@ export default function DictateVisitDialog({ open, onOpenChange, checklist, onAp
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium truncate">{it.name}</p>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusTone[p.status]}`}>{p.status}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${toneFor(p.status)}`}>{p.status}</span>
+                            {p.needs_review && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                Needs review — ambiguous, check before applying
+                              </span>
+                            )}
                             {manual && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
-                                Already filled manually — review before applying
+                                Already answered manually — review before applying
                               </span>
                             )}
                           </div>
