@@ -27,7 +27,7 @@ const UNANSWERED = "Not Checked";
 // are applied — unmentioned items stay untouched, manual answers are never
 // silently overwritten, and dictation can never complete/submit/send/bill
 // the inspection.
-export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, contextName, title = "Dictate Inspection", onApply }) {
+export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, context, title = "Dictate Inspection", onApply }) {
   const [phase, setPhase] = useState("idle"); // idle | recording | processing | review
   const [transcript, setTranscript] = useState("");
   const [proposals, setProposals] = useState([]);
@@ -36,6 +36,18 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
   const recRef = useRef(null);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
+
+  // Context lock: dictation runs ONLY for the inspection the user already
+  // opened in the app. The active inspection ID, property ID, property name,
+  // owner, and checklist all come from this app context — never from the
+  // transcript. If the context is incomplete, dictation is disabled with a
+  // simple message instead of guessing.
+  const validContext = !!(
+    context?.propertyId &&
+    (context?.propertyName || context?.inspectionLabel) &&
+    Array.isArray(checklist) && checklist.length > 0
+  );
+  const contextLabel = [context?.propertyName, context?.inspectionLabel].filter(Boolean).join(" · ") || "Current inspection";
 
   const cleanup = () => {
     try { recRef.current?.state === "recording" && recRef.current.stop(); } catch (e) {}
@@ -50,6 +62,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
   };
 
   const startRecording = async () => {
+    if (!validContext) return;
     setError("");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -77,7 +90,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
       const { transcript: text, proposals: props } = await dictationProposalsFromAudio({
         checklist,
         statuses,
-        contextLabel: contextName || "Current inspection",
+        contextLabel,
         audioBlob: new Blob(chunks, { type: chunks[0]?.type || "audio/webm" }),
       });
       setTranscript(text);
@@ -118,14 +131,19 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
           </DialogDescription>
         </DialogHeader>
 
-        {/* Context lock — the worker always sees WHERE the notes are being applied */}
-        {contextName && (
-          <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
-            <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-            <p className="text-xs text-foreground min-w-0">
-              <span className="text-muted-foreground">Applying to: </span>
-              <span className="font-medium truncate">{contextName}</span>
-            </p>
+        {/* Context lock — display-only. Shows WHERE the notes are being applied;
+            all context comes from the inspection the user already opened, never from voice. */}
+        {validContext ? (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+            <p className="text-[11px] uppercase tracking-wide text-primary/80 flex items-center gap-1"><MapPin className="w-3 h-3" /> Dictating for:</p>
+            <p className="text-sm font-medium text-foreground truncate">{context.propertyName || context.inspectionLabel}</p>
+            {context.propertyName && context.inspectionLabel && <p className="text-xs text-muted-foreground truncate">{context.inspectionLabel}</p>}
+            {context.clientName && <p className="text-xs text-muted-foreground truncate">Owner: {context.clientName}</p>}
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-500">Open or start an inspection for a property before using dictation.</p>
           </div>
         )}
 
@@ -141,7 +159,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
             <p className="text-sm text-muted-foreground">
               Speak your observations for this inspection, e.g. <span className="italic">"Front gate is broken, the pool pump is leaking, windows are all fine."</span>
             </p>
-            <Button onClick={startRecording} className="w-full rounded-2xl h-14 text-base gap-2">
+            <Button onClick={startRecording} disabled={!validContext} className="w-full rounded-2xl h-14 text-base gap-2">
               <Mic className="w-5 h-5" /> Start Recording
             </Button>
           </div>

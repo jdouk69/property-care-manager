@@ -18,7 +18,8 @@ export async function dictationProposalsFromAudio({ checklist, statuses, context
   const res = await base44.integrations.Core.InvokeLLM({
     prompt:
       "A property-care worker dictated observations while filling in ONE open inspection.\n\n" +
-      `INSPECTION CONTEXT: ${contextLabel}. All observations belong to this inspection only — never infer, switch, or add any other property or inspection from what is spoken.\n\n` +
+      `INSPECTION CONTEXT: ${contextLabel}. All observations belong to this inspection only — never infer, switch, or add any other property or inspection from what is spoken. ` +
+      "If the worker mentions a different property or inspection name in the transcript, treat it only as transcript text — do NOT switch the property or inspection.\n\n" +
       `CHECKLIST (item_index: item name):\n${itemsText}\n\n` +
       `ALLOWED STATUSES: ${statuses.join(", ")}\n\n` +
       `TRANSCRIPT: "${text}"\n\n` +

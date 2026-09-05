@@ -323,7 +323,12 @@ export default function Inspections() {
         onOpenChange={setDictateOpen}
         checklist={values.checklist || []}
         statuses={ITEM_STATUS}
-        contextName={properties[values.property_id] || (editing ? `Inspection record${values.date ? " · " + values.date : ""}` : "")}
+        context={{
+          inspectionId: editing?.id || "",
+          propertyId: values.property_id || "",
+          propertyName: properties[values.property_id] || "",
+          inspectionLabel: `Inspection record${values.date ? " · " + values.date : ""}`,
+        }}
         title="Dictate Inspection"
         onApply={applyDictation}
       />

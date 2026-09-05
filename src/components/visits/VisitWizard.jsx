@@ -1217,7 +1217,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             onOpenChange={setDictateOpen}
             checklist={checklist}
             statuses={["Normal", "Important", "Emergency", "Unable to Check", "N/A"]}
-            contextName={propertyName}
+            context={{
+              inspectionId: resumeVisitId || "",
+              propertyId,
+              propertyName,
+              clientName: clientObj?.name || "",
+              inspectionLabel: visitTypeLabel(visitType),
+            }}
             title="Dictate Visit"
             onApply={applyDictation}
           />
