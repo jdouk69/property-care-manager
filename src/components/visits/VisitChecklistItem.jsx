@@ -1,16 +1,16 @@
 import React, { useState } from "react";
-import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff, ChevronDown, Check, CircleSlash, Minus, Circle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
 
 // "Not Checked" stays the stored default (item not yet answered) but is no
 // longer a deliberate field choice — workers pick Unable to Check or N/A instead.
 const STATUSES = [
-  { value: "Normal", label: "Normal", cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
-  { value: "Important", label: "Important", cls: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
-  { value: "Emergency", label: "Emergency", cls: "bg-rose-500/10 text-rose-600 border-rose-500/30" },
-  { value: "Unable to Check", label: "Unable to Check", cls: "bg-sky-500/10 text-sky-600 border-sky-500/30" },
-  { value: "N/A", label: "N/A", cls: "bg-muted text-muted-foreground border-border" },
+  { value: "Normal", label: "Normal", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
+  { value: "Important", label: "Important", icon: AlertTriangle, cls: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
+  { value: "Emergency", label: "Emergency", icon: AlertTriangle, cls: "bg-rose-500/10 text-rose-600 border-rose-500/30" },
+  { value: "Unable to Check", label: "Unable to Check", icon: CircleSlash, cls: "bg-sky-500/10 text-sky-600 border-sky-500/30" },
+  { value: "N/A", label: "N/A", icon: Minus, cls: "bg-muted text-muted-foreground border-border" },
 ];
 // Statuses that open the detail area automatically (concerns need documenting,
 // Unable to Check needs a reason). Normal and N/A stay collapsed for fast
@@ -36,22 +36,26 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
   return (
     <div className={`rounded-2xl border bg-card transition-shadow ${expanded ? "border-primary/40 shadow-md" : "border-border"}`}>
       <button type="button" onClick={() => onToggle && onToggle()} aria-expanded={expanded}
-        className="w-full flex items-start justify-between gap-2 p-3 min-h-[56px] text-left touch-manipulation">
-        <p className={`text-foreground flex-1 leading-snug ${expanded ? "text-lg md:text-xl 2xl:text-base font-semibold" : "text-sm md:text-base 2xl:text-sm font-medium"}`}>
-          {index + 1}. {item.name}
-          {(item.status === "Important" || item.status === "Emergency") && (
-            <AlertTriangle className={`w-4 h-4 inline ml-1.5 -mt-0.5 ${item.status === "Emergency" ? "text-rose-500" : "text-amber-500"}`} />
-          )}
+        className="w-full flex items-center gap-3.5 p-4 min-h-[92px] md:min-h-24 2xl:min-h-0 2xl:gap-2.5 2xl:p-3 text-left touch-manipulation">
+        <span className={`w-11 h-11 md:w-12 md:h-12 2xl:w-8 2xl:h-8 rounded-xl flex items-center justify-center shrink-0 text-lg 2xl:text-sm font-semibold ${expanded ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+          {index + 1}
+        </span>
+        <p className={`flex-1 text-foreground leading-snug ${expanded ? "text-base md:text-lg 2xl:text-sm font-semibold" : "text-base md:text-lg 2xl:text-sm font-medium"}`}>
+          {item.name}
         </p>
-        <span className="flex items-center gap-1.5 shrink-0 mt-0.5">
+        <span className="flex flex-col items-end justify-center gap-1.5 shrink-0">
           {answered && statusDef ? (
-            <span className={`text-xs px-2 py-1 rounded-full border font-medium whitespace-nowrap ${statusDef.cls}`}>
-              {item.status === "Normal" ? "✓ Normal" : item.status}
+            <span className={`inline-flex items-center gap-1.5 text-xs md:text-sm px-2.5 py-1 rounded-full border font-medium whitespace-nowrap ${statusDef.cls}`}>
+              <statusDef.icon className="w-3.5 h-3.5 2xl:w-3 2xl:h-3 shrink-0" />
+              {item.status}
             </span>
           ) : (
-            <span className="text-xs px-2 py-1 rounded-full border border-border bg-muted/60 text-muted-foreground whitespace-nowrap">Not answered</span>
+            <span className="inline-flex items-center gap-1.5 text-xs md:text-sm px-2.5 py-1 rounded-full border border-dashed border-border bg-muted/40 text-muted-foreground whitespace-nowrap">
+              <Circle className="w-3.5 h-3.5 2xl:w-3 2xl:h-3" />
+              Not answered
+            </span>
           )}
-          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-5 h-5 2xl:w-4 2xl:h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
         </span>
       </button>
 
@@ -62,7 +66,8 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
           <div className="grid grid-cols-3 gap-2">
             {STATUSES.slice(0, 3).map((s) => (
               <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-                className={`min-h-[52px] flex items-center justify-center px-2 py-2 text-sm leading-tight rounded-xl border transition md:min-h-12 md:px-4 md:py-2.5 2xl:min-h-9 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                <s.icon className="w-4 h-4 2xl:w-3.5 2xl:h-3.5 shrink-0" />
                 {s.label}
               </button>
             ))}
@@ -70,7 +75,8 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
           <div className="grid grid-cols-2 gap-2">
             {STATUSES.slice(3).map((s) => (
               <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-                className={`min-h-[52px] flex items-center justify-center px-2 py-2 text-sm leading-tight rounded-xl border transition md:min-h-12 md:px-4 md:py-2.5 2xl:min-h-9 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                <s.icon className="w-4 h-4 2xl:w-3.5 2xl:h-3.5 shrink-0" />
                 {s.label}
               </button>
             ))}
