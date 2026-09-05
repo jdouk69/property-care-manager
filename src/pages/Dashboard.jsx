@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
   Plus, CalendarClock, AlertTriangle, ClipboardCheck, Wrench, Home, ListChecks,
@@ -19,6 +19,7 @@ import { athensToday, athensDate, athensTime, athensDateOffset, athensDayLabel, 
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import ActionCard from "@/components/dashboard/ActionCard";
 import TodayAgenda from "@/components/dashboard/TodayAgenda";
+import ReportIssueSheet from "@/components/maintenance/ReportIssueSheet";
 import ReportsToSendReminder from "@/components/dashboard/ReportsToSendReminder";
 import { getActionableCounts } from "@/lib/onboardingHandoff";
 
@@ -264,6 +265,8 @@ export default function Dashboard() {
   const [data, setData] = useState({ tasks: [], inspections: [], maintenance: [], properties: [], clients: [], contractors: [], expenses: [], keys: [], invoices: [], visits: [], agreements: [], intakes: [], servicePackages: [], repReports: [], billing: [] });
   const [settings, setSettings] = useState(null);
   const [draft, setDraft] = useState(null);
+  const navigate = useNavigate();
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -411,6 +414,14 @@ export default function Dashboard() {
               return (
                 <div key={group.label}>
                   <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
+                  {/* Report Issue — fast field entry point into the existing Maintenance Issue workflow */}
+                  <button type="button" onClick={() => setReportOpen(true)} className="w-full text-left mb-2">
+                    <div className="flex items-center gap-3 h-14 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-500 px-3.5 hover:bg-amber-500/20 transition">
+                      <span className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0"><AlertTriangle className="w-5 h-5" /></span>
+                      <span className="font-semibold text-sm truncate">Report Issue</span>
+                      <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
+                    </div>
+                  </button>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {group.items.map((a) => (
                       <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
@@ -510,6 +521,14 @@ export default function Dashboard() {
             )}
           </Section>
         </div>
+
+        {/* Report Issue sheet — saves into the existing Maintenance Issue entity */}
+        <ReportIssueSheet
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          properties={data.properties.filter((p) => !p.archived)}
+          onCreated={(m) => navigate(`/maintenance/${m.id}`)}
+        />
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
           <QuickNotes settingsId={settings?.id} initial={settings?.quick_notes} />
