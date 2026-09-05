@@ -63,6 +63,9 @@
     "reported_by": {
       "type": "string"
     },
+    "source_visit_id": {
+      "type": "string"
+    },
     "contractor_id": {
       "type": "string"
     },

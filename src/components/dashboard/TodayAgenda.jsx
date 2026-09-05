@@ -164,7 +164,7 @@ export default function TodayAgenda({ data }) {
                         <p className="text-xs text-muted-foreground truncate">{it.typeLabel}{it.clientName ? ` · ${it.clientName}` : ""}</p>
                       </div>
                       <Button asChild size="sm" variant="ghost" className="shrink-0">
-                        <Link to={it.to}>View <ArrowRight className="w-3.5 h-3.5" /></Link>
+                        <Link to={it.to}>{it.reportUnsent ? "Review & Send" : "View"} <ArrowRight className="w-3.5 h-3.5" /></Link>
                       </Button>
                     </div>
                   ))}

@@ -39,6 +39,18 @@ const itemAnswered = (it, idx, answeredMap) =>
   it.status === "Normal" || it.status === "Important" || it.status === "Emergency" ||
   it.status === "Unable to Check" || it.status === "N/A" || !!answeredMap[idx];
 
+// Build the maintenance Description from the actual visit finding: the
+// observed condition plus any notes / recommendation / action taken recorded
+// on the checklist item. Only real text is carried forward — nothing invented.
+const issueDescriptionFromFinding = (it) => {
+  const parts = [];
+  if (it.status) parts.push(`Observed condition: ${it.status}`);
+  if ((it.notes || "").trim()) parts.push(`Notes: ${it.notes.trim()}`);
+  if ((it.recommendation || "").trim()) parts.push(`Recommendation: ${it.recommendation.trim()}`);
+  if ((it.action_taken || "").trim()) parts.push(`Action taken: ${it.action_taken.trim()}`);
+  return parts.join("\n\n");
+};
+
 // First item the field user should land on: an "Unable to Check" item still
 // missing its reason (the existing completion warning) takes priority, else the
 // first unanswered item.
@@ -493,8 +505,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     try {
       const created = await base44.entities.MaintenanceIssue.create({
         title: it.name, property_id: propertyId, category: "Other", priority, status: "Reported",
-        description: it.notes || "", reported_by: "Jim", before_photos: it.photos || [],
+        description: issueDescriptionFromFinding(it), reported_by: "Jim", before_photos: it.photos || [],
         owner_approval_status: "Pending", payment_status: "Unpaid",
+        source_visit_id: resumeVisitId || "",
       });
       setIssueIds((arr) => [...arr, created.id]);
       setCreatedIssues((arr) => [...arr, { title: it.name, priority }]);
@@ -578,6 +591,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         visit = await base44.entities.PropertyVisit.create(shared);
       }
       setCompleted(visit);
+      // Link the issues created during this visit back to their source visit
+      // (a fresh draft visit only gets its id now; a resumed visit already has
+      // it, and this re-stamp is idempotent).
+      if (issueIds.length > 0) {
+        try { await base44.entities.MaintenanceIssue.bulkUpdate(issueIds.map((iid) => ({ id: iid, source_visit_id: visit.id }))); } catch (e) {}
+      }
       // Completed tiered one-time property-care visit → create the single Due
       // ledger charge at the locked agreed price (duplicate-safe). Other visit
       // types (recurring plans, Property Assistance, On-Demand, Grocery, etc.)

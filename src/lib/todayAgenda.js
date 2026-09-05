@@ -97,9 +97,23 @@ export function buildTodayAgenda(data = {}) {
       typeLabel: visitTypeLabel(v.visit_type), status: v.status, date: day,
       to: visitTo,
     };
-    if (completedVisit && isToday) {
-      push({ ...base, actionLabel: isAssistance ? "View" : "View Report", actionKind: "view-report", completed: true, overdue: false }, "completed");
-    } else if (v.status === "In Progress") {
+    if (completedVisit) {
+      // Completed visits never expose a Start/Continue action — not under Due
+      // Today, not overdue, never restartable from the Dashboard. Only a visit
+      // completed TODAY appears (under Completed Today) with the report/view
+      // action. An unsent report flags reportUnsent so the agenda surfaces the
+      // report follow-up instead of Start.
+      if (isToday) {
+        push({
+          ...base,
+          actionLabel: isAssistance ? "View" : "View Report", actionKind: "view-report",
+          completed: true, overdue: false,
+          reportUnsent: !isAssistance && !v.report_sent && v.report_status !== "Sent",
+        }, "completed");
+      }
+      return;
+    }
+    if (v.status === "In Progress") {
       push({ ...base, actionLabel: isAssistance ? "Continue" : "Continue Visit", actionKind: "continue-visit", to: isAssistance ? visitTo : `/visits?resume=${v.id}`, completed: false, overdue: false }, "today");
     } else {
       push({ ...base, ...startAction, completed: false, overdue: false }, "today");
