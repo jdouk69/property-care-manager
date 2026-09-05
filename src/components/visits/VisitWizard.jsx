@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,7 @@ import { SEED } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
+import DictateVisitDialog from "@/components/visits/DictateVisitDialog";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
@@ -123,6 +124,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [checklistLoadError, setChecklistLoadError] = useState("");
   // Which checklist rows are expanded (compact step-by-step interaction).
   const [openItems, setOpenItems] = useState({});
+  const [dictateOpen, setDictateOpen] = useState(false);
   const itemRefs = useRef({});
   const guidedInitDone = useRef(false);
 
@@ -486,6 +488,27 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     if (updated.status !== prev.status && (updated.status === "Normal" || updated.status === "N/A")) {
       advanceFrom(idx, checklist.map((it, i) => (i === idx ? updated : it)), answered);
     }
+  };
+
+  // Apply APPROVED Dictate Visit proposals to the SAME checklist — voice is
+  // only a shortcut, never a separate mode. Unmentioned items are untouched;
+  // existing notes are preserved (appended, never overwritten); every item
+  // stays manually editable and the completion rules are unchanged.
+  const applyDictation = (updates) => {
+    setChecklist((arr) => {
+      let next = arr;
+      updates.forEach((u) => {
+        const prev = next[u.item_index] || {};
+        const mergedNotes = [prev.notes || "", u.notes || ""].filter((s) => s.trim()).join("\n").trim();
+        next = next.map((it, i) => (i === u.item_index ? { ...it, status: u.status, notes: mergedNotes } : it));
+      });
+      return next;
+    });
+    setAnswered((a) => {
+      const n = { ...a };
+      updates.forEach((u) => { n[u.item_index] = true; });
+      return n;
+    });
   };
 
   const uploadPhotos = async (idx, files) => {
@@ -929,6 +952,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
         {/* Inspection */}
         <div id="step-inspection" className="scroll-mt-28">
+          {/* Dictate Visit — optional voice shortcut for filling the SAME checklist */}
+          {checklist.length > 0 && (
+            <button type="button" onClick={() => setDictateOpen(true)} className="w-full flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-3.5 py-3 mb-3 hover:bg-primary/10 transition min-h-[48px] text-left">
+              <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><Mic className="w-4 h-4" /></span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-foreground">Dictate Visit</span>
+                <span className="block text-xs text-muted-foreground">Optional — dictate observations, review them, then apply to the checklist</span>
+              </span>
+            </button>
+          )}
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">Checklist</p>
           {templateSource === "Default" && (
             <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 mb-2">
@@ -1176,6 +1209,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             </div>
           </div>
         )}
+
+        {/* Dictate Visit — optional voice entry; returns the user to this same checklist */}
+        <DictateVisitDialog open={dictateOpen} onOpenChange={setDictateOpen} checklist={checklist} onApply={applyDictation} />
       </div>
     );
   }
