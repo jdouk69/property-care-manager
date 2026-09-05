@@ -130,7 +130,7 @@ export default function Visits() {
   if (mode === "wizard") {
     return (
       <AppLayout defaultCollapsed={wizardActive}>
-        <div className={`p-4 sm:p-6 mx-auto pb-24 lg:pb-6 ${sidebarCollapsed ? "max-w-4xl xl:max-w-5xl" : "max-w-3xl"}`}>
+        <div className={`p-4 sm:p-6 pb-24 lg:pb-6 ${sidebarCollapsed ? "w-full 2xl:mx-auto 2xl:max-w-5xl" : "max-w-3xl mx-auto"}`}>
           <VisitWizard
             autoResume={autoResume}
             ctxProperty={ctx.property}

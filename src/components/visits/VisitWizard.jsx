@@ -1174,7 +1174,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
         {/* Next action card + bottom bar */}
         <div className={`fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 ${sidebarCollapsed ? "lg:left-0" : "lg:left-64"}`}>
-          <div className="max-w-2xl mx-auto space-y-2">
+          <div className={`space-y-2 ${sidebarCollapsed ? "w-full 2xl:mx-auto 2xl:max-w-5xl" : "max-w-2xl mx-auto"}`}>
             <button onClick={() => goToStep(nextStep.target)} className="w-full flex items-center justify-between gap-2 rounded-2xl bg-primary/10 border border-primary/20 px-3 py-2.5 text-left hover:bg-primary/15 transition">
               <div className="flex items-center gap-2 min-w-0">
                 <nextStep.icon className="w-4 h-4 text-primary shrink-0" />
