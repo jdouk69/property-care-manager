@@ -6,11 +6,11 @@ import { Image as UIImage } from "@/components/ui/image";
 // "Not Checked" stays the stored default (item not yet answered) but is no
 // longer a deliberate field choice — workers pick Unable to Check or N/A instead.
 const STATUSES = [
-  { value: "Normal", label: "Normal", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
-  { value: "Important", label: "Important", icon: AlertTriangle, cls: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
-  { value: "Emergency", label: "Emergency", icon: AlertTriangle, cls: "bg-rose-500/10 text-rose-600 border-rose-500/30" },
-  { value: "Unable to Check", label: "Unable to Check", icon: CircleSlash, cls: "bg-sky-500/10 text-sky-600 border-sky-500/30" },
-  { value: "N/A", label: "N/A", icon: Minus, cls: "bg-muted text-muted-foreground border-border" },
+  { value: "Normal", label: "Normal", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", idleCls: "bg-emerald-500/5 border-emerald-500/25 text-emerald-700 dark:text-emerald-400" },
+  { value: "Important", label: "Important", icon: AlertTriangle, cls: "bg-amber-500/10 text-amber-600 border-amber-500/30", idleCls: "bg-amber-500/5 border-amber-500/25 text-amber-700 dark:text-amber-500" },
+  { value: "Emergency", label: "Emergency", icon: AlertTriangle, cls: "bg-rose-500/10 text-rose-600 border-rose-500/30", idleCls: "bg-rose-500/5 border-rose-500/25 text-rose-700 dark:text-rose-400" },
+  { value: "Unable to Check", label: "Unable to Check", icon: CircleSlash, cls: "bg-sky-500/10 text-sky-600 border-sky-500/30", idleCls: "bg-muted/60 border-border text-muted-foreground" },
+  { value: "N/A", label: "N/A", icon: Minus, cls: "bg-muted text-muted-foreground border-border", idleCls: "bg-muted/60 border-border text-muted-foreground" },
 ];
 // Statuses that open the detail area automatically (concerns need documenting,
 // Unable to Check needs a reason). Normal and N/A stay collapsed for fast
@@ -66,7 +66,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
           <div className="grid grid-cols-3 gap-2">
             {STATUSES.slice(0, 3).map((s) => (
               <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-                className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base font-semibold leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-bold ring-1 ring-inset ring-current/10" : s.idleCls}`}>
                 <s.icon className="w-4 h-4 2xl:w-3.5 2xl:h-3.5 shrink-0" />
                 {s.label}
               </button>
@@ -75,7 +75,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
           <div className="grid grid-cols-2 gap-2">
             {STATUSES.slice(3).map((s) => (
               <button key={s.value} type="button" onClick={() => setStatus(s.value)}
-                className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-semibold" : "border-border text-muted-foreground hover:bg-muted"}`}>
+                className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base font-semibold leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-bold ring-1 ring-inset ring-current/10" : s.idleCls}`}>
                 <s.icon className="w-4 h-4 2xl:w-3.5 2xl:h-3.5 shrink-0" />
                 {s.label}
               </button>
