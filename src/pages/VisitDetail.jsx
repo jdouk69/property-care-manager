@@ -15,7 +15,7 @@ import { athensMediumDateTime } from "@/lib/timezone";
 
 const GROUPS = [
   { key: "Emergency", tone: "text-rose-600 bg-rose-500/10 border-rose-500/20" },
-  { key: "Important", tone: "text-amber-600 bg-amber-500/10 border-amber-500/20" },
+  { key: "Important", label: "Attention", tone: "text-amber-600 bg-amber-500/10 border-amber-500/20" },
   { key: "Normal", tone: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" },
   { key: "Unable to Check", tone: "text-sky-600 bg-sky-500/10 border-sky-500/20" },
   { key: "N/A", tone: "text-muted-foreground bg-muted border-border" },
@@ -175,7 +175,7 @@ export default function VisitDetail() {
         <div className="space-y-3 mb-4">
           {grouped.map((g) => (
             <div key={g.key} className="rounded-2xl border border-border bg-card p-3">
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${g.tone}`}>{g.key} ({g.items.length})</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${g.tone}`}>{g.label || g.key} ({g.items.length})</span>
               <div className="mt-2 space-y-3">
                 {g.items.map((it, i) => (
                   <div key={i} className="border-l-2 border-border pl-3">

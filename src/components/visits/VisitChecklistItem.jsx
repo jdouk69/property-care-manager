@@ -7,7 +7,7 @@ import { Image as UIImage } from "@/components/ui/image";
 // longer a deliberate field choice — workers pick Unable to Check or N/A instead.
 const STATUSES = [
   { value: "Normal", label: "Normal", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", idleCls: "bg-emerald-500/5 border-emerald-500/25 text-emerald-700 dark:text-emerald-400" },
-  { value: "Important", label: "Important", icon: AlertTriangle, cls: "bg-amber-500/10 text-amber-600 border-amber-500/30", idleCls: "bg-amber-500/5 border-amber-500/25 text-amber-700 dark:text-amber-500" },
+  { value: "Important", label: "Attention", icon: AlertTriangle, cls: "bg-amber-500/10 text-amber-600 border-amber-500/30", idleCls: "bg-amber-500/5 border-amber-500/25 text-amber-700 dark:text-amber-500" },
   { value: "Emergency", label: "Emergency", icon: AlertTriangle, cls: "bg-rose-500/10 text-rose-600 border-rose-500/30", idleCls: "bg-rose-500/5 border-rose-500/25 text-rose-700 dark:text-rose-400" },
   { value: "Unable to Check", label: "Unable to Check", icon: CircleSlash, cls: "bg-sky-500/10 text-sky-600 border-sky-500/30", idleCls: "bg-muted/60 border-border text-muted-foreground" },
   { value: "N/A", label: "N/A", icon: Minus, cls: "bg-muted text-muted-foreground border-border", idleCls: "bg-muted/60 border-border text-muted-foreground" },
@@ -47,7 +47,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
           {answered && statusDef ? (
             <span className={`inline-flex items-center gap-1.5 text-xs md:text-sm px-2.5 py-1 rounded-full border font-medium whitespace-nowrap ${statusDef.cls}`}>
               <statusDef.icon className="w-3.5 h-3.5 2xl:w-3 2xl:h-3 shrink-0" />
-              {item.status}
+              {statusDef.label}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs md:text-sm px-2.5 py-1 rounded-full border border-dashed border-border bg-muted/40 text-muted-foreground whitespace-nowrap">

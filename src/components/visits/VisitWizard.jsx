@@ -10,7 +10,7 @@ import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
-import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { visitTypeLabel, checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -46,7 +46,7 @@ const itemAnswered = (it, idx, answeredMap) =>
 // on the checklist item. Only real text is carried forward — nothing invented.
 const issueDescriptionFromFinding = (it) => {
   const parts = [];
-  if (it.status) parts.push(`Observed condition: ${it.status}`);
+  if (it.status) parts.push(`Observed condition: ${checklistStatusLabel(it.status)}`);
   if ((it.notes || "").trim()) parts.push(`Notes: ${it.notes.trim()}`);
   if ((it.recommendation || "").trim()) parts.push(`Recommendation: ${it.recommendation.trim()}`);
   if ((it.action_taken || "").trim()) parts.push(`Action taken: ${it.action_taken.trim()}`);

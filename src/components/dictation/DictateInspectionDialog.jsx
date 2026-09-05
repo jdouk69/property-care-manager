@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import useDictationRecorder from "@/hooks/useDictationRecorder";
 import { dictationProposalsFromAudio } from "@/lib/inspectionDictation";
+import { checklistStatusLabel } from "@/lib/visitTypeLabels";
 
 const statusTone = {
   Normal: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -174,7 +175,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium truncate">{it.name}</p>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${toneFor(p.status)}`}>{p.status}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${toneFor(p.status)}`}>{checklistStatusLabel(p.status)}</span>
                             {p.needs_review && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
                                 Needs review — ambiguous, check before applying
