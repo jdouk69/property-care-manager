@@ -118,7 +118,42 @@
         "type": "string"
       }
     },
+    "follow_ups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "by": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ]
+      }
+    },
     "completion_notes": {
+      "type": "string"
+    },
+    "resolution_note": {
+      "type": "string"
+    },
+    "resolved_at": {
+      "type": "string"
+    },
+    "resolved_by": {
       "type": "string"
     },
     "warranty_info": {

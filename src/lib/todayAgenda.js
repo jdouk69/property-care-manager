@@ -172,7 +172,7 @@ export function buildTodayAgenda(data = {}) {
       propertyId: m.property_id, propertyName: propName(m.property_id), clientName: clientFor(m.property_id),
       typeLabel: dueToday ? "Maintenance Coordination" : "Follow-up",
       status: m.status, date: dueDate,
-      to: `/maintenance?open=${m.id}`, actionLabel: "View Issue", actionKind: "view-issue",
+      to: `/maintenance/${m.id}`, actionLabel: "View Issue", actionKind: "view-issue",
     };
     if (dueToday) push({ ...base, completed: false, overdue: false }, "today");
     else push({ ...base, completed: false, overdue: true }, "overdue");

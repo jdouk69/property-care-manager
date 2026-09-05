@@ -19,6 +19,7 @@ import PropertyDetail from '@/pages/PropertyDetail';
 import Tasks from '@/pages/Tasks';
 import Inspections from '@/pages/Inspections';
 import Maintenance from '@/pages/Maintenance';
+import MaintenanceIssueDetail from '@/pages/MaintenanceIssueDetail';
 import Contractors from '@/pages/Contractors';
 import Expenses from '@/pages/Expenses';
 import Keys from '@/pages/Keys';
@@ -92,6 +93,7 @@ const AuthenticatedApp = () => {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/inspections" element={<Inspections />} />
         <Route path="/maintenance" element={<Maintenance />} />
+        <Route path="/maintenance/:id" element={<MaintenanceIssueDetail />} />
         <Route path="/contractors" element={<Contractors />} />
         <Route path="/expenses" element={<Expenses />} />
         <Route path="/keys" element={<Keys />} />

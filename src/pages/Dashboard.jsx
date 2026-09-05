@@ -215,13 +215,13 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
     );
   }
   if (openIssuesByProp) {
-    // Exactly one unresolved issue → open that issue's detail/edit screen
-    // directly (/maintenance?open=<id>). Two or more → the Maintenance list
-    // filtered to that property's open issues. Opening an issue never changes
-    // its status — staff mark it Completed only when actually resolved.
+    // Exactly one unresolved issue → open the Maintenance Issue Detail screen
+    // directly (/maintenance/<id>). Two or more → the Maintenance list filtered
+    // to that property's open issues. Opening an issue never changes its
+    // status — staff mark it Completed only when actually resolved.
     const single = openIssuesByProp.count === 1;
     const to = single
-      ? `/maintenance?open=${openIssuesByProp.issueIds[0]}`
+      ? `/maintenance/${openIssuesByProp.issueIds[0]}`
       : `/maintenance?property=${openIssuesByProp.propertyId}`;
     return (
       <Link to={to} className="block rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-5 hover:bg-amber-500/10 transition">

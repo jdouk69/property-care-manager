@@ -1,5 +1,5 @@
-import React from "react";
-import { useSearchParams } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Wrench } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
@@ -41,12 +41,20 @@ const columns = [
 
 export default function Maintenance() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const openId = searchParams.get("open") || undefined;
   // Phase 1: /maintenance?add=1 (Home "Log Issue") opens the form immediately.
   const autoOpen = searchParams.get("add") === "1";
   // /maintenance?property=<id> (Dashboard "View Issues") filters the list to
   // that property's open/unresolved issues.
   const propertyFilter = searchParams.get("property");
+  // Legacy /maintenance?open=<id> links (Dashboard "View Issue" etc.) now open
+  // the Issue Detail screen. Append &edit=1 to open the administrative Edit
+  // Maintenance form directly (used by "Edit Details").
+  const editMode = searchParams.get("edit") === "1";
+  useEffect(() => {
+    if (openId && !editMode) navigate(`/maintenance/${openId}`, { replace: true });
+  }, [openId, editMode]);
   return (
     <AppLayout>
       <ResourceListPage
@@ -59,7 +67,8 @@ export default function Maintenance() {
         searchKeys={["title", "description", "completion_notes"]}
         addItemLabel="Log Issue"
         autoOpen={autoOpen}
-        autoOpenEditId={openId}
+        autoOpenEditId={editMode ? openId : undefined}
+        onOpenItem={(it) => navigate(`/maintenance/${it.id}`)}
         archivable
         filterFn={propertyFilter ? (it) => it.property_id === propertyFilter && it.status !== "Completed" && it.status !== "Cancelled" : undefined}
         defaultValues={{ status: "Reported", priority: "Medium", category: "Other", reported_by: "Jim", owner_approval_status: "Pending", payment_status: "Unpaid" }}
