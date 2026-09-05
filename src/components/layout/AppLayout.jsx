@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Home, ListChecks, Wrench, HardHat,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
-  MapPin, FolderOpen, ClipboardList, ScrollText, Euro, ChevronLeft
+  MapPin, FolderOpen, ClipboardList, ScrollText, Euro, ChevronLeft, UserCog
 } from "lucide-react";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { useAuth } from "@/lib/AuthContext";
@@ -69,6 +69,21 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
           {item.label}
         </NavLink>
       ))}
+      {isAdmin && (
+        <>
+          <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">Admin</div>
+          <NavLink
+            to="/admin/users"
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`
+            }
+          >
+            <UserCog className="w-[18px] h-[18px] shrink-0" />
+            Users &amp; Staff
+          </NavLink>
+        </>
+      )}
       <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">System</div>
       <NavLink to="/search" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
         <Search className="w-[18px] h-[18px]" /> Search
