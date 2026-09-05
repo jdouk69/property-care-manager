@@ -38,6 +38,7 @@ export default function Visits() {
   const [filter, setFilter] = useState("ALL");
   const [query, setQuery] = useState("");
   const [wizardActive, setWizardActive] = useState(false);
+  const [activeWide, setActiveWide] = useState(false);
   const { collapsed: sidebarCollapsed } = useSidebar();
 
   const load = async () => {
@@ -130,7 +131,7 @@ export default function Visits() {
   if (mode === "wizard") {
     return (
       <AppLayout defaultCollapsed={wizardActive}>
-        <div className={`p-4 sm:p-6 pb-24 lg:pb-6 ${sidebarCollapsed ? "w-full 2xl:mx-auto 2xl:max-w-5xl" : "max-w-3xl mx-auto"}`}>
+        <div className={`p-4 sm:p-6 pb-24 lg:pb-6 ${sidebarCollapsed || activeWide ? "w-full 2xl:mx-auto 2xl:max-w-5xl" : "max-w-3xl mx-auto"}`}>
           <VisitWizard
             autoResume={autoResume}
             ctxProperty={ctx.property}
@@ -139,8 +140,14 @@ export default function Visits() {
             ctxVisitType={ctx.visitType}
             resumeVisitId={resumeId}
             scheduleMode={scheduleMode}
-            onActiveVisitStart={() => setWizardActive(window.innerWidth >= 1024 && window.innerWidth < 1536)}
-            onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); setScheduleMode(false); setWizardActive(false); load(); setDraft(loadDraft()); }}
+            onActiveVisitStart={() => {
+              // Sidebar auto-collapse stays tablet-landscape-and-up (#21);
+              // the near-full width mode covers every iPad size, portrait included (#23).
+              const w = window.innerWidth;
+              setWizardActive(w >= 1024 && w < 1536);
+              setActiveWide(w >= 768 && w < 1536);
+            }}
+            onDone={() => { setMode("list"); setAutoResume(false); setCtx({}); setResumeId(null); setScheduleMode(false); setWizardActive(false); setActiveWide(false); load(); setDraft(loadDraft()); }}
           />
         </div>
       </AppLayout>
