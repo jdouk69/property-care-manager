@@ -252,7 +252,7 @@ export default function ResourceListPage({
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
             <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || t("Select…")} /></SelectTrigger>
             <SelectContent>
-              {(f.options || []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              {(f.options || []).map((o) => <SelectItem key={o} value={o}>{t(o)}</SelectItem>)}
             </SelectContent>
           </Select>
         );
@@ -366,7 +366,7 @@ export default function ResourceListPage({
               return (
                 <button key={o} type="button" onClick={() => setField(f.name, on ? arr.filter((x) => x !== o) : [...arr, o])}
                   className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "bg-primary/10 text-primary border-primary/30" : "border-border text-muted-foreground hover:bg-muted"}`}>
-                  {o}
+                  {t(o)}
                 </button>
               );
             })}
@@ -397,6 +397,13 @@ export default function ResourceListPage({
   // Proper English singular (also fixes the old "Propertie" derivation), then
   // localized for the Add/Edit/New headers. Falls back to English untouched.
   const singular = t(title.replace(/ies$/, "y").replace(/s$/, ""));
+  // Form headings prefer a per-page dictionary entry ("Add Clients") so Greek
+  // grammar is natural; otherwise fall back to the generic "{verb} {item}" pattern.
+  const formHeading = (verb) => {
+    const key = `${verb} ${title}`;
+    const direct = t(key);
+    return direct === key ? t(`${verb} {item}`, { item: singular }) : direct;
+  };
   const isMobile = useIsMobile();
 
   // Optional shared Dictation capability (opt-in per page). Fields the engine
@@ -594,7 +601,7 @@ export default function ResourceListPage({
           </div>
           <div className="flex items-center gap-3">
             {Icon && <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" /></div>}
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">{editing ? t("Edit {item}", { item: singular }) : t("Add {item}", { item: singular })}</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">{editing ? formHeading("Edit") : formHeading("Add")}</h1>
           </div>
 
           <div className="mt-6 space-y-6">{renderFormFields}</div>
@@ -683,7 +690,7 @@ export default function ResourceListPage({
                       {columns.filter((c) => c.badge).map((c) => {
                         const v = renderCellValue(c, item);
                         if (!v || v === "—") return null;
-                        return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{v}</span>;
+                        return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{t(v)}</span>;
                       })}
                       {cardExtra && cardExtra(item, lookups)}
                     </div>
@@ -698,7 +705,7 @@ export default function ResourceListPage({
         <Sheet open={drawerOpen} onOpenChange={(open) => { if (!open) closeForm(); }}>
           <SheetContent className="w-full h-full flex flex-col overflow-hidden">
             <SheetHeader>
-              <SheetTitle>{editing ? t("Edit {item}", { item: singular }) : t("New {item}", { item: singular })}</SheetTitle>
+              <SheetTitle>{editing ? formHeading("Edit") : formHeading("New")}</SheetTitle>
               <SheetDescription className="sr-only">Form</SheetDescription>
               {savingIndicator}
             </SheetHeader>

@@ -4,6 +4,8 @@
 // caller. Stored enum/data values are NEVER translated — this map is
 // display-only.
 
+import { ENUM_EL } from "./enumDisplay";
+
 export const EL = {
   // ---- Wave 1: sidebar / navigation ----
   "Dashboard": "Πίνακας",
@@ -156,7 +158,7 @@ export const EL = {
   "Add Expense": "Προσθήκη Εξόδου",
   "Expense": "Έξοδο",
   "Total expenses": "Σύνολο εξόδων",
-  "Awaiting reimbursement": "Σε αναμονή αποπληρωμής",
+  "Awaiting reimbursement": "Σε αναμονή επιστροφής εξόδων",
   "By property": "Ανά ακίνητο",
   "No expenses yet.": "Δεν υπάρχουν έξοδα ακόμα.",
   "Track key holders and returns": "Παρακολούθηση κατόχων και επιστροφών κλειδιών",
@@ -198,7 +200,7 @@ export const EL = {
   "Primary Photo": "Κύρια Φωτογραφία",
   "Additional Photos": "Επιπλέον Φωτογραφίες",
   "Gate Code": "Κωδικός Πύλης",
-  "Lockbox Code": "Κωδικός Κλειδοθήκης",
+  "Lockbox Code": "Κωδικός Κουτιού Κλειδιών",
   "Key Location": "Τοποθεσία Κλειδιού",
   "Alarm Instructions": "Οδηγίες Συναγερμού",
   "Alarm Company": "Εταιρεία Συναγερμού",
@@ -227,7 +229,7 @@ export const EL = {
   "Pumps": "Αντλίες",
   "Security System": "Σύστημα Ασφαλείας",
   "Service Package": "Πακέτο Υπηρεσιών",
-  "Monthly Fee (€)": "Μηνιαίο Πάγιο (€)",
+  "Monthly Fee (€)": "Μηνιαία Χρέωση (€)",
   "Inspection Frequency": "Συχνότητα Ελέγχων",
   "Included Services": "Συμπεριλαμβανόμενες Υπηρεσίες",
   "Additional Service Charges": "Επιπλέον Χρεώσεις Υπηρεσιών",
@@ -281,8 +283,8 @@ export const EL = {
   "Vendor": "Προμηθευτής",
   "Amount (€)": "Ποσό (€)",
   "Paid By": "Πληρώθηκε από",
-  "Awaiting Reimbursement": "Σε Αναμονή Αποπληρωμής",
-  "Reimbursed": "Αποπληρώθηκε",
+  "Awaiting Reimbursement": "Σε Αναμονή Επιστροφής Εξόδων",
+  "Reimbursed": "Έχει επιστραφεί",
   "Receipt Photo": "Φωτογραφία Απόδειξης",
   "Linked Visit": "Σχετική Επίσκεψη",
   "Linked Issue": "Σχετικό Θέμα",
@@ -341,4 +343,34 @@ export const EL = {
   "e.g. IKEA Delivery": "π.χ. Παράδοση IKEA",
   "e.g. Pool pump warranty": "π.χ. Εγγύηση αντλίας πισίνας",
   "e.g. Weekly": "π.χ. Εβδομαδιαία",
+
+  // ---- Wave 4: natural per-page form headings (override the generic
+  // "{verb} {item}" pattern so Greek grammar is correct) ----
+  "Edit Clients": "Επεξεργασία Πελάτη",
+  "Add Clients": "Προσθήκη Πελάτη",
+  "New Clients": "Νέος Πελάτης",
+  "Edit Properties": "Επεξεργασία Ακινήτου",
+  "Add Properties": "Προσθήκη Ακινήτου",
+  "New Properties": "Νέο Ακίνητο",
+  "Edit Contractors": "Επεξεργασία Εργολάβου",
+  "Add Contractors": "Προσθήκη Εργολάβου",
+  "New Contractors": "Νέος Εργολάβος",
+  "Edit Expenses": "Επεξεργασία Εξόδου",
+  "Add Expenses": "Προσθήκη Εξόδου",
+  "New Expenses": "Νέο Έξοδο",
+  "Edit Keys": "Επεξεργασία Κλειδιού",
+  "Add Keys": "Προσθήκη Κλειδιού",
+  "New Keys": "Νέο Κλειδί",
+  "Edit Deliveries & Access": "Επεξεργασία Παράδοσης & Πρόσβασης",
+  "Add Deliveries & Access": "Προσθήκη Παράδοσης & Πρόσβασης",
+  "New Deliveries & Access": "Νέα Παράδοση & Πρόσβαση",
+  "Edit Communications": "Επεξεργασία Επικοινωνίας",
+  "Add Communications": "Καταχώριση Επικοινωνίας",
+  "New Communications": "Νέα Καταχώριση Επικοινωνίας",
+  "Edit Documents": "Επεξεργασία Εγγράφου",
+  "Add Documents": "Προσθήκη Εγγράφου",
+  "New Documents": "Νέο Έγγραφο",
+
+  // Central enum/status/category display map (merged — one authoritative map)
+  ...ENUM_EL,
 };
