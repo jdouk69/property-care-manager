@@ -13,12 +13,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { eur, monthLabel } from "@/lib/billing";
 import { computeVatTotals, resolveVatRate } from "@/lib/invoiceGeneration";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { localizedMonthLabel } from "@/lib/i18n/billingDisplay";
 
 // Review-before-finalize for a monthly ledger invoice (visit-report Review UX model).
 // Save creates the Invoice as a Draft — nothing is emailed and nothing is
 // marked Paid. The PDF is downloaded only when you choose.
 export default function InvoiceReviewModal({ open, onOpenChange, draft, client, properties = [], onSaved }) {
   const { toast } = useToast();
+  const { t, lang } = useLanguage();
   const [business, setBusiness] = useState({});
   const [number, setNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
@@ -73,9 +76,9 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
       const created = await base44.entities.Invoice.create(record);
       setSaved(created);
       onSaved?.(created);
-      toast({ title: `Invoice ${created.invoice_number} created`, description: "Saved as Draft — nothing was sent." });
+      toast({ title: t("Invoice {number} created", { number: created.invoice_number }), description: t("Saved as Draft — nothing was sent.") });
     } catch (e) {
-      toast({ title: "Could not create invoice", description: e?.message || String(e), variant: "destructive" });
+      toast({ title: t("Could not create invoice"), description: e?.message || String(e), variant: "destructive" });
     }
     setSaving(false);
   };
@@ -85,7 +88,7 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
     try {
       await generateInvoicePdf(saved, { business, client, property });
     } catch (e) {
-      toast({ title: "Could not generate PDF", description: e?.message || String(e), variant: "destructive" });
+      toast({ title: t("Could not generate PDF"), description: e?.message || String(e), variant: "destructive" });
     }
     setDownloading(false);
   };
@@ -94,9 +97,9 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Review Invoice — {monthLabel(draft.billing_period) || draft.billing_period}</DialogTitle>
+          <DialogTitle>{t("Review Invoice")} — {localizedMonthLabel(draft.billing_period, lang) || monthLabel(draft.billing_period) || draft.billing_period}</DialogTitle>
           <DialogDescription>
-            {draft.line_items.length} charge{draft.line_items.length === 1 ? "" : "s"} from the monthly ledger. Saving creates a Draft — nothing is sent.
+            {t(draft.line_items.length === 1 ? "{count} charge from the monthly ledger. Saving creates a Draft — nothing is sent." : "{count} charges from the monthly ledger. Saving creates a Draft — nothing is sent.", { count: draft.line_items.length })}
           </DialogDescription>
         </DialogHeader>
 
@@ -115,16 +118,16 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
           {/* Invoice facts */}
           <div className="space-y-3">
             <div>
-              <Label className="text-xs">Invoice number</Label>
+              <Label className="text-xs">{t("Invoice number")}</Label>
               <Input className="h-11" value={number} onChange={(e) => setNumber(e.target.value)} disabled={!!saved} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Invoice date</Label>
+                <Label className="text-xs">{t("Invoice date")}</Label>
                 <Input type="date" className="h-11" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} disabled={!!saved} />
               </div>
               <div>
-                <Label className="text-xs">Due date</Label>
+                <Label className="text-xs">{t("Due date")}</Label>
                 <Input type="date" className="h-11" value={dueDate} onChange={(e) => setDueDate(e.target.value)} disabled={!!saved} />
               </div>
             </div>
@@ -132,16 +135,16 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
 
           {/* Bill To */}
           <div className="rounded-xl border border-border p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Bill To</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("Bill To")}</p>
             <p className="text-sm font-medium">{client?.name || "—"}</p>
             {client?.billing_address && <p className="text-xs text-muted-foreground">{client.billing_address}</p>}
-            <p className="text-xs text-muted-foreground">Property: {property?.name || "—"}</p>
+            <p className="text-xs text-muted-foreground">{t("Property: {name}", { name: property?.name || "—" })}</p>
           </div>
 
           {/* Line items */}
           <div className="rounded-xl border border-border overflow-hidden">
             <div className="grid grid-cols-[1fr_auto] px-3 py-2 bg-muted/50 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>Description</span><span>Amount</span>
+              <span>{t("Description")}</span><span>{t("Amount")}</span>
             </div>
             <div className="divide-y divide-border">
               {draft.line_items.map((it, i) => (
@@ -152,36 +155,36 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
               ))}
             </div>
             <div className="px-3 py-2 bg-muted/30 space-y-1 border-t border-border">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{eur(draft.subtotal)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT {rate}%</span><span>{eur(vat)}</span></div>
-              <div className="flex justify-between text-base font-semibold pt-1 border-t border-border"><span>TOTAL DUE</span><span>{eur(total)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("Subtotal")}</span><span>{eur(draft.subtotal)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("VAT {rate}%", { rate })}</span><span>{eur(vat)}</span></div>
+              <div className="flex justify-between text-base font-semibold pt-1 border-t border-border"><span>{t("TOTAL DUE")}</span><span>{eur(total)}</span></div>
             </div>
           </div>
 
           {/* Notes */}
           <div>
-            <Label className="text-xs">Notes (optional)</Label>
-            <Textarea className="min-h-[64px] text-sm" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional note for the invoice" disabled={!!saved} />
+            <Label className="text-xs">{t("Notes (optional)")}</Label>
+            <Textarea className="min-h-[64px] text-sm" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("Optional note for the invoice")} disabled={!!saved} />
           </div>
 
           {/* Actions */}
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <Button variant="outline" className="h-11" onClick={() => onOpenChange(false)}>
-              {saved ? "Close" : "Cancel"}
+              {saved ? t("Close") : t("Cancel")}
             </Button>
             {saved ? (
               <Button className="h-11 px-6 gap-1.5" onClick={download} disabled={downloading}>
-                {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download PDF
+                {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {t("Download PDF")}
               </Button>
             ) : (
               <Button className="h-11 px-6 gap-1.5" onClick={save} disabled={saving || !number.trim() || !invoiceDate}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Invoice
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Save Invoice")}
               </Button>
             )}
           </div>
           {saved && (
             <p className="text-xs text-muted-foreground text-center">
-              Saved as {saved.invoice_number} (Draft). You send it whenever you choose — nothing was emailed.
+              {t("Saved as {number} (Draft). You send it whenever you choose — nothing was emailed.", { number: saved.invoice_number })}
             </p>
           )}
         </div>

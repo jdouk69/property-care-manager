@@ -7,10 +7,12 @@ import BillingChargeCard from "@/components/billing/BillingChargeCard";
 import BillingFilterBar from "@/components/billing/BillingFilterBar";
 import MarkPaidDialog from "@/components/billing/MarkPaidDialog";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
-import { athensToday } from "@/lib/timezone";
+import { athensToday, athensMediumDate } from "@/lib/timezone";
 import { CHARGE_TYPES, displayStatus } from "@/lib/billing";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export default function Billing() {
+  const { t, lang } = useLanguage();
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
   const [statusFilter, setStatusFilter] = useState("All");
@@ -32,7 +34,7 @@ export default function Billing() {
     (propertyFilter === "all" || it.property_id === propertyFilter);
 
   const waive = async (charge) => {
-    if (!confirm("Mark this charge as Waived? It stays in history and no payment is expected.")) return;
+    if (!confirm(t("Mark this charge as Waived? It stays in history and no payment is expected."))) return;
     try {
       await base44.entities.BillingCharge.update(charge.id, { status: "Waived" });
       setReloadSignal((x) => x + 1);
@@ -73,12 +75,12 @@ export default function Billing() {
     {
       name: "property_service_agreement_id", label: "Service agreement (optional)", type: "entity-select",
       entity: "PropertyServiceAgreement", placeholder: "Optional",
-      optionLabel: (a) => `${a.billing_type || "Billing"} · €${(a.agreed_price || 0).toFixed(0)} · ${a.status}`,
+      optionLabel: (a) => `${t(a.billing_type || "Billing")} · €${(a.agreed_price || 0).toFixed(0)} · ${t(a.status)}`,
     },
     {
       name: "visit_id", label: "Linked visit (optional)", type: "entity-select",
       entity: "PropertyVisit", placeholder: "Optional",
-      optionLabel: (v) => `${visitTypeLabel(v.visit_type)} · ${v.start_time ? v.start_time.slice(0, 10) : ""}`,
+      optionLabel: (v) => `${t(visitTypeLabel(v.visit_type))} · ${v.start_time ? athensMediumDate(v.start_time, lang) : ""}`,
     },
     {
       name: "expense_id", label: "Linked expense (optional)", type: "entity-select",
@@ -86,19 +88,21 @@ export default function Billing() {
       optionLabel: (e) => `${e.vendor} · €${(e.amount || 0).toFixed(2)} · ${e.date || ""}`,
     },
     { name: "notes", label: "Notes", type: "textarea" },
-  ], [properties]);
+  ], [properties, t, lang]);
 
+  // Display-only renders: enums and dates localized at render time (also used
+  // by the CSV export); stored values are never touched.
   const columns = [
     { key: "description", primary: true },
     { key: "client_id" },
     { key: "property_id" },
-    { key: "charge_type" },
+    { key: "charge_type", render: (it) => (it.charge_type ? t(it.charge_type) : "—") },
     { key: "amount" },
-    { key: "billing_date" },
-    { key: "due_date" },
-    { key: "status", badge: true },
-    { key: "paid_date" },
-    { key: "payment_method" },
+    { key: "billing_date", render: (it) => (it.billing_date ? athensMediumDate(it.billing_date, lang) : "—") },
+    { key: "due_date", render: (it) => (it.due_date ? athensMediumDate(it.due_date, lang) : "—") },
+    { key: "status", badge: true, enumContext: "charge" },
+    { key: "paid_date", render: (it) => (it.paid_date ? athensMediumDate(it.paid_date, lang) : "—") },
+    { key: "payment_method", render: (it) => (it.payment_method ? t(it.payment_method) : "—") },
   ];
 
   return (

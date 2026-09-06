@@ -10,10 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { athensToday } from "@/lib/timezone";
 import { PAYMENT_METHODS, eur } from "@/lib/billing";
+import { athensMediumDate } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // One charge → one payment. No separate Payment entity, no partial payments:
 // saving sets status = Paid and records paid date, method and reference.
 export default function MarkPaidDialog({ charge, open, onOpenChange, onSaved }) {
+  const { t, lang } = useLanguage();
   const [paidDate, setPaidDate] = useState(athensToday());
   const [method, setMethod] = useState("Bank Transfer");
   const [reference, setReference] = useState("");
@@ -47,36 +50,36 @@ export default function MarkPaidDialog({ charge, open, onOpenChange, onSaved }) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Mark Paid</DialogTitle>
+          <DialogTitle>{t("Mark Paid")}</DialogTitle>
           <DialogDescription>
-            {charge?.description} — {eur(charge?.amount)}{charge?.due_date ? ` · due ${charge.due_date}` : ""}
+            {charge?.description} — {eur(charge?.amount)}{charge?.due_date ? ` · ${t("due {date}", { date: athensMediumDate(charge.due_date, lang) })}` : ""}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div>
-            <Label className="text-sm">Paid date</Label>
+            <Label className="text-sm">{t("Paid date")}</Label>
             <Input type="date" className="h-12 sm:text-base" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
           </div>
           <div>
-            <Label className="text-sm">Payment method</Label>
+            <Label className="text-sm">{t("Payment method")}</Label>
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger className="h-12 sm:text-base"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {PAYMENT_METHODS.map((m) => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                  <SelectItem key={m} value={m}>{t(m)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-sm">Reference / note</Label>
-            <Input className="h-12 sm:text-base" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. Wise transfer ref, bank note" />
+            <Label className="text-sm">{t("Reference / note")}</Label>
+            <Input className="h-12 sm:text-base" value={reference} onChange={(e) => setReference(e.target.value)} placeholder={t("e.g. Wise transfer ref, bank note")} />
           </div>
         </div>
         <DialogFooter className="gap-2">
-          <Button variant="outline" className="h-11" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button variant="outline" className="h-11" onClick={() => onOpenChange(false)} disabled={saving}>{t("Cancel")}</Button>
           <Button className="h-11 px-6" onClick={save} disabled={saving || !paidDate}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Mark Paid"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Mark Paid")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -189,6 +189,9 @@ export const ENUM_EL = {
   // Manual report delivery methods (Mark Sent Externally dialog)
   "Manual Email": "Χειροκίνητο Email",
   "Phone Call": "Τηλεφωνική Κλήση",
+  // Service agreement status (η σύμβαση — Σε παύση / Έληξε)
+  "Paused": "Σε παύση",
+  "Ended": "Έληξε",
 };
 
 // Context-specific enum display overrides.

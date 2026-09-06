@@ -5,6 +5,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import MarkInvoicePaidDialog from "@/components/invoices/MarkInvoicePaidDialog";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
+import { athensMediumDate } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const STATUSES = ["Draft", "Sent", "Partially Paid", "Paid", "Overdue", "Cancelled"];
 
@@ -20,21 +22,13 @@ const fields = [
   { name: "vat", label: "VAT (€)", type: "number" },
   { name: "total", label: "Total (€)", type: "number" },
   { name: "amount_paid", label: "Amount Paid (€)", type: "number" },
-  { name: "status", label: "Status", type: "select", options: STATUSES },
+  { name: "status", label: "Status", type: "select", options: STATUSES, enumContext: "invoice" },
   { name: "payment_date", label: "Payment Date", type: "date" },
   { name: "notes", label: "Notes", type: "textarea" },
 ];
 
-const columns = [
-  { key: "invoice_number", label: "Invoice", primary: true },
-  { key: "client_id", label: "Client" },
-  { key: "property_id", label: "Property" },
-  { key: "invoice_date", label: "Date" },
-  { key: "total", label: "Total", render: (it) => `€${(it.total || 0).toFixed(2)}` },
-  { key: "status", label: "Status", badge: true },
-];
-
 export default function Invoices() {
+  const { t, lang } = useLanguage();
   const [business, setBusiness] = useState({});
   const [downloadingId, setDownloadingId] = useState(null);
   const [paidDialog, setPaidDialog] = useState(null);
@@ -55,6 +49,18 @@ export default function Invoices() {
     } catch (e) {}
     setDownloadingId(null);
   };
+
+  // Display-only renders: invoice date localized at render time (also used by
+  // the CSV export); column LABELS stay English (CSV headers). Stored values
+  // are never touched.
+  const columns = [
+    { key: "invoice_number", label: "Invoice", primary: true },
+    { key: "client_id", label: "Client" },
+    { key: "property_id", label: "Property" },
+    { key: "invoice_date", label: "Date", render: (it) => (it.invoice_date ? athensMediumDate(it.invoice_date, lang) : "—") },
+    { key: "total", label: "Total", render: (it) => `€${(it.total || 0).toFixed(2)}` },
+    { key: "status", label: "Status", badge: true, enumContext: "invoice" },
+  ];
 
   return (
     <AppLayout>
@@ -77,9 +83,9 @@ export default function Invoices() {
           const paid = items.reduce((s, i) => s + (i.amount_paid || 0), 0);
           return (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-              <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">Outstanding balance</p><p className="text-xl font-semibold mt-1 text-amber-600">€{outstanding.toFixed(2)}</p></div>
-              <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">Total received</p><p className="text-xl font-semibold mt-1 text-emerald-600">€{paid.toFixed(2)}</p></div>
-              <div className="rounded-2xl border border-border bg-card p-4 col-span-2 lg:col-span-1"><p className="text-xs text-muted-foreground">Invoices</p><p className="text-xl font-semibold mt-1">{items.length}</p></div>
+              <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">{t("Outstanding balance")}</p><p className="text-xl font-semibold mt-1 text-amber-600">€{outstanding.toFixed(2)}</p></div>
+              <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">{t("Total received")}</p><p className="text-xl font-semibold mt-1 text-emerald-600">€{paid.toFixed(2)}</p></div>
+              <div className="rounded-2xl border border-border bg-card p-4 col-span-2 lg:col-span-1"><p className="text-xs text-muted-foreground">{t("Invoices")}</p><p className="text-xl font-semibold mt-1">{items.length}</p></div>
             </div>
           );
         }}
@@ -88,7 +94,7 @@ export default function Invoices() {
             {!["Paid", "Cancelled"].includes(item.status) && (
               <button onClick={(e) => { e.stopPropagation(); setPaidDialog(item); }}
                 className="text-[11px] px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-600 border-emerald-500/20 inline-flex items-center gap-1 min-h-[32px]">
-                <CheckCircle2 className="w-3 h-3" /> Mark Paid
+                <CheckCircle2 className="w-3 h-3" /> {t("Mark Paid")}
               </button>
             )}
             <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item, lookups); }} disabled={downloadingId === item.id}
