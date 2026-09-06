@@ -573,14 +573,24 @@ async function buildDoc(visit, ctx = {}) {
               : { glyph: "-", rgb: GRAY, label: "NOT CHECKED", lead: "" };
       ensure(rc.note ? 16 : 6);
       drawMark(cfg.glyph, cfg.rgb);
+      // Render the item name first, then measure its ACTUAL rendered width at
+      // the same font size (9.5 bold) — never at the label's 7.5pt size — so
+      // the status label can never overlap the name.
       doc.setFontSize(9.5); doc.setFont(undefined, "bold"); doc.setTextColor(40);
       text(rc.name, margin + 6, y);
-      doc.setFontSize(7.5); doc.setTextColor(cfg.rgb[0], cfg.rgb[1], cfg.rgb[2]); doc.setFont(undefined, "bold");
+      const nameW = doc.getTextWidth(clean(rc.name));
+      doc.setFontSize(7.5); doc.setFont(undefined, "bold");
       const lbl = " - " + cfg.label;
-      if (margin + 6 + doc.getTextWidth(clean(rc.name)) + 2 + doc.getTextWidth(lbl) <= pageW - margin) {
-        text(lbl, margin + 6 + doc.getTextWidth(clean(rc.name)) + 2, y);
+      const lblW = doc.getTextWidth(lbl);
+      const GAP = 2.5; // safe gap between the rendered name and the status label
+      doc.setTextColor(cfg.rgb[0], cfg.rgb[1], cfg.rgb[2]);
+      if (margin + 6 + nameW + GAP + lblW <= pageW - margin) {
+        text(lbl, margin + 6 + nameW + GAP, y);
       } else {
-        y += 4.5; ensure(5); text(lbl, margin + 6, y);
+        // Name + status will not fit on one line: wrap the status label to
+        // the next line instead of overlapping the item name.
+        y += 4.5; ensure(5);
+        text(lbl, margin + 6, y);
       }
       doc.setTextColor(0); doc.setFont(undefined, "normal");
       y += 5;
