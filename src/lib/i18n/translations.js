@@ -1,9 +1,11 @@
-// Wave 1 Greek interface dictionary.
-// Keys are the exact English source strings used in shared app chrome.
-// Stored enum/data values are NEVER translated — this map is display-only.
+// Greek interface dictionary.
+// Keys are the exact English source strings used in shared app chrome and
+// shared components. Patterns may contain {placeholders} substituted by the
+// caller. Stored enum/data values are NEVER translated — this map is
+// display-only.
 
 export const EL = {
-  // Sidebar / navigation
+  // ---- Wave 1: sidebar / navigation ----
   "Dashboard": "Πίνακας",
   "Clients": "Πελάτες",
   "Properties": "Ακίνητα",
@@ -30,18 +32,18 @@ export const EL = {
   "Admin": "Διαχείριση",
   "System": "Σύστημα",
 
-  // Mobile bottom navigation
+  // ---- Wave 1: mobile bottom navigation ----
   "Home": "Αρχική",
   "More": "Περισσότερα",
 
-  // Account menu
+  // ---- Wave 1: account menu ----
   "Sign Out": "Αποσύνδεση",
   "Signed In": "Συνδεδεμένος",
   "Owner/Admin": "Ιδιοκτήτης/Διαχειριστής",
   "Staff": "Προσωπικό",
   "Account": "Λογαριασμός",
 
-  // Notifications (shared bell sheet — UI labels only; stored titles/priorities/types stay as stored)
+  // ---- Wave 1: notifications (shared bell sheet — UI labels only) ----
   "Notifications": "Ειδοποιήσεις",
   "Mark all read": "Όλα ως αναγνωσμένα",
   "Unread": "Μη αναγνωσμένα",
@@ -50,4 +52,86 @@ export const EL = {
   "Type": "Τύπος",
   "You're all caught up 🎉": "Δεν υπάρχουν νέες ειδοποιήσεις 🎉",
   "Delete notification": "Διαγραφή ειδοποίησης",
+
+  // ---- Wave 2: shared CRUD engine (ResourceListPage) ----
+  "Save": "Αποθήκευση",
+  "Save Changes": "Αποθήκευση Αλλαγών",
+  "Cancel": "Άκυρο",
+  "Delete": "Διαγραφή",
+  "Archive": "Αρχειοθέτηση",
+  "Edit": "Επεξεργασία",
+  "Add": "Προσθήκη",
+  "Export": "Εξαγωγή",
+  "Export CSV": "Εξαγωγή CSV",
+  "Select…": "Επιλογή…",
+  "Yes": "Ναι",
+  "No": "Όχι",
+  "Uploading…": "Ανέβασμα…",
+  "Upload photo": "Ανέβασμα φωτογραφίας",
+  "Replace photo": "Αντικατάσταση φωτογραφίας",
+  "Upload file": "Ανέβασμα αρχείου",
+  "Replace file": "Αντικατάσταση αρχείου",
+  "Open": "Άνοιγμα",
+  "File": "Αρχείο",
+  "Untitled": "Χωρίς τίτλο",
+  "Back": "Πίσω",
+  "Close": "Κλείσιμο",
+  "Saving…": "Αποθήκευση…",
+  "Saved": "Αποθηκεύτηκε",
+  "Edit {item}": "Επεξεργασία {item}",
+  "Add {item}": "Προσθήκη {item}",
+  "New {item}": "Νέο {item}",
+  "Search {list}…": "Αναζήτηση σε {list}…",
+  "No {list} yet": "Δεν υπάρχουν {list} ακόμα",
+  "Please fill in: {fields}": "Συμπληρώστε: {fields}",
+  "Delete this record? This cannot be undone. Consider archiving instead.":
+    "Διαγραφή της εγγραφής; Η ενέργεια δεν μπορεί να αναιρεθεί. Εξετάστε την αρχειοθέτηση.",
+
+  // ---- Wave 2: authentication screens ----
+  "Welcome back": "Καλώς ήρθατε ξανά",
+  "Log in to your account": "Συνδεθείτε στον λογαριασμό σας",
+  "Continue with Google": "Συνέχεια με Google",
+  "or": "ή",
+  "Email": "Email",
+  "Email address": "Διεύθυνση email",
+  "Password": "Κωδικός",
+  "Forgot password?": "Ξεχάσατε τον κωδικό;",
+  "Logging in...": "Σύνδεση...",
+  "Log in": "Σύνδεση",
+  "Invalid email or password": "Μη έγκυρο email ή κωδικός",
+  "Create your account": "Δημιουργία λογαριασμού",
+  "Sign up to get started": "Εγγραφείτε για να ξεκινήσετε",
+  "Already have an account?": "Έχετε ήδη λογαριασμό;",
+  "Confirm Password": "Επιβεβαίωση κωδικού",
+  "Creating account...": "Δημιουργία λογαριασμού...",
+  "Create account": "Δημιουργία λογαριασμού",
+  "Passwords do not match": "Οι κωδικοί δεν ταιριάζουν",
+  "Registration failed": "Η εγγραφή απέτυχε",
+  "Verify your email": "Επιβεβαίωση email",
+  "We sent a code to {email}": "Στείλαμε κωδικό στο {email}",
+  "Verifying...": "Επιβεβαίωση...",
+  "Verify": "Επιβεβαίωση",
+  "Didn't receive the code?": "Δεν λάβατε τον κωδικό;",
+  "Resend": "Επαναποστολή",
+  "Invalid verification code": "Μη έγκυρος κωδικός επαλήθευσης",
+  "Failed to resend code": "Αποτυχία επαναποστολής κωδικού",
+  "Code sent": "Ο κωδικός στάλθηκε",
+  "Check your email for the new code.": "Ελέγξτε το email σας για τον νέο κωδικό.",
+  "Reset password": "Επαναφορά κωδικού",
+  "We'll send you a link to reset it": "Θα σας στείλουμε σύνδεσμο επαναφοράς",
+  "Back to log in": "Πίσω στη σύνδεση",
+  "If an account exists with that email, you'll receive a password reset link shortly.":
+    "Αν υπάρχει λογαριασμός με αυτό το email, θα λάβετε σύντομα σύνδεσμο επαναφοράς κωδικού.",
+  "Sending...": "Αποστολή...",
+  "Send reset link": "Αποστολή συνδέσμου επαναφοράς",
+  "New password": "Νέος κωδικός",
+  "New Password": "Νέος κωδικός",
+  "Enter your new password below": "Εισάγετε τον νέο σας κωδικό παρακάτω",
+  "Resetting...": "Επαναφορά...",
+  "Failed to reset password": "Η επαναφορά του κωδικού απέτυχε",
+  "Invalid reset link": "Μη έγκυρος σύνδεσμος",
+  "This password reset link is missing or invalid": "Ο σύνδεσμος επαναφοράς λείπει ή δεν είναι έγκυρος",
+  "Request a new link": "Αίτημα νέου συνδέσμου",
+  "The link you used appears to be incomplete. Please request a new password reset email.":
+    "Ο σύνδεσμος που χρησιμοποιήσατε φαίνεται ελλιπής. Ζητήστε νέο email επαναφοράς κωδικού.",
 };

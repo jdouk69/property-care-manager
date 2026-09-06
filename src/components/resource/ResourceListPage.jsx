@@ -5,6 +5,7 @@ import {
   Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive, FileText, Upload, ArrowLeft
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function formatBytes(b) {
   if (!b && b !== 0) return "";
@@ -76,6 +77,7 @@ export default function ResourceListPage({
   renderCard, filterFn, dictation,
 }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = user?.role === "admin";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +193,7 @@ export default function ResourceListPage({
     // Required-field enforcement: fields marked required must have a value
     // (0 counts as filled) before a new record can be created.
     const missing = fields.filter((f) => f.required && values[f.name] !== 0 && !values[f.name]);
-    if (missing.length) { setFormError(`Please fill in: ${missing.map((f) => f.label || f.name).join(", ")}`); return; }
+    if (missing.length) { setFormError(t("Please fill in: {fields}", { fields: missing.map((f) => f.label || f.name).join(", ") })); return; }
     setFormError("");
     setSaving(true);
     try {
@@ -208,7 +210,7 @@ export default function ResourceListPage({
   };
 
   const remove = async (it) => {
-    if (!confirm("Delete this record? This cannot be undone. Consider archiving instead.")) return;
+    if (!confirm(t("Delete this record? This cannot be undone. Consider archiving instead."))) return;
     destructiveRef.current = true;
     clearTimeout(debounceRef.current);
     setDirty(false);
@@ -248,7 +250,7 @@ export default function ResourceListPage({
       case "select":
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
-            <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
+            <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || t("Select…")} /></SelectTrigger>
             <SelectContent>
               {(f.options || []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
             </SelectContent>
@@ -260,7 +262,7 @@ export default function ResourceListPage({
           : Object.entries(lookups[f.entity] || {});
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
-            <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || "Select…"} /></SelectTrigger>
+            <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || t("Select…")} /></SelectTrigger>
             <SelectContent>
               {opts.map(([id, label]) => (
                 <SelectItem key={id} value={id}>{label}</SelectItem>
@@ -279,7 +281,7 @@ export default function ResourceListPage({
         return (
           <div className="flex items-center gap-2 pt-1">
             <Switch checked={!!val} onCheckedChange={(v) => setField(f.name, v)} />
-            <span className="text-sm text-muted-foreground">{val ? "Yes" : "No"}</span>
+            <span className="text-sm text-muted-foreground">{val ? t("Yes") : t("No")}</span>
           </div>
         );
       case "image":
@@ -288,7 +290,7 @@ export default function ResourceListPage({
             {val && <UIImage src={val} className="w-full h-40 rounded-lg" fittingType="fill" />}
             <label className="inline-flex items-center gap-2 text-sm text-primary cursor-pointer">
               <ImagePlus className="w-4 h-4" />
-              <span>{uploading ? "Uploading…" : val ? "Replace photo" : "Upload photo"}</span>
+              <span>{uploading ? t("Uploading…") : val ? t("Replace photo") : t("Upload photo")}</span>
               <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (file) setField(f.name, await uploadImage(file)); }} />
             </label>
           </div>
@@ -306,15 +308,15 @@ export default function ResourceListPage({
               <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
                 <FileText className="w-8 h-8 text-primary shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{fileName || "File"}</p>
+                  <p className="text-sm font-medium truncate">{fileName || t("File")}</p>
                   <p className="text-xs text-muted-foreground">{[fileType, formatBytes(fileSize)].filter(Boolean).join(" · ")}</p>
                 </div>
-                <a href={val} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline shrink-0">Open</a>
+                <a href={val} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline shrink-0">{t("Open")}</a>
               </div>
             )}
             <label className="inline-flex items-center gap-2 text-sm text-primary cursor-pointer">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              <span>{uploading ? "Uploading…" : val ? "Replace file" : "Upload file"}</span>
+              <span>{uploading ? t("Uploading…") : val ? t("Replace file") : t("Upload file")}</span>
               <input type="file" accept={f.accept || "*"} className="hidden" onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
@@ -388,7 +390,7 @@ export default function ResourceListPage({
       }
       return fieldDef.entity ? (lookups[fieldDef.entity]?.[v] || "—") : (v || "—");
     }
-    if (col.type === "boolean") return v ? "Yes" : "No";
+    if (col.type === "boolean") return v ? t("Yes") : t("No");
     return v || "—";
   };
 
@@ -532,8 +534,8 @@ export default function ResourceListPage({
 
   const savingIndicator = (
     <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
-      {saving && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>}
-      {saved && !saving && <><Check className="w-3.5 h-3.5 text-emerald-500" /> Saved</>}
+      {saving && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Saving…")}</>}
+      {saved && !saving && <><Check className="w-3.5 h-3.5 text-emerald-500" /> {t("Saved")}</>}
     </div>
   );
 
@@ -543,21 +545,21 @@ export default function ResourceListPage({
       {editing ? (
         <div className="flex gap-1">
           {archivable && (
-            <Button variant="ghost" className="sm:h-11" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> Archive</Button>
+            <Button variant="ghost" className="sm:h-11" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> {t("Archive")}</Button>
           )}
           {isAdmin && (
             <Button variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => remove(editing)}>
-              <Trash2 className="w-4 h-4 mr-1" /> Delete
+              <Trash2 className="w-4 h-4 mr-1" /> {t("Delete")}
             </Button>
           )}
         </div>
       ) : <div />}
       <div className="flex gap-2">
-        <Button variant="outline" className="sm:h-11 sm:px-5" onClick={closeForm}>Cancel</Button>
+        <Button variant="outline" className="sm:h-11 sm:px-5" onClick={closeForm}>{t("Cancel")}</Button>
         {editing ? (
-          <Button className="sm:h-11 sm:px-5" onClick={flushSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}</Button>
+          <Button className="sm:h-11 sm:px-5" onClick={flushSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Save Changes")}</Button>
         ) : (
-          <Button className="sm:h-11 sm:px-5" onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}</Button>
+          <Button className="sm:h-11 sm:px-5" onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t(saveLabel)}</Button>
         )}
       </div>
     </>
@@ -577,12 +579,12 @@ export default function ResourceListPage({
               onClick={closeForm}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg px-2.5 py-1.5 transition-colors min-h-[36px] touch-manipulation"
             >
-              <ArrowLeft className="w-4 h-4 shrink-0" /> Back
+              <ArrowLeft className="w-4 h-4 shrink-0" /> {t("Back")}
             </button>
             <button
               type="button"
               onClick={closeForm}
-              aria-label="Close"
+              aria-label={t("Close")}
               className="h-9 w-9 md:h-11 md:w-11 2xl:hidden rounded-full hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
             >
               <X className="w-5 h-5" />
@@ -590,7 +592,7 @@ export default function ResourceListPage({
           </div>
           <div className="flex items-center gap-3">
             {Icon && <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" /></div>}
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">{editing ? `Edit ${singular}` : `Add ${singular}`}</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground leading-tight">{editing ? t("Edit {item}", { item: singular }) : t("Add {item}", { item: singular })}</h1>
           </div>
 
           <div className="mt-6 space-y-6">{renderFormFields}</div>
@@ -626,18 +628,18 @@ export default function ResourceListPage({
         icon={Icon}
         actions={
           <div className="flex items-center gap-2">
-            <Button onClick={() => exportCsv(filtered, columns, `${title.toLowerCase()}.csv`)} variant="outline" size="sm" className="rounded-full gap-1.5 h-9 px-3" title="Export CSV">
-              <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export</span>
+            <Button onClick={() => exportCsv(filtered, columns, `${title.toLowerCase()}.csv`)} variant="outline" size="sm" className="rounded-full gap-1.5 h-9 px-3" title={t("Export CSV")}>
+              <Download className="w-4 h-4" /> <span className="hidden sm:inline">{t("Export")}</span>
             </Button>
             <Button onClick={onAdd || openNew} size="sm" className="rounded-full gap-1.5 h-9 px-4">
-              <Plus className="w-4 h-4" /> {addItemLabel}
+              <Plus className="w-4 h-4" /> {t(addItemLabel)}
             </Button>
           </div>
         }
       >
         <div className="relative mt-4 max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${title.toLowerCase()}…`} className="pl-9 rounded-full bg-muted/50 border-0 focus-visible:ring-1" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Search {list}…", { list: title.toLowerCase() })} className="pl-9 rounded-full bg-muted/50 border-0 focus-visible:ring-1" />
         </div>
       </PageHeader>
 
@@ -646,7 +648,7 @@ export default function ResourceListPage({
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Icon} title={`No ${title.toLowerCase()} yet`} description={subtitle} action={<Button onClick={onAdd || openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {addItemLabel}</Button>} />
+        <EmptyState icon={Icon} title={t("No {list} yet", { list: title.toLowerCase() })} description={subtitle} action={<Button onClick={onAdd || openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {t(addItemLabel)}</Button>} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map((item) => (
@@ -663,7 +665,7 @@ export default function ResourceListPage({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-medium text-foreground truncate flex-1">
-                        {columns.find((c) => c.primary) ? renderCellValue(columns.find((c) => c.primary), item) : item.name || "Untitled"}
+                        {columns.find((c) => c.primary) ? renderCellValue(columns.find((c) => c.primary), item) : item.name || t("Untitled")}
                       </div>
                       <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition shrink-0" />
                     </div>
@@ -694,7 +696,7 @@ export default function ResourceListPage({
         <Sheet open={drawerOpen} onOpenChange={(open) => { if (!open) closeForm(); }}>
           <SheetContent className="w-full h-full flex flex-col overflow-hidden">
             <SheetHeader>
-              <SheetTitle>{editing ? `Edit ${singular}` : `New ${singular}`}</SheetTitle>
+              <SheetTitle>{editing ? t("Edit {item}", { item: singular }) : t("New {item}", { item: singular })}</SheetTitle>
               <SheetDescription className="sr-only">Form</SheetDescription>
               {savingIndicator}
             </SheetHeader>

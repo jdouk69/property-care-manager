@@ -23,9 +23,18 @@ export function LanguageProvider({ children }) {
     } catch (e) {}
   }, []);
 
-  // t(englishText) — returns the Greek display string when Greek is active and
-  // a translation exists; otherwise returns the English source unchanged.
-  const t = useCallback((key) => (lang === "el" && EL[key]) || key, [lang]);
+  // t(englishText, vars) — returns the Greek display string when Greek is
+  // active and a translation exists; otherwise returns the English source
+  // unchanged. Optional {placeholders} in the pattern are substituted from vars.
+  const t = useCallback((key, vars) => {
+    let s = (lang === "el" && EL[key]) || key;
+    if (vars) {
+      Object.keys(vars).forEach((k) => {
+        s = s.split(`{${k}}`).join(String(vars[k]));
+      });
+    }
+    return s;
+  }, [lang]);
 
   return (
     <LanguageContext.Provider value={{ lang, setLang, t }}>
