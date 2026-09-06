@@ -199,7 +199,12 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const routineChecks = cl.map((it) => {
     const st = it.status;
     let note = "";
-    if (st === "Important" || st === "Emergency") note = isOwnerFinding(it) ? (it.notes || "").trim() : "";
+    if (st === "Important" || st === "Emergency") {
+      // Explanation comes ONLY from this exact item's owner-visible note — never
+      // the private note, never another item, the Visit Summary or a finding.
+      // An abnormal row is never left looking complete with no explanation.
+      note = isOwnerFinding(it) ? (it.notes || "").trim() : "No observation details were recorded.";
+    }
     else if (st === "Unable to Check" || st === "N/A") note = (it.notes || "").trim();
     return { name: cleanLabel(it.name), status: st, note };
   });
@@ -224,12 +229,14 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     monitor: findings.filter((f) => f.severityKey === "monitor").length,
   };
 
-  const hasUrgent = counts.urgent > 0;
-  const hasAttention = counts.attention > 0;
   const hasMonitor = counts.monitor > 0;
+  // Header status derives from the ACTUAL checklist statuses, not only from
+  // owner-visible findings: any Emergency item -> URGENT ATTENTION REQUIRED,
+  // any Important item (no Emergency) -> ATTENTION REQUIRED. "No Concerns
+  // Noted" only when NO Important/Emergency checklist item exists.
   let overallStatus;
-  if (hasUrgent) overallStatus = { key: "urgent", label: "Attention Required" };
-  else if (hasAttention) overallStatus = { key: "attention", label: "Attention Required" };
+  if (urgentCount || counts.urgent) overallStatus = { key: "urgent", label: "Urgent Attention Required" };
+  else if (attentionCount || counts.attention) overallStatus = { key: "attention", label: "Attention Required" };
   else if (hasMonitor) overallStatus = { key: "monitor", label: "Observations Noted" };
   else overallStatus = { key: "ok", label: "No Concerns Noted" };
 
@@ -268,9 +275,9 @@ export function buildOwnerReportModel(visit, ctx = {}) {
       : (it.status === "N/A" ? "Not applicable" : it.status === "Unable to Check" ? "Unable to check" : ((it.status === "Not Checked" || !it.status) ? "Not checked" : "Checked")),
   }));
 
-  const result = hasUrgent
-    ? "Urgent attention recommended."
-    : hasAttention
+  const result = (urgentCount || counts.urgent)
+    ? "Urgent attention required."
+    : (attentionCount || counts.attention)
       ? "Attention required."
       : hasMonitor
         ? "Observations noted."

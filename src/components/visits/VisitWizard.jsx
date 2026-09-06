@@ -574,7 +574,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   const updateItem = (idx, updated) => {
     const prev = checklist[idx];
-    setChecklist((arr) => arr.map((it, i) => (i === idx ? updated : it)));
+    // First-time Important/Emergency: surface the note to the owner
+    // automatically (same rule the Guided Checklist applies, centralized here
+    // so every UI path behaves identically). An item that was ALREADY a
+    // concern keeps the staff's existing owner-visible choice — a manual
+    // toggle-off stays off.
+    const wasConcern = prev?.status === "Important" || prev?.status === "Emergency";
+    const isConcern = updated.status === "Important" || updated.status === "Emergency";
+    const applied = isConcern && !wasConcern ? { ...updated, owner_visible: true } : updated;
+    setChecklist((arr) => arr.map((it, i) => (i === idx ? applied : it)));
     setAnswered((a) => ({ ...a, [idx]: true }));
     // Normal / N/A: collapse and auto-advance to the next unanswered item.
     // Important / Emergency / Unable to Check stay open for their existing
@@ -985,6 +993,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // Both new statuses are deliberate answers; only "Not Checked" (untouched) is unanswered.
     const isAnswered = (it, idx) => itemAnswered(it, idx, answered);
     const missingReasons = checklist.filter((i) => i.status === "Unable to Check" && !(i.notes || "").trim());
+  // Important/Emergency items REQUIRE their own observation before completion
+  // (hard gate — every abnormal item in the owner report must be explainable).
+  // Normal / N/A / Unable to Check / Not Checked behavior is unchanged.
+  const missingConcernNotes = checklist.filter((i) => (i.status === "Important" || i.status === "Emergency") && !(i.notes || "").trim());
     const inspectionDone = checklist.length > 0 && checklist.every((it, idx) => isAnswered(it, idx));
     const issuesDone = inspectionDone && (flaggedCount === 0 || issueIds.length > 0);
     const tasksDone = inspectionDone && issuesDone && (taskIds.length > 0 || !!skipped.tasks);
@@ -1285,7 +1297,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <Button variant="outline" onClick={backFromActive} className={`rounded-2xl ${BTN}`}>{t("Back")}</Button>
               <Button
                 variant={canComplete ? "default" : "outline"}
-                onClick={() => ((canComplete && missingReasons.length === 0) ? completeVisit() : setShowIncomplete(true))}
+                onClick={() => ((canComplete && missingReasons.length === 0 && missingConcernNotes.length === 0) ? completeVisit() : setShowIncomplete(true))}
                 disabled={saving}
                 className="flex-1 h-12 rounded-2xl text-base">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-5 h-5 mr-2" /> {t("Complete Visit")}</>}
@@ -1302,13 +1314,17 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 <h3 className="font-semibold">{t("Visit incomplete")}</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                {inspectionDone
-                  ? t("{count} Unable to Check item(s) have no reason noted. The owner report will show the check could not be completed, but not why.", { count: missingReasons.length })
-                  : t("There are still unanswered checklist items.")}
+                {missingConcernNotes.length > 0
+                  ? t("{count} Attention/Emergency item(s) have no observation noted. Please describe what was observed before completing the visit.", { count: missingConcernNotes.length })
+                  : inspectionDone
+                    ? t("{count} Unable to Check item(s) have no reason noted. The owner report will show the check could not be completed, but not why.", { count: missingReasons.length })
+                    : t("There are still unanswered checklist items.")}
               </p>
               <div className="flex flex-col gap-2">
                 <Button onClick={() => { setShowIncomplete(false); goToStep("step-inspection"); }} className="rounded-2xl h-11">{t("Continue Checklist")}</Button>
-                <Button variant="outline" onClick={() => { setShowIncomplete(false); completeVisit(); }} className="rounded-2xl h-11">{t("Complete Anyway")}</Button>
+                {missingConcernNotes.length === 0 && (
+                  <Button variant="outline" onClick={() => { setShowIncomplete(false); completeVisit(); }} className="rounded-2xl h-11">{t("Complete Anyway")}</Button>
+                )}
               </div>
             </div>
           </div>
