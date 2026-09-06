@@ -8,6 +8,7 @@ import RecurrencePanel from "@/components/recurrence/RecurrencePanel";
 import QuickTaskSheet from "@/components/tasks/QuickTaskSheet";
 import TaskCard from "@/components/tasks/TaskCard";
 import { createRuleFromOccurrence, generateNextOccurrence } from "@/lib/recurrence";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const fields = [
   { name: "title", label: "Title", type: "text", required: true, placeholder: "e.g. Weekly pool check" },
@@ -32,6 +33,7 @@ const columns = [
 ];
 
 export default function Tasks() {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const openId = searchParams.get("open") || undefined;
   const preProperty = searchParams.get("property") || "";
@@ -86,7 +88,7 @@ export default function Tasks() {
         cardExtra={(item) =>
           item.is_recurring ? (
             <span className="text-xs px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1">
-              <Repeat className="w-3 h-3" /> {item.repeat_label || "Recurring"}
+              <Repeat className="w-3 h-3" /> {item.repeat_label || t("Recurring")}
             </span>
           ) : null
         }

@@ -94,4 +94,68 @@ export const ENUM_EL = {
   // Derived expense badge values (render-only; tone map stays keyed on English)
   "reimbursed": "Επιστράφηκε",
   "pending": "Σε εκκρεμότητα",
+
+  // ---- Wave 6: Tasks & Maintenance ----
+  // Task / visit / maintenance workflow statuses (same meaning across entities)
+  "In Progress": "Σε εξέλιξη",
+  "Scheduled": "Προγραμματισμένο",
+
+  // Priorities (feminine — προτεραιότητα; also fits ειδοποίηση)
+  "Low": "Χαμηλή",
+  "Medium": "Μεσαία",
+  "High": "Υψηλή",
+  "Routine": "Τυπική",
+
+  // Maintenance issue workflow statuses
+  "Reported": "Αναφέρθηκε",
+  "Awaiting Owner Approval": "Σε αναμονή έγκρισης ιδιοκτήτη",
+  "Approved": "Εγκεκριμένο",
+  "Rejected": "Απορρίφθηκε",
+  "Contractor Contacted": "Επικοινωνήθηκε με εργολάβο",
+  "Waiting for Parts": "Σε αναμονή ανταλλακτικών",
+  "Waiting for Payment": "Σε αναμονή πληρωμής",
+
+  // Payment statuses
+  "Unpaid": "Απλήρωτο",
+  "Partially Paid": "Μερικώς πληρωμένο",
+  "Paid": "Πληρωμένο",
+
+  // Maintenance categories
+  "Plumbing": "Υδραυλικά",
+  "Electrical": "Ηλεκτρολογικά",
+  "Pool": "Πισίνα",
+  "Irrigation": "Άρδευση",
+  "Garden": "Κήπος",
+  "Air conditioning": "Κλιματισμός",
+  "Security": "Ασφάλεια",
+  "Painting": "Βαφή",
+  "Building repair": "Επισκευή κτιρίου",
+  "Pest control": "Απολυμάνσεις",
+  "Storm damage": "Ζημιές από καταιγίδα",
+
+  // Task types
+  "Maintenance follow-up": "Παρακολούθηση Συντήρησης",
+  "Contractor Meeting": "Συνάντηση με Εργολάβο",
+  "Delivery": "Παράδοση",
+  "Owner Request": "Αίτημα Ιδιοκτήτη",
+  "Arrival preparation": "Προετοιμασία Άφιξης",
+  "Departure inspection": "Επιθεώρηση Αναχώρησης",
+  "Shopping": "Αγορές",
+  "Utility payment": "Πληρωμή Λογαριασμών",
+  "Report": "Αναφορά",
+  "Key return": "Επιστροφή Κλειδιού",
+  "Phone call": "Τηλεφωνική Κλήση",
+  "Owner-representative visit": "Επίσκεψη Εκπροσώπου Ιδιοκτήτη",
+  "Custom": "Προσαρμοσμένο",
+
+  // Recurrence frequencies & series statuses (stored values; display only)
+  "Daily": "Ημερησίως",
+  "Weekly": "Εβδομαδιαία",
+  "Monthly": "Μηνιαία",
+  "Quarterly": "Τριμηνιαία",
+  "Yearly": "Ετήσια",
+  "active": "Ενεργή",
+  "paused": "Σε παύση",
+  "skipped": "Παραλείφθηκε",
+  "ended": "Ολοκληρώθηκε",
 };

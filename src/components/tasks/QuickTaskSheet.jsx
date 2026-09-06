@@ -19,6 +19,7 @@ import DictateButton from "@/components/dictation/DictateButton";
 import DictateFormDialog from "@/components/dictation/DictateFormDialog";
 import RecurrenceFields from "@/components/recurrence/RecurrenceFields";
 import { createRuleFromOccurrence, isoDate } from "@/lib/recurrence";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const TASK_TYPES = [
   "Inspection", "Maintenance", "Maintenance follow-up", "Contractor Meeting", "Delivery",
@@ -45,6 +46,7 @@ const DICTATE_FIELDS = [
  */
 export default function QuickTaskSheet({ open, onOpenChange, onCreated, preProperty = "" }) {
   const isMobile = useIsMobile();
+  const { t } = useLanguage();
 
   const [properties, setProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(false);
@@ -157,7 +159,7 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
       onCreated && onCreated(created);
       onOpenChange(false);
     } catch (e) {
-      window.alert("Could not save task: " + (e?.message || e));
+      window.alert(t("Could not save task: {message}", { message: e?.message || e }));
     }
     setSaving(false);
   };
@@ -166,9 +168,9 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
     <div className="space-y-5">
       {/* Property first */}
       <div>
-        <Label className="text-sm font-medium text-foreground mb-2 block">Property <span className="text-destructive">*</span></Label>
+        <Label className="text-sm font-medium text-foreground mb-2 block">{t("Property")} <span className="text-destructive">*</span></Label>
         <Select value={propertyId} onValueChange={setPropertyId}>
-          <SelectTrigger className="h-12 text-base"><SelectValue placeholder="Select property…" /></SelectTrigger>
+          <SelectTrigger className="h-12 text-base"><SelectValue placeholder={t("Select property…")} /></SelectTrigger>
           <SelectContent>
             {loadingProps ? (
               <div className="flex items-center justify-center py-3"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>
@@ -184,12 +186,12 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
 
       {/* Task (maps to existing title) */}
       <div>
-        <Label htmlFor="qt-task" className="text-sm font-medium text-foreground mb-2 block">Task <span className="text-destructive">*</span></Label>
+        <Label htmlFor="qt-task" className="text-sm font-medium text-foreground mb-2 block">{t("Task")} <span className="text-destructive">*</span></Label>
         <Textarea
           id="qt-task"
           value={task}
           onChange={(e) => setTask(e.target.value)}
-          placeholder="What needs to be done?"
+          placeholder={t("What needs to be done?")}
           rows={3}
           className="text-base min-h-[88px] resize-none"
           autoFocus
@@ -200,22 +202,22 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
       {showDue ? (
         <div className="rounded-2xl border border-border p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">Due date</span>
+            <span className="text-sm font-medium text-foreground">{t("Due date")}</span>
             <button
               type="button"
               onClick={() => { setShowDue(false); setDate(""); setTime(""); }}
               className="text-xs text-muted-foreground hover:text-foreground min-h-[36px] touch-manipulation"
             >
-              Remove
+              {t("Remove")}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Date</Label>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">{t("Date")}</Label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-12 text-base" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Time (optional)</Label>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">{t("Time (optional)")}</Label>
               <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="h-12 text-base" />
             </div>
           </div>
@@ -226,7 +228,7 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
           onClick={() => setShowDue(true)}
           className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline min-h-[40px] touch-manipulation"
         >
-          <Plus className="w-4 h-4" /> Add due date
+          <Plus className="w-4 h-4" /> {t("Add due date")}
         </button>
       )}
 
@@ -238,37 +240,37 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground min-h-[40px] touch-manipulation"
         >
           {more ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          More options
+          {t("More options")}
         </button>
         {more && (
           <div className="mt-3 space-y-4">
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Type</Label>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">{t("Type")}</Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
-                <SelectContent>{TASK_TYPES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                <SelectContent>{TASK_TYPES.map((o) => <SelectItem key={o} value={o}>{t(o)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Priority</Label>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">{t("Priority")}</Label>
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
-                <SelectContent>{PRIORITIES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                <SelectContent>{PRIORITIES.map((o) => <SelectItem key={o} value={o}>{t(o)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Assigned To</Label>
-              <Input value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} placeholder="e.g. Jim" className="h-12 text-base" />
+              <Label className="text-xs text-muted-foreground mb-1.5 block">{t("Assigned To")}</Label>
+              <Input value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} placeholder={t("e.g. Jim")} className="h-12 text-base" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Status</Label>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">{t("Status")}</Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
-                <SelectContent>{STATUSES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                <SelectContent>{STATUSES.map((o) => <SelectItem key={o} value={o}>{t(o)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Notes</Label>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">{t("Notes")}</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="text-base resize-none" />
             </div>
             <RecurrenceFields values={recValues} setField={recSetField} />
@@ -294,9 +296,9 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
 
   const footer = (
     <div className="flex gap-2 w-full sm:w-auto">
-      <Button variant="outline" className="h-12 flex-1 sm:flex-none sm:px-5" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+      <Button variant="outline" className="h-12 flex-1 sm:flex-none sm:px-5" onClick={() => onOpenChange(false)} disabled={saving}>{t("Cancel")}</Button>
       <Button className="h-12 flex-1 sm:flex-none sm:px-6" onClick={save} disabled={!canSave}>
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />} Save Task
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />} {t("Save Task")}
       </Button>
     </div>
   );
@@ -306,8 +308,8 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="w-full h-full flex flex-col overflow-hidden">
           <SheetHeader>
-            <SheetTitle>New Task</SheetTitle>
-            <SheetDescription className="sr-only">Quick task entry</SheetDescription>
+            <SheetTitle>{t("New Task")}</SheetTitle>
+            <SheetDescription className="sr-only">{t("Quick task entry")}</SheetDescription>
           </SheetHeader>
           <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden px-1 py-4">{form}</div>
           <SheetFooter className="flex-row gap-2 border-t pt-4 pb-[env(safe-area-inset-bottom)]">{footer}</SheetFooter>
@@ -320,8 +322,8 @@ export default function QuickTaskSheet({ open, onOpenChange, onCreated, prePrope
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px] md:max-w-[720px]">
         <DialogHeader>
-          <DialogTitle>New Task</DialogTitle>
-          <DialogDescription className="sr-only">Quick task entry</DialogDescription>
+          <DialogTitle>{t("New Task")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("Quick task entry")}</DialogDescription>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto pr-1">{form}</div>
         <DialogFooter className="flex-row gap-2">{footer}</DialogFooter>
