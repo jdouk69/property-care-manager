@@ -12,6 +12,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
+import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import Dashboard from '@/pages/Dashboard';
 import Clients from '@/pages/Clients';
 import Properties from '@/pages/Properties';
@@ -137,6 +138,7 @@ function App() {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+      <LanguageProvider>
       <AuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
@@ -146,6 +148,7 @@ function App() {
           <Toaster />
         </QueryClientProvider>
       </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   )
 }

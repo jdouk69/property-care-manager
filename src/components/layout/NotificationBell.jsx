@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { badgeTone } from "@/components/resource/ResourceListPage";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const TYPES = ["Task", "Inspection", "Maintenance", "Contractor", "Visit", "System"];
 
@@ -17,6 +18,7 @@ export default function NotificationBell() {
   const [fUrgent, setFUrgent] = useState(false);
   const [fType, setFType] = useState("all");
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const load = async () => {
     setLoading(true);
@@ -69,7 +71,7 @@ export default function NotificationBell() {
   return (
     <Sheet open={open} onOpenChange={(o) => { setOpen(o); if (o && !items.length) load(); }}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative rounded-full" aria-label="Notifications">
+        <Button variant="ghost" size="icon" className="relative rounded-full" aria-label={t("Notifications")}>
           <Bell className="w-5 h-5" />
           {unread > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center">
@@ -80,18 +82,18 @@ export default function NotificationBell() {
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0">
         <SheetHeader className="px-4 py-3 border-b border-border flex-row items-center justify-between space-y-0">
-          <SheetTitle className="text-base">Notifications</SheetTitle>
+          <SheetTitle className="text-base">{t("Notifications")}</SheetTitle>
           <Button variant="ghost" size="sm" onClick={markAll} disabled={!unread} className="text-xs gap-1 h-8">
-            <CheckCheck className="w-3.5 h-3.5" /> Mark all read
+            <CheckCheck className="w-3.5 h-3.5" /> {t("Mark all read")}
           </Button>
         </SheetHeader>
         <div className="px-3 py-2 border-b border-border flex flex-wrap items-center gap-1.5">
-          <Chip active={fUnread} onClick={() => setFUnread((v) => !v)}>Unread</Chip>
-          <Chip active={fUrgent} onClick={() => setFUrgent((v) => !v)}>Urgent</Chip>
+          <Chip active={fUnread} onClick={() => setFUnread((v) => !v)}>{t("Unread")}</Chip>
+          <Chip active={fUrgent} onClick={() => setFUrgent((v) => !v)}>{t("Urgent")}</Chip>
           <Select value={fType} onValueChange={setFType}>
-            <SelectTrigger className="h-7 w-[130px] text-xs rounded-full"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="h-7 w-[130px] text-xs rounded-full"><SelectValue placeholder={t("Type")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="all">{t("All types")}</SelectItem>
               {TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -100,7 +102,7 @@ export default function NotificationBell() {
           {loading ? (
             <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">You're all caught up 🎉</div>
+            <div className="py-12 text-center text-sm text-muted-foreground">{t("You're all caught up 🎉")}</div>
           ) : (
             filtered.map((n) => (
               <div key={n.id} onClick={() => openItem(n)} className="px-4 py-3 hover:bg-muted/50 transition flex gap-3 cursor-pointer group">
@@ -116,7 +118,7 @@ export default function NotificationBell() {
                 <button
                   onClick={(e) => { e.stopPropagation(); remove(n); }}
                   className="self-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition"
-                  aria-label="Delete notification"
+                  aria-label={t("Delete notification")}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

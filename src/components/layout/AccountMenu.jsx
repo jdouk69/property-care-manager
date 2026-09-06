@@ -1,6 +1,7 @@
 import React from "react";
 import { ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -18,10 +19,12 @@ function initials(name, email) {
 
 export default function AccountMenu({ variant = "dropdown" }) {
   const { user, logout } = useAuth();
-  const name = user?.full_name || user?.email || "Signed In";
+  const { t } = useLanguage();
+  const name = user?.full_name || user?.email || t("Signed In");
   const email = user?.email;
-  const roleLabel = ROLE_LABELS[user?.role] ||
+  const rawRoleLabel = ROLE_LABELS[user?.role] ||
     (user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "");
+  const roleLabel = rawRoleLabel ? t(rawRoleLabel) : "";
 
   if (variant === "block") {
     // Flat account row used in the mobile "More" sheet.
@@ -35,7 +38,7 @@ export default function AccountMenu({ variant = "dropdown" }) {
           {roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
         </div>
         <Button variant="outline" size="sm" onClick={() => logout()} className="gap-1.5 shrink-0">
-          <LogOut className="w-3.5 h-3.5" /> Sign Out
+          <LogOut className="w-3.5 h-3.5" /> {t("Sign Out")}
         </Button>
       </div>
     );
@@ -47,7 +50,7 @@ export default function AccountMenu({ variant = "dropdown" }) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="Account"
+          aria-label={t("Account")}
           className="flex items-center gap-2 h-9 px-2 rounded-lg hover:bg-accent text-foreground transition-colors"
         >
           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary">
@@ -64,7 +67,7 @@ export default function AccountMenu({ variant = "dropdown" }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
-          <LogOut className="mr-2 h-4 w-4" /> Sign Out
+          <LogOut className="mr-2 h-4 w-4" /> {t("Sign Out")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -14,6 +14,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import NotificationBell from "@/components/layout/NotificationBell";
 import AccountMenu from "@/components/layout/AccountMenu";
+import LanguageToggle from "@/components/ui/LanguageToggle";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -51,6 +53,7 @@ const MOBILE_NAV = [
 ];
 
 function SidebarContent({ onNavigate, isAdmin = false }) {
+  const { t } = useLanguage();
   return (
     <nav className="flex flex-col gap-1 px-3 py-4">
       {NAV_ITEMS.filter((item) => isAdmin || !ADMIN_ONLY_NAV.has(item.to)).map((item) => (
@@ -66,12 +69,12 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
           }
         >
           <item.icon className="w-[18px] h-[18px] shrink-0" />
-          {item.label}
+          {t(item.label)}
         </NavLink>
       ))}
       {isAdmin && (
         <>
-          <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">Admin</div>
+          <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">{t("Admin")}</div>
           <NavLink
             to="/admin/users"
             onClick={onNavigate}
@@ -80,17 +83,17 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
             }
           >
             <UserCog className="w-[18px] h-[18px] shrink-0" />
-            Users &amp; Staff
+            {t("Users & Staff")}
           </NavLink>
         </>
       )}
-      <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">System</div>
+      <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">{t("System")}</div>
       <NavLink to="/search" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
-        <Search className="w-[18px] h-[18px]" /> Search
+        <Search className="w-[18px] h-[18px]" /> {t("Search")}
       </NavLink>
       {isAdmin && (
         <NavLink to="/settings" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
-          <SettingsIcon className="w-[18px] h-[18px]" /> Settings
+          <SettingsIcon className="w-[18px] h-[18px]" /> {t("Settings")}
         </NavLink>
       )}
     </nav>
@@ -100,6 +103,7 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
 export default function AppLayout({ businessName = "Property Care Manager", children, defaultCollapsed = false }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isAdmin = user?.role === "admin";
   // Session-level sidebar collapse (lg+ only — below lg the sidebar never shows
   // and mobile sheet navigation is untouched).
@@ -162,6 +166,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
         <div className="flex items-center gap-1">
           <NotificationBell />
           <ThemeToggle />
+          <LanguageToggle />
         </div>
       </header>
 
@@ -178,6 +183,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           <div className="flex items-center gap-1">
             <NotificationBell />
             <ThemeToggle />
+            <LanguageToggle />
             <AccountMenu />
           </div>
         </div>
@@ -194,7 +200,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
               className="flex flex-col items-center justify-center gap-0.5 flex-1 text-[10px] md:text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               <item.icon className="w-5 h-5 md:w-6 md:h-6" />
-              {item.label}
+              {t(item.label)}
             </button>
           ) : (
             <NavLink
@@ -208,7 +214,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
               }
             >
               <item.icon className="w-5 h-5 md:w-6 md:h-6" />
-              {item.label}
+              {t(item.label)}
             </NavLink>
           )
         )}
