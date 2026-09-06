@@ -1466,7 +1466,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               checkbox, so nothing can be charged accidentally). ADDITIONAL
               visits show the Billable override, defaulting to checked — staff
               can uncheck before completing for a courtesy visit. */}
-          {agreement && isRecurringAgreement(agreement) && visitType === recommendedVisitType(pkg) && (additionalService ? (
+          {agreement && isRecurringAgreement(agreement) && (additionalService ? (
             <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
               <label className="flex items-start gap-3 cursor-pointer">
                 <Checkbox checked={billable} onCheckedChange={(v) => setBillable(v === true)} className="mt-0.5" />
@@ -1483,14 +1483,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 {billable ? t("Additional - Billable") : t("Courtesy - No Charge")}
               </p>
             </div>
-          ) : (
+          ) : visitType === recommendedVisitType(pkg) ? (
             <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <p className="text-xs text-emerald-700 dark:text-emerald-500">
                 {t("Included in Package")} — {t("Included in the customer's package — no separate charge.")}
               </p>
             </div>
-          ))}
+          ) : null)}
         </div>
 
         {/* Next action card + bottom bar */}
