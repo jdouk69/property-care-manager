@@ -1,5 +1,5 @@
-import React from "react";
-import { Mic, Camera, Loader2, X, AlertTriangle } from "lucide-react";
+import React, { useState } from "react";
+import { Mic, Camera, Loader2, X, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,8 +19,13 @@ const DETAIL_STATUSES = ["Important", "Emergency", "Unable to Check"];
 // the wizard's existing update handlers — no parallel state or records.
 export default function GuidedItemCard({ item, index, uploading, onSetStatus, onDictate, onNotes, onToggleOwnerVisible, onUploadPhotos, onRemovePhoto }) {
   const { t, lang } = useLanguage();
+  // Optional note for routine answers: Normal / N/A stay fast (one tap,
+  // auto-advance), but staff can open the notes area at any time — e.g. after
+  // navigating back with Previous — same affordance as the accordion rows.
+  const [manualDetailOpen, setManualDetailOpen] = useState(false);
   const showDetails =
     DETAIL_STATUSES.includes(item.status) ||
+    manualDetailOpen ||
     !!(item.notes || "").trim() ||
     (item.photos || []).length > 0;
 
@@ -66,6 +71,17 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
           </button>
         ))}
       </div>
+
+      {item.status !== "Not Checked" && !DETAIL_STATUSES.includes(item.status) && (
+        <button
+          type="button"
+          onClick={() => setManualDetailOpen(!manualDetailOpen)}
+          className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition"
+        >
+          {manualDetailOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {manualDetailOpen ? t("Hide notes / photos") : t("Add note / photo")}
+        </button>
+      )}
 
       {showDetails && (
         <div className="space-y-2">

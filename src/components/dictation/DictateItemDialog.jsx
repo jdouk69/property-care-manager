@@ -145,7 +145,7 @@ export default function DictateItemDialog({ open, onOpenChange, item, statuses, 
                       )}
                       {manual && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
-                          {t("Already answered — review before applying")}
+                          {t("Answered manually — your status stays; only the note is added")}
                         </span>
                       )}
                     </div>

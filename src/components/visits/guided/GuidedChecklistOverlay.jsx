@@ -72,10 +72,15 @@ const concernVisibilityPatch = (item, status) =>
   // Approved item-level dictation applies to THIS item only: the proposed
   // status is set and the observation is APPENDED to existing notes (same
   // merge semantics as the whole-visit dictation — never a silent overwrite).
+  // Staff-selected status is authoritative: if this item already has a
+  // deliberate status (anything but "Not Checked"), dictation only documents
+  // the observation — the status is never changed by voice.
   const handleApplyDictation = (proposal) => {
+    const keepStatus = (item.status || "Not Checked") !== "Not Checked";
+    const status = keepStatus ? item.status : proposal.status;
     const mergedNotes = [item.notes || "", proposal.notes || ""].filter((s) => s.trim()).join("\n").trim();
-    onChangeItem(idx, { ...item, status: proposal.status, notes: mergedNotes, ...concernVisibilityPatch(item, proposal.status) });
-    advanceAfter(idx, proposal.status);
+    onChangeItem(idx, { ...item, status, notes: mergedNotes, ...concernVisibilityPatch(item, status) });
+    advanceAfter(idx, status);
   };
 
   // Same owner_visible field the accordion toggles — flips through the same

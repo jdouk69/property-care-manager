@@ -28,6 +28,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { athensLocalToIso, athensVisitWhen, athensToday } from "@/lib/timezone";
 import { createNotification } from "@/lib/notifications";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 
 const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
@@ -721,8 +722,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       let next = arr;
       updates.forEach((u) => {
         const prev = next[u.item_index] || {};
+        // Staff-selected status is authoritative: once an item has a
+        // deliberate status (anything but "Not Checked"), dictation can only
+        // document the observation — it never changes the status.
+        const keepStatus = (prev.status || "Not Checked") !== "Not Checked";
         const mergedNotes = [prev.notes || "", u.notes || ""].filter((s) => s.trim()).join("\n").trim();
-        next = next.map((it, i) => (i === u.item_index ? { ...it, status: u.status, notes: mergedNotes } : it));
+        next = next.map((it, i) => (i === u.item_index ? { ...it, status: keepStatus ? prev.status : u.status, notes: mergedNotes } : it));
       });
       return next;
     });
@@ -1213,6 +1218,19 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         ? STEPS.find((s) => s.key === "issues")
         : STEPS.find((s) => s.key === "finish");
     const goToStep = (target) => { const el = document.getElementById(target); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    // Jump straight to a specific checklist item: expand it and bring it into view.
+    const jumpToItem = (idx) => {
+      setOpenItems((m) => ({ ...m, [idx]: true }));
+      setTimeout(() => itemRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    };
+    // The first item blocking completion, in the same priority order as the
+    // completion gate's warnings (missing owner-visible concern note > missing
+    // Unable-to-Check reason > first unanswered item).
+    const firstBlockerIdx = missingConcernNotes.length > 0
+      ? checklist.findIndex((i) => (i.status === "Important" || i.status === "Emergency") && !(i.owner_visible && (i.notes || "").trim()))
+      : missingReasons.length > 0
+        ? checklist.findIndex((i) => i.status === "Unable to Check" && !(i.notes || "").trim())
+        : checklist.findIndex((it, idx) => !isAnswered(it, idx));
     const issueOptions = issueIds.map((id, i) => [id, createdIssues[i]?.title || "Issue"]);
 
     return (
@@ -1542,8 +1560,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                     ? t("{count} Unable to Check item(s) have no reason noted. The owner report will show the check could not be completed, but not why.", { count: missingReasons.length })
                     : t("There are still unanswered checklist items.")}
               </p>
+              {firstBlockerIdx >= 0 && (
+                <p className="text-sm font-medium text-foreground mb-4 -mt-1">
+                  {t("First incomplete: #{number} · {name}", { number: firstBlockerIdx + 1, name: checklistItemDisplay(checklist[firstBlockerIdx].name, lang) })}
+                </p>
+              )}
               <div className="flex flex-col gap-2">
-                <Button onClick={() => { setShowIncomplete(false); goToStep("step-inspection"); }} className="rounded-2xl h-11">{t("Continue Checklist")}</Button>
+                <Button onClick={() => { setShowIncomplete(false); if (firstBlockerIdx >= 0) jumpToItem(firstBlockerIdx); else goToStep("step-inspection"); }} className="rounded-2xl h-11">
+                  {firstBlockerIdx >= 0 ? t("Go to item {number}", { number: firstBlockerIdx + 1 }) : t("Continue Checklist")}
+                </Button>
                 {missingConcernNotes.length === 0 && (
                   <Button variant="outline" onClick={() => { setShowIncomplete(false); completeVisit(); }} className="rounded-2xl h-11">{t("Complete Anyway")}</Button>
                 )}
