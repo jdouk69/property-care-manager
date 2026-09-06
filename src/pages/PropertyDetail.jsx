@@ -19,6 +19,7 @@ import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
 import MonitoringPrioritiesEditor from "@/components/properties/MonitoringPrioritiesEditor";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const ISSUE_CATEGORIES = ["Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning", "Heating", "Appliance", "Internet", "Security", "Locksmith", "Cleaning", "Painting", "Building repair", "Pest control", "Storm damage", "Other"];
 const ISSUE_PRIORITIES = ["Routine", "Medium", "High", "Emergency"];
@@ -29,6 +30,7 @@ const DELIVERY_PURPOSES = ["Furniture", "Appliance", "Parcel", "Building materia
 export default function PropertyDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { t, lang } = useLanguage();
   const isAdmin = user?.role === "admin";
   const [prop, setProp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -96,19 +98,19 @@ export default function PropertyDetail() {
   }, [id, tick]);
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
-  if (!prop) return <AppLayout><EmptyState icon={Home} title="Property not found" action={<Link to="/properties"><Button>Back to properties</Button></Link>} /></AppLayout>;
+  if (!prop) return <AppLayout><EmptyState icon={Home} title={t("Property not found")} action={<Link to="/properties"><Button>{t("Back to properties")}</Button></Link>} /></AppLayout>;
 
   const timeline = [
-    ...inspections.map((i) => ({ date: i.date, type: "Inspection", title: `Inspection — ${i.status}`, icon: ClipboardCheck, detail: i.inspector })),
-    ...maintenance.map((m) => ({ date: m.date || m.created_date?.slice(0, 10) || "", type: "Maintenance", title: m.title, icon: Wrench, detail: m.status })),
-    ...tasks.map((t) => ({ date: t.date, type: t.type, title: t.title, icon: ListChecks, detail: t.status })),
-    ...expenses.map((e) => ({ date: e.date, type: "Expense", title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, icon: Wallet, detail: e.reimbursed ? "Reimbursed" : "" })),
+    ...inspections.map((i) => ({ date: i.date, type: "Inspection", title: t("Inspection — {status}", { status: t(i.status) }), icon: ClipboardCheck, detail: i.inspector })),
+    ...maintenance.map((m) => ({ date: m.date || m.created_date?.slice(0, 10) || "", type: "Maintenance", title: m.title, icon: Wrench, detail: t(m.status) })),
+    ...tasks.map((tk) => ({ date: tk.date, type: tk.type, title: tk.title, icon: ListChecks, detail: t(tk.status) })),
+    ...expenses.map((e) => ({ date: e.date, type: "Expense", title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, icon: Wallet, detail: e.reimbursed ? t("Reimbursed") : "" })),
   ].filter((x) => x.date).sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const outstandingCharges = charges.filter((ch) => ch.status === "Due").reduce((s, ch) => s + (ch.amount || 0), 0);
   const receipts = expenses.filter((e) => e.receipt_photo);
   const visitReports = visits.filter((v) => v.status !== "Cancelled");
-  const visitOpts = visits.map((v) => ({ value: v.id, label: `Visit — ${v.start_time ? athensMediumDate(v.start_time) : ""} · ${visitTypeLabel(v.visit_type) || ""}` }));
+  const visitOpts = visits.map((v) => ({ value: v.id, label: `${t("Visit")} — ${v.start_time ? athensMediumDate(v.start_time, lang) : ""} · ${t(visitTypeLabel(v.visit_type)) || ""}` }));
   const issueOpts = maintenance.map((m) => ({ value: m.id, label: m.title }));
   const contractorOpts = contractors.map((c) => ({ value: c.id, label: c.company }));
   // "Current operational service agreement" — same rule as the Service Agreement
@@ -137,20 +139,20 @@ export default function PropertyDetail() {
               {prop.address && <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="w-3.5 h-3.5" /> {prop.address}</p>}
             </div>
           </div>
-          <Badge variant="outline" className={badgeTone(prop.status)}>{prop.status}</Badge>
+          <Badge variant="outline" className={badgeTone(prop.status)}>{t(prop.status)}</Badge>
         </div>
 
         {/* Property actions: care work first, admin second */}
         <div className="flex flex-col gap-2 mb-6 sm:flex-row sm:flex-wrap">
           <Link to={startVisitUrl} className="sm:flex-1">
-            <Button className="w-full h-12 rounded-2xl text-base gap-2"><Navigation className="w-5 h-5" /> Start Visit</Button>
+            <Button className="w-full h-12 rounded-2xl text-base gap-2"><Navigation className="w-5 h-5" /> {t("Start Visit")}</Button>
           </Link>
           <div className="grid grid-cols-2 gap-2 sm:flex">
             <Link to={`/visits?schedule=1&property=${id}`}>
-              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><CalendarClock className="w-4 h-4 sm:w-5 sm:h-5" /> Schedule Visit</Button>
+              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><CalendarClock className="w-4 h-4 sm:w-5 sm:h-5" /> {t("Schedule Visit")}</Button>
             </Link>
             <Link to={`/properties?edit=${id}`}>
-              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><Pencil className="w-4 h-4 sm:w-5 sm:h-5" /> Edit Property</Button>
+              <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><Pencil className="w-4 h-4 sm:w-5 sm:h-5" /> {t("Edit Property")}</Button>
             </Link>
           </div>
         </div>
@@ -161,24 +163,24 @@ export default function PropertyDetail() {
           <InfoCard icon={KeyRound} label="Gate Code" value={prop.gate_code || "—"} />
           <InfoCard icon={Wifi} label="Wi-Fi" value={prop.wifi_ssid || "—"} />
           <InfoCard icon={Clock} label="Last Inspection" value={inspections[0]?.date || "—"} />
-          {isAdmin && (<InfoCard icon={Euro} label="Billing" value={`€${outstandingCharges.toFixed(2)} outstanding`} to="/billing" />)}
+          {isAdmin && (<InfoCard icon={Euro} label="Billing" value={t("€{amount} outstanding", { amount: outstandingCharges.toFixed(2) })} to="/billing" />)}
         </div>
 
         <Tabs defaultValue="overview">
           <TabsList className="w-full justify-start overflow-x-auto mb-4 md:h-auto 2xl:h-9">
-            <TabsTrigger value="overview" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Overview</TabsTrigger>
-            <TabsTrigger value="visits" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Visits</TabsTrigger>
-            <TabsTrigger value="inspections" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Inspections</TabsTrigger>
-            <TabsTrigger value="issues" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Issues</TabsTrigger>
-            <TabsTrigger value="tasks" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Tasks</TabsTrigger>
-            <TabsTrigger value="contractors" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Contractors</TabsTrigger>
-            <TabsTrigger value="expenses" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Expenses</TabsTrigger>
-            <TabsTrigger value="receipts" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Receipts</TabsTrigger>
-            <TabsTrigger value="keys" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Key Activity</TabsTrigger>
-            <TabsTrigger value="updates" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Owner Updates</TabsTrigger>
-            <TabsTrigger value="documents" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Documents</TabsTrigger>
-            <TabsTrigger value="reports" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Reports</TabsTrigger>
-            <TabsTrigger value="timeline" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">Timeline</TabsTrigger>
+            <TabsTrigger value="overview" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Overview")}</TabsTrigger>
+            <TabsTrigger value="visits" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Visits")}</TabsTrigger>
+            <TabsTrigger value="inspections" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Inspections")}</TabsTrigger>
+            <TabsTrigger value="issues" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Issues")}</TabsTrigger>
+            <TabsTrigger value="tasks" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Tasks")}</TabsTrigger>
+            <TabsTrigger value="contractors" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Contractors")}</TabsTrigger>
+            <TabsTrigger value="expenses" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Expenses")}</TabsTrigger>
+            <TabsTrigger value="receipts" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Receipts")}</TabsTrigger>
+            <TabsTrigger value="keys" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Key Activity")}</TabsTrigger>
+            <TabsTrigger value="updates" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Owner Updates")}</TabsTrigger>
+            <TabsTrigger value="documents" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Documents")}</TabsTrigger>
+            <TabsTrigger value="reports" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Reports")}</TabsTrigger>
+            <TabsTrigger value="timeline" className="md:py-2.5 md:px-4 2xl:py-1 2xl:px-3">{t("Timeline")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -186,22 +188,22 @@ export default function PropertyDetail() {
               {agreements.length > 0 ? [...agreements].sort((a, b) => (a.status === "Active" ? 0 : 1) - (b.status === "Active" ? 0 : 1)).map((a) => (
                 <div key={a.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium truncate">{pkgMap[a.service_package_id]?.name || "Service package"}</p>
+                    <p className="text-sm font-medium truncate">{pkgMap[a.service_package_id]?.name || t("Service package")}</p>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {a.signing_status && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.signing_status)}`}>{a.signing_status}</span>}
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{a.status}</span>
+                      {a.signing_status && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.signing_status)}`}>{t(a.signing_status)}</span>}
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{t(a.status)}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">€{(a.agreed_price || 0).toFixed(2)} · {a.billing_type}{a.inspection_frequency ? ` · ${a.inspection_frequency}` : ""}{a.start_date ? ` · Start ${a.start_date}` : ""}{a.renewal_date ? ` · Renew ${a.renewal_date}` : ""}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">€{(a.agreed_price || 0).toFixed(2)} · {t(a.billing_type)}{a.inspection_frequency ? ` · ${a.inspection_frequency}` : ""}{a.start_date ? ` · ${t("Start:")} ${a.start_date}` : ""}{a.renewal_date ? ` · ${t("Renewal:")} ${a.renewal_date}` : ""}</p>
                   {a.status === "Active" && a.signing_status === "Signed"
-                    ? <p className="text-xs text-emerald-700 font-medium mt-1">Current operational service agreement</p>
+                    ? <p className="text-xs text-emerald-700 font-medium mt-1">{t("Current operational service agreement")}</p>
                     : isAdmin
-                      ? <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">Open Agreement</Link>
-                      : <p className="text-xs text-muted-foreground mt-1">Managed by Owner/Admin</p>}
+                      ? <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{t("Open Agreement")}</Link>
+                      : <p className="text-xs text-muted-foreground mt-1">{t("Managed by Owner/Admin")}</p>}
                 </div>
               )) : (
                 <div className="px-4 py-4">
-                  <p className="text-sm text-muted-foreground mb-2">No active service agreement for this property.</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t("No active service agreement for this property.")}</p>
                   {isAdmin && (<Link to={`/agreements/new?client=${prop.owner_id || ""}&property=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-4 h-4" /> Assign Service Package</Button></Link>)}
                 </div>
               )}
@@ -234,7 +236,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="visits">
             <RecordSection title="Visits" icon={MapPin} empty="No visits recorded" moduleLink="/visits"
-              items={visits} render={(v) => ({ primary: visitTypeLabel(v.visit_type), sub: athensMediumDateTime(v.start_time), badge: v.status, to: `/visits/${v.id}` })}
+              items={visits} render={(v) => ({ primary: t(visitTypeLabel(v.visit_type)), sub: athensMediumDateTime(v.start_time, lang), badge: v.status, to: `/visits/${v.id}` })}
               addNode={<>
                 <LinkLink label="On-Demand Assistance" to={`/property-assistance?client=${prop.owner_id || ""}&property=${id}`} />
                 <LinkLink label="Start a new visit" to={startVisitUrl} />
@@ -243,7 +245,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="inspections">
             <RecordSection title="Inspections" icon={ClipboardCheck} empty="No inspections yet" moduleLink="/inspections"
-              items={inspections} render={(i) => ({ primary: `Inspection — ${i.date}`, sub: i.inspector, badge: i.status, to: `/inspections?open=${i.id}` })} />
+              items={inspections} render={(i) => ({ primary: t("Inspection — {date}", { date: i.date }), sub: i.inspector, badge: i.status, to: `/inspections?open=${i.id}` })} />
           </TabsContent>
 
           <TabsContent value="issues">
@@ -263,7 +265,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="tasks">
             <RecordSection title="Tasks" icon={ListChecks} empty="No tasks for this property" moduleLink="/tasks"
-              items={tasks} render={(t) => ({ primary: t.title, sub: `${t.date} · ${t.type}`, badge: t.status, to: "/tasks" })}
+              items={tasks} render={(tk) => ({ primary: tk.title, sub: `${tk.date} · ${t(tk.type)}`, badge: tk.status, to: "/tasks" })}
               addNode={
                 <PropertyInlineAdd entity="Task" propertyId={id} submitLabel="Add Task" onCreated={reload} moreLink="/tasks"
                   defaultValues={{ status: "Pending", priority: "Medium", type: "Custom", date: new Date().toISOString().slice(0, 10) }}
@@ -278,7 +280,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="contractors">
             <RecordSection title="Contractor Visits" icon={Truck} empty="No contractor visits logged" moduleLink="/contractors"
-              items={deliveries} render={(d) => ({ primary: d.company, sub: `${d.date || ""} · ${d.purpose}`, badge: d.completion_status, to: "/deliveries" })}
+              items={deliveries} render={(d) => ({ primary: d.company, sub: `${d.date || ""} · ${t(d.purpose)}`, badge: d.completion_status, to: "/deliveries" })}
               addNode={
                 <PropertyInlineAdd entity="Delivery" propertyId={id} submitLabel="Add Contractor Visit" onCreated={reload} moreLink="/deliveries"
                   defaultValues={{ completion_status: "Pending", purpose: "Contractor access", date: new Date().toISOString().slice(0, 10) }}
@@ -333,7 +335,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="keys">
             <RecordSection title="Key Activity" icon={KeyRound} empty="No key activity recorded" moduleLink="/keys"
-              items={keys} render={(k) => ({ primary: `Key ${k.key_number}`, sub: `${k.date_issued || ""} · ${k.current_holder || "—"}`, badge: k.date_returned ? "returned" : "out", to: "/keys" })}
+              items={keys} render={(k) => ({ primary: `${t("Key")} ${k.key_number}`, sub: `${k.date_issued || ""} · ${k.current_holder || "—"}`, badge: k.date_returned ? "returned" : "out", to: "/keys" })}
               addNode={
                 <PropertyInlineAdd entity="Key" propertyId={id} submitLabel="Log Key Activity" onCreated={reload} moreLink="/keys"
                   defaultValues={{ date_issued: new Date().toISOString().slice(0, 10) }}
@@ -348,7 +350,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="updates">
             <RecordSection title="Owner Updates" icon={MessageSquare} empty="No owner updates logged" moduleLink="/communications"
-              items={comms} render={(c) => ({ primary: c.subject, sub: `${c.date} · ${c.communication_type}`, to: "/communications" })}
+              items={comms} render={(c) => ({ primary: c.subject, sub: `${c.date} · ${t(c.communication_type)}`, to: "/communications" })}
               addNode={
                 <PropertyInlineAdd entity="OwnerCommunication" propertyId={id} submitLabel="Add Owner Update" onCreated={reload} moreLink="/communications"
                   defaultValues={{ date: new Date().toISOString().slice(0, 10), communication_type: "WhatsApp", client_id: prop.owner_id || "" }}
@@ -362,7 +364,7 @@ export default function PropertyDetail() {
 
           <TabsContent value="documents">
             <RecordSection title="Documents & Photos" icon={FolderOpen} empty="No documents uploaded" moduleLink="/documents"
-              items={documents} render={(d) => ({ primary: d.name, sub: d.category, to: "/documents" })}
+              items={documents} render={(d) => ({ primary: d.name, sub: t(d.category), to: "/documents" })}
               addNode={<LinkLink label="Upload document" to="/documents" />} />
           </TabsContent>
 
@@ -376,9 +378,9 @@ export default function PropertyDetail() {
                   <div key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{visitTypeLabel(v.visit_type)}</p>
-                      <p className="text-xs text-muted-foreground truncate">{v.start_time ? athensMediumDate(v.start_time) : ""}</p>
-                    </div>
-                    <Link to={`/visits/${v.id}`} className="text-xs text-primary hover:underline">Open</Link>
+                      <p className="text-xs text-muted-foreground truncate">{v.start_time ? athensMediumDate(v.start_time, lang) : ""}</p>
+                      </div>
+                      <Link to={`/visits/${v.id}`} className="text-xs text-primary hover:underline">{t("Open")}</Link>
                   </div>
                 ))}
               </Section>
@@ -388,7 +390,7 @@ export default function PropertyDetail() {
           <TabsContent value="timeline">
             <div className="rounded-2xl border border-border bg-card p-4">
               {timeline.length === 0 ? (
-                <EmptyState icon={Clock} title="No history yet" description="Inspections, maintenance and expenses will appear here." />
+              <EmptyState icon={Clock} title={t("No history yet")} description={t("Inspections, maintenance and expenses will appear here.")} />
               ) : (
                 <div className="relative pl-6">
                   <div className="absolute left-2 top-2 bottom-2 w-px bg-border" />
@@ -399,7 +401,7 @@ export default function PropertyDetail() {
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium text-foreground">{ev.title}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(ev.badge || ev.type)}`}>{ev.badge || ev.type}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(ev.badge || ev.type)}`}>{t(ev.badge || ev.type)}</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{ev.date}{ev.detail ? ` · ${ev.detail}` : ""}</p>
                     </div>
@@ -415,19 +417,21 @@ export default function PropertyDetail() {
 }
 
 function LinkLink({ label, to }) {
+  const { t } = useLanguage();
   return (
     <div className="px-4 py-3">
-      <Link to={to}><Button size="sm" variant="outline" className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {label}</Button></Link>
+      <Link to={to}><Button size="sm" variant="outline" className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {t(label)}</Button></Link>
     </div>
   );
 }
 
 function InfoCard({ icon: Icon, label, value, to }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-2xl border border-border bg-card p-3 flex items-center gap-2.5">
       <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center"><Icon className="w-4 h-4 text-muted-foreground" /></div>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{t(label)}</p>
         {to ? (
           <Link to={to} className="text-sm font-medium truncate text-primary hover:underline block">{value}</Link>
         ) : (
@@ -439,30 +443,33 @@ function InfoCard({ icon: Icon, label, value, to }) {
 }
 
 function Section({ title, children }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
-      <div className="px-4 py-3 border-b border-border font-medium text-sm">{title}</div>
+      <div className="px-4 py-3 border-b border-border font-medium text-sm">{t(title)}</div>
       <div className="divide-y divide-border">{children}</div>
     </div>
   );
 }
 
 function Detail({ label, value }) {
+  const { t } = useLanguage();
   if (!value) return null;
   return (
     <div className="px-4 py-3">
-      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
+      <p className="text-xs text-muted-foreground mb-0.5">{t(label)}</p>
       <p className="text-sm whitespace-pre-wrap">{value}</p>
     </div>
   );
 }
 
 function RecordSection({ title, icon: Icon, items, render, empty, moduleLink, addNode }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2 font-medium text-sm"><Icon className="w-4 h-4 text-muted-foreground" /> {title}</div>
-        {moduleLink && <Link to={moduleLink} className="text-xs text-primary flex items-center gap-1 hover:underline">View all</Link>}
+        <div className="flex items-center gap-2 font-medium text-sm"><Icon className="w-4 h-4 text-muted-foreground" /> {t(title)}</div>
+        {moduleLink && <Link to={moduleLink} className="text-xs text-primary flex items-center gap-1 hover:underline">{t("View all")}</Link>}
       </div>
       {items.length > 0 ? (
         <div className="divide-y divide-border">
@@ -474,13 +481,13 @@ function RecordSection({ title, icon: Icon, items, render, empty, moduleLink, ad
                   <p className="text-sm font-medium truncate">{r.primary}</p>
                   {r.sub && <p className="text-xs text-muted-foreground truncate">{r.sub}</p>}
                 </div>
-                {r.badge && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(r.badge)}`}>{r.badge}</span>}
+                {r.badge && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(r.badge)}`}>{t(r.badge)}</span>}
               </Link>
             );
           })}
         </div>
       ) : (
-        <div className="px-4 py-6"><EmptyState icon={Icon} title={empty} /></div>
+        <div className="px-4 py-6"><EmptyState icon={Icon} title={t(empty)} /></div>
       )}
       {addNode}
     </div>

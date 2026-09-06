@@ -126,7 +126,7 @@ export const CHECKLIST_ITEM_EL = {
   "Windows and shutters — visibly open, damaged or broken":
     "Παράθυρα και περσίδες — εμφανώς ανοιχτά, κατεστραμμένα ή σπασμένα",
   "Other clearly unusual conditions (odors, pests, storm debris, mail buildup)":
-    "Λοιπες σαφώς ασυνήθιστες καταστάσεις (οσμές, παράσιτα, συντρίμμια καταιγίδας, συσσώρευση αλληλογραφίας)",
+    "Λοιπές σαφώς ασυνήθιστες καταστάσεις (οσμές, παράσιτα, συντρίμμια καταιγίδας, συσσώρευση αλληλογραφίας)",
 
   // Property Care Inspection
   "Exterior condition": "Εξωτερική κατάσταση",

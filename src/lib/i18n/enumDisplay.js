@@ -161,6 +161,20 @@ export const ENUM_EL = {
   "paused": "Σε παύση",
   "skipped": "Παραλείφθηκε",
   "ended": "Ολοκληρώθηκε",
+
+  // ---- Wave 10 ----
+  // Maintenance issue category (Leaking category chip on Issue Detail)
+  "Internet": "Διαδίκτυο",
+  // Agreement signing statuses (Client Hub agreement card)
+  "Viewed": "Προβλήθηκε",
+  "Declined": "Απορρίφθηκε",
+  // Customer intake statuses (Client Hub intake panel)
+  "Received": "Παραλήφθηκε",
+  "Reviewed": "Ελέγχθηκε",
+  "Applied": "Εφαρμόστηκε",
+  // Derived key-activity badge values (render-only; tone map stays keyed on English)
+  "returned": "Επιστράφηκε",
+  "out": "Σε κυκλοφορία",
 };
 
 // Context-specific enum display overrides.
@@ -190,6 +204,11 @@ export const ENUM_CONTEXT_EL = {
   // (property status) but feminine when describing a priority.
   "priority:Emergency": "Επείγουσα",
 
-  // Visit status (feminine — επίσκεψη) — ready for the Visits wave.
+  // Visit status (feminine — επίσκεψη). Completed/Cancelled describe η επίσκεψη
+  // and take feminine participles, unlike the global neuter forms which describe
+  // το θέμα / το τιμολόγιο. "In Progress" ("Σε εξέλιξη") is gender-neutral and
+  // needs no context override.
   "visit:Scheduled": "Προγραμματισμένη",
+  "visit:Completed": "Ολοκληρωμένη",
+  "visit:Cancelled": "Ακυρωμένη",
 };

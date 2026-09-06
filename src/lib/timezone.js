@@ -5,9 +5,9 @@
 
 export const TZ = "Europe/Athens";
 
-function parts(iso, options) {
+function parts(iso, options, locale = "en-GB") {
   const d = iso ? new Date(iso) : new Date();
-  return new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hourCycle: "h23", ...options }).formatToParts(d);
+  return new Intl.DateTimeFormat(locale, { timeZone: TZ, hourCycle: "h23", ...options }).formatToParts(d);
 }
 
 function getPart(partsArr, type) {
@@ -26,20 +26,22 @@ export function athensTime(iso) {
   return `${getPart(p, "hour")}:${getPart(p, "minute")}`;
 }
 
-// Athens weekday long, e.g. "Friday"
-export function athensWeekdayLong(iso) {
-  return getPart(parts(iso, { weekday: "long" }), "weekday");
+// Athens weekday long, e.g. "Friday" / Greek "Παρασκευή".
+// The optional lang parameter is DISPLAY-ONLY: it never affects the timezone
+// (always Europe/Athens), stored timestamps, or day-grouping logic.
+export function athensWeekdayLong(iso, lang = "en") {
+  return getPart(parts(iso, { weekday: "long" }, lang === "el" ? "el-GR" : "en-GB"), "weekday");
 }
 
-// Athens day label, e.g. "MON AUG 24"
-export function athensDayLabel(iso) {
-  const p = parts(iso, { weekday: "short", day: "numeric", month: "short" });
+// Athens day label, e.g. "MON AUG 24" / Greek "ΔΕΥ ΑΥΓ 24".
+export function athensDayLabel(iso, lang = "en") {
+  const p = parts(iso, { weekday: "short", day: "numeric", month: "short" }, lang === "el" ? "el-GR" : "en-GB");
   return `${getPart(p, "weekday").toUpperCase()} ${getPart(p, "month").toUpperCase()} ${getPart(p, "day")}`;
 }
 
-// Athens-formatted visit time, e.g. "Friday 10:00"
-export function athensVisitWhen(iso) {
-  const p = parts(iso, { weekday: "long", hour: "2-digit", minute: "2-digit" });
+// Athens-formatted visit time, e.g. "Friday 10:00" / Greek "Παρασκευή 10:00".
+export function athensVisitWhen(iso, lang = "en") {
+  const p = parts(iso, { weekday: "long", hour: "2-digit", minute: "2-digit" }, lang === "el" ? "el-GR" : "en-GB");
   return `${getPart(p, "weekday")} ${getPart(p, "hour")}:${getPart(p, "minute")}`;
 }
 
@@ -84,21 +86,22 @@ export function athensTime12h(iso) {
   } catch (e) { return ""; }
 }
 
-// Athens-local "medium" date+time, e.g. "Aug 30, 2026 at 2:00 PM". Composed
-// explicitly so every surface (report PDF, Report Review, Visit Detail, Reports
-// list, delivery chips, owner email) shows the identical format — never the
-// viewer's browser timezone. Stored timestamps remain UTC ISO.
-export function athensMediumDateTime(iso) {
+// Athens-local "medium" date+time, e.g. "Aug 30, 2026 at 2:00 PM" (English)
+// or "30 Αυγ 2026, 14:00" (Greek). The optional lang parameter is DISPLAY-ONLY:
+// English call sites without a lang argument keep the exact current format, so
+// owner-facing surfaces (report PDF, owner email) stay unchanged. Stored
+// timestamps remain UTC ISO and the timezone is always Europe/Athens.
+export function athensMediumDateTime(iso, lang = "en") {
   if (!iso) return "—";
-  const d = athensMediumDate(iso);
-  const t = athensTime12h(iso);
-  return t ? `${d} at ${t}` : d;
+  const d = athensMediumDate(iso, lang);
+  const t = lang === "el" ? athensTime(iso) : athensTime12h(iso);
+  return t ? (lang === "el" ? `${d}, ${t}` : `${d} at ${t}`) : d;
 }
 
-export function athensMediumDate(iso) {
+export function athensMediumDate(iso, lang = "en") {
   if (!iso) return "—";
   try {
-    return new Intl.DateTimeFormat("en-US", { timeZone: TZ, dateStyle: "medium" }).format(new Date(iso));
+    return new Intl.DateTimeFormat(lang === "el" ? "el-GR" : "en-US", { timeZone: TZ, dateStyle: "medium" }).format(new Date(iso));
   } catch (e) { return String(iso); }
 }
 

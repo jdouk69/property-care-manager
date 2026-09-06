@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Camera, Loader2, X } from "lucide-react";
 import { Image as UIImage } from "@/components/ui/image";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Touch-friendly photo picker: upload one or more photos, remove with an
 // always-visible button (no hover-dependent controls).
 export default function PhotoPicker({ photos, onChange }) {
+  const { t } = useLanguage();
   const [uploading, setUploading] = useState(false);
 
   const add = async (files) => {
@@ -30,7 +32,7 @@ export default function PhotoPicker({ photos, onChange }) {
           <button
             type="button"
             onClick={() => onChange(photos.filter((_, x) => x !== i))}
-            aria-label="Remove photo"
+            aria-label={t("Remove photo")}
             className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center touch-manipulation"
           >
             <X className="w-3.5 h-3.5" />

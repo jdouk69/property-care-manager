@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Zap, Loader2, AlertTriangle, CheckCircle2, FlaskConical } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Staff-only activation action with an explicit confirmation dialog. Calls the
 // authenticated agreementActivate backend (activate or activateReplacement).
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
 // Hub onboarding progress, and the Service Agreement page so behavior cannot
 // drift between them.
 export default function ActivateServiceButton({ agreementId, isReplacement = false, onActivated, label }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -55,11 +57,11 @@ export default function ActivateServiceButton({ agreementId, isReplacement = fal
         if (onActivated) onActivated(d);
         else navigate(0);
       } else {
-        setErr((d && (d.message || d.error)) || "Activation failed.");
+        setErr((d && (d.message || d.error)) || t("Activation failed."));
       }
     } catch (e) {
       const d = e && e.response && e.response.data ? e.response.data : null;
-      setErr((d && (d.message || d.error)) || (e && e.message) || "Activation failed.");
+      setErr((d && (d.message || d.error)) || (e && e.message) || t("Activation failed."));
     }
     setBusy(false);
   };
@@ -73,20 +75,20 @@ export default function ActivateServiceButton({ agreementId, isReplacement = fal
   return (
     <>
       <Button onClick={openDialog} className="gap-1.5 w-full sm:w-auto">
-        <Zap className="w-4 h-4" /> {btnLabel}
+        <Zap className="w-4 h-4" /> {t(btnLabel)}
       </Button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4" onClick={() => !busy && setOpen(false)}>
           <div className="bg-card rounded-2xl w-full max-w-md p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-              <h3 className="text-base font-semibold">{isReplacement ? "Activate replacement agreement?" : "Activate Service?"}</h3>
+              <h3 className="text-base font-semibold">{isReplacement ? t("Activate replacement agreement?") : t("Activate Service?")}</h3>
             </div>
 
             {isTest && (
               <div className="flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50 dark:bg-rose-500/10 dark:border-rose-500/30 px-3 py-2">
                 <FlaskConical className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <p className="text-sm font-semibold text-rose-700 dark:text-rose-400">TEST AGREEMENT — activation is for workflow testing only.</p>
+                <p className="text-sm font-semibold text-rose-700 dark:text-rose-400">{t("TEST AGREEMENT — activation is for workflow testing only.")}</p>
               </div>
             )}
 
@@ -94,29 +96,29 @@ export default function ActivateServiceButton({ agreementId, isReplacement = fal
               <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
             ) : ag ? (
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm space-y-1">
-                {details.client && <Row label="Customer" value={details.client.name} />}
-                {details.property && <Row label="Property" value={details.property.name} />}
-                {pkgName && <Row label="Service" value={pkgName} />}
-                {ag.start_date && <Row label="Start date" value={ag.start_date} />}
-                {ag.inspection_frequency && <Row label="Visit frequency" value={ag.inspection_frequency} />}
-                {priceLabel && <Row label="Billing" value={`${priceLabel} ${ag.billing_type || ""}`.trim()} />}
+                {details.client && <Row label={t("Customer")} value={details.client.name} />}
+                {details.property && <Row label={t("Property")} value={details.property.name} />}
+                {pkgName && <Row label={t("Service")} value={pkgName} />}
+                {ag.start_date && <Row label={t("Start date")} value={ag.start_date} />}
+                {ag.inspection_frequency && <Row label={t("Visit frequency")} value={ag.inspection_frequency} />}
+                {priceLabel && <Row label={t("Billing")} value={`${priceLabel} ${ag.billing_type ? t(ag.billing_type) : ""}`.trim()} />}
               </div>
             ) : null}
 
             <p className="text-sm text-muted-foreground">
               {isReplacement
-                ? "This will activate the signed replacement and move the previous active version to Ended; its signed evidence is preserved."
-                : "This will activate the signed service agreement and allow onboarding/service visits to begin."}
+                ? t("This will activate the signed replacement and move the previous active version to Ended; its signed evidence is preserved.")
+                : t("This will activate the signed service agreement and allow onboarding/service visits to begin.")}
             </p>
             <ul className="text-xs text-muted-foreground space-y-0.5 list-disc pl-5">
-              <li>Signed terms remain immutable.</li>
-              <li>No new agreement version is created.</li>
+              <li>{t("Signed terms remain immutable.")}</li>
+              <li>{t("No new agreement version is created.")}</li>
             </ul>
             {err && <p className="text-sm text-destructive">{err}</p>}
             <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setOpen(false)} disabled={busy}>{t("Cancel")}</Button>
               <Button className="flex-1 gap-1.5" onClick={run} disabled={busy || loadingDetails}>
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} {btnLabel}
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} {t(btnLabel)}
               </Button>
             </div>
           </div>

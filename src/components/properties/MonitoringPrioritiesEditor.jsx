@@ -10,6 +10,8 @@ import {
   resolveServiceStatus,
   reconfirmPriorityForCurrentService,
 } from "@/lib/recurringChecklist";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 // Phase 6C.1 staff-only editor for Property.monitoring_priorities, including
 // the "Include in recurring visits" decision, the recurring_visit_type stamp
@@ -18,6 +20,7 @@ import {
 // secrets are stored or copied here; only staff-authored recurring_check_text
 // is ever written into checklist templates.
 export default function MonitoringPrioritiesEditor({ propertyId, initial, onChanged }) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [items, setItems] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -34,7 +37,7 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
     try {
       setServiceStatus(await resolveServiceStatus(propertyId));
     } catch (e) {
-      setServiceStatus({ status: "no_agreement", visitType: "", message: "Could not resolve service status." });
+      setServiceStatus({ status: "no_agreement", visitType: "", message: t("Could not resolve service status.") });
     }
   };
 
@@ -89,7 +92,7 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
       if (onChanged) onChanged(cleaned);
       refreshService();
     } catch (e) {
-      alert("Could not save monitoring priorities: " + (e?.message || e));
+      alert(t("Could not save monitoring priorities: {message}", { message: e?.message || e }));
     }
     setSaving(false);
   };
@@ -103,7 +106,7 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
       await refreshService();
       if (onChanged) onChanged();
     } catch (e) {
-      setStatus({ kind: "warn", message: "Could not update recurring checklist: " + (e?.message || e) });
+      setStatus({ kind: "warn", message: t("Could not update recurring checklist: {message}", { message: e?.message || e }) });
     }
     setUpdating(false);
   };
@@ -117,7 +120,7 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
       await refreshService();
       if (onChanged) onChanged();
     } catch (e) {
-      setStatus({ kind: "warn", message: "Could not reconfirm: " + (e?.message || e) });
+      setStatus({ kind: "warn", message: t("Could not reconfirm: {message}", { message: e?.message || e }) });
     }
     setReconfirming(null);
   };
@@ -128,35 +131,35 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
         {items.map((p, i) => (
           <div key={i} className="rounded-xl border border-border p-3 space-y-2.5">
             <div className="flex items-center gap-2">
-              <Input value={p.area} onChange={(e) => update(i, { area: e.target.value })} placeholder="Area (e.g. Pool / spa)" className="bg-background h-11" />
-              <button type="button" onClick={() => remove(i)} aria-label="Remove priority"
+              <Input value={p.area} onChange={(e) => update(i, { area: e.target.value })} placeholder={t("Area (e.g. Pool / spa)")} className="bg-background h-11" />
+              <button type="button" onClick={() => remove(i)} aria-label={t("Remove priority")}
                 className="shrink-0 inline-flex items-center justify-center w-11 h-11 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition touch-manipulation">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
-            <Textarea value={p.detail} onChange={(e) => update(i, { detail: e.target.value })} rows={2} placeholder="Owner / detail instruction (optional)" className="bg-background" />
+            <Textarea value={p.detail} onChange={(e) => update(i, { detail: e.target.value })} rows={2} placeholder={t("Owner / detail instruction (optional)")} className="bg-background" />
             <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
-              <span className="text-xs text-muted-foreground">Active monitoring priority</span>
+              <span className="text-xs text-muted-foreground">{t("Active monitoring priority")}</span>
               <Switch checked={p.active !== false} onCheckedChange={(v) => update(i, { active: v })} />
             </div>
             <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
-              <span className="text-xs text-muted-foreground">Include in recurring visits</span>
+              <span className="text-xs text-muted-foreground">{t("Include in recurring visits")}</span>
               <Switch checked={p.include_in_recurring} onCheckedChange={(v) => update(i, { include_in_recurring: v })} />
             </div>
             {p.include_in_recurring && (
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Recurring check wording (required)</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("Recurring check wording (required)")}</p>
                 <Textarea value={p.recurring_check_text} onChange={(e) => update(i, { recurring_check_text: e.target.value })} rows={2}
-                  placeholder="e.g. Downstairs bedroom — look for obvious moisture/humidity changes." className="bg-background" />
-                <p className="text-[11px] text-muted-foreground/70 mt-1">Describe a visual / property-care observation only — not a professional inspection. e.g. look for obvious moisture, visually check pool water level, confirm shutters remain closed.</p>
+                  placeholder={t("e.g. Downstairs bedroom — look for obvious moisture/humidity changes.")} className="bg-background" />
+                <p className="text-[11px] text-muted-foreground/70 mt-1">{t("Describe a visual / property-care observation only — not a professional inspection. e.g. look for obvious moisture, visually check pool water level, confirm shutters remain closed.")}</p>
               </div>
             )}
           </div>
         ))}
-        <Button type="button" variant="outline" size="sm" onClick={add} className="gap-1.5"><Plus className="w-4 h-4" /> Add Priority</Button>
+        <Button type="button" variant="outline" size="sm" onClick={add} className="gap-1.5"><Plus className="w-4 h-4" /> {t("Add Priority")}</Button>
         <div className="flex items-center gap-2 pt-1">
-          <Button type="button" size="sm" onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Save Priorities</Button>
-          <Button type="button" size="sm" variant="outline" onClick={cancel} disabled={saving} className="gap-1.5"><X className="w-4 h-4" /> Cancel</Button>
+          <Button type="button" size="sm" onClick={save} disabled={saving} className="gap-1.5">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("Save Priorities")}</Button>
+          <Button type="button" size="sm" variant="outline" onClick={cancel} disabled={saving} className="gap-1.5"><X className="w-4 h-4" /> {t("Cancel")}</Button>
         </div>
       </div>
     );
@@ -168,8 +171,8 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
     <div>
       {activeRows.length === 0 ? (
         <div className="px-4 py-4">
-          <p className="text-sm text-muted-foreground mb-2">No confirmed monitoring priorities yet.</p>
-          <Button size="sm" variant="outline" onClick={startEdit} className="gap-1.5"><Plus className="w-4 h-4" /> Add Priority</Button>
+          <p className="text-sm text-muted-foreground mb-2">{t("No confirmed monitoring priorities yet.")}</p>
+          <Button size="sm" variant="outline" onClick={startEdit} className="gap-1.5"><Plus className="w-4 h-4" /> {t("Add Priority")}</Button>
         </div>
       ) : (
         <div>
@@ -186,21 +189,21 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                         <div className="flex-1">
-                          <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">Needs review for current service</p>
-                          <p className="text-xs text-amber-700/80 dark:text-amber-400/80">Approved for "{p.recurring_visit_type}". Review and reconfirm for "{visitType}" if it belongs in this service.</p>
+                          <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">{t("Needs review for current service")}</p>
+                          <p className="text-xs text-amber-700/80 dark:text-amber-400/80">{t('Approved for "{old}". Review and reconfirm for "{new}" if it belongs in this service.', { old: t(visitTypeLabel(p.recurring_visit_type)), new: t(visitTypeLabel(visitType)) })}</p>
                         </div>
                       </div>
                       <Button size="sm" variant="outline" onClick={() => reconfirm(i)} disabled={reconfirming === i} className="mt-2 gap-1.5">
-                        {reconfirming === i ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} Reconfirm for current service
+                        {reconfirming === i ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />} {t("Reconfirm for current service")}
                       </Button>
                     </div>
                   ) : recurring ? (
                     <div className="mt-1.5 rounded-lg bg-primary/5 border border-primary/15 px-2.5 py-1.5">
-                      <p className="text-[10px] uppercase text-primary/80">Recurring check{p.recurring_visit_type ? ` · ${p.recurring_visit_type}` : ""}</p>
+                      <p className="text-[10px] uppercase text-primary/80">{t("Recurring check")}{p.recurring_visit_type ? ` · ${t(visitTypeLabel(p.recurring_visit_type))}` : ""}</p>
                       <p className="text-sm text-foreground whitespace-pre-wrap">{p.recurring_check_text}</p>
                     </div>
                   ) : (
-                    <p className="text-[11px] text-muted-foreground/60 mt-1">Not included in recurring visits</p>
+                    <p className="text-[11px] text-muted-foreground/60 mt-1">{t("Not included in recurring visits")}</p>
                   )}
                 </div>
               );
@@ -215,9 +218,9 @@ export default function MonitoringPrioritiesEditor({ propertyId, initial, onChan
           )}
 
           <div className="px-4 py-3 border-t border-border flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={startEdit} className="gap-1.5"><Pencil className="w-3.5 h-3.5" /> Edit Priorities</Button>
+            <Button size="sm" variant="outline" onClick={startEdit} className="gap-1.5"><Pencil className="w-3.5 h-3.5" /> {t("Edit Priorities")}</Button>
             <Button size="sm" onClick={runUpdate} disabled={updating || !canUpdate} className="gap-1.5">
-              {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Update Recurring Visit Checklist
+              {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} {t("Update Recurring Visit Checklist")}
             </Button>
           </div>
 

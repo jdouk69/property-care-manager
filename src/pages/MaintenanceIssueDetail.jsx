@@ -13,6 +13,7 @@ import ResolveIssueDialog from "@/components/maintenance/ResolveIssueDialog";
 import AddFollowUpDialog from "@/components/maintenance/AddFollowUpDialog";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function Row({ label, value }) {
   if (!value) return null;
@@ -43,6 +44,7 @@ function PhotoGrid({ photos }) {
 export default function MaintenanceIssueDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t, tEnum, lang } = useLanguage();
   const [issue, setIssue] = useState(null);
   const [property, setProperty] = useState({});
   const [contractor, setContractor] = useState(null);
@@ -76,8 +78,8 @@ export default function MaintenanceIssueDetail() {
     return (
       <AppLayout>
         <div className="p-6">
-          <p className="text-muted-foreground">Issue not found.</p>
-          <Link to="/maintenance"><Button variant="outline" className="mt-3">Back to Maintenance</Button></Link>
+          <p className="text-muted-foreground">{t("Issue not found.")}</p>
+          <Link to="/maintenance"><Button variant="outline" className="mt-3">{t("Back to Maintenance")}</Button></Link>
         </div>
       </AppLayout>
     );
@@ -89,13 +91,13 @@ export default function MaintenanceIssueDetail() {
 
   const coordRows = (
     <>
-      <Row label="Assigned contractor" value={contractor?.company} />
-      <Row label="Quotation" value={issue.contractor_quotation != null ? `€${Number(issue.contractor_quotation).toFixed(2)}` : ""} />
-      <Row label="Scheduled appointment" value={issue.scheduled_appointment} />
-      <Row label="Follow-up date" value={issue.follow_up_date} />
-      <Row label="Cost estimate" value={issue.cost_estimate != null ? `€${Number(issue.cost_estimate).toFixed(2)}` : ""} />
-      <Row label="Final cost" value={issue.final_cost != null ? `€${Number(issue.final_cost).toFixed(2)}` : ""} />
-      <Row label="Payment status" value={issue.payment_status && issue.payment_status !== "Unpaid" ? issue.payment_status : ""} />
+      <Row label={t("Assigned contractor")} value={contractor?.company} />
+      <Row label={t("Quotation")} value={issue.contractor_quotation != null ? `€${Number(issue.contractor_quotation).toFixed(2)}` : ""} />
+      <Row label={t("Scheduled appointment")} value={issue.scheduled_appointment} />
+      <Row label={t("Follow-up date")} value={issue.follow_up_date} />
+      <Row label={t("Cost estimate")} value={issue.cost_estimate != null ? `€${Number(issue.cost_estimate).toFixed(2)}` : ""} />
+      <Row label={t("Final cost")} value={issue.final_cost != null ? `€${Number(issue.final_cost).toFixed(2)}` : ""} />
+      <Row label={t("Payment status")} value={issue.payment_status && issue.payment_status !== "Unpaid" ? tEnum(issue.payment_status, "payment") : ""} />
     </>
   );
 
@@ -113,10 +115,10 @@ export default function MaintenanceIssueDetail() {
             </p>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
-            <span className={`text-xs px-2.5 py-1 rounded-full border ${badgeTone(issue.status)}`}>{issue.status}</span>
-            <span className={`text-xs px-2.5 py-1 rounded-full border ${badgeTone(issue.priority)}`}>{issue.priority}</span>
-            {issue.category && <span className="text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">{issue.category}</span>}
-            {issue.archived && <span className="text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">Archived</span>}
+            <span className={`text-xs px-2.5 py-1 rounded-full border ${badgeTone(issue.status)}`}>{t(issue.status)}</span>
+            <span className={`text-xs px-2.5 py-1 rounded-full border ${badgeTone(issue.priority)}`}>{tEnum(issue.priority, "priority")}</span>
+            {issue.category && <span className="text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">{t(issue.category)}</span>}
+            {issue.archived && <span className="text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">{t("Archived")}</span>}
           </div>
         </div>
 
@@ -125,36 +127,36 @@ export default function MaintenanceIssueDetail() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
               <Button onClick={() => setResolveOpen(true)} className="rounded-2xl h-14 text-base gap-2">
-                <CheckCircle2 className="w-5 h-5" /> Mark Resolved
+                <CheckCircle2 className="w-5 h-5" /> {t("Mark Resolved")}
               </Button>
               <Button variant="outline" onClick={() => setFollowUpOpen(true)} className="rounded-2xl h-14 text-base gap-2">
-                <MessageSquarePlus className="w-5 h-5" /> Add Update
+                <MessageSquarePlus className="w-5 h-5" /> {t("Add Update")}
               </Button>
             </div>
             <Button variant="ghost" onClick={() => navigate(`/maintenance?open=${issue.id}&edit=1`)} className="rounded-xl gap-1.5 h-11 text-muted-foreground">
-              <Pencil className="w-4 h-4" /> Edit Details
+              <Pencil className="w-4 h-4" /> {t("Edit Details")}
             </Button>
           </>
         ) : (
           <div className={`rounded-2xl border p-4 mb-4 ${resolved ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-muted/30"}`}>
             <div className="flex items-center gap-2">
               {resolved ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <X className="w-5 h-5 text-muted-foreground" />}
-              <p className="text-sm font-semibold text-foreground">{resolved ? "Resolved" : "Cancelled"}</p>
+              <p className="text-sm font-semibold text-foreground">{resolved ? t("Resolved") : t("Cancelled")}</p>
             </div>
             {resolved && issue.resolved_at && (
               <p className="text-xs text-muted-foreground mt-1">
-                {athensMediumDateTime(issue.resolved_at)}{issue.resolved_by ? ` · by ${issue.resolved_by}` : ""}
+                {athensMediumDateTime(issue.resolved_at, lang)}{issue.resolved_by ? ` · ${t("by {name}", { name: issue.resolved_by })}` : ""}
               </p>
             )}
             {resolved && issue.resolution_note && (
               <>
-                <p className="text-xs text-muted-foreground mt-2 mb-0.5">Resolution note</p>
+                <p className="text-xs text-muted-foreground mt-2 mb-0.5">{t("Resolution note")}</p>
                 <p className="text-sm text-foreground whitespace-pre-wrap">{issue.resolution_note}</p>
               </>
             )}
             <PhotoGrid photos={resolved ? issue.after_photos : issue.during_photos} />
             <Button variant="ghost" onClick={() => navigate(`/maintenance?open=${issue.id}&edit=1`)} className="rounded-xl gap-1.5 h-11 mt-2 text-muted-foreground">
-              <Pencil className="w-4 h-4" /> Edit Details
+              <Pencil className="w-4 h-4" /> {t("Edit Details")}
             </Button>
           </div>
         )}
@@ -163,27 +165,27 @@ export default function MaintenanceIssueDetail() {
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <Wrench className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Issue Details</h2>
+            <h2 className="text-sm font-semibold">{t("Issue Details")}</h2>
           </div>
           {issue.description ? (
             <div className="mb-2">
-              <p className="text-xs text-muted-foreground mb-1">What was reported / observed</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("What was reported / observed")}</p>
               <p className="text-sm text-foreground whitespace-pre-wrap">{issue.description}</p>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground mb-2">No description recorded.</p>
+            <p className="text-sm text-muted-foreground mb-2">{t("No description recorded.")}</p>
           )}
-          <Row label="Reported" value={issue.created_date ? athensMediumDateTime(issue.created_date) : ""} />
-          <Row label="Reported by" value={issue.reported_by} />
+          <Row label={t("Reported")} value={issue.created_date ? athensMediumDateTime(issue.created_date, lang) : ""} />
+          <Row label={t("Reported by")} value={issue.reported_by} />
           {sourceVisit && (
             <Row
-              label="Source visit"
-              value={`${visitTypeLabel(sourceVisit.visit_type)} · ${athensMediumDateTime(sourceVisit.start_time || sourceVisit.scheduled_time)}`}
+              label={t("Source visit")}
+              value={`${t(visitTypeLabel(sourceVisit.visit_type))} · ${athensMediumDateTime(sourceVisit.start_time || sourceVisit.scheduled_time, lang)}`}
             />
           )}
           {sourceVisit && (
             <Link to={`/visits/${sourceVisit.id}`} className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
-              <MapPin className="w-3 h-3" /> View source visit
+              <MapPin className="w-3 h-3" /> {t("View source visit")}
             </Link>
           )}
           <PhotoGrid photos={issue.before_photos} />
@@ -193,34 +195,34 @@ export default function MaintenanceIssueDetail() {
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <MessageSquarePlus className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">Updates</h2>
+            <h2 className="text-sm font-semibold">{t("Updates")}</h2>
           </div>
           {coordRows}
           {followUps.length > 0 ? (
             <div className="mt-3 space-y-3">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">History</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("History")}</p>
               {followUps.map((f, i) => (
                 <div key={i} className="rounded-xl border border-border bg-muted/30 p-3">
                   <p className="text-sm text-foreground whitespace-pre-wrap">{f.note}</p>
                   <PhotoGrid photos={f.photos} />
-                  <p className="text-xs text-muted-foreground mt-1.5">{f.by}{f.at ? ` · ${athensMediumDateTime(f.at)}` : ""}</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">{f.by}{f.at ? ` · ${athensMediumDateTime(f.at, lang)}` : ""}</p>
                 </div>
               ))}
             </div>
           ) : (
             !contractor?.company && !issue.scheduled_appointment && !issue.follow_up_date && (
-              <p className="text-sm text-muted-foreground">No follow-up activity yet.</p>
+              <p className="text-sm text-muted-foreground">{t("No follow-up activity yet.")}</p>
             )
           )}
           {unresolved && issue.during_photos?.length > 0 && (
             <div className="mt-3">
-              <p className="text-xs text-muted-foreground mb-0.5">Update photos</p>
+              <p className="text-xs text-muted-foreground mb-0.5">{t("Update photos")}</p>
               <PhotoGrid photos={issue.during_photos} />
             </div>
           )}
           {issue.completion_notes && (
             <div className="mt-3">
-              <p className="text-xs text-muted-foreground mb-0.5">Completion notes</p>
+              <p className="text-xs text-muted-foreground mb-0.5">{t("Completion notes")}</p>
               <p className="text-sm text-foreground whitespace-pre-wrap">{issue.completion_notes}</p>
             </div>
           )}

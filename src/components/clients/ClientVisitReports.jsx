@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/EmptyState";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDate } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const STATUS_TONE = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -13,7 +14,7 @@ const STATUS_TONE = {
   "Delivery Failed": "bg-rose-500/10 text-rose-600 border-rose-500/20",
 };
 
-const fmt = (iso) => (iso ? athensMediumDate(iso) : "—");
+// fmt is defined inside the component below so it can use the current language.
 
 /**
  * Permanent history of completed visits and their owner-report delivery status
@@ -21,18 +22,20 @@ const fmt = (iso) => (iso ? athensMediumDate(iso) : "—");
  * send happens on the Visit Detail page (single delivery path).
  */
 export default function ClientVisitReports({ visits, propName, to = "/visits" }) {
+  const { t, lang } = useLanguage();
+  const fmt = (iso) => (iso ? athensMediumDate(iso, lang) : "—");
   const completed = (visits || []).filter((v) => v.status === "Completed" && !v.archived);
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2 font-medium text-sm">
-          <ClipboardCheck className="w-4 h-4 text-muted-foreground" /> Visit Reports
+          <ClipboardCheck className="w-4 h-4 text-muted-foreground" /> {t("Visit Reports")}
           <span className="text-xs text-muted-foreground">({completed.length})</span>
         </div>
-        <Link to={to} className="text-xs text-primary flex items-center gap-1 hover:underline">View all <ArrowRight className="w-3 h-3" /></Link>
+        <Link to={to} className="text-xs text-primary flex items-center gap-1 hover:underline">{t("View all")} <ArrowRight className="w-3 h-3" /></Link>
       </div>
       {completed.length === 0 ? (
-        <EmptyState icon={ClipboardCheck} title="No visit reports yet" />
+        <EmptyState icon={ClipboardCheck} title={t("No visit reports yet")} />
       ) : (
         <div className="divide-y divide-border">
           {completed.map((v) => {
@@ -44,22 +47,22 @@ export default function ClientVisitReports({ visits, propName, to = "/visits" })
               <div key={v.id} className="px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{propName(v.property_id)} — {visitTypeLabel(v.visit_type)}</p>
+                    <p className="text-sm font-medium truncate">{propName(v.property_id)} — {t(visitTypeLabel(v.visit_type))}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {fmt(v.start_time)}
                       {isAssistance && v.agreed_price != null ? ` · €${Number(v.agreed_price || 0).toFixed(0)}` : ""}
-                      {!isAssistance && v.report_sent_at ? ` · Sent ${athensMediumDate(v.report_sent_at)}` : ""}
+                      {!isAssistance && v.report_sent_at ? ` · ${t("Sent {date}", { date: athensMediumDate(v.report_sent_at, lang) })}` : ""}
                     </p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${isAssistance ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : STATUS_TONE[status] || STATUS_TONE.Draft}`}>{status}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${isAssistance ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : STATUS_TONE[status] || STATUS_TONE.Draft}`}>{t(status)}</span>
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Button asChild size="sm" variant="outline" className="rounded-xl gap-1.5 h-8 px-3">
-                    <Link to={linkTo}><FileText className="w-3.5 h-3.5" /> {isAssistance ? "View Job" : "View Report"}</Link>
+                    <Link to={linkTo}><FileText className="w-3.5 h-3.5" /> {isAssistance ? t("View Job") : t("View Report")}</Link>
                   </Button>
                   {!isAssistance && (
                     <Button asChild size="sm" className="rounded-xl gap-1.5 h-8 px-3">
-                      <Link to={linkTo}>{sent ? <><RotateCw className="w-3.5 h-3.5" /> Resend Report</> : <><Send className="w-3.5 h-3.5" /> Send Report</>}</Link>
+                      <Link to={linkTo}>{sent ? <><RotateCw className="w-3.5 h-3.5" /> {t("Resend Report")}</> : <><Send className="w-3.5 h-3.5" /> {t("Send Report")}</>}</Link>
                     </Button>
                   )}
                 </div>
