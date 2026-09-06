@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import { FileWarning, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { TZ } from "@/lib/timezone";
 
-const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" }) : "";
+// Athens-anchored, interface-language date formatting (display only).
+const fmtDate = (iso, locale) => iso ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: TZ }).format(new Date(iso)) : "";
 
 /**
  * Compact operational reminder on the Dashboard when completed visit reports
@@ -14,7 +17,9 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, { dat
  * appearing until delivered or resolved. Hidden entirely when there are none.
  */
 export default function ReportsToSendReminder({ visits = [], properties = [], clients = [] }) {
-  const propName = (id) => properties.find((p) => p.id === id)?.name || "Property";
+  const { t, lang } = useLanguage();
+  const locale = lang === "el" ? "el-GR" : "en-US";
+  const propName = (id) => properties.find((p) => p.id === id)?.name || t("Property");
   const clientFor = (propId) => {
     const p = properties.find((x) => x.id === propId);
     return clients.find((c) => c.id === p?.owner_id)?.name || "";
@@ -29,8 +34,8 @@ export default function ReportsToSendReminder({ visits = [], properties = [], cl
     <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 overflow-hidden mb-5">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/20 bg-amber-500/10">
         <FileWarning className="w-4 h-4 text-amber-600" />
-        <p className="text-sm font-semibold text-amber-700 dark:text-amber-500">REPORTS TO SEND — {waiting.length}</p>
-        <Link to="/reports" className="text-xs text-amber-700 dark:text-amber-500 ml-auto flex items-center gap-1 hover:underline">Open Reports <ArrowRight className="w-3 h-3" /></Link>
+        <p className="text-sm font-semibold text-amber-700 dark:text-amber-500">{t("REPORTS TO SEND — {count}", { count: waiting.length })}</p>
+        <Link to="/reports" className="text-xs text-amber-700 dark:text-amber-500 ml-auto flex items-center gap-1 hover:underline">{t("Open Reports")} <ArrowRight className="w-3 h-3" /></Link>
       </div>
       <div className="divide-y divide-border">
         {waiting.slice(0, 4).map((v) => (
@@ -40,11 +45,11 @@ export default function ReportsToSendReminder({ visits = [], properties = [], cl
                 {propName(v.property_id)}{clientFor(v.property_id) ? ` · ${clientFor(v.property_id)}` : ""}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {visitTypeLabel(v.visit_type)} · Visit completed {fmtDate(v.start_time)}
+                {visitTypeLabel(v.visit_type)} · {t("Visit completed {date}", { date: fmtDate(v.start_time, locale) })}
               </p>
             </div>
             <Button asChild size="sm" className="rounded-xl gap-1.5 h-9 px-3 shrink-0">
-              <Link to={`/reports?open=${v.id}`}>Review &amp; Send <ArrowRight className="w-3.5 h-3.5" /></Link>
+              <Link to={`/reports?open=${v.id}`}>{t("Review & Send")} <ArrowRight className="w-3.5 h-3.5" /></Link>
             </Button>
           </div>
         ))}

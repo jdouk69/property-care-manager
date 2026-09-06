@@ -22,6 +22,7 @@ import TodayAgenda from "@/components/dashboard/TodayAgenda";
 import ReportIssueSheet from "@/components/maintenance/ReportIssueSheet";
 import ReportsToSendReminder from "@/components/dashboard/ReportsToSendReminder";
 import { getActionableCounts } from "@/lib/onboardingHandoff";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const today = athensToday;
 const greeting = () => {
@@ -73,6 +74,7 @@ const ACTION_GROUPS = [
 ];
 
 function AlertRow({ to, title, subtitle, tone, badge }) {
+  const { t } = useLanguage();
   const dot = { danger: "bg-rose-500", warning: "bg-amber-500", info: "bg-sky-500", success: "bg-emerald-500" };
   return (
     <Link to={to} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted/50 transition text-left">
@@ -83,19 +85,20 @@ function AlertRow({ to, title, subtitle, tone, badge }) {
           {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
         </div>
       </div>
-      {badge && <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${badgeTone(badge)}`}>{badge}</span>}
+      {badge && <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${badgeTone(badge)}`}>{t(badge)}</span>}
     </Link>
   );
 }
 
 function Section({ title, icon: Icon, to, children }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2 font-medium text-sm text-foreground">
           <Icon className="w-4 h-4 text-muted-foreground" /> {title}
         </div>
-        {to && <Link to={to} className="text-xs text-primary flex items-center gap-1 hover:underline">View all <ArrowRight className="w-3 h-3" /></Link>}
+        {to && <Link to={to} className="text-xs text-primary flex items-center gap-1 hover:underline">{t("View all")} <ArrowRight className="w-3 h-3" /></Link>}
       </div>
       <div className="divide-y divide-border">{children}</div>
     </div>
@@ -103,18 +106,25 @@ function Section({ title, icon: Icon, to, children }) {
 }
 
 function Row({ title, subtitle, badge }) {
+  const { t } = useLanguage();
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">
         <p className="text-sm font-medium text-foreground truncate">{title}</p>
         {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
       </div>
-      {badge && <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${badgeTone(badge)}`}>{badge}</span>}
+      {badge && <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${badgeTone(badge)}`}>{t(badge)}</span>}
     </div>
   );
 }
 
 function Next3Days({ visits, properties, clients }) {
+  const { t, lang } = useLanguage();
+  // Day label follows the interface language but stays anchored to the same
+  // Athens calendar date (pure date formatting — no timezone conversion).
+  const dayLabel = (iso) => lang === "el"
+    ? new Date(iso + "T12:00:00Z").toLocaleDateString("el-GR", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })
+    : athensDayLabel(iso);
   const days = [
     { idx: 0, date: athensToday() },
     { idx: 1, date: athensDateOffset(1) },
@@ -124,22 +134,22 @@ function Next3Days({ visits, properties, clients }) {
     <div className="rounded-2xl border border-border bg-card overflow-hidden mb-6">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2 font-semibold text-sm text-foreground">
-          <CalendarClock className="w-4 h-4 text-muted-foreground" /> NEXT 3 DAYS
+          <CalendarClock className="w-4 h-4 text-muted-foreground" /> {t("NEXT 3 DAYS")}
         </div>
-        <Link to="/calendar" className="text-xs text-primary flex items-center gap-1 hover:underline">View Full Calendar <ArrowRight className="w-3 h-3" /></Link>
+        <Link to="/calendar" className="text-xs text-primary flex items-center gap-1 hover:underline">{t("View Full Calendar")} <ArrowRight className="w-3 h-3" /></Link>
       </div>
       {days.map((d, i) => {
         const dayVisits = (visits || [])
           .filter((v) => v.status === "Scheduled" && !v.archived && athensDate(v.scheduled_time || v.start_time) === d.date)
           .sort((a, b) => (a.scheduled_time || a.start_time || "").localeCompare(b.scheduled_time || b.start_time || ""));
-        const heading = i === 0 ? `TODAY — ${athensDayLabel(d.date)}` : i === 1 ? `TOMORROW — ${athensDayLabel(d.date)}` : athensDayLabel(d.date);
+        const heading = i === 0 ? `${t("TODAY")} — ${dayLabel(d.date)}` : i === 1 ? `${t("TOMORROW")} — ${dayLabel(d.date)}` : dayLabel(d.date);
         return (
           <div key={d.date} className={i > 0 ? "border-t border-border" : ""}>
             <div className="px-4 py-2 bg-muted/40">
               <p className="text-xs font-semibold tracking-wide text-foreground">{heading}</p>
             </div>
             {dayVisits.length === 0 ? (
-              <div className="px-4 py-3"><p className="text-sm text-muted-foreground">No visits scheduled</p></div>
+              <div className="px-4 py-3"><p className="text-sm text-muted-foreground">{t("No visits scheduled")}</p></div>
             ) : (
               <div className="divide-y divide-border">
                 {dayVisits.map((v) => {
@@ -154,7 +164,7 @@ function Next3Days({ visits, properties, clients }) {
                         <p className="text-xs text-muted-foreground truncate">{prop?.name || "—"}</p>
                         <p className="text-xs text-muted-foreground truncate">{visitTypeLabel(v.visit_type)}</p>
                       </div>
-                      <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20 shrink-0 mt-0.5">{v.status}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20 shrink-0 mt-0.5">{t(v.status)}</span>
                     </Link>
                   );
                 })}
@@ -168,6 +178,7 @@ function Next3Days({ visits, properties, clients }) {
 }
 
 function QuickNotes({ settingsId, initial }) {
+  const { t: tr } = useLanguage();
   const [val, setVal] = useState(initial || "");
   const [saved, setSaved] = useState(false);
   useEffect(() => {
@@ -180,15 +191,16 @@ function QuickNotes({ settingsId, initial }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 font-medium text-sm"><StickyNote className="w-4 h-4 text-muted-foreground" /> Quick Notes</div>
-        {saved && <span className="text-xs text-emerald-600">Saved</span>}
+        <div className="flex items-center gap-2 font-medium text-sm"><StickyNote className="w-4 h-4 text-muted-foreground" /> {tr("Quick Notes")}</div>
+        {saved && <span className="text-xs text-emerald-600">{tr("Saved")}</span>}
       </div>
-      <Textarea value={val} onChange={(e) => setVal(e.target.value)} placeholder="Jot down anything important…" rows={3} className="resize-none" />
+      <Textarea value={val} onChange={(e) => setVal(e.target.value)} placeholder={tr("Jot down anything important…")} rows={3} className="resize-none" />
     </div>
   );
 }
 
 function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelDone }) {
+  const { t: tr } = useLanguage();
   if (draft && draft.propertyId) {
     return (
       <div className="relative rounded-2xl bg-primary text-primary-foreground p-4 mb-5 shadow-sm overflow-hidden">
@@ -197,12 +209,12 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
             <div className="flex items-center gap-3 min-w-0">
               <span className="w-10 h-10 rounded-xl bg-primary-foreground/15 flex items-center justify-center shrink-0"><MapPin className="w-5 h-5" /></span>
               <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wide opacity-80">Continue working — visit in progress</p>
-                <p className="font-semibold truncate">Continue Visit — {propName(draft.propertyId)}</p>
+                <p className="text-[11px] uppercase tracking-wide opacity-80">{tr("Continue working — visit in progress")}</p>
+                <p className="font-semibold truncate">{tr("Continue Visit — {property}", { property: propName(draft.propertyId) })}</p>
                 <p className="text-xs opacity-80 truncate">{visitTypeLabel(draft.visitType) || "Monthly Property Watch"}</p>
               </div>
             </div>
-            <span className="text-sm font-medium shrink-0 flex items-center gap-1">Continue <ArrowRight className="w-4 h-4" /></span>
+            <span className="text-sm font-medium shrink-0 flex items-center gap-1">{tr("Continue")} <ArrowRight className="w-4 h-4" /></span>
           </div>
         </Link>
         <div className="absolute top-2 right-2">
@@ -230,12 +242,12 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0"><Wrench className="w-5 h-5" /></span>
             <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-amber-600">Next action</p>
+              <p className="text-[11px] uppercase tracking-wide text-amber-600">{tr("Next action")}</p>
               <p className="font-semibold truncate">{propName(openIssuesByProp.propertyId)}</p>
-              <p className="text-xs text-muted-foreground truncate">{single ? "1 open issue needs follow-up" : `${openIssuesByProp.count} open issues need follow-up`}</p>
+              <p className="text-xs text-muted-foreground truncate">{single ? tr("1 open issue needs follow-up") : tr("{count} open issues need follow-up", { count: openIssuesByProp.count })}</p>
             </div>
           </div>
-          <span className="text-sm font-medium text-amber-700 dark:text-amber-500 shrink-0 flex items-center gap-1">{single ? "View Issue" : "View Issues"} <ArrowRight className="w-4 h-4" /></span>
+          <span className="text-sm font-medium text-amber-700 dark:text-amber-500 shrink-0 flex items-center gap-1">{single ? tr("View Issue") : tr("View Issues")} <ArrowRight className="w-4 h-4" /></span>
         </div>
       </Link>
     );
@@ -247,12 +259,12 @@ function NextActionCard({ draft, propName, openIssuesByProp, prepTask, onCancelD
           <div className="flex items-center gap-3 min-w-0">
             <span className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-600 flex items-center justify-center shrink-0"><Plane className="w-5 h-5" /></span>
             <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-sky-600">Next action</p>
-              <p className="font-semibold truncate">Arrival {prepTask.when} — {propName(prepTask.propertyId)}</p>
-              <p className="text-xs text-muted-foreground truncate">Preparation checklist incomplete</p>
+              <p className="text-[11px] uppercase tracking-wide text-sky-600">{tr("Next action")}</p>
+              <p className="font-semibold truncate">{tr("Arrival {when} — {property}", { when: tr(prepTask.when), property: propName(prepTask.propertyId) })}</p>
+              <p className="text-xs text-muted-foreground truncate">{tr("Preparation checklist incomplete")}</p>
             </div>
           </div>
-          <span className="text-sm font-medium text-sky-700 dark:text-sky-500 shrink-0 flex items-center gap-1">Continue Prep <ArrowRight className="w-4 h-4" /></span>
+          <span className="text-sm font-medium text-sky-700 dark:text-sky-500 shrink-0 flex items-center gap-1">{tr("Continue Prep")} <ArrowRight className="w-4 h-4" /></span>
         </div>
       </Link>
     );
@@ -267,6 +279,8 @@ export default function Dashboard() {
   const [draft, setDraft] = useState(null);
   const navigate = useNavigate();
   const [reportOpen, setReportOpen] = useState(false);
+  // NOTE: aliased as `tr` because `t` is the Athens "today" date in this component.
+  const { t: tr, lang } = useLanguage();
 
   useEffect(() => {
     (async () => {
@@ -300,7 +314,7 @@ export default function Dashboard() {
 
   const t = today();
   const ownerName = settings?.owner_name || "Jim";
-  const propName = (id) => data.properties.find((p) => p.id === id)?.name || "Property";
+  const propName = (id) => data.properties.find((p) => p.id === id)?.name || tr("Property");
   const active = (x) => x.status !== "Completed" && x.status !== "Cancelled" && x.recurrence_status !== "skipped";
   const todaysTasks = data.tasks.filter((x) => x.date === t);
   const nextAppointment = todaysTasks.filter((x) => x.time).sort((a, b) => a.time.localeCompare(b.time))[0];
@@ -361,15 +375,15 @@ export default function Dashboard() {
   const badgeFor = (label) => (label === "Clients" ? actionable.clients : 0);
 
   const startVisitTo = draft && draft.propertyId ? "/visits?continue=1" : "/visits?start=1";
-  const startVisitLabel = draft && draft.propertyId ? `Continue Visit — ${propName(draft.propertyId)}` : "Start Visit";
+  const startVisitLabel = draft && draft.propertyId ? tr("Continue Visit — {property}", { property: propName(draft.propertyId) }) : tr("Start Visit");
 
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6">
         <div className="mb-5">
-          <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: TZ })}</p>
-          <h1 className="text-2xl font-semibold tracking-tight mt-0.5">{greeting()}, {ownerName}</h1>
-          <p className="text-sm text-muted-foreground mt-1">Here's your command center for today.</p>
+          <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString(lang === "el" ? "el-GR" : "en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: TZ })}</p>
+          <h1 className="text-2xl font-semibold tracking-tight mt-0.5">{tr(greeting())}, {ownerName}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{tr("Here's your command center for today.")}</p>
         </div>
 
         {/* TODAY agenda — what do I have to do today? */}
@@ -387,11 +401,11 @@ export default function Dashboard() {
             if (group.label === "Property Visit") {
                return (
                  <div key={group.label}>
-                   <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
+                   <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{tr(group.label)}<span className="h-px flex-1 bg-border" /></p>
                    <Link to="/visits?schedule=1" className="block mb-2">
                      <div className="flex items-center gap-3 h-16 rounded-xl bg-primary text-primary-foreground px-3.5 hover:bg-primary/90 shadow-sm transition">
                        <span className="w-11 h-11 rounded-lg bg-primary-foreground/15 flex items-center justify-center shrink-0"><CalendarClock className="w-5 h-5" /></span>
-                       <span className="font-semibold text-sm truncate">Schedule Visit</span>
+                       <span className="font-semibold text-sm truncate">{tr("Schedule Visit")}</span>
                        <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
                      </div>
                    </Link>
@@ -404,7 +418,7 @@ export default function Dashboard() {
                    </Link>
                    <div className="grid grid-cols-2 gap-2">
                      {group.items.map((a) => (
-                       <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
+                       <ActionCard key={a.label} to={a.to} label={tr(a.label)} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                      ))}
                    </div>
                  </div>
@@ -413,18 +427,18 @@ export default function Dashboard() {
             if (group.label === "Follow-Up") {
               return (
                 <div key={group.label}>
-                  <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{tr(group.label)}<span className="h-px flex-1 bg-border" /></p>
                   {/* Report Issue — fast field entry point into the existing Maintenance Issue workflow */}
                   <button type="button" onClick={() => setReportOpen(true)} className="w-full text-left mb-2">
                     <div className="flex items-center gap-3 h-14 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-500 px-3.5 hover:bg-amber-500/20 transition">
                       <span className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0"><AlertTriangle className="w-5 h-5" /></span>
-                      <span className="font-semibold text-sm truncate">Report Issue</span>
+                      <span className="font-semibold text-sm truncate">{tr("Report Issue")}</span>
                       <ArrowRight className="w-5 h-5 ml-auto shrink-0" />
                     </div>
                   </button>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {group.items.map((a) => (
-                      <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
+                      <ActionCard key={a.label} to={a.to} label={tr(a.label)} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                     ))}
                   </div>
                 </div>
@@ -433,19 +447,19 @@ export default function Dashboard() {
             if (group.label === "Communication") {
               return (
                 <div key={group.label}>
-                  <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{tr(group.label)}<span className="h-px flex-1 bg-border" /></p>
                   {group.items.map((a) => (
-                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
+                    <ActionCard key={a.label} to={a.to} label={tr(a.label)} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                   ))}
                 </div>
               );
             }
             return (
               <div key={group.label}>
-                <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{group.label}<span className="h-px flex-1 bg-border" /></p>
+                <p className="text-xs font-bold uppercase tracking-wider text-destructive px-1 mb-2 flex items-center gap-2">{tr(group.label)}<span className="h-px flex-1 bg-border" /></p>
                 <div className="grid grid-cols-2 gap-2">
                   {group.items.map((a) => (
-                    <ActionCard key={a.label} to={a.to} label={a.label} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
+                    <ActionCard key={a.label} to={a.to} label={tr(a.label)} icon={a.icon} color={a.color} badge={badgeFor(a.label)} />
                   ))}
                 </div>
               </div>
@@ -458,11 +472,11 @@ export default function Dashboard() {
 
         {/* Financial summary — billing ledger + reimbursements */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-          <StatCard icon={Euro} label="Outstanding" value={`€${billingOutstanding.toFixed(2)}`} tone={billingOutstanding ? "warning" : "success"} />
-          <StatCard icon={AlertTriangle} label="Overdue" value={`€${billingOverdue.toFixed(2)}`} tone={billingOverdue ? "danger" : "success"} />
-          <StatCard icon={CheckCircle2} label="Paid this month" value={`€${billingPaidMonth.toFixed(2)}`} tone="success" />
-          <StatCard icon={Wallet} label="Awaiting reimbursement" value={`€${outstandingReimb.toFixed(2)}`} tone={outstandingReimb ? "warning" : "success"} />
-          <StatCard icon={Home} label="Properties" value={data.properties.length} tone="primary" />
+          <StatCard icon={Euro} label={tr("Outstanding")} value={`€${billingOutstanding.toFixed(2)}`} tone={billingOutstanding ? "warning" : "success"} />
+          <StatCard icon={AlertTriangle} label={tr("Overdue")} value={`€${billingOverdue.toFixed(2)}`} tone={billingOverdue ? "danger" : "success"} />
+          <StatCard icon={CheckCircle2} label={tr("Paid this month")} value={`€${billingPaidMonth.toFixed(2)}`} tone="success" />
+          <StatCard icon={Wallet} label={tr("Awaiting reimbursement")} value={`€${outstandingReimb.toFixed(2)}`} tone={outstandingReimb ? "warning" : "success"} />
+          <StatCard icon={Home} label={tr("Properties")} value={data.properties.length} tone="primary" />
         </div>
 
         {/* Alerts */}
@@ -470,52 +484,52 @@ export default function Dashboard() {
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <h2 className="font-semibold text-sm text-amber-700 dark:text-amber-500">Attention needed ({alertCount})</h2>
+              <h2 className="font-semibold text-sm text-amber-700 dark:text-amber-500">{tr("Attention needed ({count})", { count: alertCount })}</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-              {emergency.length > 0 && <AlertGroup label="Emergency issues">{emergency.slice(0, 4).map((m) => <AlertRow key={m.id} to="/maintenance" title={m.title} subtitle={m.description} tone="danger" badge={m.priority} />)}</AlertGroup>}
-              {overdue.length > 0 && <AlertGroup label="Overdue tasks">{overdue.slice(0, 4).map((task) => <AlertRow key={task.id} to="/tasks" title={task.title} subtitle={task.date} tone="danger" badge={task.priority} />)}</AlertGroup>}
-              {inspToday.length > 0 && <AlertGroup label="Inspections due today">{inspToday.slice(0, 4).map((i) => <AlertRow key={i.id} to="/inspections" title={`Inspection — ${i.date}`} subtitle={i.inspector} tone="info" badge={i.status} />)}</AlertGroup>}
-              {overdueInspections.length > 0 && <AlertGroup label="Overdue inspections">{overdueInspections.slice(0, 4).map((i) => <AlertRow key={i.id} to="/inspections" title={`Inspection — ${i.date}`} subtitle="Draft not completed" tone="danger" badge="Overdue" />)}</AlertGroup>}
-              {contractorsToday.length > 0 && <AlertGroup label="Contractor appointments today">{contractorsToday.slice(0, 4).map((c) => <AlertRow key={c.id} to="/tasks" title={c.title} subtitle={c.time} tone="info" badge="High" />)}</AlertGroup>}
-              {unreturnedKeys.length > 0 && <AlertGroup label="Unreturned keys">{unreturnedKeys.slice(0, 4).map((k) => <AlertRow key={k.id} to="/keys" title={`Key ${k.key_number}`} subtitle={`Issued ${k.date_issued} · ${k.current_holder || "—"}`} tone="warning" />)}</AlertGroup>}
-              {awaitingReimb.length > 0 && <AlertGroup label="Expenses awaiting reimbursement">{awaitingReimb.slice(0, 4).map((e) => <AlertRow key={e.id} to="/expenses" title={`${e.vendor} — €${(e.amount || 0).toFixed(2)}`} subtitle={e.date} tone="warning" />)}</AlertGroup>}
-              {missedVisits.length > 0 && <AlertGroup label="Missed scheduled visits">{missedVisits.slice(0, 4).map((v) => <AlertRow key={v.id} to={`/visits/${v.id}`} title={`${propName(v.property_id)} · ${visitTypeLabel(v.visit_type)}`} subtitle={`Scheduled for ${athensTime(v.scheduled_time || v.start_time)}`} tone="danger" badge="Missed" />)}</AlertGroup>}
+              {emergency.length > 0 && <AlertGroup label={tr("Emergency issues")}>{emergency.slice(0, 4).map((m) => <AlertRow key={m.id} to="/maintenance" title={m.title} subtitle={m.description} tone="danger" badge={m.priority} />)}</AlertGroup>}
+              {overdue.length > 0 && <AlertGroup label={tr("Overdue tasks")}>{overdue.slice(0, 4).map((task) => <AlertRow key={task.id} to="/tasks" title={task.title} subtitle={task.date} tone="danger" badge={task.priority} />)}</AlertGroup>}
+              {inspToday.length > 0 && <AlertGroup label={tr("Inspections due today")}>{inspToday.slice(0, 4).map((i) => <AlertRow key={i.id} to="/inspections" title={tr("Inspection — {date}", { date: i.date })} subtitle={i.inspector} tone="info" badge={i.status} />)}</AlertGroup>}
+              {overdueInspections.length > 0 && <AlertGroup label={tr("Overdue inspections")}>{overdueInspections.slice(0, 4).map((i) => <AlertRow key={i.id} to="/inspections" title={tr("Inspection — {date}", { date: i.date })} subtitle="Draft not completed" tone="danger" badge={tr("Overdue")} />)}</AlertGroup>}
+              {contractorsToday.length > 0 && <AlertGroup label={tr("Contractor appointments today")}>{contractorsToday.slice(0, 4).map((c) => <AlertRow key={c.id} to="/tasks" title={c.title} subtitle={c.time} tone="info" badge="High" />)}</AlertGroup>}
+              {unreturnedKeys.length > 0 && <AlertGroup label={tr("Unreturned keys")}>{unreturnedKeys.slice(0, 4).map((k) => <AlertRow key={k.id} to="/keys" title={tr("Key {number}", { number: k.key_number })} subtitle={tr("Issued {date} · {holder}", { date: k.date_issued, holder: k.current_holder || "—" })} tone="warning" />)}</AlertGroup>}
+              {awaitingReimb.length > 0 && <AlertGroup label={tr("Expenses awaiting reimbursement")}>{awaitingReimb.slice(0, 4).map((e) => <AlertRow key={e.id} to="/expenses" title={`${e.vendor} — €${(e.amount || 0).toFixed(2)}`} subtitle={e.date} tone="warning" />)}</AlertGroup>}
+              {missedVisits.length > 0 && <AlertGroup label={tr("Missed scheduled visits")}>{missedVisits.slice(0, 4).map((v) => <AlertRow key={v.id} to={`/visits/${v.id}`} title={`${propName(v.property_id)} · ${visitTypeLabel(v.visit_type)}`} subtitle={tr("Scheduled for {time}", { time: athensTime(v.scheduled_time || v.start_time) })} tone="danger" badge={tr("Missed")} />)}</AlertGroup>}
             </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Section title="Today's Schedule" icon={CalendarClock} to="/tasks">
-            {todaysTasks.length === 0 ? <EmptyState icon={CheckCircle2} title="Nothing scheduled today" /> : todaysTasks.slice(0, 6).map((task) => (
+          <Section title={tr("Today's Schedule")} icon={CalendarClock} to="/tasks">
+            {todaysTasks.length === 0 ? <EmptyState icon={CheckCircle2} title={tr("Nothing scheduled today")} /> : todaysTasks.slice(0, 6).map((task) => (
               <Row key={task.id} title={task.title} subtitle={`${task.time || ""} ${task.assigned_to ? "· " + task.assigned_to : ""}`.trim()} badge={task.priority} />
             ))}
           </Section>
 
-          <Section title={nextAppointment ? "Next Appointment" : "Upcoming Inspections"} icon={nextAppointment ? CalendarClock : ClipboardCheck} to={nextAppointment ? "/tasks" : "/inspections"}>
+          <Section title={nextAppointment ? tr("Next Appointment") : tr("Upcoming Inspections")} icon={nextAppointment ? CalendarClock : ClipboardCheck} to={nextAppointment ? "/tasks" : "/inspections"}>
             {nextAppointment ? (
               <Row title={nextAppointment.title} subtitle={`${nextAppointment.time} · ${nextAppointment.type}`} badge={nextAppointment.priority} />
-            ) : upcomingInspections.length === 0 ? <EmptyState icon={ClipboardCheck} title="No inspections scheduled" /> : upcomingInspections.map((i) => (
-              <Row key={i.id} title={`Inspection · ${i.date}`} subtitle={i.inspector} badge={i.status} />
+            ) : upcomingInspections.length === 0 ? <EmptyState icon={ClipboardCheck} title={tr("No inspections scheduled")} /> : upcomingInspections.map((i) => (
+              <Row key={i.id} title={tr("Inspection · {date}", { date: i.date })} subtitle={i.inspector} badge={i.status} />
             ))}
           </Section>
 
-          <Section title="Properties Requiring Attention" icon={Home} to="/properties">
-            {propsNeedingAttention.length === 0 ? <EmptyState icon={CheckCircle2} title="All properties in good shape" /> : propsNeedingAttention.slice(0, 6).map((p) => (
+          <Section title={tr("Properties Requiring Attention")} icon={Home} to="/properties">
+            {propsNeedingAttention.length === 0 ? <EmptyState icon={CheckCircle2} title={tr("All properties in good shape")} /> : propsNeedingAttention.slice(0, 6).map((p) => (
               <Row key={p.id} title={p.name} subtitle={p.address} badge={p.condition} />
             ))}
           </Section>
 
-          <Section title="Open Maintenance" icon={Wrench} to="/maintenance">
-            {openMaintenance.length === 0 ? <EmptyState icon={CheckCircle2} title="No open issues" /> : openMaintenance.slice(0, 6).map((m) => (
+          <Section title={tr("Open Maintenance")} icon={Wrench} to="/maintenance">
+            {openMaintenance.length === 0 ? <EmptyState icon={CheckCircle2} title={tr("No open issues")} /> : openMaintenance.slice(0, 6).map((m) => (
               <Row key={m.id} title={m.title} subtitle={m.category} badge={m.priority} />
             ))}
           </Section>
 
-          <Section title="Deliveries & Arrivals" icon={Plane} to="/tasks">
-            {deliveries.length === 0 && arrivals.length === 0 ? <EmptyState icon={Truck} title="Nothing scheduled" /> : (
+          <Section title={tr("Deliveries & Arrivals")} icon={Plane} to="/tasks">
+            {deliveries.length === 0 && arrivals.length === 0 ? <EmptyState icon={Truck} title={tr("Nothing scheduled")} /> : (
               <>
-                {deliveries.slice(0, 3).map((d) => <Row key={d.id} title={d.title} subtitle={`${d.time || ""} Delivery`} />)}
+                {deliveries.slice(0, 3).map((d) => <Row key={d.id} title={d.title} subtitle={`${d.time || ""} ${tr("Delivery")}`} />)}
                 {arrivals.slice(0, 3).map((a) => <Row key={a.id} title={a.title} subtitle={`${a.date} · ${a.type}`} badge={a.priority} />)}
               </>
             )}
@@ -533,10 +547,10 @@ export default function Dashboard() {
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
           <QuickNotes settingsId={settings?.id} initial={settings?.quick_notes} />
           <div className="grid grid-cols-2 gap-3">
-            <StatCard icon={ListChecks} label="Today's tasks" value={todaysTasks.length} tone="info" />
-            <StatCard icon={AlertTriangle} label="Overdue tasks" value={overdue.length} tone={overdue.length ? "danger" : "success"} />
-            <StatCard icon={KeyRound} label="Keys checked out" value={unreturnedKeys.length} tone="default" />
-            <StatCard icon={HardHat} label="Open issues" value={openMaintenance.length} tone="warning" />
+            <StatCard icon={ListChecks} label={tr("Today's tasks")} value={todaysTasks.length} tone="info" />
+            <StatCard icon={AlertTriangle} label={tr("Overdue tasks")} value={overdue.length} tone={overdue.length ? "danger" : "success"} />
+            <StatCard icon={KeyRound} label={tr("Keys checked out")} value={unreturnedKeys.length} tone="default" />
+            <StatCard icon={HardHat} label={tr("Open issues")} value={openMaintenance.length} tone="warning" />
           </div>
         </div>
       </div>

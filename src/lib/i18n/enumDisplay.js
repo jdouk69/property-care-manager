@@ -21,6 +21,7 @@ export const ENUM_EL = {
   "Pending": "Σε εκκρεμότητα",
   "Completed": "Ολοκληρώθηκε",
   "Cancelled": "Ακυρώθηκε",
+  "Overdue": "Εκπρόθεσμα",
   "Open": "Ανοιχτό",
   "Closed": "Κλειστό",
 
