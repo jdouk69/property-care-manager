@@ -68,7 +68,9 @@ export async function ensureOneTimeVisitCharge(visit, { clientId = "" } = {}) {
 // duplicate-safe like the other charge builders (any existing charge for the
 // visit blocks a second one).
 export async function ensureAdditionalVisitCharge(visit, { clientId = "", amount } = {}) {
-  if (!visit || visit.status !== "Completed" || !visit.is_additional_service) return null;
+  // A COURTESY additional visit (billing_classification "Courtesy - No Charge")
+  // is never charged — staff unchecked the Billable override before completing.
+  if (!visit || visit.status !== "Completed" || !visit.is_additional_service || visit.billing_classification === "Courtesy - No Charge") return null;
   const amt = Math.round(Number(amount) * 100) / 100;
   if (!Number.isFinite(amt) || amt <= 0) return null;
 

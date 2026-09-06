@@ -163,7 +163,16 @@
     "is_additional_service": {
       "type": "boolean",
       "default": false,
-      "description": "True when this visit is an ADDITIONAL requested billable service beyond the package's included visits for the period \u2014 never counted against the included allowance."
+      "description": "True when this visit is an ADDITIONAL requested service beyond the package's included visits for the period \u2014 never counted against the included allowance."
+    },
+    "billing_classification": {
+      "type": "string",
+      "enum": [
+        "Included in Package",
+        "Additional - Billable",
+        "Courtesy - No Charge"
+      ],
+      "description": "Final billing classification of a package visit, decided automatically from entitlement data. Additional visits default to 'Additional - Billable'; staff may uncheck the Billable override before completing, which stores 'Courtesy - No Charge' (no customer charge). Empty for non-package visits (one-time services, assistance, grocery, no-agreement properties)."
     },
     "agreed_price": {
       "type": "number"

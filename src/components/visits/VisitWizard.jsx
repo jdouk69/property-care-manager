@@ -19,6 +19,8 @@ import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import DraftConflictDialog from "@/components/visits/DraftConflictDialog";
 import PackageServiceCard from "@/components/visits/PackageServiceCard";
 import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
+import { Checkbox } from "@/components/ui/checkbox";
+import { billingClassificationFor } from "@/lib/visitBillingClassification";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 import { Link, useNavigate } from "react-router-dom";
@@ -138,6 +140,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // included allowance — billable, never counted as another included visit.
   const [visits, setVisits] = useState([]);
   const [additionalService, setAdditionalService] = useState(false);
+  // Billable override for ADDITIONAL visits: defaults to checked (billable);
+  // staff can uncheck before completing → COURTESY / NO CHARGE. Included
+  // package visits never show a checkbox — nothing to charge accidentally.
+  const [billable, setBillable] = useState(true);
   const [resumable, setResumable] = useState(null);
   const [contractors, setContractors] = useState([]);
   const [expensesCreated, setExpensesCreated] = useState([]);
@@ -268,6 +274,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           // Additional-service flag persists on the record (the resumed autosave
           // below keeps it current while the visit is active).
           setAdditionalService(!!v.is_additional_service);
+          // Preserve the visit's existing billing classification across
+          // resume/restart — a courtesy visit stays courtesy.
+          setBillable(v.billing_classification !== "Courtesy - No Charge");
           // QA F1/F2 fix: restore the fields the resumed-visit persistence
           // already writes on this SAME record — meter readings, summary,
           // internal notes, GPS — plus the existing issue/task linkage, so a
@@ -319,9 +328,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable });
     }
-  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService]);
+  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable]);
 
   // Scheduled/resumed visits (resumeVisitId) previously had NO autosave — the
   // PropertyVisit record was written only at completion, so leaving mid-visit
@@ -344,6 +353,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       maintenance_issue_ids: issueIds,
       follow_up_task_ids: taskIds,
       is_additional_service: additionalService,
+      billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }),
     };
     resumedSaveRef.current = { id: resumeVisitId, payload };
     const tm = setTimeout(() => {
@@ -351,7 +361,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     }, 1500);
     return () => clearTimeout(tm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, resumeVisitId, checklist, meters, summary, internalNotes, gps, issueIds, taskIds]);
+  }, [step, resumeVisitId, checklist, meters, summary, internalNotes, gps, issueIds, taskIds, billable]);
 
   // Final flush when the wizard unmounts mid-visit (navigate away / close).
   // After completion this writes the same values the completion already saved,
@@ -417,6 +427,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // an agreementId simply resolve to none, exactly as before).
     setAgreementId(resumable.agreementId || "");
     setAdditionalService(!!resumable.additionalService);
+    setBillable(resumable.billable !== false);
     if (resumable.agreementId) {
       base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then((a) => {
         setAgreement(a);
@@ -566,14 +577,20 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // record, so nothing was consumed and no charge is involved.
   const restartDraftVisit = () => {
     const vt = resumable?.visitType || visitType;
+    // Preserve the draft's existing billing decision (included/additional
+    // and the Billable checkbox state) — restart reuses the same entitlement,
+    // it never re-decides the classification.
+    const opts = { additional: !!resumable?.additionalService, billable: resumable?.billable !== false };
     clearDraft(); setResumable(null);
-    startVisit(vt);
+    startVisit(vt, opts);
   };
 
   // RESTART an unfinished scheduled/in-progress visit RECORD (confirmed first
   // via RestartVisitDialog). Resets progress on the SAME record — no new
   // record, no second included visit, no charge; never offered for completed
-  // visits. Already-created issues/tasks and the agreement link are kept.
+  // visits. Already-created issues/tasks and the agreement link are kept, and
+  // the existing billing classification + Billable checkbox state are
+  // preserved (only progress fields are reset).
   const restartExistingVisit = async (record) => {
     try {
       const { items } = await loadChecklistItems(record.property_id, record.visit_type);
@@ -640,6 +657,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // the package's own visit type with the included allowance consumed.
     const additional = opts && typeof opts.additional === "boolean" ? opts.additional : resolveAdditional(vt);
     setAdditionalService(additional);
+    // Billable default: checked (billable) for additional visits — the app
+    // decides the default automatically; staff can override before completing.
+    setBillable(opts && opts.billable === false ? false : true);
     const now = new Date();
     setStartTime(now.toISOString());
     if (navigator.geolocation) {
@@ -799,6 +819,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       owner_report: "", report_sent: false, report_status: "Ready to Send",
       property_service_agreement_id: agreementId || "",
       is_additional_service: !!additionalService,
+      billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }),
       ...(visitType === "Grocery Stocking" ? { shopping_list: groceryList.trim(), grocery_cost: parseFloat(groceryCost) || 0 } : {}),
     };
     try {
@@ -1439,6 +1460,37 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <Label className="text-xs mb-1.5 block">{t("Internal Notes")} <span className="text-rose-600 font-normal">{t("(staff only — never shown to owner)")}</span></Label>
             <Textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} placeholder={t("Private staff notes. These are NOT included in the owner report.")} className={AREA} />
           </div>
+
+          {/* Billing classification — decided AUTOMATICALLY from entitlement
+              data. Included package visits show a read-only badge (no Billable
+              checkbox, so nothing can be charged accidentally). ADDITIONAL
+              visits show the Billable override, defaulting to checked — staff
+              can uncheck before completing for a courtesy visit. */}
+          {agreement && isRecurringAgreement(agreement) && visitType === recommendedVisitType(pkg) && (additionalService ? (
+            <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <Checkbox checked={billable} onCheckedChange={(v) => setBillable(v === true)} className="mt-0.5" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-foreground">{t("Billable visit")}</span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">
+                    {billable
+                      ? t("Additional visit outside the package allowance — a charge will be created after you confirm the amount.")
+                      : t("Courtesy / No Charge — no customer charge will be created. The visit record, checklist, photos and report are kept.")}
+                  </span>
+                </span>
+              </label>
+              <p className="text-[10px] uppercase tracking-wide text-amber-600 mt-2">
+                {billable ? t("Additional - Billable") : t("Courtesy - No Charge")}
+              </p>
+            </div>
+          ) : (
+            <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <p className="text-xs text-emerald-700 dark:text-emerald-500">
+                {t("Included in Package")} — {t("Included in the customer's package — no separate charge.")}
+              </p>
+            </div>
+          ))}
         </div>
 
         {/* Next action card + bottom bar */}
@@ -1544,9 +1596,20 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <p>{t("Checklist items: {items} · Issues: {issues} · Follow-ups: {followUps}", { items: checklist.length, issues: issueIds.length, followUps: taskIds.length })}</p>
           </div>
         </div>
+        {/* Final billing classification — always visible on the completed visit. */}
+        {completed?.billing_classification && (
+          <div className="mb-4 flex justify-center">
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide px-3 py-1.5 rounded-full border ${completed.billing_classification === "Included in Package" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : completed.billing_classification === "Additional - Billable" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-sky-500/10 text-sky-600 border-sky-500/20"}`}>
+              <Receipt className="w-3.5 h-3.5" /> {t(completed.billing_classification)}
+            </span>
+          </div>
+        )}
+        {completed?.billing_classification === "Courtesy - No Charge" && (
+          <p className="text-xs text-muted-foreground text-center mb-4">{t("Courtesy visit — no customer charge. The full visit record, checklist, notes, photos and report are kept.")}</p>
+        )}
         {/* Additional billable visit: staff must CONFIRM the charge amount —
             no approved price rule exists, so nothing is auto-charged. */}
-        {completed?.is_additional_service && (
+        {completed?.is_additional_service && completed?.billing_classification !== "Courtesy - No Charge" && (
           <div className="mb-4">
             <AdditionalChargeCard
               visit={completed}

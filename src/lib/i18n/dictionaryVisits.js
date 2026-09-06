@@ -553,4 +553,13 @@ export const VISITS_EL = {
   "Create Ledger Charge": "Δημιουργία Χρέωσης στο Μητρώο",
   "No ledger charge is created until you confirm the amount.": "Δεν δημιουργείται χρέωση μέχρι να επιβεβαιώσετε το ποσό.",
   "Could not create charge: {message}": "Δεν ήταν δυνατή η δημιουργία χρέωσης: {message}",
+  // Billable visit control (automatic classification + staff override checkbox)
+  "Included in Package": "Συμπεριλαμβάνεται στο Πακέτο",
+  "Additional - Billable": "Πρόσθετη — Χρεώνεται",
+  "Courtesy - No Charge": "Χωρίς Χρέωση",
+  "Billable visit": "Χρεώνεται ως πρόσθετη επίσκεψη",
+  "Additional visit outside the package allowance — a charge will be created after you confirm the amount.": "Πρόσθετη επίσκεψη εκτός πακέτου — θα δημιουργηθεί χρέωση αφού επιβεβαιώσετε το ποσό.",
+  "Courtesy / No Charge — no customer charge will be created. The visit record, checklist, photos and report are kept.": "Χωρίς χρέωση — δεν θα δημιουργηθεί χρέωση πελάτη. Η εγγραφή επίσκεψης, η λίστα ελέγχου, οι φωτογραφίες και η αναφορά διατηρούνται.",
+  "Included in the customer's package — no separate charge.": "Συμπεριλαμβάνεται στο πακέτο του πελάτη — χωρίς ξεχωριστή χρέωση.",
+  "Courtesy visit — no customer charge. The full visit record, checklist, notes, photos and report are kept.": "Ευγενική επίσκεψη — χωρίς χρέωση πελάτη. Η πλήρης εγγραφή επίσκεψης, η λίστα ελέγχου, οι σημειώσεις, οι φωτογραφίες και η αναφορά διατηρούνται.",
 };

@@ -142,6 +142,9 @@ export default function VisitDetail() {
             <span className="text-xs px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20">{t(visitTypeLabel(visit.visit_type))}</span>
             <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.status === "Cancelled" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : visit.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : visit.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-muted text-muted-foreground border-border"}`}>{tEnum(visit.status, "visit")}</span>
             {visit.report_sent && <span className="text-xs px-2.5 py-1 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">{t("Report Sent")}</span>}
+            {visit.billing_classification && (
+              <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.billing_classification === "Included in Package" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.billing_classification === "Additional - Billable" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-sky-500/10 text-sky-600 border-sky-500/20"}`}>{t(visit.billing_classification)}</span>
+            )}
           </div>
         </div>
 
