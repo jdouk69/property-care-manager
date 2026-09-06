@@ -6,6 +6,7 @@ import ReportReviewModal from "@/components/visits/ReportReviewModal";
 import { buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPdf } from "@/lib/visitReport";
 import { sendOwnerReportEmail } from "@/lib/visitReportSend";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const STATUS_TONE = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -30,6 +31,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
   const [model, setModel] = useState(null);
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
+  const { t } = useLanguage();
 
   useEffect(() => {
     base44.auth.me().then((u) => setUserName(u?.full_name || u?.email || "")).catch(() => {});
@@ -46,7 +48,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
       onUpdate && onUpdate(updated);
       return updated;
     } catch (e) {
-      setError("Could not save report status: " + (e?.message || e));
+      setError(t("Could not save report status: {message}", { message: e?.message || e }));
       return visit;
     }
   };
@@ -66,7 +68,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
           setModel(buildOwnerReportModel({ ...visit, report_pdf_url: file_url }, ctx));
         }
       } catch (e) {
-        setError("Could not generate report: " + (e?.message || e));
+        setError(t("Could not generate report: {message}", { message: e?.message || e }));
       }
       setGenerating(false);
     }
@@ -79,7 +81,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
       openReview();
       return;
     }
-    if (isResend && !window.confirm("Resend this report to the owner?")) return;
+    if (isResend && !window.confirm(t("Resend this report to the owner?"))) return;
     setSending(true);
     try {
       const res = await sendOwnerReportEmail({
@@ -100,18 +102,18 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
         setReviewOpen(false);
       } else {
         await patch({ report_status: "Delivery Failed" });
-        setError("Email delivery failed: " + (res.error || "unknown error") + ". You can still download/share the report manually below.");
+        setError(t("Email delivery failed: {message}. You can still download/share the report manually below.", { message: res.error || "unknown error" }));
       }
     } catch (e) {
       await patch({ report_status: "Delivery Failed" });
-      setError("Email delivery failed: " + (e?.message || e));
+      setError(t("Email delivery failed: {message}. You can still download/share the report manually below.", { message: e?.message || e }));
     }
     setSending(false);
   };
 
   const download = async () => {
     setDownloading(true);
-    try { await generateVisitReportPdf(visit, ctx); } catch (e) { setError("Could not generate PDF: " + (e?.message || e)); }
+    try { await generateVisitReportPdf(visit, ctx); } catch (e) { setError(t("Could not generate PDF: {message}", { message: e?.message || e })); }
     setDownloading(false);
   };
 
@@ -121,18 +123,18 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
     <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-medium">Owner Report Delivery</p>
-          <p className="text-xs text-muted-foreground">Review the customer report before sending to the owner.</p>
+          <p className="text-sm font-medium">{t("Owner Report Delivery")}</p>
+          <p className="text-xs text-muted-foreground">{t("Review the customer report before sending to the owner.")}</p>
         </div>
-        <span className={`text-xs px-2.5 py-1 rounded-full border ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{status}</span>
+        <span className={`text-xs px-2.5 py-1 rounded-full border ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{t(status)}</span>
       </div>
 
       {visit.report_sent_at && (
         <p className="text-xs text-muted-foreground">
-          Sent {athensMediumDateTime(visit.report_sent_at)}
+          {t("Sent {date}", { date: athensMediumDateTime(visit.report_sent_at) })}
           {visit.report_sent_to ? ` · ${visit.report_sent_to}` : ""}
           {visit.report_delivery_method ? ` · ${visit.report_delivery_method}` : ""}
-          {visit.report_sent_by ? ` · by ${visit.report_sent_by}` : ""}
+          {visit.report_sent_by ? ` · ${t("by {name}", { name: visit.report_sent_by })}` : ""}
         </p>
       )}
 
@@ -145,23 +147,23 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
 
       <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
         <Button onClick={openReview} disabled={generating} className="rounded-xl gap-1.5">
-          {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Review Report
+          {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} {t("Review Report")}
         </Button>
         {sent ? (
           <Button onClick={() => doSend(true)} disabled={sending} variant="outline" className="rounded-xl gap-1.5">
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />} Resend Report
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />} {t("Resend Report")}
           </Button>
         ) : (
           <Button onClick={() => doSend(false)} disabled={sending} className="rounded-xl gap-1.5">
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Send to Owner
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Send to Owner")}
           </Button>
         )}
         <Button onClick={download} disabled={downloading} variant="outline" className="rounded-xl gap-1.5">
-          {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download PDF
+          {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {t("Download PDF")}
         </Button>
         {variant === "done" && onDone && (
           <Button onClick={onDone} variant="ghost" className="rounded-xl gap-1.5 ml-auto">
-            <Save className="w-4 h-4" /> Save Without Sending
+            <Save className="w-4 h-4" /> {t("Save Without Sending")}
           </Button>
         )}
       </div>

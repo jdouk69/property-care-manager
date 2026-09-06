@@ -6,6 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 /**
  * Renders the customer-facing report EXACTLY as the owner will receive it (and
@@ -42,14 +43,15 @@ function PriorityBreakdown({ counts }) {
 }
 
 export default function ReportReviewModal({ open, model, generating, sending, canSend, onClose, onSend, onBackToEdit }) {
+  const { t } = useLanguage();
   if (!open) return null;
   if (generating || !model) {
     return (
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
         <div className="bg-card rounded-2xl border border-border max-w-md w-full p-8 text-center shadow-xl">
           <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Generating customer report…</p>
-          <div className="flex justify-end mt-4"><Button variant="ghost" onClick={onClose}>Cancel</Button></div>
+          <p className="text-sm text-muted-foreground">{t("Generating customer report…")}</p>
+          <div className="flex justify-end mt-4"><Button variant="ghost" onClick={onClose}>{t("Cancel")}</Button></div>
         </div>
       </div>
     );
@@ -76,7 +78,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
         <div className="flex items-center justify-between px-3 py-2 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-            <h3 className="font-semibold text-sm truncate">Report Review</h3>
+            <h3 className="font-semibold text-sm truncate">{t("Report Review")}</h3>
           </div>
           <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground p-1.5 -mr-1 shrink-0"><X className="w-5 h-5" /></button>
         </div>
@@ -267,10 +269,10 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
 
         {/* Compact action footer (single row, safe-area aware) */}
         <div className="px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-border flex flex-row gap-2">
-          <Button variant="outline" onClick={onBackToEdit} className="rounded-xl flex-1 sm:flex-none h-9">Back to Edit</Button>
+          <Button variant="outline" onClick={onBackToEdit} className="rounded-xl flex-1 sm:flex-none h-9">{t("Back to Edit")}</Button>
           <Button onClick={onSend} disabled={!canSend || sending} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
             {sending ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {sending ? "Sending…" : "Send to Owner"}
+            {sending ? t("Sending…") : t("Send to Owner")}
           </Button>
         </div>
       </div>

@@ -11,6 +11,8 @@ import PageBackButton from "@/components/ui/PageBackButton";
 import { Image as UIImage } from "@/components/ui/image";
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 import { athensMediumDateTime } from "@/lib/timezone";
 
 const GROUPS = [
@@ -39,6 +41,7 @@ export default function VisitDetail() {
   const [pkg, setPkg] = useState(null);
   const [starting, setStarting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,7 +73,7 @@ export default function VisitDetail() {
         if (v.follow_up_task_ids?.length) {
           try {
             const all = await base44.entities.Task.list("-created_date", 500);
-            setTasks((all || []).filter((t) => v.follow_up_task_ids.includes(t.id)));
+            setTasks((all || []).filter((tk) => v.follow_up_task_ids.includes(tk.id)));
           } catch (e) {}
         }
       } catch (e) {}
@@ -85,24 +88,24 @@ export default function VisitDetail() {
   const fmt = (iso) => (iso ? athensMediumDateTime(iso) : "—");
 
   const startScheduledVisit = async () => {
-    if (!confirm("Start this visit now? It will move to In Progress and open the checklist.")) return;
+    if (!confirm(t("Start this visit now? It will move to In Progress and open the checklist."))) return;
     setStarting(true);
     try {
       await base44.entities.PropertyVisit.update(visit.id, { status: "In Progress", start_time: new Date().toISOString() });
       navigate(`/visits?resume=${visit.id}`);
-    } catch (e) { alert("Could not start visit: " + (e?.message || e)); }
+    } catch (e) { alert(t("Could not start visit: {message}", { message: e?.message || e })); }
     setStarting(false);
   };
 
   const cancelScheduledVisit = async () => {
-    if (!confirm("Cancel this scheduled visit?")) return;
+    if (!confirm(t("Cancel this scheduled visit?"))) return;
     setCancelling(true);
-    try { await base44.entities.PropertyVisit.update(visit.id, { status: "Cancelled" }); setVisit((v) => ({ ...v, status: "Cancelled" })); } catch (e) { alert("Could not cancel visit: " + (e?.message || e)); }
+    try { await base44.entities.PropertyVisit.update(visit.id, { status: "Cancelled" }); setVisit((v) => ({ ...v, status: "Cancelled" })); } catch (e) { alert(t("Could not cancel visit: {message}", { message: e?.message || e })); }
     setCancelling(false);
   };
 
   const archive = async () => {
-    if (!confirm("Archive this visit? It will be hidden from the list but not deleted.")) return;
+    if (!confirm(t("Archive this visit? It will be hidden from the list but not deleted."))) return;
     setArchiving(true);
     try { await base44.entities.PropertyVisit.update(visit.id, { archived: true }); setVisit((v) => ({ ...v, archived: true })); } catch (e) {}
     setArchiving(false);
@@ -114,13 +117,13 @@ export default function VisitDetail() {
       await base44.entities.PropertyVisit.delete(visit.id);
       navigate("/visits");
     } catch (e) {
-      alert("Could not delete visit: " + (e?.message || e));
+      alert(t("Could not delete visit: {message}", { message: e?.message || e }));
     }
     setDeleting(false);
   };
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
-  if (!visit) return <AppLayout><div className="p-6"><p className="text-muted-foreground">Visit not found.</p><Link to="/visits"><Button variant="outline" className="mt-3">Back to Visits</Button></Link></div></AppLayout>;
+  if (!visit) return <AppLayout><div className="p-6"><p className="text-muted-foreground">{t("Visit not found.")}</p><Link to="/visits"><Button variant="outline" className="mt-3">{t("Back to Visits")}</Button></Link></div></AppLayout>;
   if (visit.visit_type === "Property Assistance" || visit.visit_type === "On-Demand Property Assistance") return <Navigate to={`/property-assistance/${visit.id}`} replace />;
 
   const checklist = visit.checklist || [];
@@ -132,54 +135,54 @@ export default function VisitDetail() {
         <PageBackButton fallback="/visits" className="mb-2" />
 
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-          <h1 className="text-xl font-semibold">{property.name || "Property"}</h1>
+          <h1 className="text-xl font-semibold">{property.name || t("Property")}</h1>
           {property.address && <p className="text-sm text-muted-foreground">{property.address}</p>}
-          {client.name && <p className="text-sm text-muted-foreground">Owner: {client.name}</p>}
+          {client.name && <p className="text-sm text-muted-foreground">{t("Owner: {name}", { name: client.name })}</p>}
           <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-xs px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20">{visitTypeLabel(visit.visit_type)}</span>
-            <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.status === "Cancelled" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : visit.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : visit.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-muted text-muted-foreground border-border"}`}>{visit.status}</span>
-            {visit.report_sent && <span className="text-xs px-2.5 py-1 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">Report Sent</span>}
+            <span className="text-xs px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20">{t(visitTypeLabel(visit.visit_type))}</span>
+            <span className={`text-xs px-2.5 py-1 rounded-full border ${visit.status === "Completed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : visit.status === "Cancelled" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" : visit.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : visit.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : "bg-muted text-muted-foreground border-border"}`}>{t(visit.status)}</span>
+            {visit.report_sent && <span className="text-xs px-2.5 py-1 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">{t("Report Sent")}</span>}
           </div>
         </div>
 
         {visit.property_service_agreement_id && agreement && (
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-            <div className="flex items-center gap-2 mb-2"><Package className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Service Agreement</h3></div>
+            <div className="flex items-center gap-2 mb-2"><Package className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Service Agreement")}</h3></div>
             <div className="text-sm space-y-0.5">
-              <p><span className="text-muted-foreground">Package:</span> <span className="text-foreground font-medium">{pkg?.name || "—"}</span></p>
-              <p><span className="text-muted-foreground">Client / Property:</span> <span className="text-foreground">{client.name || "—"} · {property.name || "—"}</span></p>
-              <p><span className="text-muted-foreground">Agreed service:</span> <span className="text-foreground">{agreement.billing_type || "—"}{agreement.inspection_frequency ? ` · ${agreement.inspection_frequency}` : ""}</span></p>
-              {pkg?.visit_duration && <p><span className="text-muted-foreground">Expected visit time:</span> <span className="text-foreground">{pkg.visit_duration}</span></p>}
+              <p><span className="text-muted-foreground">{t("Package:")}</span> <span className="text-foreground font-medium">{pkg?.name || "—"}</span></p>
+              <p><span className="text-muted-foreground">{t("Client / Property:")}</span> <span className="text-foreground">{client.name || "—"} · {property.name || "—"}</span></p>
+              <p><span className="text-muted-foreground">{t("Agreed service:")}</span> <span className="text-foreground">{agreement.billing_type ? t(agreement.billing_type) : "—"}{agreement.inspection_frequency ? ` · ${agreement.inspection_frequency}` : ""}</span></p>
+              {pkg?.visit_duration && <p><span className="text-muted-foreground">{t("Expected visit time:")}</span> <span className="text-foreground">{pkg.visit_duration}</span></p>}
             </div>
           </div>
         )}
 
         {visit.status === "Scheduled" && (
           <div className="rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 mb-4 flex flex-col sm:flex-row gap-2">
-            <Button onClick={startScheduledVisit} disabled={starting} className="rounded-2xl gap-1.5"><Play className="w-4 h-4" /> {starting ? "Starting…" : "Start Visit"}</Button>
-            <Button variant="outline" onClick={cancelScheduledVisit} disabled={cancelling} className="rounded-2xl gap-1.5"><X className="w-4 h-4" /> Cancel Visit</Button>
+            <Button onClick={startScheduledVisit} disabled={starting} className="rounded-2xl gap-1.5"><Play className="w-4 h-4" /> {starting ? t("Starting…") : t("Start Visit")}</Button>
+            <Button variant="outline" onClick={cancelScheduledVisit} disabled={cancelling} className="rounded-2xl gap-1.5"><X className="w-4 h-4" /> {t("Cancel Visit")}</Button>
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-2 mb-4">
-          <div className="rounded-2xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {visit.status === "Scheduled" ? "Scheduled" : "Arrival"}</p><p className="text-sm font-medium mt-1">{fmt(visit.scheduled_time || visit.start_time)}</p></div>
-          <div className="rounded-2xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> Completion</p><p className="text-sm font-medium mt-1">{fmt(visit.end_time)}</p></div>
+          <div className="rounded-2xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {t(visit.status === "Scheduled" ? "Scheduled" : "Arrival")}</p><p className="text-sm font-medium mt-1">{fmt(visit.scheduled_time || visit.start_time)}</p></div>
+          <div className="rounded-2xl border border-border bg-card p-3"><p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> {t("Completion")}</p><p className="text-sm font-medium mt-1">{fmt(visit.end_time)}</p></div>
         </div>
 
         {visit.gps_location && (
-          <div className="rounded-2xl border border-border bg-card p-3 mb-4"><p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" /> GPS Location</p><p className="text-sm font-medium mt-1">{visit.gps_location}</p></div>
+          <div className="rounded-2xl border border-border bg-card p-3 mb-4"><p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" /> {t("GPS Location")}</p><p className="text-sm font-medium mt-1">{visit.gps_location}</p></div>
         )}
 
         {/* Checklist grouped */}
-        <h2 className="text-sm font-semibold mb-2">Checklist</h2>
+        <h2 className="text-sm font-semibold mb-2">{t("Checklist")}</h2>
         <div className="space-y-3 mb-4">
           {grouped.map((g) => (
             <div key={g.key} className="rounded-2xl border border-border bg-card p-3">
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${g.tone}`}>{g.label || g.key} ({g.items.length})</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${g.tone}`}>{t(g.label || g.key)} ({g.items.length})</span>
               <div className="mt-2 space-y-3">
                 {g.items.map((it, i) => (
                   <div key={i} className="border-l-2 border-border pl-3">
-                    <p className="text-sm font-medium">{it.name}</p>
+                    <p className="text-sm font-medium">{checklistItemDisplay(it.name, lang)}</p>
                     {it.notes && <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-wrap">{it.notes}</p>}
                     {it.photos?.length > 0 && (
                       <div className="grid grid-cols-3 gap-2 mt-2">
@@ -192,7 +195,7 @@ export default function VisitDetail() {
                     )}
                   </div>
                 ))}
-                {g.items.length === 0 && <p className="text-xs text-muted-foreground">None</p>}
+                {g.items.length === 0 && <p className="text-xs text-muted-foreground">{t("None")}</p>}
               </div>
             </div>
           ))}
@@ -201,7 +204,7 @@ export default function VisitDetail() {
         {/* Meter readings */}
         {visit.meter_readings?.filter((m) => m.label || m.value).length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-            <div className="flex items-center gap-2 mb-2"><Gauge className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Meter Readings</h3></div>
+            <div className="flex items-center gap-2 mb-2"><Gauge className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Meter Readings")}</h3></div>
             <div className="space-y-1">
               {visit.meter_readings.filter((m) => m.label || m.value).map((m, i) => (
                 <p key={i} className="text-sm">{m.label || "—"}: <span className="font-medium">{m.value || "—"}</span></p>
@@ -213,10 +216,10 @@ export default function VisitDetail() {
         {/* Linked issues */}
         {issues.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-            <div className="flex items-center gap-2 mb-2"><Wrench className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Maintenance Issues ({issues.length})</h3></div>
+            <div className="flex items-center gap-2 mb-2"><Wrench className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Maintenance Issues ({count})", { count: issues.length })}</h3></div>
             <div className="space-y-1">
               {issues.map((iss) => (
-                <Link key={iss.id} to="/maintenance" className="block text-sm text-primary hover:underline">{iss.title} <span className="text-muted-foreground">[{iss.priority}]</span></Link>
+                <Link key={iss.id} to="/maintenance" className="block text-sm text-primary hover:underline">{iss.title} <span className="text-muted-foreground">[{t(iss.priority)}]</span></Link>
               ))}
             </div>
           </div>
@@ -225,10 +228,10 @@ export default function VisitDetail() {
         {/* Linked tasks */}
         {tasks.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-            <div className="flex items-center gap-2 mb-2"><ListChecks className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">Follow-up Tasks ({tasks.length})</h3></div>
+            <div className="flex items-center gap-2 mb-2"><ListChecks className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Follow-up Tasks ({count})", { count: tasks.length })}</h3></div>
             <div className="space-y-1">
-              {tasks.map((t) => (
-                <Link key={t.id} to="/tasks" className="block text-sm text-primary hover:underline">{t.title}</Link>
+              {tasks.map((tk) => (
+                <Link key={tk.id} to="/tasks" className="block text-sm text-primary hover:underline">{tk.title}</Link>
               ))}
             </div>
           </div>
@@ -237,7 +240,7 @@ export default function VisitDetail() {
         {/* Summary */}
         {visit.summary && (
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-            <h3 className="font-medium text-sm mb-1">Summary & Recommendations</h3>
+            <h3 className="font-medium text-sm mb-1">{t("Summary & Recommendations")}</h3>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{visit.summary}</p>
           </div>
         )}
@@ -257,9 +260,9 @@ export default function VisitDetail() {
         {/* Admin actions */}
         <div className="rounded-2xl border border-border bg-card p-4 mt-4">
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={archive} disabled={archiving} className="rounded-2xl gap-1.5"><Archive className="w-4 h-4" /> Archive</Button>
+            <Button variant="outline" onClick={archive} disabled={archiving} className="rounded-2xl gap-1.5"><Archive className="w-4 h-4" /> {t("Archive")}</Button>
             {isAdmin && (
-              <Button variant="destructive" onClick={() => setDeleteStep(1)} className="rounded-2xl gap-1.5 ml-auto"><Trash2 className="w-4 h-4" /> Delete Permanently</Button>
+              <Button variant="destructive" onClick={() => setDeleteStep(1)} className="rounded-2xl gap-1.5 ml-auto"><Trash2 className="w-4 h-4" /> {t("Delete Permanently")}</Button>
             )}
           </div>
         </div>
@@ -271,30 +274,30 @@ export default function VisitDetail() {
                 <>
                   <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="w-5 h-5 text-rose-500" />
-                    <h3 className="font-semibold">Delete this visit permanently?</h3>
+                    <h3 className="font-semibold">{t("Delete this visit permanently?")}</h3>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">This will permanently delete the visit record, including its checklist answers, notes, photos, meter readings, and summary.</p>
+                  <p className="text-sm text-muted-foreground mb-3">{t("This will permanently delete the visit record, including its checklist answers, notes, photos, meter readings, and summary.")}</p>
                   <div className="rounded-xl border border-border bg-muted/40 p-3 mb-4 text-xs text-muted-foreground space-y-1">
-                    <p className="font-medium text-foreground">Related data that will be affected:</p>
-                    <p>• Issues, tasks, expenses, receipts, contractor activity, and owner updates created during this visit will <span className="font-medium">remain</span> in their modules, but will no longer be linked to this visit.</p>
-                    <p>• This action <span className="font-medium">cannot be undone</span>.</p>
+                    <p className="font-medium text-foreground">{t("Related data that will be affected:")}</p>
+                    <p>• {t("Issues, tasks, expenses, receipts, contractor activity, and owner updates created during this visit will remain in their modules, but will no longer be linked to this visit.")}</p>
+                    <p>• {t("This action cannot be undone.")}</p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Button variant="outline" onClick={() => setDeleteStep(0)} className="rounded-2xl h-11">Keep Visit</Button>
-                    <Button variant="destructive" onClick={() => setDeleteStep(2)} className="rounded-2xl h-11">Continue</Button>
+                    <Button variant="outline" onClick={() => setDeleteStep(0)} className="rounded-2xl h-11">{t("Keep Visit")}</Button>
+                    <Button variant="destructive" onClick={() => setDeleteStep(2)} className="rounded-2xl h-11">{t("Continue")}</Button>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-2">
                     <AlertTriangle className="w-5 h-5 text-rose-500" />
-                    <h3 className="font-semibold">Are you absolutely sure?</h3>
+                    <h3 className="font-semibold">{t("Are you absolutely sure?")}</h3>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">This cannot be undone. The visit record and all its recorded details will be permanently removed.</p>
+                  <p className="text-sm text-muted-foreground mb-4">{t("This cannot be undone. The visit record and all its recorded details will be permanently removed.")}</p>
                   <div className="flex flex-col gap-2">
-                    <Button variant="outline" onClick={() => setDeleteStep(1)} disabled={deleting} className="rounded-2xl h-11">Back</Button>
+                    <Button variant="outline" onClick={() => setDeleteStep(1)} disabled={deleting} className="rounded-2xl h-11">{t("Back")}</Button>
                     <Button variant="destructive" onClick={deletePermanently} disabled={deleting} className="rounded-2xl h-11">
-                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1.5" /> Yes, delete permanently</>}
+                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4 mr-1.5" /> {t("Yes, delete permanently")}</>}
                     </Button>
                   </div>
                 </>
