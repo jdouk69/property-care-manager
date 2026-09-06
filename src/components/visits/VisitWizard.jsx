@@ -11,7 +11,7 @@ import GuidedChecklistOverlay from "@/components/visits/guided/GuidedChecklistOv
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
-import { recommendedVisitType, isRecurringAgreement } from "@/lib/activeService";
+import { recommendedVisitType, isRecurringAgreement, serviceFrequency } from "@/lib/activeService";
 import { entitlementStatus } from "@/lib/packageEntitlement";
 import { visitTypeLabel, checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
@@ -415,6 +415,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   }, [step, propertyId, visitType, pkg]);
 
   const propertyName = properties.find((p) => p.id === propertyId)?.name || "";
+
+  // Active-service frequency — the real recurring configuration (agreement
+  // billing period + package included-visit allowance), never the free-text
+  // inspection_frequency fields, which can hold stale onboarding defaults.
+  const freqText = (ag, pk) => {
+    const f = serviceFrequency(ag, pk);
+    return f ? t("{count} included visit(s) per {period}", { count: f.visits, period: t(f.periodWord) }) : null;
+  };
 
   const resume = async () => {
     if (!resumable) return;
@@ -919,7 +927,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <p className="font-medium text-foreground">{agreementPackages[a.id]?.name || t("Service agreement")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {[
-                  a.inspection_frequency || agreementPackages[a.id]?.inspection_frequency,
+                  freqText(a, agreementPackages[a.id]),
                   agreementPackages[a.id]?.visit_duration,
                   a.agreed_price != null ? `€${a.agreed_price.toFixed(2)} ${t("+ VAT")}` : (agreementPackages[a.id]?.standard_price != null ? `€${agreementPackages[a.id].standard_price.toFixed(2)} ${t("+ VAT")}` : ""),
                   a.billing_type,
@@ -947,7 +955,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <div className="flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Client:")}</span> <span className="font-medium truncate">{clientObj?.name || "—"}</span></div>
             <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Property:")}</span> <span className="font-medium truncate">{properties.find((p) => p.id === propertyId)?.name || "—"}</span></div>
             <div className="flex items-center gap-2"><Package className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Service:")}</span> <span className="font-medium truncate">{pkg?.name || "—"}</span></div>
-            <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Frequency:")}</span> <span className="font-medium">{agreement?.inspection_frequency || pkg?.inspection_frequency || "—"}</span></div>
+            <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Frequency:")}</span> <span className="font-medium">{freqText(agreement, pkg) || "—"}</span></div>
             <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Expected visit time:")}</span> <span className="font-medium">{pkg?.visit_duration || "—"}</span></div>
           </div>
         </div>
@@ -984,7 +992,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             {agreement ? (
               <>
                 <div className="flex items-center gap-2"><Package className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Service:")}</span> <span className="font-medium truncate">{pkg?.name || "—"}</span></div>
-                <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Frequency:")}</span> <span className="font-medium">{agreement.inspection_frequency || pkg?.inspection_frequency || "—"}</span></div>
+                <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Frequency:")}</span> <span className="font-medium">{freqText(agreement, pkg) || "—"}</span></div>
                 <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Expected visit time:")}</span> <span className="font-medium">{pkg?.visit_duration || "—"}</span></div>
               </>
             ) : (
@@ -1110,7 +1118,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <p className="text-sm font-semibold text-foreground">{activeServiceName}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {[
-                agreement.inspection_frequency || pkg?.inspection_frequency,
+                freqText(agreement, pkg),
                 isRecurringAgreement(agreement) ? null : t("One-time service"),
               ].filter(Boolean).join(" · ")}
             </p>

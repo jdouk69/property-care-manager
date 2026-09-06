@@ -6,7 +6,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensToday } from "@/lib/timezone";
 import { entitlementStatus } from "@/lib/packageEntitlement";
-import { isRecurringAgreement } from "@/lib/activeService";
+import { isRecurringAgreement, serviceFrequency } from "@/lib/activeService";
 import RestartVisitDialog from "@/components/visits/RestartVisitDialog";
 
 /**
@@ -31,8 +31,11 @@ export default function PackageServiceCard({
   const [restartFor, setRestartFor] = useState(null); // { mode: "draft" } | { mode: "record", record }
 
   const ent = entitlementStatus({ visits: visits || [], agreement, pkg, recType, todayStr: athensToday() }) || { allowance: 1, used: 0, completed: 0, remaining: 1, unfinished: null };
+  // Frequency from the REAL recurring configuration — never the free-text
+  // inspection_frequency fields (stale onboarding defaults live there).
+  const freq = serviceFrequency(agreement, pkg);
   const freqLine = [
-    agreement.inspection_frequency || pkg?.inspection_frequency,
+    freq ? t("{count} included visit(s) per {period}", { count: freq.visits, period: t(freq.periodWord) }) : null,
     isRecurringAgreement(agreement) ? null : t("One-time service"),
   ].filter(Boolean).join(" · ");
   const checklistLine = recPreview && recPreview.found

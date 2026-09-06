@@ -1,4 +1,5 @@
 import { VISIT_TYPES } from "@/lib/checklistSeed";
+import { includedVisitsPerPeriod } from "@/lib/packageEntitlement";
 
 // Shared helpers for linking a property's ACTIVE SERVICE (what the customer
 // purchased — package/agreement) to TODAY'S VISIT (what staff is doing).
@@ -20,3 +21,19 @@ export const isRecurringAgreement = (a) => (a?.purchase_type || "Recurring") !==
 // Only the package's own default_visit_type counts — never guessed.
 export const recommendedVisitType = (pkg) =>
   pkg && VISIT_TYPES.includes(pkg.default_visit_type) ? pkg.default_visit_type : null;
+
+// The ACTIVE SERVICE's real recurring frequency, derived from the same
+// configuration the entitlement/billing logic uses — the agreement's billing
+// period plus the package's included_visits_per_period allowance. The
+// free-text inspection_frequency fields are NOT used here: they can hold
+// stale onboarding defaults (e.g. "Weekly") that contradict the actual
+// configuration. Returns { visits, periodWord } for a recurring service, or
+// null for one-time services (callers show "One-time service" instead).
+const PERIOD_WORD = { Monthly: "month", Quarterly: "quarter", Annual: "year" };
+
+export function serviceFrequency(agreement, pkg) {
+  if (!isRecurringAgreement(agreement)) return null;
+  const billing = agreement?.billing_type || pkg?.billing_type || "Monthly";
+  if (billing === "One-time") return null;
+  return { visits: includedVisitsPerPeriod(pkg), periodWord: PERIOD_WORD[billing] || billing };
+}
