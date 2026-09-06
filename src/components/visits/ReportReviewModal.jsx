@@ -1,7 +1,7 @@
 import React from "react";
 import {
   X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, AlertOctagon,
-  ListChecks, MapPin, Camera, Eye, EyeOff,
+  ListChecks, MapPin, Camera, Eye, EyeOff, Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
@@ -61,7 +61,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
     business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl,
     overallStatus = { key: "ok", label: "No Concerns Noted" }, counts = { urgent: 0, attention: 0, monitor: 0 },
     priorityBreakdown = "", routineLine = "", summaryText = "",
-    findings = [], routineChecks = [], routineCount = 0, unableToCheck = [], naCount = 0, docPhotos = [],
+    findings = [], routineChecks = [], docPhotos = [],
     issues = [], tasks = [], nextVisit,
   } = model;
 
@@ -166,41 +166,57 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             </div>
           )}
 
-          {/* Routine checks */}
-          {routineCount > 0 && (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-              <p className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-500 mb-1 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Routine Checks
+          {/* Routine Checks — status-by-status result of every checklist item.
+              Green check = checked, no concern observed; abnormal items show
+              their own checklist-specific note. Unable/N/A render gray. */}
+          {routineChecks.length > 0 && (
+            <div className="rounded-xl border border-border p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
+                <ListChecks className="w-3.5 h-3.5" /> Routine Checks
               </p>
-              <p className="text-xs text-muted-foreground mb-2">{routineCount} routine check{routineCount === 1 ? "" : "s"} completed with no concerns noted.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                {routineChecks.map((rc, i) => (
-                  <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {rc.name}
-                  </p>
-                ))}
+              <div className="space-y-1.5">
+                {routineChecks.map((rc, i) => {
+                  if (rc.status === "Normal") {
+                    return (
+                      <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {rc.name}
+                      </p>
+                    );
+                  }
+                  if (rc.status === "Important" || rc.status === "Emergency") {
+                    const urgent = rc.status === "Emergency";
+                    return (
+                      <div key={i} className={`rounded-lg border p-2 ${urgent ? "border-rose-500/25 bg-rose-500/5" : "border-amber-500/25 bg-amber-500/5"}`}>
+                        <div className="flex items-start gap-1.5 flex-wrap">
+                          {urgent
+                            ? <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                            : <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />}
+                          <p className="text-xs font-semibold leading-snug">{rc.name}</p>
+                          <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border shrink-0 ${urgent ? "text-rose-600 border-rose-500/30 bg-rose-500/10" : "text-amber-600 border-amber-500/30 bg-amber-500/10"}`}>
+                            {urgent ? "Urgent" : "Attention Recommended"}
+                          </span>
+                        </div>
+                        {rc.note && (
+                          <p className="text-[11px] text-foreground/80 mt-1 whitespace-pre-wrap">
+                            <span className="font-medium text-muted-foreground">What we observed: </span>{rc.note}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+                  const label = rc.status === "Unable to Check" ? "Unable to check" : rc.status === "N/A" ? "N/A" : "Not checked";
+                  return (
+                    <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <Minus className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>
+                        {rc.name} <span className="uppercase tracking-wide text-[10px] font-semibold">{label}</span>
+                        {rc.note && <span className="text-foreground/70"> — {rc.note}</span>}
+                      </span>
+                    </p>
+                  );
+                })}
               </div>
             </div>
-          )}
-
-          {/* Unable to Check — shown to the owner; excluded from routine checks */}
-          {unableToCheck.length > 0 && (
-            <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3">
-              <p className="text-xs uppercase tracking-wide text-sky-700 dark:text-sky-400 mb-1 flex items-center gap-1">
-                <EyeOff className="w-3.5 h-3.5" /> Unable to Check This Visit
-              </p>
-              <div className="space-y-1">
-                {unableToCheck.map((u, i) => (
-                  <p key={i} className="text-xs text-foreground/80">
-                    <span className="font-medium">{u.name}</span>
-                    {u.reason ? ` — Unable to check during this visit — ${u.reason}` : " — Unable to check during this visit."}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-          {naCount > 0 && (
-            <p className="text-[11px] text-muted-foreground">{naCount} checklist item{naCount === 1 ? "" : "s"} not applicable to this property.</p>
           )}
 
           {/* Routine Visit Photos */}

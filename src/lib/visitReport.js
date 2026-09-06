@@ -115,22 +115,33 @@ const nextStepFromStatus = (st) => ({
 }[st] || "");
 
 // Dynamic, grammar-correct owner summary. Monitor findings never imply action is
-// required; an all-clear visit gets a single positive sentence.
-function buildSummaryText({ findings, counts, routineCount }) {
+// required; an all-clear visit gets a single positive sentence. Attention/urgent
+// counts come from the ACTUAL checklist statuses, so abnormal items are never
+// described as "no concerns".
+function buildSummaryText({ findings, counts, routineCount, attentionCount, urgentCount }) {
   const n = findings.length;
   const u = counts.urgent, a = counts.attention, m = counts.monitor;
-  if (n === 0) {
+  if (n === 0 && !attentionCount && !urgentCount) {
     return "All routine checks were completed with no concerns noted during this visit.";
   }
-  const parts = ["Overall, the property appeared secure and generally well maintained."];
-  parts.push(`${n} observation${n === 1 ? "" : "s"} ${n === 1 ? "was" : "were"} documented during this visit.`);
-  const clauses = [];
-  if (u) clauses.push(`${u} ${u === 1 ? "requires" : "require"} prompt attention`);
-  if (a) clauses.push(`${a} ${a === 1 ? "has" : "have"} recommended follow-up`);
-  if (m) clauses.push(`${m} will be monitored`);
-  if (clauses.length === 1) parts.push(clauses[0] + ".");
-  else if (clauses.length > 1) parts.push(clauses.slice(0, -1).join(", ") + ", and " + clauses[clauses.length - 1] + ".");
-  if (routineCount) parts.push(`${routineCount} routine check${routineCount === 1 ? "" : "s"} completed with no concerns noted.`);
+  const parts = [];
+  if (n > 0) {
+    parts.push("Overall, the property appeared secure and generally well maintained.");
+    parts.push(`${n} observation${n === 1 ? "" : "s"} ${n === 1 ? "was" : "were"} documented during this visit.`);
+    const clauses = [];
+    if (u) clauses.push(`${u} ${u === 1 ? "requires" : "require"} prompt attention`);
+    if (a) clauses.push(`${a} ${a === 1 ? "has" : "have"} recommended follow-up`);
+    if (m) clauses.push(`${m} will be monitored`);
+    if (clauses.length === 1) parts.push(clauses[0] + ".");
+    else if (clauses.length > 1) parts.push(clauses.slice(0, -1).join(", ") + ", and " + clauses[clauses.length - 1] + ".");
+  } else {
+    parts.push("The visit was completed and checks were carried out as scheduled.");
+  }
+  const rbits = [];
+  if (routineCount) rbits.push(`${routineCount} routine check${routineCount === 1 ? "" : "s"} completed with no concerns noted`);
+  if (attentionCount) rbits.push(`${attentionCount} item${attentionCount === 1 ? "" : "s"} require${attentionCount === 1 ? "s" : ""} attention`);
+  if (urgentCount) rbits.push(`${urgentCount} urgent condition${urgentCount === 1 ? " was" : "s were"} documented`);
+  if (rbits.length) parts.push(rbits.join(". ") + ".");
   return parts.join(" ");
 }
 
@@ -180,12 +191,23 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const order = { urgent: 0, attention: 1, monitor: 2 };
   findings.sort((a, b) => (order[a.severityKey] ?? 2) - (order[b.severityKey] ?? 2));
 
-  // Routine checks = actually checked, no concern noted. Unable to Check and
-  // N/A are excluded — they were not completed checks.
-  const routineChecks = cl
-    .filter((it) => it.status !== "Unable to Check" && it.status !== "N/A" && !isOwnerFinding(it))
-    .map((it) => ({ name: cleanLabel(it.name) }));
-  const routineCount = routineChecks.length;
+  // Checklist RESULTS view: every item is rendered by its ACTUAL stored status.
+  // A green check means "checked, no concern observed" — never merely
+  // "completed". Explanations under abnormal items come ONLY from that exact
+  // item's own notes field (never the Visit Summary, other items, or unrelated
+  // observations); private (owner_visible=false) notes are never exposed.
+  const routineChecks = cl.map((it) => {
+    const st = it.status;
+    let note = "";
+    if (st === "Important" || st === "Emergency") note = isOwnerFinding(it) ? (it.notes || "").trim() : "";
+    else if (st === "Unable to Check" || st === "N/A") note = (it.notes || "").trim();
+    return { name: cleanLabel(it.name), status: st, note };
+  });
+  // Counts derive from the ACTUAL checklist statuses — abnormal, unable, N/A
+  // and not-checked items are never counted as routine/no-concern.
+  const routineCount = cl.filter((it) => it.status === "Normal").length;
+  const attentionCount = cl.filter((it) => it.status === "Important").length;
+  const urgentCount = cl.filter((it) => it.status === "Emergency").length;
   const unableToCheck = cl
     .filter((it) => it.status === "Unable to Check")
     .map((it) => ({ name: cleanLabel(it.name), reason: (it.notes || "").trim() }));
@@ -216,15 +238,25 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   if (counts.attention) segs.push(`${counts.attention} Attention Recommended`);
   if (counts.monitor) segs.push(`${counts.monitor} Monitor`);
   const priorityBreakdown = segs.join(" \u00B7 ");
-  const routineLine = routineCount ? `${routineCount} routine check${routineCount === 1 ? "" : "s"} completed - no concerns noted` : "";
+  // "no concerns noted" only when every applicable completed check is Normal.
+  let routineLine = "";
+  if (routineCount && !attentionCount && !urgentCount) {
+    routineLine = `${routineCount} routine check${routineCount === 1 ? "" : "s"} completed - no concerns noted`;
+  } else if (routineCount || attentionCount || urgentCount) {
+    const rbits = [];
+    if (routineCount) rbits.push(`${routineCount} routine check${routineCount === 1 ? "" : "s"} completed with no concerns noted`);
+    if (attentionCount) rbits.push(`${attentionCount} item${attentionCount === 1 ? "" : "s"} require${attentionCount === 1 ? "s" : ""} attention`);
+    if (urgentCount) rbits.push(`${urgentCount} urgent condition${urgentCount === 1 ? " was" : "s were"} documented`);
+    routineLine = rbits.join(". ") + ".";
+  }
 
   const vtl = visitTypeLabel(visit?.visit_type) || "Property Visit";
-  const summaryText = buildSummaryText({ findings, counts, routineCount });
+  const summaryText = buildSummaryText({ findings, counts, routineCount, attentionCount, urgentCount });
 
-  // Compact appendix: routine check names + observations (priority - title). No
-  // descriptions/photos repeated here.
+  // Compact appendix: routine (Normal, no-concern) check names + observations
+  // (priority - title). No descriptions/photos repeated here.
   const visitChecklist = {
-    routineChecks: routineChecks.map((r) => r.name),
+    routineChecks: cl.filter((it) => it.status === "Normal").map((it) => cleanLabel(it.name)),
     observations: findings.map((f) => ({ priorityLabel: f.priorityLabel, severityKey: f.severityKey, title: f.title })),
   };
 
@@ -505,42 +537,66 @@ async function buildDoc(visit, ctx = {}) {
   nextSteps.forEach((s) => { wrap(s, maxWidth, margin); });
   y += 4;
 
-  // --- Routine Checks (each completed check appears exactly once) ---
-  // The banner above already states the overall status and the routine-check
-  // count, so the section is a single clean list with no repeated summary line.
-  if (routineCount) {
+  // --- Routine Checks (status-by-status result of EVERY checklist item) ---
+  // Green check = checked, no concern observed. Important/Emergency items show
+  // their own checklist-specific note underneath (the detailed Visit
+  // Observations section above still carries photos and full context). Unable
+  // to Check / N/A / Not Checked render gray and are never counted as passed.
+  if (routineChecks.length) {
     ensure(30); // keep the heading with at least the first few checks
     doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
     text("Routine Checks", margin, y); y += 6.5;
+    const GRAY = [148, 163, 184];
+    const drawMark = (glyph, rgb) => {
+      doc.setFontSize(10); doc.setFont(undefined, "bold");
+      doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+      text(glyph, margin, y);
+      doc.setTextColor(0); doc.setFont(undefined, "normal");
+    };
     for (const rc of routineChecks) {
-      ensure(6);
-      drawCheck(doc, margin, y, TONE.ok);
-      doc.setTextColor(40); doc.setFontSize(9.5); doc.setFont(undefined, "normal");
+      if (rc.status === "Normal") {
+        ensure(6);
+        drawCheck(doc, margin, y, TONE.ok);
+        doc.setTextColor(40); doc.setFontSize(9.5); doc.setFont(undefined, "normal");
+        text(rc.name, margin + 6, y);
+        y += 6;
+        continue;
+      }
+      const cfg = rc.status === "Emergency"
+        ? { glyph: "X", rgb: TONE.urgent, label: "URGENT", lead: "What we observed:" }
+        : rc.status === "Important"
+          ? { glyph: "!", rgb: TONE.attention, label: "ATTENTION RECOMMENDED", lead: "What we observed:" }
+          : rc.status === "Unable to Check"
+            ? { glyph: "-", rgb: GRAY, label: "UNABLE TO CHECK", lead: "Reason:" }
+            : rc.status === "N/A"
+              ? { glyph: "-", rgb: GRAY, label: "N/A", lead: "" }
+              : { glyph: "-", rgb: GRAY, label: "NOT CHECKED", lead: "" };
+      ensure(rc.note ? 16 : 6);
+      drawMark(cfg.glyph, cfg.rgb);
+      doc.setFontSize(9.5); doc.setFont(undefined, "bold"); doc.setTextColor(40);
       text(rc.name, margin + 6, y);
-      y += 6;
+      doc.setFontSize(7.5); doc.setTextColor(cfg.rgb[0], cfg.rgb[1], cfg.rgb[2]); doc.setFont(undefined, "bold");
+      const lbl = " - " + cfg.label;
+      if (margin + 6 + doc.getTextWidth(clean(rc.name)) + 2 + doc.getTextWidth(lbl) <= pageW - margin) {
+        text(lbl, margin + 6 + doc.getTextWidth(clean(rc.name)) + 2, y);
+      } else {
+        y += 4.5; ensure(5); text(lbl, margin + 6, y);
+      }
+      doc.setTextColor(0); doc.setFont(undefined, "normal");
+      y += 5;
+      // Explanation comes ONLY from this exact item's note (already blank for
+      // private items in the model). Never invented, never borrowed.
+      if (rc.note) {
+        if (cfg.lead) {
+          doc.setFontSize(8.5); doc.setFont(undefined, "bold"); doc.setTextColor(70);
+          text(cfg.lead, margin + 8, y); y += 4.5;
+        }
+        doc.setFont(undefined, "normal"); doc.setTextColor(60); doc.setFontSize(9);
+        wrap(rc.note, maxWidth - 12, margin + 10, 4.5);
+      }
+      y += 2.5;
     }
     y += 3;
-  }
-
-  // --- Unable to Check This Visit (concise; excluded from routine checks) ---
-  if (unableToCheck && unableToCheck.length) {
-    ensure(16);
-    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Unable to Check This Visit", margin, y); y += 6.5;
-    for (const uc of unableToCheck) {
-      ensure(10);
-      doc.setFont(undefined, "bold"); doc.setFontSize(9.5); doc.setTextColor(40);
-      text(uc.name, margin + 2, y); y += 5;
-      doc.setFont(undefined, "normal"); doc.setTextColor(90); doc.setFontSize(9);
-      wrap(uc.reason ? `Unable to check during this visit — ${uc.reason}` : "Unable to check during this visit.", maxWidth - 6, margin + 4, 4.5);
-    }
-    y += 2;
-  }
-  if (naLine) {
-    ensure(5);
-    doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(120);
-    text(naLine, margin, y); y += 5;
-    doc.setTextColor(0);
   }
 
   // --- Routine Visit Photos (routine documentation; not findings) ---
