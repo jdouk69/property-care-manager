@@ -11,6 +11,7 @@ import GuidedChecklistOverlay from "@/components/visits/guided/GuidedChecklistOv
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
+import { recommendedVisitType, isRecurringAgreement } from "@/lib/activeService";
 import { visitTypeLabel, checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
@@ -121,6 +122,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [createdIssues, setCreatedIssues] = useState([]);
   const [createdTasks, setCreatedTasks] = useState([]);
   const [templateSource, setTemplateSource] = useState("");
+  // Live preview (Choose Visit Type screen) of the checklist the currently
+  // selected visit type will load. Resolution is identical to the real start:
+  // property-specific override > master template > built-in default.
+  const [typePreview, setTypePreview] = useState(null);
   const [resumable, setResumable] = useState(null);
   const [contractors, setContractors] = useState([]);
   const [expensesCreated, setExpensesCreated] = useState([]);
@@ -357,6 +362,23 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, checklist.length, templateSource, visitType, propertyId]);
 
+  // Choose Visit Type screen: preview which checklist the selected type will
+  // actually load (real template data — property-specific first, then master).
+  useEffect(() => {
+    if (step !== "type" || !propertyId || !visitType) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const p = await loadChecklistItems(propertyId, visitType);
+        if (!cancelled) setTypePreview(p);
+      } catch (e) {
+        if (!cancelled) setTypePreview(null);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, propertyId, visitType]);
+
   const propertyName = properties.find((p) => p.id === propertyId)?.name || "";
 
   const resume = async () => {
@@ -425,15 +447,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const tmpl = propSpecific || master;
     if (tmpl) {
       const items = (tmpl.items || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [], owner_visible: false }));
-      return { items, source: propSpecific ? "Property-Specific" : "Master", found: true };
+      return { items, source: propSpecific ? "Property-Specific" : "Master", found: true, templateName: tmpl.name || "", count: items.length };
     }
     // Defensive fallback: built-in defaults only when no template record exists and the seed is non-empty.
     const seed = SEED[vtype] || [];
     if (seed.length > 0) {
       const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [], owner_visible: false }));
-      return { items, source: "Default", found: true };
+      return { items, source: "Default", found: true, templateName: "", count: seed.length };
     }
-    return { items: [], source: "None", found: false };
+    return { items: [], source: "None", found: false, templateName: "", count: 0 };
   };
 
   // Loads agreement + package context. Returns true when a visit type was
@@ -465,7 +487,6 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const handleSelectProperty = async (pid, cidOverride) => {
     setPropertyId(pid);
     const cid = cidOverride || ctxClient || selectedClient;
-    if (!cid) { setStep("type"); return; }
     try {
       const all = await base44.entities.PropertyServiceAgreement.list("-created_date", 500);
       // Operational agreement = status Active AND signing_status Signed — same rule as Property Detail.
@@ -962,7 +983,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   }
 
   // ---- STEP: select visit type ----
+  // Shows the property's ACTIVE SERVICE (what the customer purchased) first,
+  // then marks the package's normal scheduled visit as RECOMMENDED — while all
+  // visit types remain selectable for special/add-on situations.
   if (step === "type") {
+    const recType = recommendedVisitType(pkg);
+    const activeServiceName = pkg?.name || agreement?.included_services_override || t("Service agreement");
     return (
       <div>
         <div className="flex items-center gap-2 mb-4">
@@ -972,14 +998,64 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <p className="text-xs text-muted-foreground">{t("Choose visit type")}</p>
           </div>
         </div>
+
+        {/* Active service — actual package/agreement data, never hardcoded */}
+        {agreement ? (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 mb-4">
+            <p className="text-[11px] uppercase tracking-wide text-primary mb-1">{t("Active Service")}</p>
+            <p className="text-sm font-semibold text-foreground">{activeServiceName}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {[
+                agreement.inspection_frequency || pkg?.inspection_frequency,
+                isRecurringAgreement(agreement) ? null : t("One-time service"),
+              ].filter(Boolean).join(" · ")}
+            </p>
+            {recType ? (
+              <p className="text-xs text-muted-foreground mt-2">
+                {t("Normal scheduled visit: {type}", { type: t(visitTypeLabel(recType)) })}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">{t("This service has no linked visit type — choose below.")}</p>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 mb-4">
+            <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-500">{t("No active service agreement for this property. Choose the visit type for today's service.")}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {VISIT_TYPES.map((vt) => (
-            <button key={vt} onClick={() => setVisitType(vt)}
-              className={`text-left rounded-2xl border p-4 transition ${visitType === vt ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"}`}>
-              <p className="font-medium text-sm text-foreground">{t(visitTypeLabel(vt))}</p>
-            </button>
-          ))}
+          {VISIT_TYPES.map((vt) => {
+            const isRec = vt === recType;
+            return (
+              <button key={vt} onClick={() => setVisitType(vt)}
+                className={`text-left rounded-2xl border p-4 transition ${visitType === vt ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium text-sm text-foreground">{t(visitTypeLabel(vt))}</p>
+                  {isRec && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 shrink-0">{t("Recommended")}</span>
+                  )}
+                </div>
+                {isRec && <p className="text-xs text-muted-foreground mt-1">{t("Recommended for {package}", { package: activeServiceName })}</p>}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Live preview: the checklist this visit type will actually load */}
+        {typePreview && typePreview.found && (
+          <p className="text-xs text-muted-foreground mt-3 text-center">
+            {t("Checklist: {template} · {count} items", {
+              template: typePreview.templateName || (typePreview.source === "Default" ? t("Built-in default checklist") : "—"),
+              count: typePreview.count,
+            })}
+          </p>
+        )}
+        {typePreview && !typePreview.found && (
+          <p className="text-xs text-destructive mt-3 text-center">{t("No checklist is configured for this visit type.")}</p>
+        )}
+
         <Button onClick={() => startVisit(visitType)} className="w-full mt-5 h-12 rounded-2xl text-base">
           <Navigation className="w-5 h-5 mr-2" /> {t("Start Visit & Record Arrival")}
         </Button>
