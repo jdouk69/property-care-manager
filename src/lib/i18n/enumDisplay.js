@@ -204,6 +204,11 @@ export const ENUM_CONTEXT_EL = {
   // (property status) but feminine when describing a priority.
   "priority:Emergency": "Επείγουσα",
 
+  // Property occupancy status (feminine — κατάσταση). Only "Emergency" is a
+  // gendered adjective; the remaining occupancy statuses are phrases that read
+  // naturally for both το ακίνητο and η κατάσταση, so they keep the global map.
+  "property:Emergency": "Επείγουσα",
+
   // Visit status (feminine — επίσκεψη). Completed/Cancelled describe η επίσκεψη
   // and take feminine participles, unlike the global neuter forms which describe
   // το θέμα / το τιμολόγιο. "In Progress" ("Σε εξέλιξη") is gender-neutral and

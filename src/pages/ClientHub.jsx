@@ -256,7 +256,7 @@ export default function ClientHub() {
                   {p.service_package_id && servicePackages[p.service_package_id] && (
                     <span className="text-xs px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 truncate max-w-[120px]">{servicePackages[p.service_package_id].name}</span>
                   )}
-                  <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(p.status)}`}>{t(p.status)}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(p.status)}`}>{tEnum(p.status, "property")}</span>
                 </div>
               </Link>
             ))}

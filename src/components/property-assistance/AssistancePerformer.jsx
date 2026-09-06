@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Image as UIImage } from "@/components/ui/image";
 import { Loader2, Camera, CheckCircle2, X, Play, Pencil } from "lucide-react";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { assistanceChargeBreakdown, assistanceHourlyRate, assistanceServiceName, ON_DEMAND_ASSISTANCE_TYPE } from "@/lib/propertyAssistance";
 import { ensureOnDemandAssistanceCharge } from "@/lib/visitBilling";
 import AdjustChargesSheet from "./AdjustChargesSheet";
@@ -21,6 +22,7 @@ function Row({ label, value, bold }) {
 }
 
 function ChargesCard({ visit, vatRate, onAdjust }) {
+  const { t } = useLanguage();
   const base = Number(visit.agreed_price) || 0;
   const minutes = Number(visit.additional_minutes) || 0;
   const additionalLabor = Number(visit.additional_labor_charge) || 0;
@@ -30,31 +32,32 @@ function ChargesCard({ visit, vatRate, onAdjust }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-2 text-sm">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">CHARGES</p>
+        <p className="text-xs text-muted-foreground">{t("CHARGES")}</p>
         <button
           type="button"
           onClick={onAdjust}
           className="inline-flex items-center gap-1 text-xs text-primary hover:underline min-h-[36px] touch-manipulation"
         >
-          <Pencil className="w-3.5 h-3.5" /> Adjust
+          <Pencil className="w-3.5 h-3.5" /> {t("Adjust")}
         </button>
       </div>
-      <Row label="Base service" value={`€${base.toFixed(2)}`} />
+      <Row label={t("Base service")} value={`€${base.toFixed(2)}`} />
       {minutes > 0 || additionalLabor > 0 ? (
-        <Row label={`Additional labor (${minutes} min)`} value={`€${additionalLabor.toFixed(2)}`} />
+        <Row label={t("Additional labor ({minutes} min)", { minutes })} value={`€${additionalLabor.toFixed(2)}`} />
       ) : null}
-      <Row label="Travel" value={`€${travel.toFixed(2)}`} />
-      <Row label="Materials" value={`€${materials.toFixed(2)}`} />
+      <Row label={t("Travel")} value={`€${travel.toFixed(2)}`} />
+      <Row label={t("Materials")} value={`€${materials.toFixed(2)}`} />
       <div className="border-t border-border pt-2">
-        <Row label="Subtotal" value={`€${subtotal.toFixed(2)}`} />
-        {vatRate ? <Row label={`VAT (${vatRate}%)`} value={`€${vat.toFixed(2)}`} /> : null}
-        {vatRate ? <Row label="Total" value={`€${total.toFixed(2)}`} bold /> : null}
+        <Row label={t("Subtotal")} value={`€${subtotal.toFixed(2)}`} />
+        {vatRate ? <Row label={t("VAT ({rate}%)", { rate: vatRate })} value={`€${vat.toFixed(2)}`} /> : null}
+        {vatRate ? <Row label={t("Total")} value={`€${total.toFixed(2)}`} bold /> : null}
       </div>
     </div>
   );
 }
 
 export default function AssistancePerformer({ visit, property, client, business, onVisitUpdated, onCompleted }) {
+  const { t, lang } = useLanguage();
   const [notes, setNotes] = useState(visit.summary || "");
   const [internalNotes, setInternalNotes] = useState(visit.internal_notes || "");
   const [photos, setPhotos] = useState(visit.photos || []);
@@ -74,7 +77,7 @@ export default function AssistancePerformer({ visit, property, client, business,
       });
       onVisitUpdated(updated);
     } catch (e) {
-      alert("Could not start: " + (e?.message || e));
+      alert(t("Could not start: ") + (e?.message || e));
     }
     setSaving(false);
   };
@@ -129,25 +132,25 @@ export default function AssistancePerformer({ visit, property, client, business,
           await ensureOnDemandAssistanceCharge(updated, { clientId: client?.id || property?.owner_id || "" });
         }
       } catch (e) {
-        alert("Job completed, but the ledger charge could not be created: " + (e?.message || e));
+        alert(t("Job completed, but the ledger charge could not be created: ") + (e?.message || e));
       }
       onCompleted(updated);
     } catch (e) {
-      alert("Could not complete: " + (e?.message || e));
+      alert(t("Could not complete: ") + (e?.message || e));
     }
     setSaving(false);
   };
 
   const RequestCard = (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <p className="text-xs text-muted-foreground mb-1">REQUEST</p>
+      <p className="text-xs text-muted-foreground mb-1">{t("REQUEST")}</p>
       <p className="text-sm font-medium whitespace-pre-wrap">{visit.request_description || "—"}</p>
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div><span className="text-muted-foreground">Property: </span>{property?.name || "—"}</div>
-        <div><span className="text-muted-foreground">Owner: </span>{client?.name || "—"}</div>
+        <div><span className="text-muted-foreground">{t("Property:")} </span>{property?.name || "—"}</div>
+        <div><span className="text-muted-foreground">{t("Owner:")} </span>{client?.name || "—"}</div>
       </div>
       {visit.scheduled_time && (
-        <p className="text-xs text-muted-foreground mt-2">Scheduled: {athensMediumDateTime(visit.scheduled_time)}</p>
+        <p className="text-xs text-muted-foreground mt-2">{t("Scheduled:")} {athensMediumDateTime(visit.scheduled_time, lang)}</p>
       )}
     </div>
   );
@@ -170,7 +173,7 @@ export default function AssistancePerformer({ visit, property, client, business,
           {RequestCard}
           <ChargesCard visit={visit} vatRate={vatRate} onAdjust={() => setAdjustOpen(true)} />
           <Button onClick={startNow} disabled={saving} className="w-full h-12 rounded-2xl gap-1.5">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} Start Now
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} {t("Start Now")}
           </Button>
         </div>
         {adjustSheet}
@@ -183,9 +186,9 @@ export default function AssistancePerformer({ visit, property, client, business,
       <div className="space-y-4">
         {RequestCard}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-          <Label>Findings &amp; actions <span className="text-xs font-normal text-muted-foreground">(owner update)</span></Label>
+          <Label>{t("Findings & actions")} <span className="text-xs font-normal text-muted-foreground">{t("(owner update)")}</span></Label>
           <Textarea
-            placeholder="What you found and what you did…"
+            placeholder={t("What you found and what you did…")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
@@ -193,9 +196,9 @@ export default function AssistancePerformer({ visit, property, client, business,
           />
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-          <Label>Internal notes <span className="text-xs font-normal text-muted-foreground">(staff only)</span></Label>
+          <Label>{t("Internal notes")} <span className="text-xs font-normal text-muted-foreground">{t("(staff only)")}</span></Label>
           <Textarea
-            placeholder="Anything worth recording for staff records…"
+            placeholder={t("Anything worth recording for staff records…")}
             value={internalNotes}
             onChange={(e) => setInternalNotes(e.target.value)}
             rows={2}
@@ -203,7 +206,7 @@ export default function AssistancePerformer({ visit, property, client, business,
           />
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-          <Label>Photos (optional)</Label>
+          <Label>{t("Photos (optional)")}</Label>
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
               {photos.map((url, i) => (
@@ -222,7 +225,7 @@ export default function AssistancePerformer({ visit, property, client, business,
           )}
           <label className="flex items-center justify-center gap-2 h-11 rounded-xl border border-dashed border-border text-sm text-muted-foreground cursor-pointer hover:bg-muted/50">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-            {uploading ? "Uploading…" : "Add photos"}
+            {uploading ? t("Uploading…") : t("Add photos")}
             <input
               type="file"
               accept="image/*"
@@ -234,7 +237,7 @@ export default function AssistancePerformer({ visit, property, client, business,
         </div>
         <ChargesCard visit={visit} vatRate={vatRate} onAdjust={() => setAdjustOpen(true)} />
         <Button onClick={() => setReviewOpen(true)} disabled={saving} className="w-full h-12 rounded-2xl gap-1.5">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Complete Job
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} {t("Complete Job")}
         </Button>
       </div>
       {adjustSheet}
@@ -242,7 +245,7 @@ export default function AssistancePerformer({ visit, property, client, business,
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         visit={visit}
-        serviceLabel={assistanceServiceName(visit.visit_type)}
+        serviceLabel={t(assistanceServiceName(visit.visit_type))}
         vatRate={vatRate}
         onConfirm={confirmComplete}
         onAdjust={() => {

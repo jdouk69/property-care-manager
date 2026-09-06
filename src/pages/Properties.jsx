@@ -9,7 +9,7 @@ const fields = [
   { name: "name", label: "Property Name", type: "text", required: true, placeholder: "e.g. Villa Sunset" },
   { name: "owner_id", label: "Owner", type: "entity-select", entity: "Client" },
   { name: "property_type", label: "Property Type", type: "select", options: ["Villa", "Apartment", "House", "Studio", "Cottage", "Commercial"] },
-  { name: "status", label: "Occupancy Status", type: "select", options: ["Vacant", "Owner Occupied", "Guest Occupied", "Rental Occupied", "Preparing for Arrival", "Preparing for Departure", "Under Maintenance", "Emergency", "Inactive"] },
+  { name: "status", label: "Occupancy Status", type: "select", enumContext: "property", options: ["Vacant", "Owner Occupied", "Guest Occupied", "Rental Occupied", "Preparing for Arrival", "Preparing for Departure", "Under Maintenance", "Emergency", "Inactive"] },
   { name: "condition", label: "Current Condition", type: "select", options: ["Excellent", "Good", "Needs Attention", "Poor"] },
   { name: "location", type: "custom", render: (values, setField) => <PropertyLocationFields values={values} setField={setField} /> },
   { name: "primary_photo", label: "Primary Photo", type: "image" },

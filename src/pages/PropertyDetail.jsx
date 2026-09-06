@@ -30,7 +30,7 @@ const DELIVERY_PURPOSES = ["Furniture", "Appliance", "Parcel", "Building materia
 export default function PropertyDetail() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { t, lang } = useLanguage();
+  const { t, tEnum, lang } = useLanguage();
   const isAdmin = user?.role === "admin";
   const [prop, setProp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -139,7 +139,7 @@ export default function PropertyDetail() {
               {prop.address && <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5"><MapPin className="w-3.5 h-3.5" /> {prop.address}</p>}
             </div>
           </div>
-          <Badge variant="outline" className={badgeTone(prop.status)}>{t(prop.status)}</Badge>
+          <Badge variant="outline" className={badgeTone(prop.status)}>{tEnum(prop.status, "property")}</Badge>
         </div>
 
         {/* Property actions: care work first, admin second */}

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Plus, Search, User, Building2, Clock, Play } from "lucide-react";
 import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
 import { createNotification } from "@/lib/notifications";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import {
   fetchAssistanceDefaultPrice,
   ON_DEMAND_ASSISTANCE_TYPE,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/propertyAssistance";
 
 function SelectedCard({ icon: Icon, title, subtitle, onChange }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
       <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -24,13 +26,14 @@ function SelectedCard({ icon: Icon, title, subtitle, onChange }) {
         <p className="text-sm font-medium truncate">{title}</p>
         {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
       </div>
-      <Button variant="ghost" size="sm" onClick={onChange} className="shrink-0">Change</Button>
+      <Button variant="ghost" size="sm" onClick={onChange} className="shrink-0">{t("Change")}</Button>
     </div>
   );
 }
 
 export default function AssistanceCreateForm({ preClient, preProperty, onCreated }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [clients, setClients] = useState([]);
   const [properties, setProperties] = useState([]);
   const [clientId, setClientId] = useState(preClient || "");
@@ -90,7 +93,7 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
       setNcName("");
       setNcPhone("");
     } catch (e) {
-      alert("Could not create client: " + (e?.message || e));
+      alert(t("Could not create client: ") + (e?.message || e));
     }
   };
 
@@ -108,17 +111,17 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
       setNpName("");
       setNpAddress("");
     } catch (e) {
-      alert("Could not create property: " + (e?.message || e));
+      alert(t("Could not create property: ") + (e?.message || e));
     }
   };
 
   const build = async (status, timeIso) => {
     if (!propertyId) {
-      alert("Select a property.");
+      alert(t("Select a property."));
       return;
     }
     if (!request.trim()) {
-      alert("Enter the request.");
+      alert(t("Enter the request."));
       return;
     }
     setSaving(true);
@@ -157,14 +160,14 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
       }
       onCreated(visit, status !== "Scheduled");
     } catch (e) {
-      alert("Could not create: " + (e?.message || e));
+      alert(t("Could not create: ") + (e?.message || e));
     }
     setSaving(false);
   };
 
   const schedule = () => {
     if (!scheduleDate || !scheduleTime) {
-      alert("Pick a date and time, or use Start Now.");
+      alert(t("Pick a date and time, or use Start Now."));
       return;
     }
     build("Scheduled", athensLocalToIso(scheduleDate, scheduleTime));
@@ -177,18 +180,18 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
       {clientId ? (
         <SelectedCard
           icon={User}
-          title={selectedClient?.name || "Client"}
+          title={selectedClient?.name || t("Client")}
           subtitle={selectedClient?.phone || selectedClient?.email || ""}
           onChange={() => setClientId("")}
         />
       ) : showNewClient ? (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-          <p className="text-sm font-medium">New client</p>
-          <Input placeholder="Name" value={ncName} onChange={(e) => setNcName(e.target.value)} className="h-11" />
-          <Input placeholder="Phone" value={ncPhone} onChange={(e) => setNcPhone(e.target.value)} className="h-11" />
+          <p className="text-sm font-medium">{t("New client")}</p>
+          <Input placeholder={t("Name")} value={ncName} onChange={(e) => setNcName(e.target.value)} className="h-11" />
+          <Input placeholder={t("Phone")} value={ncPhone} onChange={(e) => setNcPhone(e.target.value)} className="h-11" />
           <div className="flex gap-2">
-            <Button onClick={createClient} size="sm" className="rounded-xl">Add client</Button>
-            <Button onClick={() => setShowNewClient(false)} variant="outline" size="sm" className="rounded-xl">Cancel</Button>
+            <Button onClick={createClient} size="sm" className="rounded-xl">{t("Add client")}</Button>
+            <Button onClick={() => setShowNewClient(false)} variant="outline" size="sm" className="rounded-xl">{t("Cancel")}</Button>
           </div>
         </div>
       ) : (
@@ -198,7 +201,7 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
             <Input
               value={clientSearch}
               onChange={(e) => setClientSearch(e.target.value)}
-              placeholder="Select client…"
+              placeholder={t("Select client…")}
               className="pl-9 rounded-full bg-muted/50 border-0 focus-visible:ring-1"
             />
           </div>
@@ -219,14 +222,14 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
               </button>
             ))}
             {filteredClients.length === 0 && (
-              <p className="px-4 py-3 text-sm text-muted-foreground">No clients found.</p>
+              <p className="px-4 py-3 text-sm text-muted-foreground">{t("No clients found.")}</p>
             )}
           </div>
           <button
             onClick={() => setShowNewClient(true)}
             className="w-full px-4 py-3 text-sm text-primary hover:bg-muted/50 flex items-center gap-2 border-t border-border"
           >
-            <Plus className="w-4 h-4" /> New client
+            <Plus className="w-4 h-4" /> {t("New client")}
           </button>
         </div>
       )}
@@ -236,23 +239,23 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
         (propertyId ? (
           <SelectedCard
             icon={Building2}
-            title={selectedProperty?.name || "Property"}
+            title={selectedProperty?.name || t("Property")}
             subtitle={selectedProperty?.address || ""}
             onChange={() => setPropertyId("")}
           />
         ) : showNewProp ? (
           <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-            <p className="text-sm font-medium">New property</p>
-            <Input placeholder="Name" value={npName} onChange={(e) => setNpName(e.target.value)} className="h-11" />
-            <Input placeholder="Address" value={npAddress} onChange={(e) => setNpAddress(e.target.value)} className="h-11" />
+            <p className="text-sm font-medium">{t("New property")}</p>
+            <Input placeholder={t("Name")} value={npName} onChange={(e) => setNpName(e.target.value)} className="h-11" />
+            <Input placeholder={t("Address")} value={npAddress} onChange={(e) => setNpAddress(e.target.value)} className="h-11" />
             <div className="flex gap-2">
-              <Button onClick={createProperty} size="sm" className="rounded-xl">Add property</Button>
-              <Button onClick={() => setShowNewProp(false)} variant="outline" size="sm" className="rounded-xl">Cancel</Button>
+              <Button onClick={createProperty} size="sm" className="rounded-xl">{t("Add property")}</Button>
+              <Button onClick={() => setShowNewProp(false)} variant="outline" size="sm" className="rounded-xl">{t("Cancel")}</Button>
             </div>
           </div>
         ) : (
           <div className="rounded-2xl border border-border bg-card overflow-hidden">
-            <p className="px-4 py-2 text-xs text-muted-foreground">Select property</p>
+            <p className="px-4 py-2 text-xs text-muted-foreground">{t("Select property")}</p>
             <div className="divide-y divide-border">
               {clientProps.map((p) => (
                 <button
@@ -270,14 +273,14 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
                 </button>
               ))}
               {clientProps.length === 0 && (
-                <p className="px-4 py-3 text-sm text-muted-foreground">No properties for this client.</p>
+                <p className="px-4 py-3 text-sm text-muted-foreground">{t("No properties for this client.")}</p>
               )}
             </div>
             <button
               onClick={() => setShowNewProp(true)}
               className="w-full px-4 py-3 text-sm text-primary hover:bg-muted/50 flex items-center gap-2 border-t border-border"
             >
-              <Plus className="w-4 h-4" /> New property
+              <Plus className="w-4 h-4" /> {t("New property")}
             </button>
           </div>
         ))}
@@ -286,23 +289,23 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
       {propertyId && (
         <>
           <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-            <Label>Request</Label>
+            <Label>{t("Request")}</Label>
             <Textarea
-              placeholder="e.g. Adjust security camera angle"
+              placeholder={t("e.g. Adjust security camera angle")}
               value={request}
               onChange={(e) => setRequest(e.target.value)}
               rows={3}
               className="resize-none"
             />
             <p className="text-[11px] text-muted-foreground">
-              Property Care assists with simple, non-specialist tasks. For licensed trade work we coordinate a contractor.
+              {t("Property Care assists with simple, non-specialist tasks. For licensed trade work we coordinate a contractor.")}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-2xl border border-border bg-card p-4">
-              <Label>Agreed price (€)</Label>
+              <Label>{t("Agreed price (€)")}</Label>
               <p className="text-[11px] text-muted-foreground mb-1">
-                €70 + VAT — first 30 minutes included. Additional time €45/hour + VAT.
+                {t("€70 + VAT — first 30 minutes included. Additional time €45/hour + VAT.")}
               </p>
               <Input
                 type="number"
@@ -314,7 +317,7 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
               />
             </div>
             <div className="rounded-2xl border border-border bg-card p-4">
-              <Label>Travel charge (€)</Label>
+              <Label>{t("Travel charge (€)")}</Label>
               <Input
                 type="number"
                 min="0"
@@ -326,7 +329,7 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
             </div>
           </div>
           <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-            <Label>Schedule (optional)</Label>
+            <Label>{t("Schedule (optional)")}</Label>
             <div className="grid grid-cols-2 gap-2">
               <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className="h-11" />
               <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className="h-11" />
@@ -334,10 +337,10 @@ export default function AssistanceCreateForm({ preClient, preProperty, onCreated
           </div>
           <div className="flex flex-col gap-2">
             <Button onClick={schedule} disabled={saving} className="h-12 rounded-2xl gap-1.5">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />} Schedule
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />} {t("Schedule")}
             </Button>
             <Button onClick={startNow} disabled={saving} variant="outline" className="h-12 rounded-2xl gap-1.5">
-              <Play className="w-4 h-4" /> Start Now
+              <Play className="w-4 h-4" /> {t("Start Now")}
             </Button>
           </div>
         </>

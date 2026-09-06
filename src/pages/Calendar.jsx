@@ -10,6 +10,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { athensDate, athensTime, athensToday } from "@/lib/timezone";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const TYPE_COLORS = {
   Inspection: "bg-sky-500",
@@ -22,10 +23,16 @@ const TYPE_COLORS = {
   "Property Visit": "bg-cyan-500",
 };
 
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DOW = ["M","T","W","T","F","S","S"];
+// Month names come from Intl in the active language (el-GR / en-GB) — no
+// separate hard-coded Greek month arrays. Operational date logic (athensDate
+// placement, filters, raw values) is untouched by the display locale.
+const DOW_EN = ["M", "T", "W", "T", "F", "S", "S"];
+const DOW_EL = ["Δε", "Τρ", "Τε", "Πε", "Πα", "Σα", "Κυ"];
 
 export default function Calendar() {
+  const { t, tEnum, lang } = useLanguage();
+  const locale = lang === "el" ? "el-GR" : "en-GB";
+  const DOW = lang === "el" ? DOW_EL : DOW_EN;
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState(athensToday());
 
@@ -73,15 +80,15 @@ export default function Calendar() {
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
         <PageBackButton className="mb-3" />
-        <PageHeader title="Calendar" subtitle="Your schedule at a glance" icon={CalendarDays}
-          actions={<Link to="/tasks"><Button size="sm" className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> Add Task</Button></Link>}
+        <PageHeader title={t("Calendar")} subtitle={t("Your schedule at a glance")} icon={CalendarDays}
+          actions={<Link to="/tasks"><Button size="sm" className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> {t("Add Task")}</Button></Link>}
         />
 
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">{MONTHS[month]} {year}</h2>
+          <h2 className="text-lg font-semibold">{new Date(year, month, 1).toLocaleDateString(locale, { month: "long" })} {year}</h2>
           <div className="flex gap-1">
             <Button variant="outline" size="icon" onClick={() => move(-1)}><ChevronLeft className="w-4 h-4" /></Button>
-            <Button variant="outline" size="sm" onClick={() => { setCursor(new Date()); setSelected(athensToday()); }}>Today</Button>
+            <Button variant="outline" size="sm" onClick={() => { setCursor(new Date()); setSelected(athensToday()); }}>{t("Today")}</Button>
             <Button variant="outline" size="icon" onClick={() => move(1)}><ChevronRight className="w-4 h-4" /></Button>
           </div>
         </div>
@@ -103,8 +110,8 @@ export default function Calendar() {
                 } ${isToday ? "ring-1 ring-primary" : ""}`}>
                 <span className={`text-xs ${isToday ? "font-bold text-primary" : "text-foreground"}`}>{date.getDate()}</span>
                 <div className="flex flex-wrap gap-0.5 mt-0.5 justify-center sm:justify-start">
-                  {dayTasks.slice(0, 4).map((t) => (
-                    <span key={t.id} className={`w-1.5 h-1.5 rounded-full ${TYPE_COLORS[t.type] || "bg-primary"}`} />
+                  {dayTasks.slice(0, 4).map((dot) => (
+                    <span key={dot.id} className={`w-1.5 h-1.5 rounded-full ${TYPE_COLORS[dot.type] || "bg-primary"}`} />
                   ))}
                 </div>
               </button>
@@ -115,31 +122,31 @@ export default function Calendar() {
         {/* Legend */}
         <div className="flex flex-wrap gap-3 mt-4 mb-6">
           {Object.entries(TYPE_COLORS).map(([k, c]) => (
-            <div key={k} className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className={`w-2 h-2 rounded-full ${c}`} /> {k}</div>
+            <div key={k} className="flex items-center gap-1.5 text-xs text-muted-foreground"><span className={`w-2 h-2 rounded-full ${c}`} /> {t(k)}</div>
           ))}
         </div>
 
         {/* Selected day */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="px-4 py-3 border-b border-border font-medium text-sm">
-            {new Date(selected + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+            {new Date(selected + "T12:00:00").toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })}
           </div>
           <div className="divide-y divide-border">
             {selectedTasks.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">No tasks scheduled.</div>
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">{t("No tasks scheduled.")}</div>
             ) : (
-              selectedTasks.map((t) => (
-                <Link to={t.to || "/tasks"} key={t.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
+              selectedTasks.map((ev) => (
+                <Link to={ev.to || "/tasks"} key={ev.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50 transition">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TYPE_COLORS[t.type] || "bg-primary"}`} />
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${TYPE_COLORS[ev.type] || "bg-primary"}`} />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{t.title}</p>
-                      <p className="text-xs text-muted-foreground">{t.time ? `${t.time} · ` : ""}{t.type}{t._kind === "visit" && t.status ? ` · ${t.status}` : ""}</p>
+                      <p className="text-sm font-medium truncate">{ev._kind === "visit" ? t(ev.title) : ev.title}</p>
+                      <p className="text-xs text-muted-foreground">{ev.time ? `${ev.time} · ` : ""}{t(ev.type)}{ev._kind === "visit" && ev.status ? ` · ${tEnum(ev.status, "visit")}` : ""}</p>
                     </div>
                   </div>
-                  {t._kind === "visit" && t.status
-                    ? <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">{t.status}</span>
-                    : (t.priority && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(t.priority)}`}>{t.priority}</span>)}
+                  {ev._kind === "visit" && ev.status
+                    ? <span className="text-xs px-2 py-0.5 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20">{tEnum(ev.status, "visit")}</span>
+                    : (ev.priority && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(ev.priority)}`}>{t(ev.priority)}</span>)}
                 </Link>
               ))
             )}

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { assistanceChargeBreakdown, computeAdditionalLabor, ADDITIONAL_TIME_OPTIONS } from "@/lib/propertyAssistance";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function Row({ label, value, bold }) {
   return (
@@ -21,6 +22,7 @@ function Row({ label, value, bold }) {
 // (works while Scheduled or In Progress). Selecting an additional-time option
 // sets a suggested additional-labor charge, but staff can override the amount.
 export default function AdjustChargesSheet({ open, onOpenChange, visit, vatRate, hourlyRate = 40, onSaved }) {
+  const { t } = useLanguage();
   const [base, setBase] = useState(Number(visit.agreed_price) || 0);
   const [minutes, setMinutes] = useState(Number(visit.additional_minutes) || 0);
   const [additionalLabor, setAdditionalLabor] = useState(Number(visit.additional_labor_charge) || 0);
@@ -59,7 +61,7 @@ export default function AdjustChargesSheet({ open, onOpenChange, visit, vatRate,
       onSaved(updated);
       onOpenChange(false);
     } catch (e) {
-      alert("Could not save charges: " + (e?.message || e));
+      alert(t("Could not save charges: ") + (e?.message || e));
     }
     setSaving(false);
   };
@@ -68,47 +70,47 @@ export default function AdjustChargesSheet({ open, onOpenChange, visit, vatRate,
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Adjust Charges</SheetTitle>
+          <SheetTitle>{t("Adjust Charges")}</SheetTitle>
         </SheetHeader>
         <div className="space-y-4 mt-3">
           <div className="space-y-1.5">
-            <Label>Base service (incl. first 30 min)</Label>
+            <Label>{t("Base service (incl. first 30 min)")}</Label>
             <Input type="number" inputMode="decimal" step="0.01" value={base} onChange={(e) => setBase(e.target.value)} className="h-11" />
           </div>
           <div className="space-y-1.5">
-            <Label>Additional time</Label>
+            <Label>{t("Additional time")}</Label>
             <Select value={String(minutes)} onValueChange={(v) => onMinutesChange(Number(v))}>
               <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {ADDITIONAL_TIME_OPTIONS.map((m) => (
                   <SelectItem key={m} value={String(m)}>
-                    {m} min{m > 0 ? ` · €${computeAdditionalLabor(m, hourlyRate).toFixed(0)}` : ""}
+                    {t("{minutes} min", { minutes: m })}{m > 0 ? ` · €${computeAdditionalLabor(m, hourlyRate).toFixed(0)}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">€{hourlyRate}/hour, 15-min increments.</p>
+            <p className="text-xs text-muted-foreground">{t("€{rate}/hour, 15-min increments.", { rate: hourlyRate })}</p>
           </div>
           <div className="space-y-1.5">
-            <Label>Additional labor charge</Label>
+            <Label>{t("Additional labor charge")}</Label>
             <Input type="number" inputMode="decimal" step="0.01" value={additionalLabor} onChange={(e) => setAdditionalLabor(e.target.value)} className="h-11" />
-            <p className="text-xs text-muted-foreground">Override if needed.</p>
+            <p className="text-xs text-muted-foreground">{t("Override if needed.")}</p>
           </div>
           <div className="space-y-1.5">
-            <Label>Travel charge</Label>
+            <Label>{t("Travel charge")}</Label>
             <Input type="number" inputMode="decimal" step="0.01" value={travel} onChange={(e) => setTravel(e.target.value)} className="h-11" />
           </div>
           <div className="space-y-1.5">
-            <Label>Materials / expenses</Label>
+            <Label>{t("Materials / expenses")}</Label>
             <Input type="number" inputMode="decimal" step="0.01" value={materials} onChange={(e) => setMaterials(e.target.value)} className="h-11" />
           </div>
           <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1.5 text-sm">
-            <Row label="Subtotal" value={`€${subtotal.toFixed(2)}`} />
-            {vatRate ? <Row label={`VAT (${vatRate}%)`} value={`€${vat.toFixed(2)}`} /> : null}
-            {vatRate ? <Row label="Total" value={`€${total.toFixed(2)}`} bold /> : null}
+            <Row label={t("Subtotal")} value={`€${subtotal.toFixed(2)}`} />
+            {vatRate ? <Row label={t("VAT ({rate}%)", { rate: vatRate })} value={`€${vat.toFixed(2)}`} /> : null}
+            {vatRate ? <Row label={t("Total")} value={`€${total.toFixed(2)}`} bold /> : null}
           </div>
           <Button onClick={save} disabled={saving} className="w-full h-12 rounded-2xl gap-1.5">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Save charges
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null} {t("Save charges")}
           </Button>
         </div>
       </SheetContent>
