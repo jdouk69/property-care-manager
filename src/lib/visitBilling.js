@@ -58,6 +58,37 @@ export async function ensureOneTimeVisitCharge(visit, { clientId = "" } = {}) {
   return charge;
 }
 
+// ADDITIONAL requested property-care visit: a recurring customer asks for
+// another visit AFTER the package's included visits for the current service
+// period are used (the visit is created with is_additional_service = true).
+// NO approved price rule exists for additional visits, so nothing is ever
+// auto-charged — staff must confirm the amount first (see
+// AdditionalChargeCard). This function only executes after an explicit staff
+// confirmation of the amount, creates exactly ONE Due ledger charge, and is
+// duplicate-safe like the other charge builders (any existing charge for the
+// visit blocks a second one).
+export async function ensureAdditionalVisitCharge(visit, { clientId = "", amount } = {}) {
+  if (!visit || visit.status !== "Completed" || !visit.is_additional_service) return null;
+  const amt = Math.round(Number(amount) * 100) / 100;
+  if (!Number.isFinite(amt) || amt <= 0) return null;
+
+  const existing = await base44.entities.BillingCharge.filter({ visit_id: visit.id });
+  if (existing && existing.length > 0) return null;
+
+  return base44.entities.BillingCharge.create({
+    client_id: clientId || "",
+    property_id: visit.property_id || "",
+    visit_id: visit.id,
+    description: "Additional Property Care Visit — additional service",
+    amount: amt,
+    charge_type: "Visit",
+    billing_date: athensToday(),
+    due_date: athensDateOffset(NET_DUE_DAYS),
+    status: "Due",
+    source_key: `visit:${visit.id}`,
+  });
+}
+
 // Consolidated On-Demand Property Assistance (request-driven one-time
 // service). On completion, exactly ONE Due ledger charge is created for the
 // final approved service amount: base €70 + any approved additional-time

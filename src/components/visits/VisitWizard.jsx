@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search, Mic, Play } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,15 +12,18 @@ import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
 import { recommendedVisitType, isRecurringAgreement } from "@/lib/activeService";
+import { entitlementStatus } from "@/lib/packageEntitlement";
 import { visitTypeLabel, checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import DraftConflictDialog from "@/components/visits/DraftConflictDialog";
+import PackageServiceCard from "@/components/visits/PackageServiceCard";
+import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
+import { athensLocalToIso, athensVisitWhen, athensToday } from "@/lib/timezone";
 import { createNotification } from "@/lib/notifications";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -130,6 +133,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // Checklist preview for the RECOMMENDED package visit, independent of which
   // type is currently selected (used by the package launch button).
   const [recPreview, setRecPreview] = useState(null);
+  // Live visits (package entitlement counting on the Choose Visit Type screen)
+  // and the additional-service flag: a requested visit BEYOND the package's
+  // included allowance — billable, never counted as another included visit.
+  const [visits, setVisits] = useState([]);
+  const [additionalService, setAdditionalService] = useState(false);
   const [resumable, setResumable] = useState(null);
   const [contractors, setContractors] = useState([]);
   const [expensesCreated, setExpensesCreated] = useState([]);
@@ -202,6 +210,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((p) => setProperties((p || []).filter((x) => !x.archived))).catch(() => {});
+    base44.entities.PropertyVisit.list("-start_time", 500).then((v) => setVisits((v || []).filter((x) => !x.archived))).catch(() => {});
     base44.entities.Contractor.list("-created_date", 500).then((c) => setContractors((c || []).filter((x) => !x.archived))).catch(() => {});
     if (scheduleMode) base44.entities.Client.list("-created_date", 500).then((c) => setClients((c || []).filter((x) => !x.archived))).catch(() => {});
     const d = loadDraft();
@@ -256,6 +265,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           setVisitType(v.visit_type || VISIT_TYPES[0]);
           setStartTime(v.start_time || null);
           setAgreementId(v.property_service_agreement_id || "");
+          // Additional-service flag persists on the record (the resumed autosave
+          // below keeps it current while the visit is active).
+          setAdditionalService(!!v.is_additional_service);
           // QA F1/F2 fix: restore the fields the resumed-visit persistence
           // already writes on this SAME record — meter readings, summary,
           // internal notes, GPS — plus the existing issue/task linkage, so a
@@ -307,9 +319,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService });
     }
-  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId]);
+  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService]);
 
   // Scheduled/resumed visits (resumeVisitId) previously had NO autosave — the
   // PropertyVisit record was written only at completion, so leaving mid-visit
@@ -331,6 +343,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       // so links created mid-visit survive leaving and resuming.
       maintenance_issue_ids: issueIds,
       follow_up_task_ids: taskIds,
+      is_additional_service: additionalService,
     };
     resumedSaveRef.current = { id: resumeVisitId, payload };
     const tm = setTimeout(() => {
@@ -403,6 +416,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // resumed draft still records the same service agreement (old drafts without
     // an agreementId simply resolve to none, exactly as before).
     setAgreementId(resumable.agreementId || "");
+    setAdditionalService(!!resumable.additionalService);
     if (resumable.agreementId) {
       base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then((a) => {
         setAgreement(a);
@@ -523,16 +537,57 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     } catch (e) { setStep("type"); }
   };
 
-  const handleStartNow = (overrideType) => {
+  // Is this visit type the package's included scheduled visit with its
+  // allowance already consumed? Performing it again is then an ADDITIONAL
+  // billable service — never a second included entitlement — regardless of
+  // which entry point staff used (package card or generic type picker).
+  const resolveAdditional = (vt) => {
+    if (!agreement || !isRecurringAgreement(agreement)) return false;
+    const rec = recommendedVisitType(pkg);
+    if (!rec || vt !== rec) return false;
+    const ent = entitlementStatus({ visits, agreement, pkg, recType: rec, todayStr: athensToday() });
+    return !ent || (ent.remaining === 0 && !ent.unfinished);
+  };
+
+  const handleStartNow = (overrideType, opts = {}) => {
     const d = loadDraft();
     if (d && d.propertyId && d.checklist && d.checklist.length > 0) { setDraftConflict(true); return; }
     const vt = overrideType || visitType || VISIT_TYPES[0];
     if (!visitType) setVisitType(vt);
-    startVisit(vt);
+    startVisit(vt, opts);
   };
 
   const startNowDiscardDraft = () => {
     clearDraft(); setResumable(null); setDraftConflict(false); startVisit();
+  };
+
+  // RESTART an unfinished device-local draft (confirmed first via
+  // RestartVisitDialog). Reuses the same entitlement — a draft is not a
+  // record, so nothing was consumed and no charge is involved.
+  const restartDraftVisit = () => {
+    const vt = resumable?.visitType || visitType;
+    clearDraft(); setResumable(null);
+    startVisit(vt);
+  };
+
+  // RESTART an unfinished scheduled/in-progress visit RECORD (confirmed first
+  // via RestartVisitDialog). Resets progress on the SAME record — no new
+  // record, no second included visit, no charge; never offered for completed
+  // visits. Already-created issues/tasks and the agreement link are kept.
+  const restartExistingVisit = async (record) => {
+    try {
+      const { items } = await loadChecklistItems(record.property_id, record.visit_type);
+      await base44.entities.PropertyVisit.update(record.id, {
+        checklist: items,
+        meter_readings: [],
+        summary: "",
+        internal_notes: "",
+        gps_location: "",
+        start_time: new Date().toISOString(),
+        status: "In Progress",
+      });
+      navigate(`/visits?resume=${record.id}`);
+    } catch (e) { alert(t("Could not restart visit: {message}", { message: e?.message || e })); }
   };
 
   const saveScheduled = async () => {
@@ -579,8 +634,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     } catch (e) { setSaving(false); alert(t("Could not schedule visit: {message}", { message: e?.message || e })); }
   };
 
-  const startVisit = async (overrideType) => {
+  const startVisit = async (overrideType, opts = {}) => {
     const vt = overrideType || visitType;
+    // Additional billable service: explicit launch ({ additional: true }) or
+    // the package's own visit type with the included allowance consumed.
+    const additional = opts && typeof opts.additional === "boolean" ? opts.additional : resolveAdditional(vt);
+    setAdditionalService(additional);
     const now = new Date();
     setStartTime(now.toISOString());
     if (navigator.geolocation) {
@@ -739,6 +798,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       summary, internal_notes: internalNotes, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
       owner_report: "", report_sent: false, report_status: "Ready to Send",
       property_service_agreement_id: agreementId || "",
+      is_additional_service: !!additionalService,
       ...(visitType === "Grocery Stocking" ? { shopping_list: groceryList.trim(), grocery_cost: parseFloat(groceryCost) || 0 } : {}),
     };
     try {
@@ -1002,8 +1062,28 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           </div>
         </div>
 
-        {/* Active service — actual package/agreement data, never hardcoded */}
-        {agreement ? (
+        {/* Package Service Card — the property's ACTIVE recurring service with
+            its real entitlement status for the current service period, from
+            actual agreement/package configuration: INCLUDED start, RESUME /
+            RESTART of an unfinished visit, or ADDITIONAL — billable once the
+            included allowance is consumed. */}
+        {agreement && isRecurringAgreement(agreement) && recType ? (
+          <PackageServiceCard
+            agreement={agreement}
+            pkg={pkg}
+            recType={recType}
+            recPreview={recPreview}
+            activeServiceName={activeServiceName}
+            visits={visits}
+            propertyId={propertyId}
+            draft={resumable}
+            onStartIncluded={() => { setVisitType(recType); handleStartNow(recType); }}
+            onStartAdditional={() => { setVisitType(recType); handleStartNow(recType, { additional: true }); }}
+            onResumeDraft={resume}
+            onRestartDraft={restartDraftVisit}
+            onRestartRecord={restartExistingVisit}
+          />
+        ) : agreement ? (
           <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 mb-4">
             <p className="text-[11px] uppercase tracking-wide text-primary mb-1">{t("Active Service")}</p>
             <p className="text-sm font-semibold text-foreground">{activeServiceName}</p>
@@ -1026,30 +1106,6 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 dark:text-amber-500">{t("No active service agreement for this property. Choose the visit type for today's service.")}</p>
           </div>
-        )}
-
-        {/* Package launch — run the customer's actual recurring service directly.
-            Resolves the SAME checklist as a manually chosen visit (property
-            override > package master) and links the visit to the active
-            agreement via the existing architecture. */}
-        {agreement && isRecurringAgreement(agreement) && recType && (
-          <button type="button" onClick={() => { setVisitType(recType); handleStartNow(recType); }}
-            className="w-full text-left rounded-2xl border border-primary bg-primary text-primary-foreground px-3.5 py-3.5 mb-4 hover:bg-primary/90 transition min-h-[56px]">
-            <div className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-xl bg-primary-foreground/15 flex items-center justify-center shrink-0"><Play className="w-4 h-4" /></span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">{t("Start {package} Visit", { package: activeServiceName })}</p>
-                <p className="text-xs opacity-80 truncate">
-                  {recPreview && recPreview.found
-                    ? t("Checklist: {template} · {count} items", {
-                        template: recPreview.templateName || (recPreview.source === "Default" ? t("Built-in default checklist") : "—"),
-                        count: recPreview.count,
-                      })
-                    : t("Included scheduled visit for this service")}
-                </p>
-              </div>
-            </div>
-          </button>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1488,6 +1544,17 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <p>{t("Checklist items: {items} · Issues: {issues} · Follow-ups: {followUps}", { items: checklist.length, issues: issueIds.length, followUps: taskIds.length })}</p>
           </div>
         </div>
+        {/* Additional billable visit: staff must CONFIRM the charge amount —
+            no approved price rule exists, so nothing is auto-charged. */}
+        {completed?.is_additional_service && (
+          <div className="mb-4">
+            <AdditionalChargeCard
+              visit={completed}
+              pkg={pkg}
+              clientId={reportClient?.id || properties.find((p) => p.id === propertyId)?.owner_id || ""}
+            />
+          </div>
+        )}
         <ReportDeliveryCard
           visit={completed}
           property={properties.find((p) => p.id === propertyId) || {}}

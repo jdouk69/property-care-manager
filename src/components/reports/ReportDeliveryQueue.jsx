@@ -13,6 +13,7 @@ import { buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPd
 import { sendOwnerReportEmail } from "@/lib/visitReportSend";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
+import { qaPropertyIds } from "@/lib/qaGuard";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const STATUS_TONE = {
@@ -84,7 +85,9 @@ export default function ReportDeliveryQueue() {
         base44.entities.MaintenanceIssue.list("-created_date", 500),
         base44.entities.Task.list("-created_date", 500),
       ]);
-      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived));
+      // QA test property's synthetic visits stay out of the real delivery queue.
+      const qaIds = qaPropertyIds(props || []);
+      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id)));
       setProperties(props || []);
       setClients(cls || []);
       setBusiness((bss && bss[0]) || {});

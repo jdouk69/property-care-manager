@@ -46,6 +46,11 @@
     "inspection_frequency": {
       "type": "string"
     },
+    "included_visits_per_period": {
+      "type": "number",
+      "default": 1,
+      "description": "Included scheduled visits per service (billing) period \u2014 drives the package visit entitlement display. Default 1."
+    },
     "default_visit_type": {
       "type": "string"
     },

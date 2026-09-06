@@ -22,6 +22,7 @@ import TodayAgenda from "@/components/dashboard/TodayAgenda";
 import ReportIssueSheet from "@/components/maintenance/ReportIssueSheet";
 import ReportsToSendReminder from "@/components/dashboard/ReportsToSendReminder";
 import { getActionableCounts } from "@/lib/onboardingHandoff";
+import { isQaProperty, qaPropertyIds } from "@/lib/qaGuard";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const today = athensToday;
@@ -313,6 +314,9 @@ export default function Dashboard() {
   }, []);
 
   const t = today();
+  // QA test property stays out of operational counts, queues and the agenda.
+  const qaIds = qaPropertyIds(data.properties);
+  const opVisits = data.visits.filter((v) => !qaIds.has(v.property_id));
   const ownerName = settings?.owner_name || "Jim";
   const propName = (id) => data.properties.find((p) => p.id === id)?.name || tr("Property");
   const active = (x) => x.status !== "Completed" && x.status !== "Cancelled" && x.recurrence_status !== "skipped";
@@ -330,9 +334,9 @@ export default function Dashboard() {
   const emergency = openMaintenance.filter((x) => x.priority === "Emergency");
   const unreturnedKeys = data.keys.filter((k) => k.date_issued && !k.date_returned);
   const awaitingReimb = data.expenses.filter((e) => e.awaiting_reimbursement && !e.reimbursed);
-  const propsNeedingAttention = data.properties.filter((p) => ["Needs Attention", "Poor"].includes(p.condition) || ["Emergency", "Under Maintenance", "Preparing for Arrival"].includes(p.status));
+  const propsNeedingAttention = data.properties.filter((p) => !isQaProperty(p) && (["Needs Attention", "Poor"].includes(p.condition) || ["Emergency", "Under Maintenance", "Preparing for Arrival"].includes(p.status)));
   // Missed scheduled visits: scheduled time passed (by >1h grace) and still Scheduled.
-  const missedVisits = (data.visits || []).filter((v) => v.status === "Scheduled" && !v.archived && (v.scheduled_time || v.start_time) && new Date(v.scheduled_time || v.start_time).getTime() < Date.now() - 3600000);
+  const missedVisits = (opVisits || []).filter((v) => v.status === "Scheduled" && !v.archived && (v.scheduled_time || v.start_time) && new Date(v.scheduled_time || v.start_time).getTime() < Date.now() - 3600000);
 
   // Next Action computation. ALL unresolved statuses count (existing status
   // model — no second system): resolved/cancelled/archived issues never appear.
@@ -350,7 +354,7 @@ export default function Dashboard() {
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   const prepTasks = data.tasks.filter((x) => x.type === "Arrival preparation" && (x.date === t || x.date === tomorrow) && x.status !== "Completed");
   const prepTask = prepTasks.length ? { propertyId: prepTasks[0].property_id, when: prepTasks[0].date === t ? "today" : "tomorrow" } : null;
-  const nextAction = { draft: draft && draft.propertyId ? draft : null, openIssuesByProp, prepTask };
+  const nextAction = { draft: draft && draft.propertyId && !qaIds.has(draft.propertyId) ? draft : null, openIssuesByProp, prepTask };
 
   // Billing ledger totals. "Overdue" is derived (Due + past due date), never stored.
   const billingOutstanding = data.billing
@@ -387,10 +391,10 @@ export default function Dashboard() {
         </div>
 
         {/* TODAY agenda — what do I have to do today? */}
-        <TodayAgenda data={data} />
+        <TodayAgenda data={{ ...data, visits: opVisits }} />
 
         {/* Reports waiting to be sent — operational reminder, distinct from property work */}
-        <ReportsToSendReminder visits={data.visits} properties={data.properties} clients={data.clients} />
+        <ReportsToSendReminder visits={opVisits} properties={data.properties} clients={data.clients} />
 
         {/* Next action / continue working */}
         <NextActionCard draft={nextAction.draft} propName={propName} openIssuesByProp={nextAction.openIssuesByProp} prepTask={nextAction.prepTask} onCancelDone={() => setDraft(null)} />
@@ -468,7 +472,7 @@ export default function Dashboard() {
         </div>
 
         {/* Next 3 days schedule */}
-        <Next3Days visits={data.visits} properties={data.properties} clients={data.clients} />
+        <Next3Days visits={opVisits} properties={data.properties} clients={data.clients} />
 
         {/* Financial summary — billing ledger + reimbursements */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
@@ -476,7 +480,7 @@ export default function Dashboard() {
           <StatCard icon={AlertTriangle} label={tr("Overdue")} value={`€${billingOverdue.toFixed(2)}`} tone={billingOverdue ? "danger" : "success"} />
           <StatCard icon={CheckCircle2} label={tr("Paid this month")} value={`€${billingPaidMonth.toFixed(2)}`} tone="success" />
           <StatCard icon={Wallet} label={tr("Awaiting reimbursement")} value={`€${outstandingReimb.toFixed(2)}`} tone={outstandingReimb ? "warning" : "success"} />
-          <StatCard icon={Home} label={tr("Properties")} value={data.properties.length} tone="primary" />
+          <StatCard icon={Home} label={tr("Properties")} value={data.properties.filter((p) => !isQaProperty(p)).length} tone="primary" />
         </div>
 
         {/* Alerts */}

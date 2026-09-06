@@ -160,6 +160,11 @@
     "property_service_agreement_id": {
       "type": "string"
     },
+    "is_additional_service": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this visit is an ADDITIONAL requested billable service beyond the package's included visits for the period \u2014 never counted against the included allowance."
+    },
     "agreed_price": {
       "type": "number"
     },
