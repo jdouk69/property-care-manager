@@ -74,10 +74,10 @@ export default function ResourceListPage({
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
   showBack = true, sections = [],
   onAdd, reloadSignal,
-  renderCard, filterFn, dictation,
+  renderCard, filterFn, dictation, emptyTitle,
 }) {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, tEnum } = useLanguage();
   const isAdmin = user?.role === "admin";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -252,7 +252,7 @@ export default function ResourceListPage({
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
             <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || t("Select…")} /></SelectTrigger>
             <SelectContent>
-              {(f.options || []).map((o) => <SelectItem key={o} value={o}>{t(o)}</SelectItem>)}
+              {(f.options || []).map((o) => <SelectItem key={o} value={o}>{tEnum(o, f.enumContext)}</SelectItem>)}
             </SelectContent>
           </Select>
         );
@@ -366,7 +366,7 @@ export default function ResourceListPage({
               return (
                 <button key={o} type="button" onClick={() => setField(f.name, on ? arr.filter((x) => x !== o) : [...arr, o])}
                   className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "bg-primary/10 text-primary border-primary/30" : "border-border text-muted-foreground hover:bg-muted"}`}>
-                  {t(o)}
+                  {tEnum(o, f.enumContext)}
                 </button>
               );
             })}
@@ -657,7 +657,7 @@ export default function ResourceListPage({
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Icon} title={t("No {list} yet", { list: t(title).toLowerCase() })} description={t(subtitle)} action={<Button onClick={onAdd || openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {t(addItemLabel)}</Button>} />
+        <EmptyState icon={Icon} title={emptyTitle ? t(emptyTitle) : t("No {list} yet", { list: t(title).toLowerCase() })} description={t(subtitle)} action={<Button onClick={onAdd || openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {t(addItemLabel)}</Button>} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map((item) => (
@@ -690,7 +690,8 @@ export default function ResourceListPage({
                       {columns.filter((c) => c.badge).map((c) => {
                         const v = renderCellValue(c, item);
                         if (!v || v === "—") return null;
-                        return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{t(v)}</span>;
+                        const fieldDef = fields.find((f) => f.name === c.key);
+                        return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{tEnum(v, fieldDef?.enumContext)}</span>;
                       })}
                       {cardExtra && cardExtra(item, lookups)}
                     </div>

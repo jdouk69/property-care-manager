@@ -6,7 +6,7 @@ import ResourceListPage from "@/components/resource/ResourceListPage";
 
 const fields = [
   { name: "name", label: "Full Name", type: "text", required: true, placeholder: "e.g. James Whitfield" },
-  { name: "status", label: "Status", type: "select", options: ["Active", "Inactive"] },
+  { name: "status", label: "Status", type: "select", options: ["Active", "Inactive"], enumContext: "client" },
   { name: "phone", label: "Phone", type: "text" },
   { name: "whatsapp", label: "WhatsApp Number", type: "text" },
   { name: "email", label: "Email", type: "text" },

@@ -3,7 +3,7 @@ import { EL } from "./translations";
 
 // Central interface-language context. English is the default; Greek is a
 // display-only layer — stored data and enum values are never modified.
-const LanguageContext = createContext({ lang: "en", setLang: () => {}, t: (s) => s });
+const LanguageContext = createContext({ lang: "en", setLang: () => {}, t: (s) => s, tEnum: (v) => v });
 
 const STORAGE_KEY = "pcm-interface-language";
 
@@ -36,8 +36,21 @@ export function LanguageProvider({ children }) {
     return s;
   }, [lang]);
 
+  // tEnum(storedValue, context) — context-aware enum display. Greek adjectives
+  // agree with the grammatical gender of what they describe, so the same stored
+  // English value can have several Greek labels ("client:Active" → "Ενεργός"
+  // but the global fallback stays "Ενεργό"). Falls back to t(value) — the
+  // global enum map — when no context override exists. English always shows the
+  // raw stored value. Display-only; nothing is written back to the database.
+  const tEnum = useCallback((value, context) => {
+    if (!value) return "";
+    const keyed = context ? `${context}:${value}` : null;
+    if (lang === "el" && keyed && EL[keyed]) return EL[keyed];
+    return t(value);
+  }, [lang, t]);
+
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, tEnum }}>
       {children}
     </LanguageContext.Provider>
   );

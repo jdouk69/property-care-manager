@@ -4,7 +4,7 @@
 // caller. Stored enum/data values are NEVER translated — this map is
 // display-only.
 
-import { ENUM_EL } from "./enumDisplay";
+import { ENUM_EL, ENUM_CONTEXT_EL } from "./enumDisplay";
 
 export const EL = {
   // ---- Wave 1: sidebar / navigation ----
@@ -561,6 +561,15 @@ export const EL = {
   "Add Maintenance": "Καταχώριση Θέματος",
   "New Maintenance": "Νέο Θέμα",
 
+  // Explicit empty-state overrides. Keys mirror the engine's English output
+  // exactly (English behavior unchanged); Greek gets a natural per-page
+  // sentence instead of a declined noun dropped into an English pattern.
+  "No maintenance yet": "Δεν υπάρχουν καταχωρισμένα θέματα συντήρησης.",
+  "No communications yet": "Δεν υπάρχουν καταχωρισμένες επικοινωνίες.",
+  "No deliveries & access yet": "Δεν υπάρχουν καταχωρισμένες παραδόσεις ή επισκέψεις πρόσβασης.",
+
   // Central enum/status/category display map (merged — one authoritative map)
   ...ENUM_EL,
+  // Context-specific enum overrides ("<context>:<English value>")
+  ...ENUM_CONTEXT_EL,
 };

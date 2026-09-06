@@ -117,6 +117,7 @@ export default function OwnerCommunications() {
         entityName="OwnerCommunication"
         title="Communications"
         subtitle="Owner communication log and message templates"
+        emptyTitle="No communications yet"
         icon={MessageSquare}
         fields={fields}
         columns={columns}

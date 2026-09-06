@@ -5,8 +5,10 @@
 // value when no entry exists).
 //
 // Include a value here ONLY if it means the same thing everywhere it is
-// displayed. Context-specific values (e.g. workflow statuses that differ by
-// entity) get their own context keys, not entries here.
+// displayed. Values whose Greek label must agree with the grammatical gender
+// of the entity they describe (adjectives/participles like Active, Approved,
+// Paid, Scheduled, Emergency) live in ENUM_CONTEXT_EL below instead, keyed
+// "<context>:<English value>".
 //
 // Consumers render via the shared t(value) helper, which merges this map into
 // the single translation dictionary — t() is the authoritative display
@@ -57,7 +59,7 @@ export const ENUM_EL = {
   "Cleaner": "Καθαριστής",
   "Locksmith": "Κλειδαράς",
   "HVAC": "Τεχνικός Κλιματισμού",
-  "Pest Control": "Απολυμάνσεις",
+  "Pest Control": "Απολυμάνσεις & Μυοκτονία",
   "Roofer": "Τεχνικός Στεγών",
   "Painter": "Ελαιοχρωματιστής",
   "General Handyman": "Γενικός Τεχνικός",
@@ -130,7 +132,8 @@ export const ENUM_EL = {
   "Security": "Ασφάλεια",
   "Painting": "Βαφή",
   "Building repair": "Επισκευή κτιρίου",
-  "Pest control": "Απολυμάνσεις",
+  // Broad pest management (insects, rodents) — not just disinfection.
+  "Pest control": "Απολυμάνσεις & Μυοκτονία",
   "Storm damage": "Ζημιές από καταιγίδα",
 
   // Task types
@@ -158,4 +161,35 @@ export const ENUM_EL = {
   "paused": "Σε παύση",
   "skipped": "Παραλείφθηκε",
   "ended": "Ολοκληρώθηκε",
+};
+
+// Context-specific enum display overrides.
+// Greek adjectives/participles agree with the grammatical gender of the noun
+// they describe, so a single stored English value may need several Greek
+// DISPLAY labels. Entries are keyed "<context>:<English value>" and apply ONLY
+// when a caller explicitly passes that context (tEnum(value, context) in
+// LanguageContext; `enumContext` on a field config in ResourceListPage pages).
+// The global map above stays the safe fallback everywhere else; stored values
+// are never touched.
+export const ENUM_CONTEXT_EL = {
+  // Client status (masculine — πελάτης)
+  "client:Active": "Ενεργός",
+  "client:Inactive": "Ανενεργός",
+
+  // Owner approval status (feminine — έγκριση); the issue's own workflow
+  // status "Approved" stays the global neuter "Εγκεκριμένο" (θέμα).
+  "approval:Approved": "Εγκεκριμένη",
+
+  // Payment status (feminine — πληρωμή); invoice status (τιμολόγιο, neuter)
+  // keeps the global "Πληρωμένο" / "Μερικώς πληρωμένο".
+  "payment:Paid": "Πληρωμένη",
+  "payment:Unpaid": "Απληρωμένη",
+  "payment:Partially Paid": "Μερικώς Πληρωμένη",
+
+  // Priority (feminine — προτεραιότητα); "Emergency" is neuter globally
+  // (property status) but feminine when describing a priority.
+  "priority:Emergency": "Επείγουσα",
+
+  // Visit status (feminine — επίσκεψη) — ready for the Visits wave.
+  "visit:Scheduled": "Προγραμματισμένη",
 };

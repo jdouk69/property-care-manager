@@ -36,6 +36,7 @@ export default function Deliveries() {
         entityName="Delivery"
         title="Deliveries & Access"
         subtitle="Deliveries, contractor access and technician visits"
+        emptyTitle="No deliveries & access yet"
         icon={Truck}
         fields={fields}
         columns={columns}

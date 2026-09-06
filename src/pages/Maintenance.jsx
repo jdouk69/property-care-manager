@@ -12,17 +12,17 @@ const fields = [
   { name: "title", label: "Issue Title", type: "text", required: true, placeholder: "e.g. Leaking kitchen tap" },
   { name: "property_id", label: "Property", type: "entity-select", entity: "Property" },
   { name: "category", label: "Category", type: "select", options: CATEGORIES },
-  { name: "priority", label: "Priority", type: "select", options: PRIORITIES },
+  { name: "priority", label: "Priority", type: "select", options: PRIORITIES, enumContext: "priority" },
   { name: "status", label: "Status", type: "select", options: STATUSES },
   { name: "description", label: "Description", type: "textarea" },
   { name: "reported_by", label: "Reported By", type: "text" },
   { name: "contractor_id", label: "Assigned Contractor", type: "entity-select", entity: "Contractor" },
   { name: "contractor_quotation", label: "Contractor Quotation (€)", type: "number" },
-  { name: "owner_approval_status", label: "Owner Approval", type: "select", options: ["Pending", "Approved", "Rejected"] },
+  { name: "owner_approval_status", label: "Owner Approval", type: "select", options: ["Pending", "Approved", "Rejected"], enumContext: "approval" },
   { name: "scheduled_appointment", label: "Scheduled Appointment", type: "date" },
   { name: "cost_estimate", label: "Cost Estimate (€)", type: "number" },
   { name: "final_cost", label: "Final Cost (€)", type: "number" },
-  { name: "payment_status", label: "Payment Status", type: "select", options: ["Unpaid", "Partially Paid", "Paid"] },
+  { name: "payment_status", label: "Payment Status", type: "select", options: ["Unpaid", "Partially Paid", "Paid"], enumContext: "payment" },
   { name: "before_photos", label: "Before Photos", type: "images" },
   { name: "during_photos", label: "During Photos", type: "images" },
   { name: "after_photos", label: "After Photos", type: "images" },
@@ -61,6 +61,7 @@ export default function Maintenance() {
         entityName="MaintenanceIssue"
         title="Maintenance"
         subtitle="Track and resolve property issues"
+        emptyTitle="No maintenance yet"
         icon={Wrench}
         fields={fields}
         columns={columns}
