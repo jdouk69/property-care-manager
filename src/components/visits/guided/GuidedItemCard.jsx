@@ -2,6 +2,7 @@ import React from "react";
 import { Mic, Camera, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Image as UIImage } from "@/components/ui/image";
 import { STATUSES } from "@/components/visits/VisitChecklistItem";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -16,7 +17,7 @@ const DETAIL_STATUSES = ["Important", "Emergency", "Unable to Check"];
 // visual semantics as VisitChecklistItem (same STATUSES definitions). It
 // renders and mutates the SAME checklist item object the wizard owns, through
 // the wizard's existing update handlers — no parallel state or records.
-export default function GuidedItemCard({ item, index, uploading, onSetStatus, onDictate, onNotes, onUploadPhotos, onRemovePhoto }) {
+export default function GuidedItemCard({ item, index, uploading, onSetStatus, onDictate, onNotes, onToggleOwnerVisible, onUploadPhotos, onRemovePhoto }) {
   const { t, lang } = useLanguage();
   const showDetails =
     DETAIL_STATUSES.includes(item.status) ||
@@ -96,6 +97,18 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
               {uploading ? <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /> : <Camera className="w-5 h-5 text-muted-foreground" />}
               <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onUploadPhotos(index, Array.from(e.target.files || []))} />
             </label>
+          </div>
+          {/* Same owner_visible field the accordion toggles — secondary to the
+              notes/photos fields, shown only when the item has details. */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={onToggleOwnerVisible}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleOwnerVisible(); } }}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-left cursor-pointer transition hover:bg-muted"
+          >
+            <span className="text-sm font-medium text-foreground">{t("Show this observation to owner")}</span>
+            <Checkbox checked={!!item.owner_visible} className="pointer-events-none" />
           </div>
         </div>
       )}

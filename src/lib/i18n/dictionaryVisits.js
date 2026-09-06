@@ -370,6 +370,7 @@ export const VISITS_EL = {
   "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…": "Αιτία αδυναμίας ελέγχου (π.χ. κλειδωμένος χώρος εξοπλισμού, απρόσιτη περιοχή, κλειστό νερό)…",
   "Notes…": "Σημειώσεις…",
   "Owner-visible": "Ορατό στον ιδιοκτήτη",
+  "Show this observation to owner": "Εμφάνιση αυτής της παρατήρησης στον ιδιοκτήτη",
   "Private (staff only)": "Ιδιωτικό (μόνο προσωπικό)",
   "Issue created": "Το θέμα δημιουργήθηκε",
   "Create maintenance issue": "Δημιουργία θέματος συντήρησης",

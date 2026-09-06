@@ -53,8 +53,19 @@ export default function GuidedChecklistOverlay({ open, onClose, checklist, initi
     else setShowSummary(true);
   };
 
+// Concern statuses: the first time an item becomes Important/Emergency it is
+// automatically surfaced to the owner (same owner_visible field/semantics the
+// accordion uses — no second visibility system). If the item was ALREADY a
+// concern, the staff's existing owner-visible choice stands and is never
+// silently overridden; a manual toggle-off stays off.
+const CONCERN_STATUSES = ["Important", "Emergency"];
+const concernVisibilityPatch = (item, status) =>
+  CONCERN_STATUSES.includes(status) && !CONCERN_STATUSES.includes(item.status)
+    ? { owner_visible: true }
+    : {};
+
   const handleSetStatus = (status) => {
-    onChangeItem(idx, { ...item, status });
+    onChangeItem(idx, { ...item, status, ...concernVisibilityPatch(item, status) });
     advanceAfter(idx, status);
   };
 
@@ -63,8 +74,14 @@ export default function GuidedChecklistOverlay({ open, onClose, checklist, initi
   // merge semantics as the whole-visit dictation — never a silent overwrite).
   const handleApplyDictation = (proposal) => {
     const mergedNotes = [item.notes || "", proposal.notes || ""].filter((s) => s.trim()).join("\n").trim();
-    onChangeItem(idx, { ...item, status: proposal.status, notes: mergedNotes });
+    onChangeItem(idx, { ...item, status: proposal.status, notes: mergedNotes, ...concernVisibilityPatch(item, proposal.status) });
     advanceAfter(idx, proposal.status);
+  };
+
+  // Same owner_visible field the accordion toggles — flips through the same
+  // wizard checklist update handler, so there is one source of truth.
+  const handleToggleOwnerVisible = () => {
+    onChangeItem(idx, { ...item, owner_visible: !item.owner_visible });
   };
 
   return (
@@ -104,6 +121,7 @@ export default function GuidedChecklistOverlay({ open, onClose, checklist, initi
               onSetStatus={handleSetStatus}
               onDictate={() => setDictateOpen(true)}
               onNotes={(notes) => onChangeItem(idx, { ...item, notes })}
+              onToggleOwnerVisible={handleToggleOwnerVisible}
               onUploadPhotos={onUploadPhotos}
               onRemovePhoto={onRemovePhoto}
             />
