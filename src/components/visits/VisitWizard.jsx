@@ -1050,9 +1050,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><Wrench className="w-3 h-3" /> {t("Issues")}</p>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
             {flaggedCount === 0 ? (
-              <p className="text-sm text-muted-foreground">No items flagged. Mark a checklist item as Important or Emergency to create an issue.</p>
+              <p className="text-sm text-muted-foreground">{t("No items flagged. Mark a checklist item as Important or Emergency to create an issue.")}</p>
             ) : (
-              <p className="text-sm text-muted-foreground mb-2">{flaggedCount} checklist item(s) flagged. Tap "Create Issue" on a flagged item to log it.</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('{count} checklist item(s) flagged. Tap "Create Issue" on a flagged item to log it.', { count: flaggedCount })}</p>
             )}
             {createdIssues.length > 0 && (
               <div className="space-y-1.5 mt-2">

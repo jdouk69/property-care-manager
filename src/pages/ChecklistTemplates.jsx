@@ -10,8 +10,10 @@ import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { SEED, VISIT_TYPES } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export default function ChecklistTemplates() {
+  const { t } = useLanguage();
   const [templates, setTemplates] = useState([]);
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,11 +35,11 @@ export default function ChecklistTemplates() {
   const load = async () => {
     setLoading(true);
     try {
-      const [t, p] = await Promise.all([
+      const [tpls, p] = await Promise.all([
         base44.entities.ChecklistTemplate.list("-created_date", 500),
         base44.entities.Property.list("-created_date", 500),
       ]);
-      setTemplates((t || []).filter((x) => !x.archived));
+      setTemplates((tpls || []).filter((x) => !x.archived));
       setProperties((p || []).filter((x) => !x.archived));
     } catch (e) {}
     setLoading(false);
@@ -47,7 +49,7 @@ export default function ChecklistTemplates() {
 
   const propName = (id) => properties.find((p) => p.id === id)?.name || "";
 
-  const openEdit = (t) => { setEditing(t); setItems([...(t.items || [])]); setNewItem(""); setSaved(false); };
+  const openEdit = (tpl) => { setEditing(tpl); setItems([...(tpl.items || [])]); setNewItem(""); setSaved(false); };
 
   const persist = async (nextItems) => {
     if (!editing) return;
@@ -69,17 +71,17 @@ export default function ChecklistTemplates() {
   };
   const rename = (i, val) => { const next = items.map((x, idx) => idx === i ? val : x); setItems(next); };
   const commitRename = () => persist(items);
-  const remove = (i) => { if (!confirm("Remove this checklist item?")) return; const next = items.filter((_, idx) => idx !== i); setItems(next); persist(next); };
+  const remove = (i) => { if (!confirm(t("Remove this checklist item?"))) return; const next = items.filter((_, idx) => idx !== i); setItems(next); persist(next); };
   const add = () => { if (!newItem.trim()) return; const next = [...items, newItem.trim()]; setItems(next); setNewItem(""); persist(next); };
 
   const restoreMaster = () => {
-    if (!confirm("Restore the original seeded master template? Your customizations to this master will be lost.")) return;
+    if (!confirm(t("Restore the original seeded master template? Your customizations to this master will be lost."))) return;
     const seed = SEED[editing.visit_type] || [];
     setItems([...seed]); persist([...seed]);
   };
 
   const copyToProperty = async () => {
-    if (!copyTarget) { alert("Select a property first."); return; }
+    if (!copyTarget) { alert(t("Select a property first.")); return; }
     setBusy(true);
     try {
       const created = await base44.entities.ChecklistTemplate.create({
@@ -91,14 +93,14 @@ export default function ChecklistTemplates() {
       });
       setTemplates((arr) => [created, ...arr]);
       setCopyTarget("");
-      alert("Property-specific template created. You can now customize it independently.");
-    } catch (e) { alert("Could not copy: " + (e?.message || e)); }
+      alert(t("Property-specific template created. You can now customize it independently."));
+    } catch (e) { alert(t("Could not copy: {message}", { message: e?.message || e })); }
     setBusy(false);
   };
 
-  const archiveTemplate = async (t) => {
-    if (!confirm("Archive this property-specific template? The master remains unaffected.")) return;
-    try { await base44.entities.ChecklistTemplate.update(t.id, { archived: true }); setTemplates((arr) => arr.filter((x) => x.id !== t.id)); if (editing?.id === t.id) setEditing(null); } catch (e) {}
+  const archiveTemplate = async (tpl) => {
+    if (!confirm(t("Archive this property-specific template? The master remains unaffected."))) return;
+    try { await base44.entities.ChecklistTemplate.update(tpl.id, { archived: true }); setTemplates((arr) => arr.filter((x) => x.id !== tpl.id)); if (editing?.id === tpl.id) setEditing(null); } catch (e) {}
   };
 
   const openCreate = () => {
@@ -109,10 +111,10 @@ export default function ChecklistTemplates() {
   const moveNewItem = (i, dir) => { const j = i + dir; if (j < 0 || j >= newItems.length) return; const n = [...newItems]; [n[i], n[j]] = [n[j], n[i]]; setNewItems(n); };
   const renameNewItem = (i, val) => setNewItems((a) => a.map((x, idx) => (idx === i ? val : x)));
   const createTemplate = async () => {
-    if (!newName.trim()) { setCreateError("Enter a template name."); return; }
-    if (!newVisitType) { setCreateError("Choose a visit type."); return; }
-    const existing = templates.find((t) => t.visit_type === newVisitType && (t.is_master || !t.property_id) && !t.archived);
-    if (existing) { setCreateError(`An active master template for "${newVisitType}" already exists. Edit that template instead of creating a duplicate.`); return; }
+    if (!newName.trim()) { setCreateError(t("Enter a template name.")); return; }
+    if (!newVisitType) { setCreateError(t("Choose a visit type.")); return; }
+    const existing = templates.find((tpl) => tpl.visit_type === newVisitType && (tpl.is_master || !tpl.property_id) && !tpl.archived);
+    if (existing) { setCreateError(t('An active master template for "{name}" already exists. Edit that template instead of creating a duplicate.', { name: t(visitTypeLabel(newVisitType)) })); return; }
     setBusy(true);
     try {
       const created = await base44.entities.ChecklistTemplate.create({
@@ -121,17 +123,17 @@ export default function ChecklistTemplates() {
       });
       setTemplates((arr) => [created, ...arr]);
       setCreating(false);
-    } catch (e) { setCreateError("Could not create: " + (e?.message || e)); }
+    } catch (e) { setCreateError(t("Could not create: {message}", { message: e?.message || e })); }
     setBusy(false);
   };
 
-  const visible = templates.filter((t) => {
-    if (t.is_master || !t.property_id) return true;
+  const visible = templates.filter((tpl) => {
+    if (tpl.is_master || !tpl.property_id) return true;
     if (propFilter === "all") return true;
-    return t.property_id === propFilter;
+    return tpl.property_id === propFilter;
   });
-  const masters = visible.filter((t) => t.is_master || !t.property_id);
-  const propSpecific = visible.filter((t) => !t.is_master && t.property_id);
+  const masters = visible.filter((tpl) => tpl.is_master || !tpl.property_id);
+  const propSpecific = visible.filter((tpl) => !tpl.is_master && tpl.property_id);
 
   return (
     <AppLayout>
@@ -139,17 +141,17 @@ export default function ChecklistTemplates() {
         <PageBackButton className="mb-3" />
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Checklist Templates</h1>
-            <p className="text-sm text-muted-foreground">Manage master and property-specific checklists.</p>
+            <h1 className="text-2xl font-semibold tracking-tight">{t("Checklist Templates")}</h1>
+            <p className="text-sm text-muted-foreground">{t("Manage master and property-specific checklists.")}</p>
           </div>
-          <Button onClick={openCreate} className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> New Template</Button>
+          <Button onClick={openCreate} className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> {t("New Template")}</Button>
         </div>
 
         <div className="max-w-xs mb-4">
           <Select value={propFilter} onValueChange={setPropFilter}>
-            <SelectTrigger><SelectValue placeholder="Filter by property" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("Filter by property")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All (masters + property-specific)</SelectItem>
+              <SelectItem value="all">{t("All (masters + property-specific)")}</SelectItem>
               {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -159,34 +161,34 @@ export default function ChecklistTemplates() {
           <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <>
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Master Templates</h2>
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("Master Templates")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
-              {masters.map((t) => (
-                <button key={t.id} onClick={() => openEdit(t)} className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
+              {masters.map((tpl) => (
+                <button key={tpl.id} onClick={() => openEdit(tpl)} className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-sm truncate">{visitTypeLabel(t.visit_type)}</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 shrink-0">Master</span>
+                    <p className="font-medium text-sm truncate">{t(visitTypeLabel(tpl.visit_type))}</p>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 shrink-0">{t("Master")}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{(t.items || []).length} items</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("{count} items", { count: (tpl.items || []).length })}</p>
                 </button>
               ))}
             </div>
 
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Property-Specific</h2>
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("Property-Specific")}</h2>
             {propSpecific.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No property-specific templates. Open a master and use "Copy to property".</p>
+              <p className="text-sm text-muted-foreground">{t('No property-specific templates. Open a master and use "Copy to property".')}</p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {propSpecific.map((t) => (
-                  <div key={t.id} className="rounded-2xl border border-border bg-card p-4 hover:shadow-md transition">
-                    <button onClick={() => openEdit(t)} className="text-left w-full">
+                {propSpecific.map((tpl) => (
+                  <div key={tpl.id} className="rounded-2xl border border-border bg-card p-4 hover:shadow-md transition">
+                    <button onClick={() => openEdit(tpl)} className="text-left w-full">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-sm truncate">{visitTypeLabel(t.visit_type)}</p>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 shrink-0">Property</span>
+                        <p className="font-medium text-sm truncate">{t(visitTypeLabel(tpl.visit_type))}</p>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 shrink-0">{t("Property")}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{propName(t.property_id)} · {(t.items || []).length} items</p>
+                      <p className="text-xs text-muted-foreground mt-1">{propName(tpl.property_id)} · {t("{count} items", { count: (tpl.items || []).length })}</p>
                     </button>
-                    <Button variant="ghost" size="sm" onClick={() => archiveTemplate(t)} className="text-muted-foreground hover:text-destructive mt-2 h-7 px-2"><Archive className="w-3.5 h-3.5" /> Archive</Button>
+                    <Button variant="ghost" size="sm" onClick={() => archiveTemplate(tpl)} className="text-muted-foreground hover:text-destructive mt-2 h-7 px-2"><Archive className="w-3.5 h-3.5" /> {t("Archive")}</Button>
                   </div>
                 ))}
               </div>
@@ -198,11 +200,11 @@ export default function ChecklistTemplates() {
       <Sheet open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
           <SheetHeader>
-            <SheetTitle>{visitTypeLabel(editing?.visit_type)}</SheetTitle>
-            <SheetDescription className="sr-only">Edit checklist items</SheetDescription>
+            <SheetTitle>{t(visitTypeLabel(editing?.visit_type))}</SheetTitle>
+            <SheetDescription className="sr-only">{t("Edit checklist items")}</SheetDescription>
             <div className="flex items-center gap-2">
               <span className={`text-[10px] px-2 py-0.5 rounded-full border ${editing?.is_master || !editing?.property_id ? "bg-primary/10 text-primary border-primary/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
-                {editing?.is_master || !editing?.property_id ? "Master" : `Property: ${propName(editing?.property_id)}`}
+                {editing?.is_master || !editing?.property_id ? t("Master") : t("Property: {name}", { name: propName(editing?.property_id) })}
               </span>
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : null}
             </div>
@@ -219,10 +221,10 @@ export default function ChecklistTemplates() {
                 <button onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
               </div>
             ))}
-            {items.length === 0 && <p className="text-sm text-muted-foreground">No items yet.</p>}
+            {items.length === 0 && <p className="text-sm text-muted-foreground">{t("No items yet.")}</p>}
 
             <div className="flex gap-2 pt-2">
-              <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Add checklist item" />
+              <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder={t("Add checklist item")} />
               <Button onClick={add} disabled={!newItem.trim()}><Plus className="w-4 h-4" /></Button>
             </div>
           </div>
@@ -230,17 +232,17 @@ export default function ChecklistTemplates() {
           <SheetFooter className="flex-col gap-2 border-t pt-4">
             {(editing?.is_master || !editing?.property_id) && (
               <>
-                <Button variant="outline" onClick={restoreMaster} className="rounded-full w-full justify-start"><RotateCcw className="w-4 h-4 mr-2" /> Restore original seeded master</Button>
+                <Button variant="outline" onClick={restoreMaster} className="rounded-full w-full justify-start"><RotateCcw className="w-4 h-4 mr-2" /> {t("Restore original seeded master")}</Button>
                 <div className="flex gap-2 w-full">
                   <Select value={copyTarget} onValueChange={setCopyTarget}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Copy to property…" /></SelectTrigger>
+                    <SelectTrigger className="flex-1"><SelectValue placeholder={t("Copy to property…")} /></SelectTrigger>
                     <SelectContent>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Button onClick={copyToProperty} disabled={busy || !copyTarget} className="rounded-full"><Copy className="w-4 h-4 mr-1" /> Copy</Button>
+                  <Button onClick={copyToProperty} disabled={busy || !copyTarget} className="rounded-full"><Copy className="w-4 h-4 mr-1" /> {t("Copy")}</Button>
                 </div>
               </>
             )}
-            <Button variant="ghost" onClick={() => setEditing(null)} className="w-full">Close</Button>
+            <Button variant="ghost" onClick={() => setEditing(null)} className="w-full">{t("Close")}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
@@ -248,23 +250,23 @@ export default function ChecklistTemplates() {
       <Sheet open={creating} onOpenChange={setCreating}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
           <SheetHeader>
-            <SheetTitle>New Checklist Template</SheetTitle>
-            <SheetDescription className="sr-only">Create a master template</SheetDescription>
+            <SheetTitle>{t("New Checklist Template")}</SheetTitle>
+            <SheetDescription className="sr-only">{t("Create a master template")}</SheetDescription>
           </SheetHeader>
           <div className="flex-1 py-4 space-y-4">
             <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Template Name</Label>
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Emergency Visit (Master)" />
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Template Name")}</Label>
+              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t("e.g. Emergency Visit (Master)")} />
             </div>
             <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Type</Label>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Visit Type")}</Label>
               <Select value={newVisitType} onValueChange={setNewVisitType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{visitTypeLabel(vt)}</SelectItem>)}</SelectContent>
+                <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{t(visitTypeLabel(vt))}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Checklist Items</Label>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Checklist Items")}</Label>
               <div className="space-y-2">
                 {newItems.map((it, i) => (
                   <div key={i} className="flex items-center gap-1.5">
@@ -276,9 +278,9 @@ export default function ChecklistTemplates() {
                     <button onClick={() => removeNewItem(i)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 ))}
-                {newItems.length === 0 && <p className="text-sm text-muted-foreground">No items yet.</p>}
+                {newItems.length === 0 && <p className="text-sm text-muted-foreground">{t("No items yet.")}</p>}
                 <div className="flex gap-2 pt-1">
-                  <Input value={createItem} onChange={(e) => setCreateItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCreateItem()} placeholder="Add checklist item" />
+                  <Input value={createItem} onChange={(e) => setCreateItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addCreateItem()} placeholder={t("Add checklist item")} />
                   <Button onClick={addCreateItem} disabled={!createItem.trim()}><Plus className="w-4 h-4" /></Button>
                 </div>
               </div>
@@ -291,8 +293,8 @@ export default function ChecklistTemplates() {
             )}
           </div>
           <SheetFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setCreating(false)} className="rounded-full">Cancel</Button>
-            <Button onClick={createTemplate} disabled={busy} className="rounded-full">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> Create Master Template</>}</Button>
+            <Button variant="outline" onClick={() => setCreating(false)} className="rounded-full">{t("Cancel")}</Button>
+            <Button onClick={createTemplate} disabled={busy} className="rounded-full">{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> {t("Create Master Template")}</>}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

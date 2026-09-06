@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff, ChevronDown, Check, CircleSlash, Minus, Circle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 
 // "Not Checked" stays the stored default (item not yet answered) but is no
 // longer a deliberate field choice — workers pick Unable to Check or N/A instead.
@@ -22,6 +24,7 @@ const AUTO_OPEN = ["Important", "Emergency", "Unable to Check"];
 // the existing status buttons and detail controls — no status values or save
 // behavior changed.
 export default function VisitChecklistItem({ item, index, onChange, onUploadPhoto, onRemovePhoto, uploading, onFlagIssue, flagged, expanded = false, onToggle }) {
+  const { t, lang } = useLanguage();
   const [detailOpen, setDetailOpen] = useState(AUTO_OPEN.includes(item.status));
   const setStatus = (status) => {
     onChange({ ...item, status });
@@ -41,18 +44,18 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
           {index + 1}
         </span>
         <p className={`flex-1 text-foreground leading-snug ${expanded ? "text-base md:text-lg 2xl:text-sm font-semibold" : "text-base md:text-lg 2xl:text-sm font-medium"}`}>
-          {item.name}
+          {checklistItemDisplay(item.name, lang)}
         </p>
         <span className="flex flex-col items-end justify-center gap-1.5 shrink-0">
           {answered && statusDef ? (
             <span className={`inline-flex items-center gap-1.5 text-xs md:text-sm px-2.5 py-1 rounded-full border font-medium whitespace-nowrap ${statusDef.cls}`}>
               <statusDef.icon className="w-3.5 h-3.5 2xl:w-3 2xl:h-3 shrink-0" />
-              {statusDef.label}
+              {t(statusDef.label)}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs md:text-sm px-2.5 py-1 rounded-full border border-dashed border-border bg-muted/40 text-muted-foreground whitespace-nowrap">
               <Circle className="w-3.5 h-3.5 2xl:w-3 2xl:h-3" />
-              Not answered
+              {t("Not answered")}
             </span>
           )}
           <ChevronDown className={`w-5 h-5 2xl:w-4 2xl:h-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -68,7 +71,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
               <button key={s.value} type="button" onClick={() => setStatus(s.value)}
                 className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base font-semibold leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-bold ring-1 ring-inset ring-current/10" : s.idleCls}`}>
                 <s.icon className="w-4 h-4 2xl:w-3.5 2xl:h-3.5 shrink-0" />
-                {s.label}
+                {t(s.label)}
               </button>
             ))}
           </div>
@@ -77,7 +80,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
               <button key={s.value} type="button" onClick={() => setStatus(s.value)}
                 className={`min-h-[56px] flex items-center justify-center gap-1.5 px-2 py-2.5 text-sm md:text-base font-semibold leading-tight rounded-xl border transition md:min-h-14 2xl:min-h-9 2xl:gap-1 2xl:px-3 2xl:py-1 2xl:text-xs 2xl:rounded-full ${item.status === s.value ? s.cls + " font-bold ring-1 ring-inset ring-current/10" : s.idleCls}`}>
                 <s.icon className="w-4 h-4 2xl:w-3.5 2xl:h-3.5 shrink-0" />
-                {s.label}
+                {t(s.label)}
               </button>
             ))}
           </div>
@@ -89,20 +92,20 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
               className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition 2xl:min-h-9 2xl:px-3 2xl:py-1.5 2xl:text-xs"
             >
               {detailOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {detailOpen ? "Hide notes / photos" : "Add note / photo"}
+              {detailOpen ? t("Hide notes / photos") : t("Add note / photo")}
             </button>
           )}
 
           {detailOpen && (
             <div className="space-y-2">
-              <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder={item.status === "Unable to Check" ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…" : "Notes…"} rows={item.status === "Unable to Check" ? 4 : 3} className="resize-none min-h-[96px] text-base leading-relaxed py-3 2xl:text-sm 2xl:min-h-60 2xl:py-2" />
+              <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder={t(item.status === "Unable to Check" ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…" : "Notes…")} rows={item.status === "Unable to Check" ? 4 : 3} className="resize-none min-h-[96px] text-base leading-relaxed py-3 2xl:text-sm 2xl:min-h-60 2xl:py-2" />
               <button
                 type="button"
                 onClick={toggleOwnerVisible}
                 className={`inline-flex items-center gap-1.5 min-h-[44px] text-sm px-4 py-2 md:px-4 md:py-2.5 2xl:min-h-9 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border transition ${ownerVisible ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-border text-muted-foreground hover:bg-muted"}`}
               >
                 {ownerVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                {ownerVisible ? "Owner-visible" : "Private (staff only)"}
+                {ownerVisible ? t("Owner-visible") : t("Private (staff only)")}
               </button>
               <div className="grid grid-cols-4 gap-2">
                 {(item.photos || []).map((url, i) => (
@@ -124,7 +127,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
                 <button type="button" onClick={() => onFlagIssue(index)}
                   disabled={flagged}
                   className={`min-h-[44px] text-sm px-4 py-2 md:px-4 md:py-2.5 2xl:min-h-9 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border inline-flex items-center gap-1.5 transition ${flagged ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-primary/30 text-primary hover:bg-primary/10"}`}>
-                  <Wrench className="w-3.5 h-3.5" /> {flagged ? "Issue created" : "Create maintenance issue"}
+                  <Wrench className="w-3.5 h-3.5" /> {flagged ? t("Issue created") : t("Create maintenance issue")}
                 </button>
               )}
             </div>
