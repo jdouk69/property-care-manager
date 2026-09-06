@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CancelVisitDialog from "@/components/visits/CancelVisitDialog";
 import { cancelVisitFromDraft } from "@/lib/visitCancel";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // A small ⋯ menu offering a safe "Cancel Visit" action for an in-progress
 // (draft) visit. Used on the Dashboard "Continue Visit" card and inside the
@@ -14,6 +15,7 @@ export default function CancelVisitMenu({ draft, onDone, triggerClassName = "" }
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { t } = useLanguage();
 
   const handleConfirm = async () => {
     setBusy(true);
@@ -23,7 +25,7 @@ export default function CancelVisitMenu({ draft, onDone, triggerClassName = "" }
       setOpen(false);
       onDone?.();
     } catch (e) {
-      alert("Could not cancel visit: " + (e?.message || e));
+      alert(t("Could not cancel visit: {message}", { message: e?.message || e }));
     }
     setBusy(false);
   };
@@ -35,7 +37,7 @@ export default function CancelVisitMenu({ draft, onDone, triggerClassName = "" }
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Visit options"
+            aria-label={t("Visit options")}
             className={`rounded-full shrink-0 h-9 w-9 ${triggerClassName}`}
           >
             <MoreHorizontal className="w-5 h-5" />
@@ -46,7 +48,7 @@ export default function CancelVisitMenu({ draft, onDone, triggerClassName = "" }
             className="text-destructive focus:text-destructive"
             onClick={() => setConfirm(true)}
           >
-            Cancel Visit
+            {t("Cancel Visit")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
