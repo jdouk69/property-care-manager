@@ -996,7 +996,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // Important/Emergency items REQUIRE their own observation before completion
   // (hard gate — every abnormal item in the owner report must be explainable).
   // Normal / N/A / Unable to Check / Not Checked behavior is unchanged.
-  const missingConcernNotes = checklist.filter((i) => (i.status === "Important" || i.status === "Emergency") && !(i.notes || "").trim());
+  // Owner-visible observation REQUIRED: a private (owner_visible=false) note
+  // cannot substitute — the customer report must be able to explain every
+  // abnormal item from that exact item's own owner-facing note.
+  const missingConcernNotes = checklist.filter((i) => (i.status === "Important" || i.status === "Emergency") && !(i.owner_visible && (i.notes || "").trim()));
     const inspectionDone = checklist.length > 0 && checklist.every((it, idx) => isAnswered(it, idx));
     const issuesDone = inspectionDone && (flaggedCount === 0 || issueIds.length > 0);
     const tasksDone = inspectionDone && issuesDone && (taskIds.length > 0 || !!skipped.tasks);
@@ -1315,7 +1318,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               </div>
               <p className="text-sm text-muted-foreground mb-4">
                 {missingConcernNotes.length > 0
-                  ? t("{count} Attention/Emergency item(s) have no observation noted. Please describe what was observed before completing the visit.", { count: missingConcernNotes.length })
+                  ? t("{count} Attention/Emergency item(s) still need an owner-visible observation describing what was found. A private staff note cannot substitute. The visit cannot be completed until each one has one.", { count: missingConcernNotes.length })
                   : inspectionDone
                     ? t("{count} Unable to Check item(s) have no reason noted. The owner report will show the check could not be completed, but not why.", { count: missingReasons.length })
                     : t("There are still unanswered checklist items.")}

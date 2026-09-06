@@ -1,5 +1,5 @@
 import React from "react";
-import { Mic, Camera, Loader2, X } from "lucide-react";
+import { Mic, Camera, Loader2, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -69,13 +69,21 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
 
       {showDetails && (
         <div className="space-y-2">
+          {(item.status === "Important" || item.status === "Emergency") && (
+            <p className="text-xs font-medium text-amber-600 dark:text-amber-500 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              {t("Required: describe what was observed. This explanation appears in the owner report.")}
+            </p>
+          )}
           <Textarea
             value={item.notes || ""}
             onChange={(e) => onNotes(e.target.value)}
             placeholder={t(
               item.status === "Unable to Check"
                 ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…"
-                : "Notes…"
+                : item.status === "Important" || item.status === "Emergency"
+                  ? "Describe what was observed (required)…"
+                  : "Notes…"
             )}
             rows={item.status === "Unable to Check" ? 4 : 3}
             className="resize-none min-h-[96px] text-base leading-relaxed py-3"

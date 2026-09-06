@@ -260,6 +260,21 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const vtl = visitTypeLabel(visit?.visit_type) || "Property Visit";
   const summaryText = buildSummaryText({ findings, counts, routineCount, attentionCount, urgentCount });
 
+  // Shared "Summary & Next Steps" body used IDENTICALLY by Report Review and the
+  // PDF. Whenever any Important/Emergency checklist status exists, this states
+  // the factual counts so "no concerns were noted" wording is IMPOSSIBLE while
+  // abnormal items exist. It never invents observations or recommendations —
+  // it only points to the observations documented above.
+  let concernSummary = "";
+  if (attentionCount || urgentCount) {
+    const bits = [];
+    if (attentionCount) bits.push(`${attentionCount} item${attentionCount === 1 ? "" : "s"} requiring attention`);
+    if (urgentCount) bits.push(`${urgentCount} urgent condition${urgentCount === 1 ? "" : "s"}`);
+    const listed = bits.length === 1 ? bits[0] : `${bits[0]} and ${bits[1]}`;
+    const verb = attentionCount + urgentCount === 1 ? "was" : "were";
+    concernSummary = `${listed} ${verb} documented during this visit. Please review the observations above for details.`;
+  }
+
   // Compact appendix: routine (Normal, no-concern) check names + observations
   // (priority - title). No descriptions/photos repeated here.
   const visitChecklist = {
@@ -300,6 +315,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     priorityBreakdown,
     routineLine,
     summaryText,
+    concernSummary,
     findings,
     routineChecks,
     routineCount,
@@ -348,7 +364,7 @@ function drawImageFit(doc, entry, x, y, boxW, boxH) {
 
 async function buildDoc(visit, ctx = {}) {
   const model = buildOwnerReportModel(visit, ctx);
-  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, findings, routineChecks, routineCount, unableToCheck, naLine, docPhotos, issues, tasks, nextVisit } = model;
+  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, concernSummary, findings, routineChecks, routineCount, unableToCheck, naLine, docPhotos, issues, tasks, nextVisit } = model;
 
   const doc = new jsPDF();
   const pageW = doc.internal.pageSize.getWidth();
@@ -536,11 +552,12 @@ async function buildDoc(visit, ctx = {}) {
   text("Summary & Next Steps", margin, y); y += 6;
   doc.setFontSize(10); doc.setFont(undefined, "normal"); doc.setTextColor(40);
   if (v.summary) { wrap(v.summary, maxWidth, margin); y += 2; }
+  if (concernSummary) { wrap(concernSummary, maxWidth, margin); y += 2; }
   const nextSteps = [];
   if (issues.length) nextSteps.push(`${issues.length} maintenance item${issues.length === 1 ? "" : "s"} recorded - we will coordinate as agreed.`);
   if (tasks.length) nextSteps.push(`${tasks.length} follow-up task${tasks.length === 1 ? "" : "s"} scheduled.`);
   if (nextVisit && nextVisit.start_time) nextSteps.push(`Next scheduled visit: ${fmtDate(nextVisit.start_time)}.`);
-  if (!v.summary && !nextSteps.length) { doc.setTextColor(120); text("No additional next steps recorded.", margin, y); y += 5; doc.setTextColor(0); }
+  if (!v.summary && !concernSummary && !nextSteps.length) { doc.setTextColor(120); text("No additional next steps recorded.", margin, y); y += 5; doc.setTextColor(0); }
   nextSteps.forEach((s) => { wrap(s, maxWidth, margin); });
   y += 4;
 

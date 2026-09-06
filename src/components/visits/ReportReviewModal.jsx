@@ -60,7 +60,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
   const {
     business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl,
     overallStatus = { key: "ok", label: "No Concerns Noted" }, counts = { urgent: 0, attention: 0, monitor: 0 },
-    priorityBreakdown = "", routineLine = "", summaryText = "",
+    priorityBreakdown = "", routineLine = "", summaryText = "", concernSummary = "",
     findings = [], routineChecks = [], docPhotos = [],
     issues = [], tasks = [], nextVisit,
   } = model;
@@ -240,11 +240,17 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
           {/* Summary & next steps */}
           <div className="border-t border-border pt-3">
             <p className="text-sm font-semibold mb-1">Summary & Next Steps</p>
-            {visit.summary ? (
+            {visit.summary && (
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{visit.summary}</p>
-            ) : findings.length === 0 ? (
+            )}
+            {concernSummary && (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{concernSummary}</p>
+            )}
+            {/* "No concerns" wording is impossible while any Important/Emergency
+                item exists — concernSummary always renders in that case. */}
+            {!visit.summary && !concernSummary && findings.length === 0 && (
               <p className="text-sm text-muted-foreground">No concerns were noted during this visit.</p>
-            ) : null}
+            )}
             {nextSteps.length > 0 && (
               <ul className="text-sm text-muted-foreground mt-2 space-y-0.5">
                 {nextSteps.map((s, i) => <li key={i} className="flex items-start gap-1.5"><ListChecks className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {s}</li>)}
