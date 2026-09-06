@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search, Mic } from "lucide-react";
+import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search, Mic, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import { recommendedVisitType, isRecurringAgreement } from "@/lib/activeService"
 import { visitTypeLabel, checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
+import DraftConflictDialog from "@/components/visits/DraftConflictDialog";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 import { Link, useNavigate } from "react-router-dom";
@@ -126,6 +127,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // selected visit type will load. Resolution is identical to the real start:
   // property-specific override > master template > built-in default.
   const [typePreview, setTypePreview] = useState(null);
+  // Checklist preview for the RECOMMENDED package visit, independent of which
+  // type is currently selected (used by the package launch button).
+  const [recPreview, setRecPreview] = useState(null);
   const [resumable, setResumable] = useState(null);
   const [contractors, setContractors] = useState([]);
   const [expensesCreated, setExpensesCreated] = useState([]);
@@ -370,14 +374,22 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     (async () => {
       try {
         const p = await loadChecklistItems(propertyId, visitType);
-        if (!cancelled) setTypePreview(p);
+        if (cancelled) return;
+        setTypePreview(p);
+        const rec = recommendedVisitType(pkg);
+        if (rec && rec !== visitType) {
+          const rp = await loadChecklistItems(propertyId, rec);
+          if (!cancelled) setRecPreview(rp);
+        } else {
+          setRecPreview(p);
+        }
       } catch (e) {
-        if (!cancelled) setTypePreview(null);
+        if (!cancelled) { setTypePreview(null); setRecPreview(null); }
       }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, propertyId, visitType]);
+  }, [step, propertyId, visitType, pkg]);
 
   const propertyName = properties.find((p) => p.id === propertyId)?.name || "";
 
@@ -511,10 +523,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     } catch (e) { setStep("type"); }
   };
 
-  const handleStartNow = () => {
+  const handleStartNow = (overrideType) => {
     const d = loadDraft();
     if (d && d.propertyId && d.checklist && d.checklist.length > 0) { setDraftConflict(true); return; }
-    const vt = visitType || VISIT_TYPES[0];
+    const vt = overrideType || visitType || VISIT_TYPES[0];
     if (!visitType) setVisitType(vt);
     startVisit(vt);
   };
@@ -865,20 +877,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         </div>
 
         {draftConflict && (
-          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-card rounded-2xl border border-border max-w-sm md:max-w-md 2xl:max-w-sm w-full p-5 shadow-xl">
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-                <h3 className="font-semibold">{t("You already have a visit in progress.")}</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">{t("Starting a new visit will discard the unfinished one. Choose how to proceed.")}</p>
-              <div className="flex flex-col gap-2">
-                <Button onClick={() => { setDraftConflict(false); resume(); }} className="rounded-2xl h-11">{t("Continue Existing Visit")}</Button>
-                <Button variant="outline" onClick={() => setDraftConflict(false)} className="rounded-2xl h-11">{t("Cancel")}</Button>
-                <Button variant="destructive" onClick={startNowDiscardDraft} className="rounded-2xl h-11">{t("Start New Visit")}</Button>
-              </div>
-            </div>
-          </div>
+          <DraftConflictDialog
+            onResume={() => { setDraftConflict(false); resume(); }}
+            onCancel={() => setDraftConflict(false)}
+            onDiscardAndStart={startNowDiscardDraft}
+          />
         )}
       </div>
     );
@@ -1023,6 +1026,30 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 dark:text-amber-500">{t("No active service agreement for this property. Choose the visit type for today's service.")}</p>
           </div>
+        )}
+
+        {/* Package launch — run the customer's actual recurring service directly.
+            Resolves the SAME checklist as a manually chosen visit (property
+            override > package master) and links the visit to the active
+            agreement via the existing architecture. */}
+        {agreement && isRecurringAgreement(agreement) && recType && (
+          <button type="button" onClick={() => { setVisitType(recType); handleStartNow(recType); }}
+            className="w-full text-left rounded-2xl border border-primary bg-primary text-primary-foreground px-3.5 py-3.5 mb-4 hover:bg-primary/90 transition min-h-[56px]">
+            <div className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-primary-foreground/15 flex items-center justify-center shrink-0"><Play className="w-4 h-4" /></span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">{t("Start {package} Visit", { package: activeServiceName })}</p>
+                <p className="text-xs opacity-80 truncate">
+                  {recPreview && recPreview.found
+                    ? t("Checklist: {template} · {count} items", {
+                        template: recPreview.templateName || (recPreview.source === "Default" ? t("Built-in default checklist") : "—"),
+                        count: recPreview.count,
+                      })
+                    : t("Included scheduled visit for this service")}
+                </p>
+              </div>
+            </div>
+          </button>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

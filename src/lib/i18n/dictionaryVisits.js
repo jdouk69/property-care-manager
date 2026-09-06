@@ -324,6 +324,8 @@ export const VISITS_EL = {
   "Checklist: {template} · {count} items": "Λίστα ελέγχου: {template} · {count} στοιχεία",
   "Built-in default checklist": "Ενσωματωμένη προεπιλεγμένη λίστα ελέγχου",
   "One-time service": "Μεμονωμένη υπηρεσία",
+  "Start {package} Visit": "Έναρξη επίσκεψης {package}",
+  "Included scheduled visit for this service": "Περιλαμβανόμενη προγραμματισμένη επίσκεψη της υπηρεσίας",
   "Leave the active visit? Your progress is saved and you can resume it from the visits list.": "Αποχώρηση από την ενεργή επίσκεψη; Η πρόοδος έχει αποθηκευτεί και μπορείτε να τη συνεχίσετε από τη λίστα επισκέψεων.",
   "Visit Complete ✓": "Η Επίσκεψη Ολοκληρώθηκε ✓",
   "Duration: {start} – {end}": "Διάρκεια: {start} – {end}",
