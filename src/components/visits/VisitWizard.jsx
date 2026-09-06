@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
+import GuidedChecklistOverlay from "@/components/visits/guided/GuidedChecklistOverlay";
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
@@ -141,6 +142,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // Which checklist rows are expanded (compact step-by-step interaction).
   const [openItems, setOpenItems] = useState({});
   const [dictateOpen, setDictateOpen] = useState(false);
+  // Guided Checklist overlay (mobile field mode): entry index is derived at
+  // open time from checklist progress — no persisted current-card field.
+  const [guidedOpen, setGuidedOpen] = useState(false);
+  const [guidedStart, setGuidedStart] = useState(0);
   const itemRefs = useRef({});
   const guidedInitDone = useRef(false);
 
@@ -276,6 +281,39 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId });
     }
   }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId]);
+
+  // Scheduled/resumed visits (resumeVisitId) previously had NO autosave — the
+  // PropertyVisit record was written only at completion, so leaving mid-visit
+  // lost in-progress checklist progress. This debounced save persists progress
+  // on the SAME record (no new entity, no duplicate visit); completion still
+  // writes the final full record exactly as before, and the resume flow below
+  // already loads v.checklist — so reopening restores statuses, notes and
+  // photos, and the Guided Checklist resumes at the first unanswered item.
+  const resumedSaveRef = useRef(null);
+  useEffect(() => {
+    if (step !== "active" || !resumeVisitId || !propertyId) return;
+    const payload = {
+      checklist,
+      meter_readings: meters.filter((m) => m.label || m.value),
+      summary,
+      internal_notes: internalNotes,
+      gps_location: gps,
+    };
+    resumedSaveRef.current = { id: resumeVisitId, payload };
+    const tm = setTimeout(() => {
+      base44.entities.PropertyVisit.update(resumeVisitId, payload).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(tm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, resumeVisitId, checklist, meters, summary, internalNotes, gps]);
+
+  // Final flush when the wizard unmounts mid-visit (navigate away / close).
+  // After completion this writes the same values the completion already saved,
+  // so it is idempotent and never overwrites the completed record's status.
+  useEffect(() => () => {
+    const s = resumedSaveRef.current;
+    if (s) base44.entities.PropertyVisit.update(s.id, s.payload).catch(() => {});
+  }, []);
 
   // Safety net: if a visit is active but the checklist failed to load (a transient list failure, or a
   // stale draft left over from before a Master template existed), re-attempt the lookup once so a
@@ -984,6 +1022,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
         {/* Inspection */}
         <div id="step-inspection" className="scroll-mt-28">
+          {/* Guided Checklist — full-screen, one item at a time (iPhone field mode) */}
+          {checklist.length > 0 && propertyId && (
+            <button type="button" onClick={() => { setGuidedStart(Math.max(0, focusIdx(checklist, answered))); setGuidedOpen(true); }} className="w-full flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-3.5 py-3.5 mb-2 hover:bg-primary/15 transition min-h-[56px] text-left">
+              <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0"><ListChecks className="w-4 h-4" /></span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-foreground">{t("Guided Checklist")}</span>
+                <span className="block text-xs text-muted-foreground">{t("One item at a time — tap a status to continue")}</span>
+              </span>
+            </button>
+          )}
           {/* Dictate Visit — optional voice shortcut for filling the SAME checklist */}
           {checklist.length > 0 && propertyId && (
             <button type="button" onClick={() => setDictateOpen(true)} className="w-full flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-3.5 py-3 mb-3 hover:bg-primary/10 transition min-h-[48px] text-left">
@@ -1260,6 +1308,21 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             onApply={applyDictation}
           />
         )}
+
+        {/* Guided Checklist — full-screen presentation over the SAME checklist
+            state and update handlers; closing it returns to this active step,
+            which keeps the existing review/completion/report flow. */}
+        <GuidedChecklistOverlay
+          open={guidedOpen}
+          onClose={() => setGuidedOpen(false)}
+          checklist={checklist}
+          initialIndex={guidedStart}
+          context={{ serviceLabel: t(visitTypeLabel(visitType)), propertyName, clientName: clientObj?.name || "" }}
+          onChangeItem={updateItem}
+          onUploadPhotos={uploadPhotos}
+          onRemovePhoto={removePhoto}
+          uploading={uploading}
+        />
       </div>
     );
   }

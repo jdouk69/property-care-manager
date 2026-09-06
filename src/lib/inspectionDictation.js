@@ -145,3 +145,62 @@ export async function dictationFormProposalsFromAudio({ fields, values, contextL
 
   return { transcript: text, proposals };
 }
+
+// Item-level dictation (Guided Checklist): the checklist item is ALREADY
+// known — passed in by the caller from the card staff is currently looking at.
+// The AI NEVER performs checklist-item matching; it may propose only ONE of
+// the allowed existing statuses plus an observation note in the worker's own
+// words. The result is a PROPOSAL — the dialog reviews it and staff approves
+// before anything is applied (the caller APPENDS approved notes to existing
+// notes, never silently overwriting). Reuses the exact same recorder /
+// transcription / AI pipeline as all other dictation surfaces; no new
+// infrastructure, statuses, or fields.
+export async function dictationItemProposalFromAudio({ itemName, statuses, contextLabel, audioBlob }) {
+  const file = new File([audioBlob], `dictation-${Date.now()}.webm`, { type: audioBlob.type || "audio/webm" });
+  const { file_url } = await base44.integrations.Core.UploadFile({ file });
+  const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
+  const text = (typeof transcript === "string" ? transcript : transcript?.text || "").trim();
+  if (!text) return { transcript: "", proposal: null };
+
+  const res = await base44.integrations.Core.InvokeLLM({
+    prompt:
+      "A property-care worker dictated an observation about ONE known checklist item.\n\n" +
+      `INSPECTION CONTEXT: ${contextLabel}. The property and visit are already chosen by the app — never infer, switch, or add any other property, visit, or checklist item; a spoken name is transcript text only.\n\n` +
+      `CHECKLIST ITEM (already known — do NOT match, search for, or invent items): "${itemName}"\n\n` +
+      `ALLOWED STATUSES: ${statuses.join(", ")}\n\n` +
+      `TRANSCRIPT: "${text}"\n\n` +
+      "Choose exactly one status from the allowed list that best matches the worker's words " +
+      "(fine/OK/no problem → the status meaning fine, a problem or concern → the status meaning needs attention, " +
+      "urgent or serious → the most severe status, could not check or access → that status, not applicable → that status). " +
+      'Set "notes" to the worker\'s own words describing the observation, kept short and factual. ' +
+      "Keep wording within visual property-care / home-watch observation scope — never introduce professional inspection, engineering, certification, or code-compliance language. " +
+      "Do not invent facts the worker did not say. " +
+      "Set needs_review to true when the speech does not clearly relate to this item or you cannot confidently choose one status. Do NOT guess in that case.",
+    response_json_schema: {
+      type: "object",
+      properties: {
+        update: {
+          type: "object",
+          properties: {
+            status: { type: "string", enum: statuses },
+            notes: { type: "string" },
+            needs_review: { type: "boolean" },
+          },
+          required: ["status", "notes"],
+        },
+      },
+      required: ["update"],
+    },
+  });
+
+  const u = res?.update;
+  if (!u || !statuses.includes(u.status)) return { transcript: text, proposal: null };
+  return {
+    transcript: text,
+    proposal: {
+      status: u.status,
+      notes: (u.notes || "").trim(),
+      needs_review: !!u.needs_review,
+    },
+  };
+}

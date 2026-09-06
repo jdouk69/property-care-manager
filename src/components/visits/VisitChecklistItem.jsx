@@ -7,7 +7,7 @@ import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 
 // "Not Checked" stays the stored default (item not yet answered) but is no
 // longer a deliberate field choice — workers pick Unable to Check or N/A instead.
-const STATUSES = [
+export const STATUSES = [
   { value: "Normal", label: "Normal", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", idleCls: "bg-emerald-500/5 border-emerald-500/25 text-emerald-700 dark:text-emerald-400" },
   { value: "Important", label: "Attention", icon: AlertTriangle, cls: "bg-amber-500/10 text-amber-600 border-amber-500/30", idleCls: "bg-amber-500/5 border-amber-500/25 text-amber-700 dark:text-amber-500" },
   { value: "Emergency", label: "Emergency", icon: AlertTriangle, cls: "bg-rose-500/10 text-rose-600 border-rose-500/30", idleCls: "bg-rose-500/5 border-rose-500/25 text-rose-700 dark:text-rose-400" },
