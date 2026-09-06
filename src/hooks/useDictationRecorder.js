@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Shared microphone capture used by ALL Dictate surfaces — no separate
 // recording implementations per form. The hook records audio and hands the
@@ -6,6 +7,7 @@ import { useRef, useState } from "react";
 // interpretation and review stay in the dialogs.
 // phase: idle | recording | processing
 export default function useDictationRecorder() {
+  const { t } = useLanguage();
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const recRef = useRef(null);
@@ -39,12 +41,12 @@ export default function useDictationRecorder() {
       rec.onstop = async () => {
         const chunks = [...chunksRef.current];
         cleanup();
-        if (!chunks.length) { setError("No audio captured — try again or continue manually."); setPhase("idle"); return; }
+        if (!chunks.length) { setError(t("No audio captured — try again or continue manually.")); setPhase("idle"); return; }
         setPhase("processing");
         try {
           await interpret(new Blob(chunks, { type: chunks[0]?.type || "audio/webm" }));
         } catch (e) {
-          setError("Could not process the dictation — try again or continue manually. (" + (e?.message || e) + ")");
+          setError(t("Could not process the dictation — try again or continue manually. ({message})", { message: e?.message || String(e) }));
         }
         setPhase("idle");
       };
@@ -52,7 +54,7 @@ export default function useDictationRecorder() {
       rec.start();
       setPhase("recording");
     } catch (e) {
-      setError("Microphone unavailable — check permissions, or simply continue manually.");
+      setError(t("Microphone unavailable — check permissions, or simply continue manually."));
     }
   };
 

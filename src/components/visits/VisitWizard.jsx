@@ -247,6 +247,19 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           setVisitType(v.visit_type || VISIT_TYPES[0]);
           setStartTime(v.start_time || null);
           setAgreementId(v.property_service_agreement_id || "");
+          // QA F1/F2 fix: restore the fields the resumed-visit persistence
+          // already writes on this SAME record — meter readings, summary,
+          // internal notes, GPS — plus the existing issue/task linkage, so a
+          // resumed visit shows the previous session's data and completing it
+          // can no longer overwrite those values with blanks.
+          setGps(v.gps_location || "");
+          setMeters(v.meter_readings?.length ? v.meter_readings : [{ label: "Electricity meter", value: "", photo: "" }, { label: "Water meter", value: "", photo: "" }]);
+          setSummary(v.summary || "");
+          setInternalNotes(v.internal_notes || "");
+          const priorIssueIds = v.maintenance_issue_ids || [];
+          const priorTaskIds = v.follow_up_task_ids || [];
+          setIssueIds(priorIssueIds);
+          setTaskIds(priorTaskIds);
           if (v.property_service_agreement_id) {
             try {
               const a = await base44.entities.PropertyServiceAgreement.get(v.property_service_agreement_id);
@@ -264,6 +277,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               setTemplateSource(source);
             } catch (e) { setChecklist([]); setTemplateSource("None"); }
           }
+          // Items already carrying an existing linked issue keep their flagged
+          // state, so staff cannot accidentally create a duplicate issue for
+          // the same checklist item after resuming (same heuristic as the
+          // existing draft-resume path).
+          (v.checklist || []).forEach((it, i) => {
+            if (it.status === "Important" || it.status === "Emergency") setFlagged((f) => ({ ...f, [i]: priorIssueIds.length > 0 }));
+          });
           setStep("active");
         } catch (e) { setStep("property"); }
       })();
@@ -298,6 +318,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       summary,
       internal_notes: internalNotes,
       gps_location: gps,
+      // QA F2 fix: persist the existing issue/task linkage on the same record,
+      // so links created mid-visit survive leaving and resuming.
+      maintenance_issue_ids: issueIds,
+      follow_up_task_ids: taskIds,
     };
     resumedSaveRef.current = { id: resumeVisitId, payload };
     const tm = setTimeout(() => {
@@ -305,7 +329,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     }, 1500);
     return () => clearTimeout(tm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, resumeVisitId, checklist, meters, summary, internalNotes, gps]);
+  }, [step, resumeVisitId, checklist, meters, summary, internalNotes, gps, issueIds, taskIds]);
 
   // Final flush when the wizard unmounts mid-visit (navigate away / close).
   // After completion this writes the same values the completion already saved,

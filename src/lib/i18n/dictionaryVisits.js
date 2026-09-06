@@ -505,4 +505,8 @@ export const VISITS_EL = {
   "{count} of {total} reviewed": "{count} από {total} ολοκληρώθηκαν",
   "Return to Visit": "Επιστροφή στην Επίσκεψη",
   "Back to Checklist": "Πίσω στο Checklist",
+  // Shared dictation recorder errors (QA F4) — used by ALL dictation surfaces
+  "No audio captured — try again or continue manually.": "Δεν καταγράφηκε ήχος — δοκιμάστε ξανά ή συνεχίστε χειροκίνητα.",
+  "Could not process the dictation — try again or continue manually. ({message})": "Δεν μπόρεσε να επεξεργαστεί η εκφώνηση — δοκιμάστε ξανά ή συνεχίστε χειροκίνητα. ({message})",
+  "Microphone unavailable — check permissions, or simply continue manually.": "Το μικρόφωνο δεν είναι διαθέσιμο — ελέγξτε τα δικαιώματα πρόσβασης ή συνεχίστε απλώς χειροκίνητα.",
 };

@@ -42,7 +42,7 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
             type="button"
             onClick={() => onSetStatus(s.value)}
             className={`min-h-[64px] flex items-center justify-center gap-1.5 px-1.5 py-3 text-sm md:text-base font-semibold leading-tight rounded-2xl border transition ${
-              item.status === s.value ? s.cls + " font-bold ring-2 ring-inset ring-current/10" : s.idleCls
+              item.status === s.value ? s.cls + " font-bold ring-2 ring-inset ring-primary" : s.idleCls
             }`}
           >
             <s.icon className="w-4 h-4 shrink-0" />
@@ -57,7 +57,7 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
             type="button"
             onClick={() => onSetStatus(s.value)}
             className={`min-h-[64px] flex items-center justify-center gap-1.5 px-2 py-3 text-sm md:text-base font-semibold leading-tight rounded-2xl border transition ${
-              item.status === s.value ? s.cls + " font-bold ring-2 ring-inset ring-current/10" : s.idleCls
+              item.status === s.value ? s.cls + " font-bold ring-2 ring-inset ring-primary" : s.idleCls
             }`}
           >
             <s.icon className="w-4 h-4 shrink-0" />
