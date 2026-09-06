@@ -115,7 +115,7 @@ export default function MaintenanceIssueDetail() {
             </p>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
-            <span className={`text-xs px-2.5 py-1 rounded-full border ${badgeTone(issue.status)}`}>{t(issue.status)}</span>
+            <span className={`text-xs px-2.5 py-1 rounded-full border ${badgeTone(issue.status)}`}>{tEnum(issue.status, "issue")}</span>
             <span className={`text-xs px-2.5 py-1 rounded-full border ${badgeTone(issue.priority)}`}>{tEnum(issue.priority, "priority")}</span>
             {issue.category && <span className="text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">{t(issue.category)}</span>}
             {issue.archived && <span className="text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border">{t("Archived")}</span>}

@@ -13,7 +13,7 @@ const fields = [
   { name: "property_id", label: "Property", type: "entity-select", entity: "Property" },
   { name: "category", label: "Category", type: "select", options: CATEGORIES },
   { name: "priority", label: "Priority", type: "select", options: PRIORITIES, enumContext: "priority" },
-  { name: "status", label: "Status", type: "select", options: STATUSES },
+  { name: "status", label: "Status", type: "select", options: STATUSES, enumContext: "issue" },
   { name: "description", label: "Description", type: "textarea" },
   { name: "reported_by", label: "Reported By", type: "text" },
   { name: "contractor_id", label: "Assigned Contractor", type: "entity-select", entity: "Contractor" },
@@ -36,7 +36,7 @@ const columns = [
   { key: "property_id", label: "Property" },
   { key: "category", label: "Category", badge: true },
   { key: "priority", label: "Priority", badge: true },
-  { key: "status", label: "Status", badge: true },
+  { key: "status", label: "Status", badge: true, enumContext: "issue" },
 ];
 
 export default function Maintenance() {

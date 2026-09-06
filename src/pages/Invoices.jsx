@@ -50,14 +50,14 @@ export default function Invoices() {
     setDownloadingId(null);
   };
 
-  // Display-only renders: invoice date localized at render time (also used by
-  // the CSV export); column LABELS stay English (CSV headers). Stored values
-  // are never touched.
+  // Display-only renders: invoice date localized at render time; column LABELS
+  // stay English (CSV headers). exportValue keeps the CSV export raw/stable —
+  // identical regardless of the interface language. Stored values are never touched.
   const columns = [
     { key: "invoice_number", label: "Invoice", primary: true },
     { key: "client_id", label: "Client" },
     { key: "property_id", label: "Property" },
-    { key: "invoice_date", label: "Date", render: (it) => (it.invoice_date ? athensMediumDate(it.invoice_date, lang) : "—") },
+    { key: "invoice_date", label: "Date", render: (it) => (it.invoice_date ? athensMediumDate(it.invoice_date, lang) : "—"), exportValue: (it) => it.invoice_date || "—" },
     { key: "total", label: "Total", render: (it) => `€${(it.total || 0).toFixed(2)}` },
     { key: "status", label: "Status", badge: true, enumContext: "invoice" },
   ];

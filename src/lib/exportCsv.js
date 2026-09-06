@@ -17,7 +17,7 @@ export function exportCsv(rows, columns, filename) {
   rows.forEach((r) => {
     lines.push(
       columns
-        .map((c) => esc(c.render ? c.render(r, {}) : r[c.key]))
+        .map((c) => esc(c.exportValue ? c.exportValue(r) : (c.render ? c.render(r, {}) : r[c.key])))
         .join(",")
     );
   });

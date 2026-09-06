@@ -24,7 +24,6 @@ export const ENUM_EL = {
   "Completed": "Ολοκληρώθηκε",
   "Cancelled": "Ακυρώθηκε",
   "Overdue": "Εκπρόθεσμα",
-  "Open": "Ανοιχτό",
   "Closed": "Κλειστό",
 
   // Property occupancy statuses
@@ -255,4 +254,10 @@ export const ENUM_CONTEXT_EL = {
   "report:Ready to Send": "Έτοιμη για αποστολή",
   "report:Sent": "Απεσταλμένη",
   "report:Delivery Failed": "Αποτυχία αποστολής",
+
+  // Maintenance issue status (neuter — θέμα). Only the legacy out-of-enum
+  // "Open" status needs a context entry; the in-enum statuses keep the global
+  // map. The generic action label "Open" ("Άνοιγμα" in the base dictionary) is
+  // unaffected — this entry applies only via tEnum(..., "issue").
+  "issue:Open": "Ανοιχτό",
 };

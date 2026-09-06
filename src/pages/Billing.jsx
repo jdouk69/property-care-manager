@@ -90,19 +90,21 @@ export default function Billing() {
     { name: "notes", label: "Notes", type: "textarea" },
   ], [properties, t, lang]);
 
-  // Display-only renders: enums and dates localized at render time (also used
-  // by the CSV export); stored values are never touched.
+  // Display-only renders: enums and dates localized at render time; stored
+  // values are never touched. exportValue keeps the CSV export raw/stable —
+  // identical regardless of the interface language (raw stored charge types,
+  // payment methods, and YYYY-MM-DD dates).
   const columns = [
     { key: "description", primary: true },
     { key: "client_id" },
     { key: "property_id" },
-    { key: "charge_type", render: (it) => (it.charge_type ? t(it.charge_type) : "—") },
+    { key: "charge_type", render: (it) => (it.charge_type ? t(it.charge_type) : "—"), exportValue: (it) => it.charge_type || "—" },
     { key: "amount" },
-    { key: "billing_date", render: (it) => (it.billing_date ? athensMediumDate(it.billing_date, lang) : "—") },
-    { key: "due_date", render: (it) => (it.due_date ? athensMediumDate(it.due_date, lang) : "—") },
+    { key: "billing_date", render: (it) => (it.billing_date ? athensMediumDate(it.billing_date, lang) : "—"), exportValue: (it) => it.billing_date || "—" },
+    { key: "due_date", render: (it) => (it.due_date ? athensMediumDate(it.due_date, lang) : "—"), exportValue: (it) => it.due_date || "—" },
     { key: "status", badge: true, enumContext: "charge" },
-    { key: "paid_date", render: (it) => (it.paid_date ? athensMediumDate(it.paid_date, lang) : "—") },
-    { key: "payment_method", render: (it) => (it.payment_method ? t(it.payment_method) : "—") },
+    { key: "paid_date", render: (it) => (it.paid_date ? athensMediumDate(it.paid_date, lang) : "—"), exportValue: (it) => it.paid_date || "—" },
+    { key: "payment_method", render: (it) => (it.payment_method ? t(it.payment_method) : "—"), exportValue: (it) => it.payment_method || "—" },
   ];
 
   return (

@@ -4,10 +4,7 @@ import { FileWarning, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { TZ } from "@/lib/timezone";
-
-// Athens-anchored, interface-language date formatting (display only).
-const fmtDate = (iso, locale) => iso ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: TZ }).format(new Date(iso)) : "";
+import { athensMediumDate } from "@/lib/timezone";
 
 /**
  * Compact operational reminder on the Dashboard when completed visit reports
@@ -18,7 +15,6 @@ const fmtDate = (iso, locale) => iso ? new Intl.DateTimeFormat(locale, { dateSty
  */
 export default function ReportsToSendReminder({ visits = [], properties = [], clients = [] }) {
   const { t, lang } = useLanguage();
-  const locale = lang === "el" ? "el-GR" : "en-US";
   const propName = (id) => properties.find((p) => p.id === id)?.name || t("Property");
   const clientFor = (propId) => {
     const p = properties.find((x) => x.id === propId);
@@ -45,7 +41,7 @@ export default function ReportsToSendReminder({ visits = [], properties = [], cl
                 {propName(v.property_id)}{clientFor(v.property_id) ? ` · ${clientFor(v.property_id)}` : ""}
               </p>
               <p className="text-xs text-muted-foreground truncate">
-                {visitTypeLabel(v.visit_type)} · {t("Visit completed {date}", { date: fmtDate(v.start_time, locale) })}
+                {t(visitTypeLabel(v.visit_type))} · {t("Visit completed {date}", { date: athensMediumDate(v.start_time, lang) })}
               </p>
             </div>
             <Button asChild size="sm" className="rounded-xl gap-1.5 h-9 px-3 shrink-0">

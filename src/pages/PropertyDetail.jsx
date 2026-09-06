@@ -102,7 +102,7 @@ export default function PropertyDetail() {
 
   const timeline = [
     ...inspections.map((i) => ({ date: i.date, type: "Inspection", title: t("Inspection — {status}", { status: t(i.status) }), icon: ClipboardCheck, detail: i.inspector })),
-    ...maintenance.map((m) => ({ date: m.date || m.created_date?.slice(0, 10) || "", type: "Maintenance", title: m.title, icon: Wrench, detail: t(m.status) })),
+    ...maintenance.map((m) => ({ date: m.date || m.created_date?.slice(0, 10) || "", type: "Maintenance", title: m.title, icon: Wrench, detail: tEnum(m.status, "issue") })),
     ...tasks.map((tk) => ({ date: tk.date, type: tk.type, title: tk.title, icon: ListChecks, detail: t(tk.status) })),
     ...expenses.map((e) => ({ date: e.date, type: "Expense", title: `${e.vendor} — €${(e.amount || 0).toFixed(2)}`, icon: Wallet, detail: e.reimbursed ? t("Reimbursed") : "" })),
   ].filter((x) => x.date).sort((a, b) => (a.date < b.date ? 1 : -1));

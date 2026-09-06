@@ -24,7 +24,7 @@ export default function BillingChargeCard({ charge, clientName, propertyName, on
         <div className="mt-2 flex items-baseline gap-2 flex-wrap">
           <p className="text-lg font-semibold text-foreground">{eur(charge.amount)}</p>
           <p className="text-xs text-muted-foreground">
-            {charge.due_date ? t("Due {date}", { date: athensMediumDate(charge.due_date, lang) }) : (charge.billing_date ? athensMediumDate(charge.billing_date, lang) : "")}
+            {charge.due_date ? t("Payment due {date}", { date: athensMediumDate(charge.due_date, lang) }) : (charge.billing_date ? athensMediumDate(charge.billing_date, lang) : "")}
             {charge.charge_type ? ` · ${t(charge.charge_type)}` : ""}
           </p>
         </div>
