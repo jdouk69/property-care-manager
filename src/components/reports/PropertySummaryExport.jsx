@@ -9,6 +9,7 @@ import jsPDF from "jspdf";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { createNotification } from "@/lib/notifications";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 /**
  * Secondary tool on the Reports page: a one-off property summary PDF export
@@ -16,6 +17,7 @@ import { createNotification } from "@/lib/notifications";
  * report delivery queue above.
  */
 export default function PropertySummaryExport() {
+  const { t } = useLanguage();
   const [propId, setPropId] = useState("");
   const [generating, setGenerating] = useState(false);
 
@@ -27,7 +29,7 @@ export default function PropertySummaryExport() {
   const propInspections = propId ? inspections.filter((i) => i.property_id === propId) : inspections;
   const propMaintenance = propId ? maintenance.filter((m) => m.property_id === propId) : maintenance;
   const propExpenses = propId ? expenses.filter((e) => e.property_id === propId) : expenses;
-  const propName = properties.find((p) => p.id === propId)?.name || "All Properties";
+  const propName = properties.find((p) => p.id === propId)?.name || "All Properties"; // stored/raw name (also feeds the PDF header)
 
   const generatePDF = () => {
     setGenerating(true);
@@ -74,17 +76,17 @@ export default function PropertySummaryExport() {
       <div className="flex items-center gap-2 mb-4">
         <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><FileText className="w-4 h-4" /></div>
         <div>
-          <h3 className="font-medium text-sm">Property Summary Export</h3>
-          <p className="text-xs text-muted-foreground">One-off PDF of inspections, maintenance and expenses.</p>
+          <h3 className="font-medium text-sm">{t("Property Summary Export")}</h3>
+          <p className="text-xs text-muted-foreground">{t("One-off PDF of inspections, maintenance and expenses.")}</p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label className="text-xs mb-1.5 block">Property</Label>
+          <Label className="text-xs mb-1.5 block">{t("Property")}</Label>
           <Select value={propId} onValueChange={setPropId}>
-            <SelectTrigger><SelectValue placeholder="All properties" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("All properties")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>All properties</SelectItem>
+              <SelectItem value={null}>{t("All properties")}</SelectItem>
               {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -92,14 +94,14 @@ export default function PropertySummaryExport() {
         <div className="flex items-end">
           <Button onClick={generatePDF} disabled={generating} className="w-full rounded-xl gap-2 h-11">
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-            {generating ? "Generating…" : "Download PDF Report"}
+            {generating ? t("Generating…") : t("Download PDF Report")}
           </Button>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3 mt-5">
-        <Stat label="Inspections" value={propInspections.length} />
-        <Stat label="Maintenance" value={propMaintenance.length} />
-        <Stat label="Expenses" value={`€${propExpenses.reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}`} />
+        <Stat label={t("Inspections")} value={propInspections.length} />
+        <Stat label={t("Maintenance")} value={propMaintenance.length} />
+        <Stat label={t("Expenses")} value={`€${propExpenses.reduce((s, e) => s + (e.amount || 0), 0).toFixed(2)}`} />
       </div>
     </div>
   );

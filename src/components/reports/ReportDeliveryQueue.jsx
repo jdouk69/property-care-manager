@@ -13,6 +13,7 @@ import { buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPd
 import { sendOwnerReportEmail } from "@/lib/visitReportSend";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const STATUS_TONE = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -29,14 +30,16 @@ const FILTERS = [
 ];
 
 const statusOf = (v) => (v && (v.report_status || (v.report_sent ? "Sent" : "Draft"))) || "Draft";
+// Display-only localized date formatting (stored timestamps untouched).
+const tDate = (iso, lang) => (iso ? athensMediumDate(iso, lang) : "—");
+const tDateTime = (iso, lang) => (iso ? athensMediumDateTime(iso, lang) : "—");
 const bucketOf = (v) => {
   const s = statusOf(v);
   if (s === "Sent") return "sent";
   if (s === "Delivery Failed") return "failed";
   return "needs";
 };
-const fmtDateTime = (iso) => (iso ? athensMediumDateTime(iso) : "—");
-const fmtDate = (iso) => (iso ? athensMediumDate(iso) : "—");
+
 
 /**
  * Centralized customer-report delivery queue. Reuses the SAME delivery
@@ -48,6 +51,7 @@ const fmtDate = (iso) => (iso ? athensMediumDate(iso) : "—");
  */
 export default function ReportDeliveryQueue() {
   const [searchParams] = useSearchParams();
+  const { t, tEnum, lang } = useLanguage();
   const autoOpenId = searchParams.get("open");
 
   const [visits, setVisits] = useState([]);
@@ -123,7 +127,7 @@ export default function ReportDeliveryQueue() {
         applyUpdate(v.id, { report_pdf_url: file_url, report_status: "Ready to Send" });
       }
       setModel(buildOwnerReportModel({ ...v, report_pdf_url: pdfUrl }, ctx));
-    } catch (e) { setError("Could not generate report: " + (e?.message || e)); }
+    } catch (e) { setError(t("Could not generate report: {error}", { error: e?.message || e })); }
     setGenerating(false);
   };
 
@@ -138,8 +142,8 @@ export default function ReportDeliveryQueue() {
   const doSend = async (v, isResend) => {
     setError("");
     const client = clientFor(v.property_id);
-    if (!client?.email) { setError("No email on the client record. Use Mark Sent Externally or Download PDF."); return; }
-    if (isResend && !window.confirm("Resend this report to the owner?")) return;
+    if (!client?.email) { setError(t("No email on the client record. Use Mark Sent Externally or Download PDF.")); return; }
+    if (isResend && !window.confirm(t("Resend this report to the owner?"))) return;
     setSendingId(v.id);
     try {
       let pdfUrl = v.report_pdf_url;
@@ -164,12 +168,12 @@ export default function ReportDeliveryQueue() {
       } else {
         await base44.entities.PropertyVisit.update(v.id, { report_status: "Delivery Failed" });
         applyUpdate(v.id, { report_status: "Delivery Failed" });
-        setError("Email delivery failed: " + (res.error || "unknown error") + ". You can download/share manually or mark sent externally.");
+        setError(t("Email delivery failed: {error}. You can download/share manually or mark sent externally.", { error: res.error || "unknown error" }));
       }
     } catch (e) {
       await base44.entities.PropertyVisit.update(v.id, { report_status: "Delivery Failed" });
       applyUpdate(v.id, { report_status: "Delivery Failed" });
-      setError("Email delivery failed: " + (e?.message || e));
+      setError(t("Email delivery failed: {error}. You can download/share manually or mark sent externally.", { error: e?.message || e }));
     }
     setSendingId(null);
   };
@@ -177,7 +181,7 @@ export default function ReportDeliveryQueue() {
   const download = async (v) => {
     setDownloadingId(v.id);
     try { await generateVisitReportPdf(v, ctxFor(v)); }
-    catch (e) { setError("Could not generate PDF: " + (e?.message || e)); }
+    catch (e) { setError(t("Could not generate PDF: {error}", { error: e?.message || e })); }
     setDownloadingId(null);
   };
 
@@ -193,7 +197,7 @@ export default function ReportDeliveryQueue() {
       await base44.entities.PropertyVisit.update(v.id, patch);
       applyUpdate(v.id, patch);
       setMarkExtFor(null);
-    } catch (e) { setError("Could not mark sent: " + (e?.message || e)); }
+    } catch (e) { setError(t("Could not mark sent: {error}", { error: e?.message || e })); }
   };
 
   const counts = useMemo(() => {
@@ -212,8 +216,8 @@ export default function ReportDeliveryQueue() {
   return (
     <div>
       <PageHeader
-        title="Reports"
-        subtitle="Customer report delivery queue — review and send completed visit reports to owners."
+        title={t("Reports")}
+        subtitle={t("Customer report delivery queue — review and send completed visit reports to owners.")}
         icon={FileText}
       />
 
@@ -233,7 +237,7 @@ export default function ReportDeliveryQueue() {
               onClick={() => setFilter(f.key)}
               className={`text-sm px-3.5 py-2 rounded-full border transition ${activeTab ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:bg-muted/50"}`}
             >
-              {f.label} <span className={activeTab ? "opacity-90" : "text-muted-foreground/70"}>({counts[f.key]})</span>
+              {f.key === "all" ? t("All") : f.key === "sent" ? tEnum("Sent", "report") : f.key === "failed" ? t("Failed") : t("Needs Sending")} <span className={activeTab ? "opacity-90" : "text-muted-foreground/70"}>({counts[f.key]})</span>
             </button>
           );
         })}
@@ -244,8 +248,8 @@ export default function ReportDeliveryQueue() {
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={filter === "needs" ? CheckCircle2 : FileText}
-          title={filter === "needs" ? "Nothing to send" : filter === "sent" ? "No sent reports" : filter === "failed" ? "No failed deliveries" : "No reports yet"}
-          description={filter === "needs" ? "All completed visit reports have been delivered." : "Reports will appear here as visits are completed."}
+          title={filter === "needs" ? t("Nothing to send") : filter === "sent" ? t("No sent reports") : filter === "failed" ? t("No failed deliveries") : t("No reports yet")}
+          description={filter === "needs" ? t("All completed visit reports have been delivered.") : t("Reports will appear here as visits are completed.")}
         />
       ) : (
         <div className="space-y-3">
@@ -260,46 +264,46 @@ export default function ReportDeliveryQueue() {
               <div key={v.id} className="rounded-2xl border border-border bg-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{prop.name || "Property"}{client.name ? ` · ${client.name}` : ""}</p>
-                    <p className="text-xs text-muted-foreground truncate">{visitTypeLabel(v.visit_type)} · Visit {fmtDate(v.start_time)}</p>
+                    <p className="text-sm font-semibold truncate">{prop.name || t("Property")}{client.name ? ` · ${client.name}` : ""}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t(visitTypeLabel(v.visit_type))} · {t("Visit {date}", { date: tDate(v.start_time, lang) })}</p>
                   </div>
-                  <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{status}</span>
+                  <span className={`text-xs px-2.5 py-1 rounded-full border shrink-0 ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{tEnum(status, "report")}</span>
                 </div>
 
                 {sent ? (
                   <p className="text-xs text-muted-foreground">
-                    {external ? `Marked externally · ${v.report_delivery_method}` : "Sent via Email"}
-                    {" on " + fmtDateTime(v.report_sent_at)}
-                    {v.report_sent_to ? ` · to ${v.report_sent_to}` : ""}
-                    {v.report_sent_by ? ` · by ${v.report_sent_by}` : ""}
+                    {external ? t("Marked externally · {method}", { method: t(v.report_delivery_method) }) : t("Sent via Email")}
+                    {" " + t("on {date}", { date: tDateTime(v.report_sent_at, lang) })}
+                    {v.report_sent_to ? ` · ${t("to {recipient}", { recipient: v.report_sent_to })}` : ""}
+                    {v.report_sent_by ? ` · ${t("by {name}", { name: v.report_sent_by })}` : ""}
                   </p>
                 ) : (
                   client.email
-                    ? <p className="text-xs text-muted-foreground">Recipient: {client.email}</p>
-                    : <p className="text-xs text-amber-600">No email on client record — mark sent externally or download PDF.</p>
+                    ? <p className="text-xs text-muted-foreground">{t("Recipient: {email}", { email: client.email })}</p>
+                    : <p className="text-xs text-amber-600">{t("No email on client record — mark sent externally or download PDF.")}</p>
                 )}
 
                 <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
                   <Button onClick={() => openReview(v)} disabled={generating && reviewVisit?.id === v.id} variant="outline" size="sm" className="rounded-xl gap-1.5 h-9">
-                    {generating && reviewVisit?.id === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} Review Report
+                    {generating && reviewVisit?.id === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} {t("Review Report")}
                   </Button>
                   {canDispatch && !sent && (
                     <Button onClick={() => doSend(v, false)} disabled={sendingId === v.id} size="sm" className="rounded-xl gap-1.5 h-9">
                       {sendingId === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : failed ? <RotateCw className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                      {failed ? "Retry Delivery" : "Send to Owner"}
+                      {failed ? t("Retry Delivery") : t("Send to Owner")}
                     </Button>
                   )}
                   {canDispatch && sent && (
                     <Button onClick={() => doSend(v, true)} disabled={sendingId === v.id} variant="outline" size="sm" className="rounded-xl gap-1.5 h-9">
-                      {sendingId === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />} Resend Report
+                      {sendingId === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />} {t("Resend Report")}
                     </Button>
                   )}
                   <Button onClick={() => download(v)} disabled={downloadingId === v.id} variant="outline" size="sm" className="rounded-xl gap-1.5 h-9">
-                    {downloadingId === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download PDF
+                    {downloadingId === v.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {t("Download PDF")}
                   </Button>
                   {canDispatch && !sent && (
                     <Button onClick={() => setMarkExtFor(v)} variant="ghost" size="sm" className="rounded-xl gap-1.5 h-9">
-                      <ExternalLink className="w-4 h-4" /> Mark Sent Externally
+                      <ExternalLink className="w-4 h-4" /> {t("Mark Sent Externally")}
                     </Button>
                   )}
                 </div>
@@ -311,7 +315,7 @@ export default function ReportDeliveryQueue() {
 
       {!canDispatch && !loading && (
         <p className="text-xs text-muted-foreground mt-4">
-          You can review and download reports. Sending, resending and marking sent externally are restricted to administrators.
+          {t("You can review and download reports. Sending, resending and marking sent externally are restricted to administrators.")}
         </p>
       )}
 

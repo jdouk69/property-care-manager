@@ -691,7 +691,7 @@ export default function ResourceListPage({
                         const v = renderCellValue(c, item);
                         if (!v || v === "—") return null;
                         const fieldDef = fields.find((f) => f.name === c.key);
-                        return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{tEnum(v, fieldDef?.enumContext)}</span>;
+                        return <span key={c.key} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{tEnum(v, fieldDef?.enumContext || c.enumContext)}</span>;
                       })}
                       {cardExtra && cardExtra(item, lookups)}
                     </div>

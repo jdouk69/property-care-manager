@@ -175,6 +175,20 @@ export const ENUM_EL = {
   // Derived key-activity badge values (render-only; tone map stays keyed on English)
   "returned": "Επιστράφηκε",
   "out": "Σε κυκλοφορία",
+
+  // ---- Wave 12: Billing / report delivery ----
+  // BillingCharge.status "Due" (χρέωση — display-only; "Overdue" is derived,
+  // never stored). "Προς πληρωμή" reads naturally for charge and invoice alike.
+  "Due": "Προς πληρωμή",
+  "Waived": "Ακυρώθηκε",
+  // Payment methods (brand names Wise/Revolut stay as-is)
+  "Bank Transfer": "Τραπεζική Μεταφορά",
+  "Cash": "Μετρητά",
+  // Charge types
+  "Reimbursement": "Επιστροφή εξόδων",
+  // Manual report delivery methods (Mark Sent Externally dialog)
+  "Manual Email": "Χειροκίνητο Email",
+  "Phone Call": "Τηλεφωνική Κλήση",
 };
 
 // Context-specific enum display overrides.
@@ -216,4 +230,26 @@ export const ENUM_CONTEXT_EL = {
   "visit:Scheduled": "Προγραμματισμένη",
   "visit:Completed": "Ολοκληρωμένη",
   "visit:Cancelled": "Ακυρωμένη",
+
+  // ---- Wave 12 ----
+  // BillingCharge status (feminine — χρέωση). "Overdue" is derived at display
+  // time (never stored) and also takes the feminine form here.
+  "charge:Due": "Προς πληρωμή",
+  "charge:Paid": "Πληρωμένη",
+  "charge:Waived": "Ακυρωμένη",
+  "charge:Overdue": "Εκπρόθεσμη",
+
+  // Invoice status (neuter — τιμολόγιο).
+  "invoice:Draft": "Πρόχειρο",
+  "invoice:Sent": "Απεσταλμένο",
+  "invoice:Partially Paid": "Μερικώς πληρωμένο",
+  "invoice:Paid": "Πληρωμένο",
+  "invoice:Overdue": "Εκπρόθεσμο",
+  "invoice:Cancelled": "Ακυρωμένο",
+
+  // Visit report delivery status (feminine — αναφορά).
+  "report:Draft": "Πρόχειρη",
+  "report:Ready to Send": "Έτοιμη για αποστολή",
+  "report:Sent": "Απεσταλμένη",
+  "report:Delivery Failed": "Αποτυχία αποστολής",
 };
