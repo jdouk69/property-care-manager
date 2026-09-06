@@ -260,4 +260,19 @@ export const ENUM_CONTEXT_EL = {
   // map. The generic action label "Open" ("Άνοιγμα" in the base dictionary) is
   // unaffected — this entry applies only via tEnum(..., "issue").
   "issue:Open": "Ανοιχτό",
+
+  // ---- FINAL PASS ----
+  // Inspection status (feminine — επιθεώρηση; legacy Inspections module).
+  "inspection:Draft": "Πρόχειρη",
+  "inspection:Completed": "Ολοκληρωμένη",
+
+  // Service agreement status / signing status (feminine — σύμβαση).
+  "agreement:Draft": "Πρόχειρη",
+  "agreement:Active": "Ενεργή",
+  "agreement:Sent": "Απεσταλμένη",
+  "agreement:Signed": "Υπογεγραμμένη",
+
+  // Customer intake status (feminine — φόρμα).
+  "intake:Draft": "Πρόχειρη",
+  "intake:Sent": "Απεσταλμένη",
 };

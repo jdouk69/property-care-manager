@@ -4,6 +4,7 @@ import { CheckCircle2, CalendarClock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { buildScheduleFirstVisitPath } from "@/lib/onboardingHandoff";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // One-time onboarding-completion confirmation. Shown only when a recurring
 // customer has reached Ready for Regular Service AND the internal "Ready"
@@ -15,6 +16,7 @@ import { buildScheduleFirstVisitPath } from "@/lib/onboardingHandoff";
 // depends on dismissing this dialog. Does NOT auto-schedule a visit.
 export default function OnboardingCompleteDialog({ handoff, notification, onDismiss }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   if (!handoff || !notification || notification.read) return null;
   const schedule = () => {
     onDismiss?.();
@@ -28,17 +30,17 @@ export default function OnboardingCompleteDialog({ handoff, notification, onDism
           <div className="w-14 h-14 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3">
             <CheckCircle2 className="w-8 h-8" />
           </div>
-          <h2 className="text-lg font-semibold">Customer Setup Complete</h2>
+          <h2 className="text-lg font-semibold">{t("Customer Setup Complete")}</h2>
           <p className="text-sm text-muted-foreground mt-1">{handoff.clientName} · {handoff.propertyName}</p>
-          <p className="text-sm text-muted-foreground">{handoff.packageName}{handoff.frequency ? ` · ${handoff.frequency} service` : ""}</p>
+          <p className="text-sm text-muted-foreground">{handoff.packageName}{handoff.frequency ? ` · ${t(handoff.frequency)} ${t("service")}` : ""}</p>
         </div>
         <div className="rounded-xl bg-muted/40 p-3 mb-4 text-sm text-center">
-          <p className="text-foreground">All onboarding stages are complete. This property is ready for regular service.</p>
-          <p className="text-xs text-muted-foreground mt-1">Next visit type: {visitTypeLabel(handoff.visitType)}</p>
+          <p className="text-foreground">{t("All onboarding stages are complete. This property is ready for regular service.")}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("Next visit type: {type}", { type: t(visitTypeLabel(handoff.visitType)) })}</p>
         </div>
         <div className="flex flex-col gap-2">
-          <Button onClick={schedule} className="h-11 rounded-xl gap-2"><CalendarClock className="w-4 h-4" /> Schedule First Regular Visit <ArrowRight className="w-4 h-4" /></Button>
-          <Button variant="outline" onClick={done} className="h-11 rounded-xl">Done / Return to Client Hub</Button>
+          <Button onClick={schedule} className="h-auto min-h-11 py-2.5 rounded-xl gap-2 whitespace-normal leading-snug text-center"><CalendarClock className="w-4 h-4 shrink-0" /> {t("Schedule First Regular Visit")} <ArrowRight className="w-4 h-4 shrink-0" /></Button>
+          <Button variant="outline" onClick={done} className="h-11 rounded-xl">{t("Done / Return to Client Hub")}</Button>
         </div>
       </div>
     </div>

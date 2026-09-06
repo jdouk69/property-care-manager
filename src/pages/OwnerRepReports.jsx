@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { ClipboardList } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const DISCLAIMER = "This report documents visual observations only. It does not constitute engineering approval, construction supervision, building certification, contractor management, or technical inspection. Observations are communicated to assist the owner's decision-making.";
 
@@ -35,6 +36,7 @@ const columns = [
 
 export default function OwnerRepReports() {
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const openId = searchParams.get("open") || undefined;
   return (
     <AppLayout>
@@ -53,7 +55,7 @@ export default function OwnerRepReports() {
         dictation={{ label: "Dictate", fields: ["project_name", "expected_work", "observed_progress", "work_completed", "visible_concerns", "delays", "questions_for_owner", "questions_for_contractor", "recommendations"] }}
         renderSummary={() => (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-4">
-            <p className="text-xs text-amber-700 dark:text-amber-500 leading-relaxed">{DISCLAIMER}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-500 leading-relaxed">{t(DISCLAIMER)}</p>
           </div>
         )}
       />

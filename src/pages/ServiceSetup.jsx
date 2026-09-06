@@ -14,6 +14,7 @@ import PricingRecommendationCard from "@/components/assessment/PricingRecommenda
 import {
   buildRecommendation, formatPricePlusVat, PRICING_NOTE, CHARACTERISTICS,
 } from "@/lib/servicePricing";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import {
   Loader2, ClipboardCheck, Repeat, CalendarClock, AlertTriangle, Pencil, Home as HomeIcon,
 } from "lucide-react";
@@ -42,6 +43,7 @@ export default function ServiceSetup() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [prop, setProp] = useState(null);
@@ -95,7 +97,7 @@ export default function ServiceSetup() {
 
   const saveAssessment = async () => {
     if (!assessment.assessment_interior_size || !assessment.assessment_complexity || !assessment.assessment_visit_time || !assessment.assessment_service_area) {
-      setError("Complete size, complexity, estimated visit time and service area first.");
+      setError(t("Complete size, complexity, estimated visit time and service area first."));
       return;
     }
     setSaving(true); setError("");
@@ -106,7 +108,7 @@ export default function ServiceSetup() {
         ...assessment, assessment_completed_at: new Date().toISOString(), assessment_completed_by: meName,
       });
       setProp(updated); setAssessmentDone(true);
-    } catch (e) { setError("Could not save assessment: " + (e?.message || e)); }
+    } catch (e) { setError(t("Could not save assessment: {message}", { message: e?.message || e })); }
     setSaving(false);
   };
 
@@ -118,17 +120,21 @@ export default function ServiceSetup() {
     });
   }, [pkg, tier, purchaseType, assessment]);
 
+  // Display-only summary: the parts are translated at render time; the stored
+  // assessment values themselves are never modified.
   const propertySummary = useMemo(() => {
     const parts = [];
-    if (assessment.assessment_interior_size) parts.push(assessment.assessment_interior_size);
+    if (assessment.assessment_interior_size) parts.push(t(assessment.assessment_interior_size));
     const units = 1 + (Number(assessment.assessment_additional_units) || 0);
-    parts.push(`${units} residence${units === 1 ? "" : "s"}`);
-    if (assessment.assessment_multiple_floors) parts.push("Multiple floors");
-    if (assessment.assessment_pool_spa) parts.push("Pool");
-    if (assessment.assessment_complexity) parts.push(assessment.assessment_complexity);
-    if (assessment.assessment_visit_time) parts.push(`Estimated visit: ${assessment.assessment_visit_time}`);
+    parts.push(units === 1
+      ? t("1 residence")
+      : t("{count} residences", { count: units }));
+    if (assessment.assessment_multiple_floors) parts.push(t("Multiple floors"));
+    if (assessment.assessment_pool_spa) parts.push(t("Pool"));
+    if (assessment.assessment_complexity) parts.push(t(assessment.assessment_complexity));
+    if (assessment.assessment_visit_time) parts.push(t("Estimated visit: {time}", { time: t(assessment.assessment_visit_time) }));
     return parts.join(" · ");
-  }, [assessment]);
+  }, [assessment, t]);
 
   const openAdjust = () => {
     setAdjustPrice(rec ? String(rec.recommendedPrice) : "");
@@ -138,9 +144,9 @@ export default function ServiceSetup() {
 
   const confirmAdjust = async () => {
     const final = parseFloat(adjustPrice);
-    if (isNaN(final) || final <= 0) { setError("Enter a valid price."); return; }
+    if (isNaN(final) || final <= 0) { setError(t("Enter a valid price.")); return; }
     const changed = rec && final !== rec.recommendedPrice;
-    if (changed && !adjustReason.trim()) { setError("An adjustment reason is required when the price differs from the recommendation."); return; }
+    if (changed && !adjustReason.trim()) { setError(t("An adjustment reason is required when the price differs from the recommendation.")); return; }
     setAdjustOpen(false);
     await createService(final, adjustReason.trim(), rec.status === "custom_review" ? "Custom Review" : "Manual Override");
   };
@@ -155,7 +161,7 @@ export default function ServiceSetup() {
   // Existing agreements are never modified by this flow.
   const createService = async (finalPrice, reason, reviewStatus) => {
     if (!pkg || !rec) return;
-    if (purchaseType === "One-time" && !visitDate) { setError("Select the date for the one-time visit."); return; }
+    if (purchaseType === "One-time" && !visitDate) { setError(t("Select the date for the one-time visit.")); return; }
     setSaving(true); setError("");
     let meName = "";
     try { const me = await base44.auth.me(); meName = me?.full_name || me?.email || ""; } catch (e) {}
@@ -196,7 +202,7 @@ export default function ServiceSetup() {
         navigate(`/visits/${visit.id}`);
       }
     } catch (e) {
-      setError("Could not save: " + (e?.message || e));
+      setError(t("Could not save: {message}", { message: e?.message || e }));
     }
     setSaving(false);
   };
@@ -204,7 +210,7 @@ export default function ServiceSetup() {
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!prop) return (
     <AppLayout>
-      <EmptyState icon={HomeIcon} title="Property not found" action={<Link to="/properties"><Button>Back to properties</Button></Link>} />
+      <EmptyState icon={HomeIcon} title={t("Property not found")} action={<Link to="/properties"><Button>{t("Back to properties")}</Button></Link>} />
     </AppLayout>
   );
 
@@ -212,16 +218,16 @@ export default function ServiceSetup() {
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
         <PageBackButton fallback={`/properties/${id}`} className="mb-1" />
-        <h1 className="text-xl sm:text-2xl font-semibold">Service &amp; Pricing Assessment</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold">{t("Service & Pricing Assessment")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {prop.name}{client ? ` · ${client.name}` : ""} — assess the property, get a pricing recommendation, then approve the service.
+          {prop.name}{client ? ` · ${client.name}` : ""} — {t("assess the property, get a pricing recommendation, then approve the service.")}
         </p>
 
         {existingAgreements.length > 0 && (
           <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5 flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700">
-              This property already has a service agreement on file. Creating a service here adds a NEW agreement/visit — existing agreed prices are never changed automatically.
+              {t("This property already has a service agreement on file. Creating a service here adds a NEW agreement/visit — existing agreed prices are never changed automatically.")}
             </p>
           </div>
         )}
@@ -230,27 +236,27 @@ export default function ServiceSetup() {
         <section className="mt-5 rounded-2xl border border-border bg-card p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2 mb-4">
             <h2 className="text-sm font-semibold flex items-center gap-2">
-              <ClipboardCheck className="w-4 h-4 text-primary" /> Property Assessment
-              {assessmentDone && <span className="text-[11px] font-medium text-emerald-600">Saved</span>}
+              <ClipboardCheck className="w-4 h-4 text-primary" /> {t("Property Assessment")}
+              {assessmentDone && <span className="text-[11px] font-medium text-emerald-600">{t("Saved")}</span>}
             </h2>
             {assessmentDone && (
               <Button variant="ghost" size="sm" className="h-9 gap-1.5" onClick={() => setAssessmentDone(false)}>
-                <Pencil className="w-3.5 h-3.5" /> Edit
+                <Pencil className="w-3.5 h-3.5" /> {t("Edit")}
               </Button>
             )}
           </div>
           {assessmentDone ? (
             <div className="text-sm text-muted-foreground space-y-1">
               <p>{propertySummary}</p>
-              {assessment.assessment_note && <p className="text-xs">Note: {assessment.assessment_note}</p>}
-              <p className="text-xs">Service area: {assessment.assessment_service_area}</p>
+              {assessment.assessment_note && <p className="text-xs">{t("Note: {note}", { note: assessment.assessment_note })}</p>}
+              <p className="text-xs">{t("Service area: {area}", { area: t(assessment.assessment_service_area) })}</p>
             </div>
           ) : (
             <>
               <AssessmentForm values={assessment} setField={setField} />
               <div className="mt-4 flex items-center gap-3">
                 <Button className="h-11 px-5" onClick={saveAssessment} disabled={saving}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Assessment"}
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Save Assessment")}
                 </Button>
               </div>
             </>
@@ -259,7 +265,7 @@ export default function ServiceSetup() {
 
         {/* Step 2 — purchase type & level */}
         <section className="mt-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
-          <h2 className="text-sm font-semibold mb-3">How would you like this service?</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("How would you like this service?")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {PURCHASE_TYPES.map((pt) => (
               <button
@@ -269,46 +275,45 @@ export default function ServiceSetup() {
                 }`}
               >
                 <div className="flex items-center gap-2 font-medium text-sm">
-                  <pt.icon className="w-4 h-4 text-primary" /> {pt.label}
+                  <pt.icon className="w-4 h-4 text-primary" /> {t(pt.label)}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{pt.hint}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t(pt.hint)}</p>
               </button>
             ))}
           </div>
 
-          <h2 className="text-sm font-semibold mt-5 mb-3">Select service level</h2>
+          <h2 className="text-sm font-semibold mt-5 mb-3">{t("Select service level")}</h2>
           <div className="grid grid-cols-1 gap-2">
-            {TIERS.map((t) => {
-              const p = packages.find((x) => x.service_tier === t);
+            {TIERS.map((tierOpt) => {
+              const p = packages.find((x) => x.service_tier === tierOpt);
               if (!p) return null;
               const price = purchaseType === "One-time" ? p.one_time_price : p.standard_price;
               return (
                 <button
-                  key={t} onClick={() => setTier(t)}
+                  key={tierOpt} onClick={() => setTier(tierOpt)}
                   className={`text-left rounded-2xl border p-3.5 transition-colors ${
-                    tier === t ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                    tier === tierOpt ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sm">{TIER_CARD_LABELS[t]}</span>
+                    <span className="font-medium text-sm">{t(TIER_CARD_LABELS[tierOpt])}</span>
                     <span className="text-sm font-semibold text-primary">
-                      {price != null ? `From ${formatPricePlusVat(price, { perMonth: purchaseType === "Recurring" })}` : "—"}
+                      {price != null ? t("From {price}", { price: formatPricePlusVat(price, { perMonth: purchaseType === "Recurring" }) }) : "—"}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {purchaseType === "One-time" ? "One visit" : p.inspection_frequency || "Monthly"} · {p.visit_duration || ""}
+                    {purchaseType === "One-time" ? t("One visit") : t(p.inspection_frequency || "Monthly")} · {p.visit_duration || ""}
                   </p>
-                  {purchaseType === "One-time" && t === "Premium" && (
+                  {purchaseType === "One-time" && tierOpt === "Premium" && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Compared with Standard one-time: longer visit allowance, more time for owner-selected monitoring
-                      priorities, more detailed documentation where appropriate, and a more detailed owner update/follow-up.
+                      {t("Compared with Standard one-time: longer visit allowance, more time for owner-selected monitoring priorities, more detailed documentation where appropriate, and a more detailed owner update/follow-up.")}
                     </p>
                   )}
                 </button>
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground mt-3">{PRICING_NOTE}</p>
+          <p className="text-xs text-muted-foreground mt-3">{t(PRICING_NOTE)}</p>
         </section>
 
         {/* Step 3 — recommendation */}
@@ -316,9 +321,9 @@ export default function ServiceSetup() {
           <div className="mt-4">
             {purchaseType === "One-time" && (
               <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 mb-4">
-                <Label className="text-xs sm:text-sm text-muted-foreground mb-1.5 block">Visit date *</Label>
+                <Label className="text-xs sm:text-sm text-muted-foreground mb-1.5 block">{t("Visit date *")}</Label>
                 <Input className="sm:h-12 max-w-xs" type="date" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} />
-                <p className="text-xs text-muted-foreground mt-1.5">The one-time visit is scheduled on this date. No recurring agreement or schedule is created.</p>
+                <p className="text-xs text-muted-foreground mt-1.5">{t("The one-time visit is scheduled on this date. No recurring agreement or schedule is created.")}</p>
               </div>
             )}
             <PricingRecommendationCard
@@ -340,26 +345,26 @@ export default function ServiceSetup() {
         <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{rec && rec.status === "custom_review" ? "Set Custom Price" : "Adjust Price"}</DialogTitle>
+              <DialogTitle>{rec && rec.status === "custom_review" ? t("Set Custom Price") : t("Adjust Price")}</DialogTitle>
               <DialogDescription>
-                {rec && `Recommendation: ${formatPricePlusVat(rec.recommendedPrice, { perMonth: purchaseType === "Recurring" })}. The recommendation is preserved; your final price and reason are recorded with your approval.`}
+                {rec && t("Recommendation: {price}. The recommendation is preserved; your final price and reason are recorded with your approval.", { price: formatPricePlusVat(rec.recommendedPrice, { perMonth: purchaseType === "Recurring" }) })}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-1">
               <div>
-                <Label className="mb-1.5 block">Final agreed service price (€, excl. VAT) *</Label>
+                <Label className="mb-1.5 block">{t("Final agreed service price (€, excl. VAT) *")}</Label>
                 <Input className="h-12" type="number" min="0" step="0.01" value={adjustPrice} onChange={(e) => setAdjustPrice(e.target.value)} />
-                {purchaseType === "Recurring" && <p className="text-xs text-muted-foreground mt-1">Monthly recurring price before VAT.</p>}
+                {purchaseType === "Recurring" && <p className="text-xs text-muted-foreground mt-1">{t("Monthly recurring price before VAT.")}</p>}
               </div>
               <div>
-                <Label className="mb-1.5 block">Adjustment reason / note {rec && adjustPrice !== "" && Number(adjustPrice) !== rec.recommendedPrice ? "*" : ""}</Label>
-                <Textarea rows={2} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="Why the price differs from the recommendation…" />
+                <Label className="mb-1.5 block">{t("Adjustment reason / note")} {rec && adjustPrice !== "" && Number(adjustPrice) !== rec.recommendedPrice ? "*" : ""}</Label>
+                <Textarea rows={2} value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder={t("Why the price differs from the recommendation…")} />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" className="h-11" onClick={() => setAdjustOpen(false)}>Cancel</Button>
+              <Button variant="outline" className="h-11" onClick={() => setAdjustOpen(false)}>{t("Cancel")}</Button>
               <Button className="h-11" onClick={confirmAdjust} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Approve & Continue"}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Approve & Continue")}
               </Button>
             </DialogFooter>
           </DialogContent>

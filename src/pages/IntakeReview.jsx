@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader2, Check, ArrowRight, Plus, Home, Package, CheckCheck, X } from "lucide-react";
 import { INTAKE_SECTIONS, MAPPED_FIELDS } from "@/lib/intakeSchema";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { athensMediumDateTime } from "@/lib/timezone";
 
 const STATUS_TONE = {
   Draft: "bg-slate-100 text-slate-600 border-slate-200",
@@ -22,6 +24,7 @@ const STATUS_TONE = {
 export default function IntakeReview() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t, tEnum, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState(null);
   const [properties, setProperties] = useState([]);
@@ -171,12 +174,12 @@ export default function IntakeReview() {
   };
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
-  if (!client) return <AppLayout><div className="p-6">Client not found.</div></AppLayout>;
+  if (!client) return <AppLayout><div className="p-6">{t("Client not found.")}</div></AppLayout>;
   if (!intake) return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-2xl mx-auto">
         <PageBackButton fallback={`/clients/${id}`} className="mb-3" />
-        <p className="text-sm text-muted-foreground">No intake submission found for this client.</p>
+        <p className="text-sm text-muted-foreground">{t("No intake submission found for this client.")}</p>
       </div>
     </AppLayout>
   );
@@ -186,9 +189,9 @@ export default function IntakeReview() {
       <AppLayout>
         <div className="p-4 sm:p-6 max-w-md mx-auto text-center pt-12">
           <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3"><Check className="w-8 h-8 text-emerald-600" /></div>
-          <h1 className="text-lg font-semibold">Approved information applied</h1>
-          <p className="text-sm text-muted-foreground mt-1">The selected fields have been updated on the Client and/or Property record. The intake is retained for reference.</p>
-          <Button onClick={() => navigate(`/clients/${id}`)} className="mt-5 gap-1.5">Back to Client Hub <ArrowRight className="w-4 h-4" /></Button>
+          <h1 className="text-lg font-semibold">{t("Approved information applied")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("The selected fields have been updated on the Client and/or Property record. The intake is retained for reference.")}</p>
+          <Button onClick={() => navigate(`/clients/${id}`)} className="mt-5 gap-1.5">{t("Back to Client Hub")} <ArrowRight className="w-4 h-4" /></Button>
         </div>
       </AppLayout>
     );
@@ -199,23 +202,23 @@ export default function IntakeReview() {
       <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
         <PageBackButton fallback={`/clients/${id}`} className="mb-1" />
         <div className="flex items-center justify-between gap-3 mb-1">
-          <h1 className="text-xl font-semibold">Review Intake</h1>
-          <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_TONE[intake.status] || ""}`}>{intake.status}</span>
+          <h1 className="text-xl font-semibold">{t("Review Intake")}</h1>
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_TONE[intake.status] || ""}`}>{tEnum(intake.status, "intake")}</span>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          {client.name} · Submitted {intake.submitted_at ? new Date(intake.submitted_at).toLocaleString() : "—"}
+          {client.name} · {t("Submitted {date}", { date: intake.submitted_at ? athensMediumDateTime(intake.submitted_at, lang) : "—" })}
         </p>
 
         {/* Property target */}
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Apply property data to</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{t("Apply property data to")}</p>
           {properties.length === 0 ? (
-            <div className="flex items-center gap-2 text-sm"><Plus className="w-4 h-4 text-primary" /> A new property will be created from the approved property fields.</div>
+            <div className="flex items-center gap-2 text-sm"><Plus className="w-4 h-4 text-primary" /> {t("A new property will be created from the approved property fields.")}</div>
           ) : properties.length === 1 ? (
             <div className="flex items-center gap-2 text-sm"><Home className="w-4 h-4 text-muted-foreground" /> {properties[0].name}</div>
           ) : (
             <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
-              <SelectTrigger><SelectValue placeholder="Select which property this intake applies to" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("Select which property this intake applies to")} /></SelectTrigger>
               <SelectContent>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
             </Select>
           )}
@@ -224,13 +227,13 @@ export default function IntakeReview() {
         {/* Bulk selection — selects eligible mapped fields only; reference-only
             sections and monitoring priorities are never bulk-selected. */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-2xl border border-border bg-card p-3 mb-4">
-          <p className="text-xs text-muted-foreground">Bulk-select eligible submitted fields. Reference-only sections are not affected.</p>
+          <p className="text-xs text-muted-foreground">{t("Bulk-select eligible submitted fields. Reference-only sections are not affected.")}</p>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={applyAllSubmitted} className="gap-1.5 min-h-[40px]">
-              <CheckCheck className="w-4 h-4" /> Apply All Submitted
+              <CheckCheck className="w-4 h-4" /> {t("Apply All Submitted")}
             </Button>
             <Button size="sm" variant="ghost" onClick={clearAll} className="gap-1.5 min-h-[40px]">
-              <X className="w-4 h-4" /> Clear All
+              <X className="w-4 h-4" /> {t("Clear All")}
             </Button>
           </div>
         </div>
@@ -241,7 +244,7 @@ export default function IntakeReview() {
             const refFields = (sec.fields || []).filter((f) => !f.map);
             return (
               <section key={sec.id} className="rounded-2xl border border-border bg-card p-4">
-                <h2 className="text-sm font-semibold mb-3">{sec.title}</h2>
+                <h2 className="text-sm font-semibold mb-3">{t(sec.title)}</h2>
 
                 {mappedFields.length > 0 && (
                   <div className="space-y-2.5">
@@ -253,19 +256,19 @@ export default function IntakeReview() {
                       return (
                         <div key={f.name} className="rounded-xl border border-border p-3">
                           <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="text-xs font-medium text-muted-foreground">{f.label}</span>
+                            <span className="text-xs font-medium text-muted-foreground">{t(f.label)}</span>
                             <button type="button" onClick={() => toggleApply(f.name)}
                               className={`text-xs px-3 py-1.5 min-h-[40px] inline-flex items-center rounded-full border transition ${checked ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>
-                              {checked ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Apply</span> : "Apply submitted"}
+                              {checked ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> {t("Apply")}</span> : t("Apply submitted")}
                             </button>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                             <div className="rounded-lg bg-muted/40 px-3 py-2">
-                              <p className="text-[10px] uppercase text-muted-foreground mb-0.5">Current</p>
+                              <p className="text-[10px] uppercase text-muted-foreground mb-0.5">{t("Current")}</p>
                               <p className={diff ? "text-foreground" : "text-muted-foreground"}>{cur || <span className="text-muted-foreground/60">—</span>}</p>
                             </div>
                             <div className={`rounded-lg px-3 py-2 ${diff ? "bg-amber-50 text-amber-900 border border-amber-200" : "bg-muted/40"}`}>
-                              <p className="text-[10px] uppercase text-muted-foreground mb-0.5">Submitted</p>
+                              <p className="text-[10px] uppercase text-muted-foreground mb-0.5">{t("Submitted")}</p>
                               <p>{sub || <span className="text-muted-foreground/60">—</span>}</p>
                             </div>
                           </div>
@@ -277,10 +280,10 @@ export default function IntakeReview() {
 
                 {refFields.length > 0 && (
                   <div className={`mt-${mappedFields.length > 0 ? "3" : "0"} space-y-2`}>
-                    {mappedFields.length > 0 && <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">For reference (not applied)</p>}
+                    {mappedFields.length > 0 && <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">{t("For reference (not applied)")}</p>}
                     {refFields.map((f) => (
                       <div key={f.name} className="text-sm">
-                        <span className="text-muted-foreground">{f.label}: </span>
+                        <span className="text-muted-foreground">{t(f.label)}: </span>
                         <span className="text-foreground whitespace-pre-wrap">{payload[f.name] || <span className="text-muted-foreground/60">—</span>}</span>
                       </div>
                     ))}
@@ -289,9 +292,9 @@ export default function IntakeReview() {
 
                 {sec.repeatable === "contractors" && (
                   <div className="space-y-2">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">For reference (not applied)</p>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">{t("For reference (not applied)")}</p>
                     {(payload.contractors || []).length === 0
-                      ? <p className="text-sm text-muted-foreground/60">None provided.</p>
+                      ? <p className="text-sm text-muted-foreground/60">{t("None provided.")}</p>
                       : (payload.contractors || []).map((c, i) => (
                         <div key={i} className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
                           <p className="font-medium">{c.name || "—"}{c.service_type ? ` · ${c.service_type}` : ""}</p>
@@ -304,9 +307,9 @@ export default function IntakeReview() {
 
                 {sec.special === "service-packages" && (
                   <div className="space-y-2">
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">For reference (not assigned)</p>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">{t("For reference (not assigned)")}</p>
                     {(payload.service_interest || []).length === 0
-                      ? <p className="text-sm text-muted-foreground/60">No services selected.</p>
+                      ? <p className="text-sm text-muted-foreground/60">{t("No services selected.")}</p>
                       : (payload.service_interest || []).map((s) => (
                         <div key={s.id} className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-border bg-muted/40 mr-1.5 mb-1.5">
                           <Package className="w-3.5 h-3.5 text-muted-foreground" /> {s.name}
@@ -319,13 +322,13 @@ export default function IntakeReview() {
                     {/* Existing confirmed priorities on the target property */}
                     {propForReview && Array.isArray(propForReview.monitoring_priorities) && propForReview.monitoring_priorities.length > 0 && (
                       <div className="space-y-1.5">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">Existing confirmed priorities</p>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">{t("Existing confirmed priorities")}</p>
                         <div className="rounded-lg bg-muted/30 px-3 py-2 space-y-1">
                           {propForReview.monitoring_priorities.map((p, i) => (
                             <p key={i} className="text-sm">
                               <span className="font-medium">{p.area}</span>
                               {p.detail ? <span className="text-muted-foreground"> — {p.detail}</span> : null}
-                              {p.active === false && <span className="text-muted-foreground/60"> (inactive)</span>}
+                              {p.active === false && <span className="text-muted-foreground/60"> ({t("inactive")})</span>}
                             </p>
                           ))}
                         </div>
@@ -334,13 +337,13 @@ export default function IntakeReview() {
 
                     {/* New customer requests from this intake */}
                     <div className="space-y-1.5">
-                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">New customer requests from this intake</p>
+                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground/70">{t("New customer requests from this intake")}</p>
                       {(payload.monitoring_areas || []).length === 0 && !payload.monitoring_notes ? (
-                        <p className="text-sm text-muted-foreground/60">No monitoring requests submitted.</p>
+                        <p className="text-sm text-muted-foreground/60">{t("No monitoring requests submitted.")}</p>
                       ) : (
                         <>
                           {(payload.monitoring_areas || []).length === 0 ? (
-                            <p className="text-sm text-muted-foreground/60">No areas selected.</p>
+                            <p className="text-sm text-muted-foreground/60">{t("No areas selected.")}</p>
                           ) : (
                             <div className="flex flex-wrap gap-1.5">
                               {(payload.monitoring_areas || []).map((a) => (
@@ -350,7 +353,7 @@ export default function IntakeReview() {
                           )}
                           {payload.monitoring_notes && (
                             <div className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
-                              <p className="text-[10px] uppercase text-muted-foreground mb-0.5">Specific instructions</p>
+                              <p className="text-[10px] uppercase text-muted-foreground mb-0.5">{t("Specific instructions")}</p>
                               <p className="whitespace-pre-wrap">{payload.monitoring_notes}</p>
                             </div>
                           )}
@@ -360,12 +363,12 @@ export default function IntakeReview() {
 
                     <div className="flex items-center justify-between gap-2 rounded-xl border border-border p-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground">Apply as confirmed monitoring priorities on the property</p>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">Adds the approved areas as new priorities. Existing confirmed priorities are preserved; duplicates are skipped.</p>
+                        <p className="text-xs font-medium text-muted-foreground">{t("Apply as confirmed monitoring priorities on the property")}</p>
+                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">{t("Adds the approved areas as new priorities. Existing confirmed priorities are preserved; duplicates are skipped.")}</p>
                       </div>
                       <button type="button" onClick={toggleMonitoringApply}
                         className={`text-xs px-3 py-1.5 min-h-[40px] inline-flex items-center rounded-full border transition shrink-0 ${monitoringApply ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>
-                        {monitoringApply ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Apply</span> : "Apply"}
+                        {monitoringApply ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> {t("Apply")}</span> : t("Apply")}
                       </button>
                     </div>
                   </div>
@@ -376,9 +379,9 @@ export default function IntakeReview() {
         </div>
 
         <div className="mt-5 flex items-center justify-between gap-3">
-          <Link to={`/clients/${id}`}><Button variant="outline">Cancel</Button></Link>
+          <Link to={`/clients/${id}`}><Button variant="outline">{t("Cancel")}</Button></Link>
           <Button onClick={doApply} disabled={applying} className="gap-1.5">
-            {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Apply Approved Information
+            {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("Apply Approved Information")}
           </Button>
         </div>
       </div>

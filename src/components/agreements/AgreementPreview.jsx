@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { AlertTriangle, Lock, FileWarning, ShieldAlert } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Renders the customer-facing agreement preview from a built snapshot.
 // SECURITY: the snapshot is built by buildSentSnapshot (Phase A), which never
@@ -20,6 +21,7 @@ const SECRET_FIELDS = [
 const QA_MARKERS = ["ZZ_MUTATED_", "QA Biz", "QA Owner", "qaqbiz@"];
 
 export default function AgreementPreview({ snapshot, template, property, emergencyConfirmed }) {
+  const { t } = useLanguage();
   const sections = (snapshot && snapshot.sections) || [];
 
   const leakedSecret = useMemo(() => {
@@ -52,26 +54,26 @@ export default function AgreementPreview({ snapshot, template, property, emergen
       {snapshot?.is_test_agreement && (
         <div className="px-4 py-3 bg-rose-600 border-b border-rose-700 flex items-center gap-2 flex-wrap">
           <AlertTriangle className="w-4 h-4 text-white shrink-0" />
-          <p className="text-sm font-bold text-white tracking-wide">TEST AGREEMENT — NOT FOR PRODUCTION USE — NOT LEGALLY APPROVED</p>
+          <p className="text-sm font-bold text-white tracking-wide">{t("TEST AGREEMENT — NOT FOR PRODUCTION USE — NOT LEGALLY APPROVED")}</p>
         </div>
       )}
       {/* Draft banner */}
       <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 flex-wrap">
         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-        <p className="text-sm font-medium text-amber-700">DRAFT PREVIEW — NOT SENT</p>
+        <p className="text-sm font-medium text-amber-700">{t("DRAFT PREVIEW — NOT SENT")}</p>
       </div>
 
       {templateIsDraft && (
         <div className="px-4 py-2.5 bg-rose-500/5 border-b border-rose-500/15 flex items-center gap-2">
           <FileWarning className="w-4 h-4 text-rose-600 shrink-0" />
-          <p className="text-xs font-medium text-rose-700">DRAFT TERMS — LEGAL REVIEW REQUIRED. This template is not yet active and cannot be sent for signature.</p>
+          <p className="text-xs font-medium text-rose-700">{t("DRAFT TERMS — LEGAL REVIEW REQUIRED. This template is not yet active and cannot be sent for signature.")}</p>
         </div>
       )}
 
       {emergencyConfirmed === false && (
         <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-          <p className="text-xs font-medium text-amber-700">Internal notice: Emergency authorization requires staff confirmation before this agreement can be sent.</p>
+          <p className="text-xs font-medium text-amber-700">{t("Internal notice: Emergency authorization requires staff confirmation before this agreement can be sent.")}</p>
         </div>
       )}
 
@@ -80,11 +82,11 @@ export default function AgreementPreview({ snapshot, template, property, emergen
           <div className="flex items-start gap-2 text-rose-700">
             <Lock className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium">{qaContaminated ? "Business configuration error" : "Preview redaction failed"}</p>
+              <p className="font-medium">{qaContaminated ? t("Business configuration error") : t("Preview redaction failed")}</p>
               <p className="text-sm text-rose-600 mt-1">
                 {qaContaminated
-                  ? "The business identity contains test/QA data. Do not send this agreement. Restore the legitimate business configuration in Settings before sending."
-                  : `A property access secret (${leakedSecret.key}) was found in the preview output. Do not send this agreement. Report this issue.`}
+                  ? t("The business identity contains test/QA data. Do not send this agreement. Restore the legitimate business configuration in Settings before sending.")
+                  : t("A property access secret ({key}) was found in the preview output. Do not send this agreement. Report this issue.", { key: leakedSecret.key })}
               </p>
             </div>
           </div>
@@ -95,13 +97,13 @@ export default function AgreementPreview({ snapshot, template, property, emergen
           {snapshot && (
             <div className="border-b border-border pb-4">
               <p className="text-lg font-semibold">
-                Service Agreement{snapshot.agreement_version ? ` — Version ${snapshot.agreement_version}` : ""}
+                {snapshot.agreement_version ? t("Service Agreement — Version {version}", { version: snapshot.agreement_version }) : t("Service Agreement")}
               </p>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {snapshot.business_identity?.name || "—"} · {snapshot.customer?.full_name || "—"} · {snapshot.property?.name || "—"}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Terms version {snapshot.terms_version || "—"} · {snapshot.language || "English"}
+                {t("Terms version {version} · {language}", { version: snapshot.terms_version || "—", language: snapshot.language || "English" })}
               </p>
             </div>
           )}
@@ -117,7 +119,7 @@ export default function AgreementPreview({ snapshot, template, property, emergen
           ))}
 
           {sections.length === 0 && (
-            <p className="text-sm text-muted-foreground">No terms template selected. Select a service package and property to preview the agreement.</p>
+            <p className="text-sm text-muted-foreground">{t("No terms template selected. Select a service package and property to preview the agreement.")}</p>
           )}
         </div>
       )}

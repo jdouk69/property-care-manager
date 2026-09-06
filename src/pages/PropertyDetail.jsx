@@ -204,7 +204,7 @@ export default function PropertyDetail() {
               )) : (
                 <div className="px-4 py-4">
                   <p className="text-sm text-muted-foreground mb-2">{t("No active service agreement for this property.")}</p>
-                  {isAdmin && (<Link to={`/agreements/new?client=${prop.owner_id || ""}&property=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-4 h-4" /> Assign Service Package</Button></Link>)}
+                  {isAdmin && (<Link to={`/agreements/new?client=${prop.owner_id || ""}&property=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Plus className="w-4 h-4" /> {t("Assign Service Package")}</Button></Link>)}
                 </div>
               )}
             </Section>

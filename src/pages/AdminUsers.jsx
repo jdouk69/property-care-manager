@@ -7,6 +7,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { athensMediumDate } from "@/lib/timezone";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -26,18 +28,10 @@ const initialsFor = (name, email) => {
   return src ? src.slice(0, 1).toUpperCase() : "?";
 };
 
-const formatDate = (iso) => {
-  if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-  } catch {
-    return null;
-  }
-};
-
 export default function AdminUsers() {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const { t, lang } = useLanguage();
   const [users, setUsers] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
@@ -55,11 +49,11 @@ export default function AdminUsers() {
       setUsers(sorted);
     } catch (e) {
       setUsers([]);
-      toast({ title: "Could not load users", description: e?.message || "Please try again.", variant: "destructive" });
+      toast({ title: t("Could not load users"), description: e?.message || t("Please try again."), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, t]);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
@@ -68,19 +62,19 @@ export default function AdminUsers() {
     if (!target) return;
     // Fail-closed: the acting user must be a verified admin before any change.
     if (currentUser?.role !== "admin") {
-      toast({ title: "Not allowed", description: "Only the Owner/Admin can manage access.", variant: "destructive" });
+      toast({ title: t("Not allowed"), description: t("Only the Owner/Admin can manage access."), variant: "destructive" });
       setConfirmTarget(null);
       return;
     }
     setBusyId(target.user.id);
     try {
       await base44.entities.User.update(target.user.id, { role: target.newRole });
-      toast({ title: target.newRole === "staff" ? "Approved as Staff" : "Access revoked" });
+      toast({ title: target.newRole === "staff" ? t("Approved as Staff") : t("Access revoked") });
       await loadUsers(); // re-read from the server — no optimistic state changes
     } catch (e) {
       toast({
-        title: "Update failed",
-        description: e?.message || "The role was not changed. Please try again.",
+        title: t("Update failed"),
+        description: e?.message || t("The role was not changed. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -105,16 +99,16 @@ export default function AdminUsers() {
     <AppLayout>
       <div className="px-4 py-6 md:px-8 lg:py-8 max-w-4xl mx-auto">
         <PageHeader
-          title="Users & Staff"
-          subtitle="Approve and manage who can access the Property Care system."
+          title={t("Users & Staff")}
+          subtitle={t("Approve and manage who can access the Property Care system.")}
           icon={UserCog}
         />
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { label: "Pending", value: counts.pending },
-            { label: "Staff", value: counts.staff },
-            { label: "Owner/Admin", value: counts.admin },
+            { label: t("Pending"), value: counts.pending },
+            { label: t("Staff"), value: counts.staff },
+            { label: t("Owner/Admin"), value: counts.admin },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-border bg-card px-4 py-3 text-center">
               <div className="text-xl font-semibold text-foreground">{s.value}</div>
@@ -129,13 +123,13 @@ export default function AdminUsers() {
           </div>
         ) : !users?.length ? (
           <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-            No users found.
+            {t("No users found.")}
           </div>
         ) : (
           <div className="space-y-3">
             {users.map((u) => {
               const m = metaFor(u.role);
-              const name = u.full_name || u.email || "Unnamed user";
+              const name = u.full_name || u.email || t("Unnamed user");
               return (
                 <div key={u.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
@@ -147,9 +141,9 @@ export default function AdminUsers() {
                       <div className="text-xs text-muted-foreground truncate">{u.email}</div>
                     )}
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className={m.badge}>{m.label}</Badge>
-                      {formatDate(u.created_date) && (
-                        <span className="text-[11px] text-muted-foreground">Joined {formatDate(u.created_date)}</span>
+                      <Badge variant="outline" className={m.badge}>{t(m.label)}</Badge>
+                      {u.created_date && (
+                        <span className="text-[11px] text-muted-foreground">{t("Joined {date}", { date: athensMediumDate(u.created_date, lang) })}</span>
                       )}
                     </div>
                   </div>
@@ -161,8 +155,8 @@ export default function AdminUsers() {
                       className="gap-1.5 shrink-0"
                     >
                       <UserCheck className="w-4 h-4" />
-                      <span className="hidden sm:inline">Approve as Staff</span>
-                      <span className="sm:hidden">Approve</span>
+                      <span className="hidden sm:inline">{t("Approve as Staff")}</span>
+                      <span className="sm:hidden">{t("Approve")}</span>
                     </Button>
                   ) : u.role === "staff" ? (
                     <Button
@@ -173,10 +167,10 @@ export default function AdminUsers() {
                       className="gap-1.5 shrink-0"
                     >
                       <UserX className="w-4 h-4" />
-                      Revoke Access
+                      {t("Revoke Access")}
                     </Button>
                   ) : u.role === "admin" ? (
-                    <ShieldCheck className="w-5 h-5 text-primary shrink-0" aria-label="Owner/Admin" />
+                    <ShieldCheck className="w-5 h-5 text-primary shrink-0" aria-label={t("Owner/Admin")} />
                   ) : null}
                 </div>
               );
@@ -187,17 +181,17 @@ export default function AdminUsers() {
         <AlertDialog open={!!confirmTarget} onOpenChange={(open) => !open && setConfirmTarget(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{isApproving ? "Approve as Staff?" : "Revoke Access?"}</AlertDialogTitle>
+              <AlertDialogTitle>{isApproving ? t("Approve as Staff?") : t("Revoke Access?")}</AlertDialogTitle>
               <AlertDialogDescription>
                 {isApproving
-                  ? `Give ${confirmTarget?.user?.email || confirmTarget?.user?.full_name || "this user"} operational access to the Property Care system as approved staff.`
-                  : `Remove operational access from ${confirmTarget?.user?.email || confirmTarget?.user?.full_name || "this user"} and return their account to Pending Approval. Their past work and records are not deleted.`}
+                  ? t("Give {name} operational access to the Property Care system as approved staff.", { name: confirmTarget?.user?.email || confirmTarget?.user?.full_name || t("this user") })
+                  : t("Remove operational access from {name} and return their account to Pending Approval. Their past work and records are not deleted.", { name: confirmTarget?.user?.email || confirmTarget?.user?.full_name || t("this user") })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
               <AlertDialogAction onClick={performRoleChange}>
-                {isApproving ? "Approve as Staff" : "Revoke Access"}
+                {isApproving ? t("Approve as Staff") : t("Revoke Access")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

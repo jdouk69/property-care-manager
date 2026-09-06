@@ -707,7 +707,7 @@ export default function ResourceListPage({
           <SheetContent className="w-full h-full flex flex-col overflow-hidden">
             <SheetHeader>
               <SheetTitle>{editing ? formHeading("Edit") : formHeading("New")}</SheetTitle>
-              <SheetDescription className="sr-only">Form</SheetDescription>
+              <SheetDescription className="sr-only">{t("Form")}</SheetDescription>
               {savingIndicator}
             </SheetHeader>
 

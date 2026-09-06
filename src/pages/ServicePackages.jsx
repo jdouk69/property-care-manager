@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { VISIT_TYPES } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { formatPricePlusVat } from "@/lib/servicePricing";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const fields = [
   { name: "name", label: "Service Name", type: "text", required: true, placeholder: "e.g. Standard property care" },
@@ -23,16 +24,16 @@ const fields = [
     name: "default_visit_type",
     label: "Default Visit Type",
     type: "custom",
-    render: (values, setField) => (
+    render: (values, setField, t) => (
       <div>
         <Select value={values.default_visit_type || "__none__"} onValueChange={(v) => setField("default_visit_type", v === "__none__" ? "" : v)}>
-          <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={t("None")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">None</SelectItem>
-            {VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{visitTypeLabel(vt)}</SelectItem>)}
+            <SelectItem value="__none__">{t("None")}</SelectItem>
+            {VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{t(visitTypeLabel(vt))}</SelectItem>)}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground mt-1.5">Used to choose the default checklist/visit workflow when this service package is scheduled.</p>
+        <p className="text-xs text-muted-foreground mt-1.5">{t("Used to choose the default checklist/visit workflow when this service package is scheduled.")}</p>
       </div>
     ),
   },
@@ -54,6 +55,12 @@ const columns = [
 ];
 
 export default function ServicePackages() {
+  const { t } = useLanguage();
+  // Bind t() into the custom field render (display-only — stored package
+  // values, prices and visit types are untouched).
+  const fieldsWithT = fields.map((f) =>
+    f.type === "custom" && f.render ? { ...f, render: (values, setField) => f.render(values, setField, t) } : f
+  );
   return (
     <AppLayout>
       <ResourceListPage
@@ -61,7 +68,7 @@ export default function ServicePackages() {
         title="Service Packages"
         subtitle="Define your services and pricing"
         icon={Package}
-        fields={fields}
+        fields={fieldsWithT}
         columns={columns}
         searchKeys={["name", "description"]}
         addItemLabel="Add Service"

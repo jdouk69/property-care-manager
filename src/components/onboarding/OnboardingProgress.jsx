@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, Circle, CircleDot, ArrowRight, AlertTriangle, Sparkles, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Step 7 — Staff onboarding progress workflow for Client Hub. Renders a compact,
 // sequential, property-aware stage list with one primary next action. No
@@ -11,6 +12,7 @@ import ActivateServiceButton from "@/components/agreements/ActivateServiceButton
 // opens an explicit confirmation and calls the secure agreementActivate
 // backend) instead of routing to the Edit Agreement page.
 export default function OnboardingProgress({ properties, selectedPropertyId, onSelectProperty, onboarding, onActivated }) {
+  const { t } = useLanguage();
   const { stages, primaryAction, ready, serviceConflict } = onboarding || {};
   if (!stages) return null;
   const currentIdx = stages.findIndex((s) => !s.complete);
@@ -34,7 +36,7 @@ export default function OnboardingProgress({ properties, selectedPropertyId, onS
       return (
         <Link to={action.to}>
           <Button size="sm" variant="outline" className="gap-1.5 mt-2 h-9">
-            {action.label} <ArrowRight className="w-3.5 h-3.5" />
+            {t(action.label)} <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </Link>
       );
@@ -46,7 +48,7 @@ export default function OnboardingProgress({ properties, selectedPropertyId, onS
       };
       return (
         <Button size="sm" variant="outline" className="gap-1.5 mt-2 h-9" onClick={scroll}>
-          {action.label} <ArrowRight className="w-3.5 h-3.5" />
+          {t(action.label)} <ArrowRight className="w-3.5 h-3.5" />
         </Button>
       );
     }
@@ -57,11 +59,11 @@ export default function OnboardingProgress({ properties, selectedPropertyId, onS
     <div className="rounded-2xl border border-border bg-card p-4 mb-4">
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 font-medium text-sm">
-          <Sparkles className="w-4 h-4 text-primary" /> Onboarding Progress
+          <Sparkles className="w-4 h-4 text-primary" /> {t("Onboarding Progress")}
         </div>
         {ready && (
           <span className="text-xs px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
-            Ready for Regular Service
+            {t("Ready for Regular Service")}
           </span>
         )}
       </div>
@@ -88,15 +90,15 @@ export default function OnboardingProgress({ properties, selectedPropertyId, onS
       {serviceConflict && (
         <div className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>Agreement conflict — multiple active agreements. Resolve before continuing service-dependent stages.</span>
+          <span>{t("Agreement conflict — multiple active agreements. Resolve before continuing service-dependent stages.")}</span>
         </div>
       )}
 
       {primaryAction && !serviceConflict && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 mb-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-wide text-primary">Next action</p>
-            <p className="font-medium text-sm truncate">{primaryAction.action.label}</p>
+            <p className="text-[11px] uppercase tracking-wide text-primary">{t("Next action")}</p>
+            <p className="font-medium text-sm truncate">{t(primaryAction.action.label)}</p>
           </div>
           <div className="shrink-0">{renderAction(primaryAction.action)}</div>
         </div>
@@ -126,10 +128,10 @@ export default function OnboardingProgress({ properties, selectedPropertyId, onS
               </div>
               <div className="flex-1 pb-4 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium">{s.name}</p>
-                  <span className={`text-xs shrink-0 ${isComplete ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}`}>{s.status}</span>
+                  <p className="text-sm font-medium">{t(s.name)}</p>
+                  <span className={`text-xs shrink-0 ${isComplete ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}`}>{t(s.status)}</span>
                 </div>
-                {s.detail && <p className="text-xs text-muted-foreground mt-0.5">{s.detail}</p>}
+                {s.detail && <p className="text-xs text-muted-foreground mt-0.5">{t(s.detail)}</p>}
                 {renderAction(s.action)}
               </div>
             </li>

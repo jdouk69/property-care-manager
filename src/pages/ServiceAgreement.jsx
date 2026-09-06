@@ -26,6 +26,8 @@ import ActivateServiceButton from "@/components/agreements/ActivateServiceButton
 import CreateReplacementButton from "@/components/agreements/CreateReplacementButton";
 import TestAgreementControl from "@/components/agreements/TestAgreementControl";
 import AgreementHistory from "@/components/agreements/AgreementHistory";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { athensMediumDateTime } from "@/lib/timezone";
 
 const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
 // Pending is the default for NEW agreements. Legacy agreements keep their stored status.
@@ -73,6 +75,7 @@ export default function ServiceAgreement() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { t, tEnum, lang } = useLanguage();
   const clientId = params.get("client");
   const propertyParam = params.get("property");
   const isEdit = !!id;
@@ -305,13 +308,13 @@ export default function ServiceAgreement() {
     : values.signing_status !== "Draft"
       ? null
       : !emergencyConfirmedEffective
-        ? "Confirm the emergency authorization before sending."
+        ? t("Confirm the emergency authorization before sending.")
         : !selectedTemplate
-          ? "No agreement terms template is available."
+          ? t("No agreement terms template is available.")
           : !values.is_test_agreement && selectedTemplate.active !== true
-            ? "No active legally-approved agreement terms template is available."
+            ? t("No active legally-approved agreement terms template is available.")
             : !values.is_test_agreement && selectedTemplate.legal_approved !== true
-              ? "The selected agreement terms have not been legally approved for customer use."
+              ? t("The selected agreement terms have not been legally approved for customer use.")
               : null;
   const hasExtra = !!(
     values.included_services_override || values.additional_terms ||
@@ -353,13 +356,13 @@ export default function ServiceAgreement() {
         }));
         setSendResult({ public_link: data.public_link, sent_at: data.sent_at });
       } else {
-        const msg = (data && data.error) || "Send failed.";
+        const msg = (data && data.error) || t("Send failed.");
         const detail = data && Array.isArray(data.details) ? " " + data.details.join(" ") : "";
         setSendError(msg + detail);
       }
     } catch (e) {
       const data = e && e.response && e.response.data ? e.response.data : null;
-      const msg = (data && data.error) || (e && e.message) || "Send failed.";
+      const msg = (data && data.error) || (e && e.message) || t("Send failed.");
       const detail = data && Array.isArray(data.details) ? " " + data.details.join(" ") : "";
       setSendError(msg + detail);
     }
@@ -379,9 +382,10 @@ export default function ServiceAgreement() {
     copyToClipboard(msg, "message");
   };
 
+  // Athens-local display formatting (language-aware); stored timestamps unchanged.
   const formatSentAt = (iso) => {
     if (!iso) return "";
-    try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+    return athensMediumDateTime(iso, lang);
   };
 
   const onPackageChange = (pid) => {
@@ -424,8 +428,8 @@ export default function ServiceAgreement() {
 
   const confirmPriceChange = async () => {
     const final = parseFloat(newPrice);
-    if (!Number.isFinite(final) || final <= 0) { setPriceChangeError("Enter a valid price above €0."); return; }
-    if (!priceChangeReason.trim()) { setPriceChangeError("A reason is required for a price change."); return; }
+    if (!Number.isFinite(final) || final <= 0) { setPriceChangeError(t("Enter a valid price above €0.")); return; }
+    if (!priceChangeReason.trim()) { setPriceChangeError(t("A reason is required for a price change.")); return; }
     setApproving(true);
     let meName = "";
     try { const me = await base44.auth.me(); meName = me?.full_name || me?.email || ""; } catch (e) {}
@@ -520,38 +524,38 @@ export default function ServiceAgreement() {
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-28 lg:pb-6">
         <PageBackButton fallback={backTo} className="mb-1" />
-        <h1 className="text-xl font-semibold mb-4">{isEdit ? "Edit Service Agreement" : "New Service Agreement"}</h1>
+        <h1 className="text-xl font-semibold mb-4">{isEdit ? t("Edit Service Agreement") : t("New Service Agreement")}</h1>
 
         {/* Frozen banner */}
         {isFrozen && (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-4 flex items-start gap-3">
             <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-700">This agreement version has been sent and is frozen.</p>
-              <p className="text-xs text-amber-600/90 mt-0.5">Use “Create Replacement Version” below to draft a new version; this version's signed terms remain immutable.</p>
+              <p className="text-sm font-medium text-amber-700">{t("This agreement version has been sent and is frozen.")}</p>
+              <p className="text-xs text-amber-600/90 mt-0.5">{t("Use “Create Replacement Version” below to draft a new version; this version's signed terms remain immutable.")}</p>
             </div>
           </div>
         )}
 
         {!client ? (
-          <EmptyState icon={User} title="No client selected" description="Open this screen from a client's hub." />
+          <EmptyState icon={User} title={t("No client selected")} description={t("Open this screen from a client's hub.")} />
         ) : properties.length === 0 ? (
-          <EmptyState icon={Building2} title="No properties for this client" description="Add a property before creating a service agreement."
-            action={<Link to={`/properties?add=1&owner=${client.id}`}><Button size="sm">Add Property</Button></Link>} />
+          <EmptyState icon={Building2} title={t("No properties for this client")} description={t("Add a property before creating a service agreement.")}
+            action={<Link to={`/properties?add=1&owner=${client.id}`}><Button size="sm">{t("Add Property")}</Button></Link>} />
         ) : (
           <div className="space-y-4">
             <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-1">Client</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("Client")}</p>
               <p className="font-medium">{client.name}</p>
             </div>
 
             <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Property</Label>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Property")}</Label>
               {properties.length === 1 ? (
                 <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">{properties[0].name}</div>
               ) : (
                 <Select value={values.property_id} onValueChange={(v) => set("property_id", v)} disabled={isFrozen}>
-                  <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("Select property")} /></SelectTrigger>
                   <SelectContent>
                     {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
@@ -560,9 +564,9 @@ export default function ServiceAgreement() {
             </div>
 
             <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Service Package</Label>
+              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Service Package")}</Label>
               <Select value={values.service_package_id} onValueChange={onPackageChange} disabled={isFrozen}>
-                <SelectTrigger><SelectValue placeholder="Select a package" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("Select a package")} /></SelectTrigger>
                 <SelectContent>
                   {packages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
@@ -573,80 +577,80 @@ export default function ServiceAgreement() {
               <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Package className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Package defaults (reference)</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Package defaults (reference)")}</p>
                 </div>
                 <p className="text-sm font-medium">{selectedPackage.name}</p>
                 {selectedPackage.description && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{selectedPackage.description}</p>}
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div>Standard price: <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)} + VAT</span></div>
-                  <div>Billing: <span className="text-foreground">{selectedPackage.billing_type}</span></div>
-                  <div>Visit duration: <span className="text-foreground">{selectedPackage.visit_duration || "—"}</span></div>
-                  <div>Frequency: <span className="text-foreground">{selectedPackage.inspection_frequency || "—"}</span></div>
-                  <div className="col-span-2">VAT: <span className="text-foreground">{selectedPackage.vat_setting}</span></div>
+                  <div>{t("Standard price:")} <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)} + VAT</span></div>
+                  <div>{t("Billing:")} <span className="text-foreground">{tEnum(selectedPackage.billing_type)}</span></div>
+                  <div>{t("Visit duration:")} <span className="text-foreground">{selectedPackage.visit_duration || "—"}</span></div>
+                  <div>{t("Frequency:")} <span className="text-foreground">{selectedPackage.inspection_frequency ? t(selectedPackage.inspection_frequency) : "—"}</span></div>
+                  <div className="col-span-2">{t("VAT:")} <span className="text-foreground">{tEnum(selectedPackage.vat_setting)}</span></div>
                 </div>
               </div>
             )}
 
             <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Agreement terms (customer-specific)</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Agreement terms (customer-specific)")}</p>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Agreed Price (€)</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Agreed Price (€)")}</Label>
                   {isEdit ? (
                     <>
                       <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm flex items-center justify-between gap-2 min-h-[44px]">
                         <span className="font-medium truncate">€{(Number(values.agreed_price) || 0).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">+ VAT</span></span>
                         {!isFrozen && (
-                          <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={openPriceChange}>Change Price</Button>
+                          <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={openPriceChange}>{t("Change Price")}</Button>
                         )}
                       </div>
                       {values.previous_agreed_price != null && Number(values.previous_agreed_price) > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">Previous agreed price: €{Number(values.previous_agreed_price).toFixed(2)}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">Locked at approval — changing the package never changes this price.</p>
-                    </>
-                  ) : (
-                    <>
-                      <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} disabled={isFrozen} />
-                      <p className="text-xs text-muted-foreground mt-1">Base price before VAT. Prefer the Service &amp; Pricing Assessment flow for governed pricing.</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t("Previous agreed price: €{amount}", { amount: Number(values.previous_agreed_price).toFixed(2) })}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">{t("Locked at approval — changing the package never changes this price.")}</p>
+                        </>
+                        ) : (
+                        <>
+                        <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} disabled={isFrozen} />
+                        <p className="text-xs text-muted-foreground mt-1">{t("Base price before VAT. Prefer the Service & Pricing Assessment flow for governed pricing.")}</p>
                     </>
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Billing Type</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Billing Type")}</Label>
                   <Select value={values.billing_type} onValueChange={onBillingTypeChange} disabled={isFrozen}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{BILLING_TYPES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                    <SelectContent>{BILLING_TYPES.map((o) => <SelectItem key={o} value={o}>{tEnum(o)}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visit Frequency</Label>
-                <Input value={values.inspection_frequency || ""} onChange={(e) => set("inspection_frequency", e.target.value)} placeholder="e.g. Weekly" list="freq-opts" disabled={isFrozen} />
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Visit Frequency")}</Label>
+                <Input value={values.inspection_frequency || ""} onChange={(e) => set("inspection_frequency", e.target.value)} placeholder={t("e.g. Weekly")} list="freq-opts" disabled={isFrozen} />
                 <datalist id="freq-opts">{FREQUENCY_OPTS.map((o) => <option key={o} value={o} />)}</datalist>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Start Date</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Start Date")}</Label>
                   <Input type="date" className="min-w-0" value={values.start_date || ""} onChange={(e) => onStartDateChange(e.target.value)} disabled={isFrozen} />
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Renewal Date</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Renewal Date")}</Label>
                   <Input type="date" className="min-w-0" value={values.renewal_date || ""} onChange={(e) => set("renewal_date", e.target.value)} disabled={isFrozen} />
                 </div>
               </div>
 
               <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Status</Label>
+                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Status")}</Label>
                 <Select value={values.status} onValueChange={(v) => set("status", v)} disabled={isFrozen}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUSES.filter((o) => o !== "Active" || values.status === "Active").map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                  <SelectContent>{STATUSES.filter((o) => o !== "Active" || values.status === "Active").map((o) => <SelectItem key={o} value={o}>{tEnum(o, "agreement")}</SelectItem>)}</SelectContent>
                 </Select>
                 {values.status === "Pending" && (
-                  <p className="text-xs text-muted-foreground mt-1.5">Pending agreements are drafts awaiting activation. They do not count as active service.</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">{t("Pending agreements are drafts awaiting activation. They do not count as active service.")}</p>
                 )}
               </div>
             </div>
@@ -671,9 +675,9 @@ export default function ServiceAgreement() {
             >
               <span className="flex items-center gap-2 text-sm font-medium">
                 <FileText className="w-4 h-4 text-muted-foreground" />
-                Additional Details (optional)
+                {t("Additional Details (optional)")}
                 {hasExtra && !additionalOpen && (
-                  <span className="text-xs font-normal text-primary">· has data</span>
+                  <span className="text-xs font-normal text-primary">· {t("has data")}</span>
                 )}
               </span>
               {additionalOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
@@ -682,25 +686,25 @@ export default function ServiceAgreement() {
             {additionalOpen && (
               <div className="rounded-2xl border border-border bg-card p-4 space-y-4 -mt-1">
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Custom Services / Changes</Label>
-                  <Textarea value={values.included_services_override || ""} onChange={(e) => set("included_services_override", e.target.value)} rows={2} placeholder="Override or add to the package's included services" disabled={isFrozen} />
-                  <p className="text-xs text-muted-foreground mt-1">Only use this if this customer's services differ from the selected package.</p>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Custom Services / Changes")}</Label>
+                  <Textarea value={values.included_services_override || ""} onChange={(e) => set("included_services_override", e.target.value)} rows={2} placeholder={t("Override or add to the package's included services")} disabled={isFrozen} />
+                  <p className="text-xs text-muted-foreground mt-1">{t("Only use this if this customer's services differ from the selected package.")}</p>
                 </div>
 
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Additional Terms</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Additional Terms")}</Label>
                   <Textarea value={values.additional_terms || ""} onChange={(e) => set("additional_terms", e.target.value)} rows={2} disabled={isFrozen} />
                 </div>
 
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Notes</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Notes")}</Label>
                   <Textarea value={values.notes || ""} onChange={(e) => set("notes", e.target.value)} rows={2} />
                 </div>
 
                 <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">Next Invoice Date</Label>
+                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Next Invoice Date")}</Label>
                   <Input type="date" className="min-w-0" value={values.next_invoice_date || ""} onChange={(e) => set("next_invoice_date", e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">Auto-calculated from Start Date for recurring billing. You can adjust it manually.</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("Auto-calculated from Start Date for recurring billing. You can adjust it manually.")}</p>
                 </div>
               </div>
             )}
@@ -713,7 +717,7 @@ export default function ServiceAgreement() {
             >
               <span className="flex items-center gap-2 text-sm font-medium">
                 <Eye className="w-4 h-4 text-primary" />
-                Preview Customer Agreement
+                {t("Preview Customer Agreement")}
               </span>
               {showPreview ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-primary" />}
             </button>
@@ -722,11 +726,11 @@ export default function ServiceAgreement() {
               <div className="-mt-1">
                 {!selectedPackage || !selectedProperty ? (
                   <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                    Select a property and service package to preview the agreement.
+                    {t("Select a property and service package to preview the agreement.")}
                   </div>
                 ) : !selectedTemplate ? (
                   <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                    No terms template available to preview.
+                    {t("No terms template available to preview.")}
                   </div>
                 ) : (
                   <AgreementPreview
@@ -752,19 +756,26 @@ export default function ServiceAgreement() {
               <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Send className="w-4 h-4 text-primary" />
-                  <p className="text-sm font-medium">Send for Signature</p>
+                  <p className="text-sm font-medium">{t("Send for Signature")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Freezes this agreement version, generates a secure customer signing link, and marks the agreement as Sent.
-                  After sending, customer-facing terms cannot be changed without a replacement version (available in a later phase).
+                  {t("Freezes this agreement version, generates a secure customer signing link, and marks the agreement as Sent. After sending, customer-facing terms cannot be changed without a replacement version (available in a later phase).")}
                 </p>
                 {selectedTemplate && (
                   <p className="text-xs text-muted-foreground">
-                    Terms template: {selectedTemplate.name} · Version {selectedTemplate.version} · {selectedTemplate.active !== true ? "Draft / inactive" : selectedTemplate.legal_approved !== true ? "Active — legal approval pending" : "Active + legally approved"}
+                    {t("Terms template: {name} · Version {version} · {state}", {
+                      name: selectedTemplate.name,
+                      version: selectedTemplate.version,
+                      state: selectedTemplate.active !== true
+                        ? t("Draft / inactive")
+                        : selectedTemplate.legal_approved !== true
+                          ? t("Active — legal approval pending")
+                          : t("Active + legally approved"),
+                    })}
                   </p>
                 )}
                 {values.is_test_agreement && (
-                  <p className="text-xs text-amber-600 font-medium">TEST mode active — legal-approval gate bypassed for this test draft only. Customer-facing surfaces and PDF are watermarked.</p>
+                  <p className="text-xs text-amber-600 font-medium">{t("TEST mode active — legal-approval gate bypassed for this test draft only. Customer-facing surfaces and PDF are watermarked.")}</p>
                 )}
                 {sendDisabledReason && (
                   <p className="text-xs text-amber-600">{sendDisabledReason}</p>
@@ -773,7 +784,7 @@ export default function ServiceAgreement() {
                   <p className="text-xs text-destructive">{sendError}</p>
                 )}
                 <Button onClick={handleSend} disabled={sending || !!sendDisabledReason} className="gap-1.5">
-                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Send for Signature
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Send for Signature")}
                 </Button>
               </div>
             )}
@@ -783,23 +794,23 @@ export default function ServiceAgreement() {
               <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <p className="text-sm font-medium text-emerald-700">{values.signing_status === "Viewed" ? "Customer viewed the agreement" : "Sent for signature"}</p>
+                  <p className="text-sm font-medium text-emerald-700">{values.signing_status === "Viewed" ? t("Customer viewed the agreement") : t("Sent for signature")}</p>
                 </div>
-                {values.sent_at && <p className="text-xs text-muted-foreground">Sent {formatSentAt(values.sent_at)}</p>}
+                {values.sent_at && <p className="text-xs text-muted-foreground">{t("Sent {date}", { date: formatSentAt(values.sent_at) })}</p>}
                 {publicLink && (
                   <div className="space-y-2">
                     <div className="rounded-md border border-border bg-card px-3 py-2 text-xs break-all">{publicLink}</div>
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" variant="outline" onClick={() => copyToClipboard(publicLink, "link")} className="gap-1.5">
-                        <Copy className="w-4 h-4" /> {copied === "link" ? "Copied" : "Copy Link"}
+                        <Copy className="w-4 h-4" /> {copied === "link" ? t("Copied") : t("Copy Link")}
                       </Button>
                       <Button size="sm" variant="outline" onClick={copyMessage} className="gap-1.5">
-                        <MessageCircle className="w-4 h-4" /> {copied === "message" ? "Copied" : "Copy Message"}
+                        <MessageCircle className="w-4 h-4" /> {copied === "message" ? t("Copied") : t("Copy Message")}
                       </Button>
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground">{values.signing_status === "Viewed" ? "Customer opened the agreement link — awaiting signature." : "Awaiting customer signature."}</p>
+                <p className="text-xs text-muted-foreground">{values.signing_status === "Viewed" ? t("Customer opened the agreement link — awaiting signature.") : t("Awaiting customer signature.")}</p>
               </div>
             )}
 
@@ -808,18 +819,22 @@ export default function ServiceAgreement() {
               <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-1.5">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <p className="text-sm font-medium text-emerald-700">{isActive ? "Active Service Agreement" : "Agreement signed"}</p>
+                  <p className="text-sm font-medium text-emerald-700">{isActive ? t("Active Service Agreement") : t("Agreement signed")}</p>
                 </div>
-                <p className="text-xs text-muted-foreground">Version {values.agreement_version} · Terms {values.terms_version || "—"}</p>
-                {values.signer_name && <p className="text-xs text-muted-foreground">Signed by: {values.signer_name}</p>}
-                {values.signed_at && <p className="text-xs text-muted-foreground">Signed {formatSentAt(values.signed_at)}</p>}
+                <p className="text-xs text-muted-foreground">{t("Version {version} · Terms {terms}", { version: values.agreement_version, terms: values.terms_version || "—" })}</p>
+                {values.signer_name && <p className="text-xs text-muted-foreground">{t("Signed by: {name}", { name: values.signer_name })}</p>}
+                {values.signed_at && <p className="text-xs text-muted-foreground">{t("Signed {date}", { date: formatSentAt(values.signed_at) })}</p>}
                 {isActive && values.activated_at && (
-                  <p className="text-xs text-muted-foreground">Activated {formatSentAt(values.activated_at)}{values.activated_by ? ` by ${values.activated_by}` : ""}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {values.activated_by
+                      ? t("Activated {date} by {by}", { date: formatSentAt(values.activated_at), by: values.activated_by })
+                      : t("Activated {date}", { date: formatSentAt(values.activated_at) })}
+                  </p>
                 )}
                 {values.signed_pdf_url && values.public_token && (
                   <div className="flex flex-wrap gap-2 pt-2">
                     <button type="button" onClick={handleDownloadSigned} disabled={downloadingSigned} className="inline-flex items-center gap-1.5 h-8 rounded-md border border-input bg-transparent px-3 text-xs font-medium hover:bg-accent disabled:opacity-50">
-                      {downloadingSigned ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} Download Signed PDF
+                      {downloadingSigned ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} {t("Download Signed PDF")}
                     </button>
                   </div>
                 )}
@@ -829,10 +844,10 @@ export default function ServiceAgreement() {
                   </div>
                 )}
                 {canActivate && (
-                  <p className="text-xs text-muted-foreground pt-1">Activation pending — review and activate the service when ready.</p>
+                  <p className="text-xs text-muted-foreground pt-1">{t("Activation pending — review and activate the service when ready.")}</p>
                 )}
                 {isActive && (
-                  <p className="text-xs text-muted-foreground pt-1">This is the current operational service agreement. To change terms, create a replacement version below.</p>
+                  <p className="text-xs text-muted-foreground pt-1">{t("This is the current operational service agreement. To change terms, create a replacement version below.")}</p>
                 )}
                 {isActive && (
                   <div className="pt-2">
@@ -845,8 +860,8 @@ export default function ServiceAgreement() {
             {/* Replacement / revised action for frozen non-active versions (Sent/Viewed/Signed-pending/Declined) */}
             {canReplace && !isActive && (
               <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-                <p className="text-sm font-medium">Change customer-facing terms</p>
-                <p className="text-xs text-muted-foreground">This version is frozen. Create a new editable draft version to change terms; this version is preserved as permanent history.</p>
+                <p className="text-sm font-medium">{t("Change customer-facing terms")}</p>
+                <p className="text-xs text-muted-foreground">{t("This version is frozen. Create a new editable draft version to change terms; this version is preserved as permanent history.")}</p>
                 <CreateReplacementButton agreementId={id} label={isDeclinedReplace ? "Create Revised Agreement" : "Create Replacement Version"} />
               </div>
             )}
@@ -861,30 +876,29 @@ export default function ServiceAgreement() {
               <Dialog open={priceChangeOpen} onOpenChange={setPriceChangeOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Change Agreed Price</DialogTitle>
+                    <DialogTitle>{t("Change Agreed Price")}</DialogTitle>
                     <DialogDescription>
-                      This is a deliberate, approved price change for this customer. The previous price, new price,
-                      reason, approver and date/time are recorded on the agreement.
+                      {t("This is a deliberate, approved price change for this customer. The previous price, new price, reason, approver and date/time are recorded on the agreement.")}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-3 py-1">
                     <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-                      Current agreed price: <span className="font-medium">€{(Number(values.agreed_price) || 0).toFixed(2)} + VAT</span>
+                      {t("Current agreed price:")} <span className="font-medium">€{(Number(values.agreed_price) || 0).toFixed(2)} + VAT</span>
                     </div>
                     <div>
-                      <Label className="mb-1.5 block">New agreed price (€, excl. VAT) *</Label>
+                      <Label className="mb-1.5 block">{t("New agreed price (€, excl. VAT) *")}</Label>
                       <Input className="h-11" type="number" min="0" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} />
                     </div>
                     <div>
-                      <Label className="mb-1.5 block">Reason for the price change *</Label>
-                      <Textarea rows={2} value={priceChangeReason} onChange={(e) => setPriceChangeReason(e.target.value)} placeholder="e.g. Package change agreed with owner; annual price review…" />
+                      <Label className="mb-1.5 block">{t("Reason for the price change *")}</Label>
+                      <Textarea rows={2} value={priceChangeReason} onChange={(e) => setPriceChangeReason(e.target.value)} placeholder={t("e.g. Package change agreed with owner; annual price review…")} />
                     </div>
                     {priceChangeError && <p className="text-xs text-destructive">{priceChangeError}</p>}
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" className="h-11" onClick={() => setPriceChangeOpen(false)}>Cancel</Button>
+                    <Button variant="outline" className="h-11" onClick={() => setPriceChangeOpen(false)}>{t("Cancel")}</Button>
                     <Button className="h-11" onClick={confirmPriceChange} disabled={approving}>
-                      {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Record Approved Change"}
+                      {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Record Approved Change")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -892,9 +906,9 @@ export default function ServiceAgreement() {
             )}
 
             <div className="flex items-center justify-between gap-2 pt-1">
-              <Link to={backTo}><Button variant="outline">Cancel</Button></Link>
+              <Link to={backTo}><Button variant="outline">{t("Cancel")}</Button></Link>
               <Button onClick={save} disabled={saving || !values.property_id || !values.service_package_id} className="gap-1.5">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Agreement
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Save Agreement")}
               </Button>
             </div>
           </div>

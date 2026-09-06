@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FilePlus2, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Staff-only "create replacement / revised version" action. Calls the
 // authenticated agreementReplace backend, which creates a new Pending/Draft
@@ -13,6 +14,7 @@ export default function CreateReplacementButton({ agreementId, label = "Create R
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const run = async () => {
     setBusy(true);
@@ -23,11 +25,11 @@ export default function CreateReplacementButton({ agreementId, label = "Create R
       if (d && d.ok) {
         navigate(`/agreements/${d.agreement_id}`);
       } else {
-        setErr((d && d.error) || "Could not create replacement.");
+        setErr((d && d.error) || t("Could not create replacement."));
       }
     } catch (e) {
       const d = e && e.response && e.response.data ? e.response.data : null;
-      setErr((d && d.error) || (e && e.message) || "Could not create replacement.");
+      setErr((d && d.error) || (e && e.message) || t("Could not create replacement."));
     }
     setBusy(false);
   };
@@ -35,7 +37,7 @@ export default function CreateReplacementButton({ agreementId, label = "Create R
   return (
     <div className="space-y-2">
       <Button variant="outline" onClick={run} disabled={busy} className="gap-1.5 w-full">
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FilePlus2 className="w-4 h-4" />} {label}
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FilePlus2 className="w-4 h-4" />} {t(label)}
       </Button>
       {err && <p className="text-xs text-destructive">{err}</p>}
     </div>

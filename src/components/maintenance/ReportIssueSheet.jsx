@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import PhotoPicker from "@/components/maintenance/PhotoPicker";
 import DictateButton from "@/components/dictation/DictateButton";
 import DictateFormDialog from "@/components/dictation/DictateFormDialog";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const CATEGORIES = [
   "Plumbing", "Electrical", "Pool", "Irrigation", "Garden", "Air conditioning",
@@ -31,6 +32,7 @@ const DICTATE_FIELDS = [
 // is linked: the issue was reported independently. After save the caller
 // navigates to the new Maintenance Issue Detail.
 export default function ReportIssueSheet({ open, onOpenChange, properties, onCreated }) {
+  const { t, tEnum } = useLanguage();
   const [propertyId, setPropertyId] = useState("");
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState("Medium");
@@ -79,7 +81,7 @@ export default function ReportIssueSheet({ open, onOpenChange, properties, onCre
       onOpenChange(false);
       onCreated(created);
     } catch (e) {
-      alert("Could not save the issue: " + (e?.message || e));
+      alert(t("Could not save the issue: {message}", { message: e?.message || e }));
       setSaving(false);
     }
   };
@@ -88,53 +90,53 @@ export default function ReportIssueSheet({ open, onOpenChange, properties, onCre
     <Sheet open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <SheetContent side="bottom" className="p-4 pb-6 rounded-t-2xl max-h-[90vh] overflow-y-auto">
         <SheetHeader className="text-left pr-10">
-          <SheetTitle>Report Issue</SheetTitle>
-          <SheetDescription>Record a new problem or concern for a property.</SheetDescription>
+          <SheetTitle>{t("Report Issue")}</SheetTitle>
+          <SheetDescription>{t("Record a new problem or concern for a property.")}</SheetDescription>
         </SheetHeader>
         <div className="space-y-3 mt-2">
           {/* Dictate — optional voice entry for this Report Issue form */}
           <DictateButton label="Dictate" onClick={() => setDictateOpen(true)} />
           <div>
-            <Label className="mb-1.5 block">Property</Label>
+            <Label className="mb-1.5 block">{t("Property")}</Label>
             <Select value={propertyId} onValueChange={setPropertyId}>
-              <SelectTrigger className="h-12 rounded-xl text-base"><SelectValue placeholder="Select property" /></SelectTrigger>
+              <SelectTrigger className="h-12 rounded-xl text-base"><SelectValue placeholder={t("Select property")} /></SelectTrigger>
               <SelectContent>
                 {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="mb-1.5 block">What is the problem?</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Broken gate at the driveway" className="h-12 rounded-xl text-base" />
+            <Label className="mb-1.5 block">{t("What is the problem?")}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("e.g. Broken gate at the driveway")} className="h-12 rounded-xl text-base" />
           </div>
           <div>
-            <Label className="mb-1.5 block">Priority</Label>
+            <Label className="mb-1.5 block">{t("Priority")}</Label>
             <Select value={priority} onValueChange={setPriority}>
               <SelectTrigger className="h-12 rounded-xl text-base"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {PRIORITIES.map((p) => <SelectItem key={p} value={p}>{tEnum(p, "priority")}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="mb-1.5 block">What was observed or reported? (optional)</Label>
-            <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Anything else staff should know…" className="rounded-xl resize-none" />
+            <Label className="mb-1.5 block">{t("What was observed or reported? (optional)")}</Label>
+            <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("Anything else staff should know…")} className="rounded-xl resize-none" />
           </div>
           <div>
-            <Label className="mb-1.5 block">Category (optional)</Label>
+            <Label className="mb-1.5 block">{t("Category (optional)")}</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="h-12 rounded-xl text-base"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{tEnum(c)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="mb-1.5 block">Photos (optional)</Label>
+            <Label className="mb-1.5 block">{t("Photos (optional)")}</Label>
             <PhotoPicker photos={photos} onChange={setPhotos} />
           </div>
           <Button onClick={save} disabled={saving || !propertyId || !title.trim()} className="w-full rounded-2xl h-14 text-base">
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save
+            {saving && <Loader2 className="w-4 h-4 animate-spin" />} {t("Save")}
           </Button>
 
           {/* Shared dictation service — operates only on this open form; the
