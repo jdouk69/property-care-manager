@@ -246,7 +246,7 @@ export default function ResourceListPage({
     const val = values[f.name];
     switch (f.type) {
       case "textarea":
-        return <Textarea className="sm:text-base" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} rows={3} />;
+        return <Textarea className="sm:text-base" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder && t(f.placeholder)} rows={3} />;
       case "select":
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
@@ -375,7 +375,7 @@ export default function ResourceListPage({
       case "custom":
         return f.render ? f.render(values, setField) : null;
       default:
-        return <Input className="sm:h-12 sm:text-base" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder} />;
+        return <Input className="sm:h-12 sm:text-base" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder && t(f.placeholder)} />;
     }
   };
 
@@ -394,7 +394,9 @@ export default function ResourceListPage({
     return v || "—";
   };
 
-  const singular = title.replace(/s$/, "");
+  // Proper English singular (also fixes the old "Propertie" derivation), then
+  // localized for the Add/Edit/New headers. Falls back to English untouched.
+  const singular = t(title.replace(/ies$/, "y").replace(/s$/, ""));
   const isMobile = useIsMobile();
 
   // Optional shared Dictation capability (opt-in per page). Fields the engine
@@ -508,7 +510,7 @@ export default function ResourceListPage({
     if (f.showIf && !f.showIf(values)) return null;
     return (
       <div key={f.name}>
-        {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 block">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
+        {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 block">{t(f.label)}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
         {renderField(f)}
       </div>
     );
@@ -521,7 +523,7 @@ export default function ResourceListPage({
       {dictation && <DictateButton label={dictation.label || "Dictate"} onClick={() => setDictateOpen(true)} />}
       {(sections || []).map((sec) => (
         <section key={sec.title} className="space-y-4">
-          <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-2">{sec.title}</h2>
+          <h2 className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-muted-foreground border-b border-border pb-2">{t(sec.title)}</h2>
           {fields.filter((f) => (sec.fields || []).includes(f.name)).map(renderFieldRow)}
         </section>
       ))}
@@ -623,8 +625,8 @@ export default function ResourceListPage({
       {showBack && <PageBackButton className="mb-3" />}
 
       <PageHeader
-        title={title}
-        subtitle={subtitle}
+        title={t(title)}
+        subtitle={t(subtitle)}
         icon={Icon}
         actions={
           <div className="flex items-center gap-2">
@@ -639,7 +641,7 @@ export default function ResourceListPage({
       >
         <div className="relative mt-4 max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Search {list}…", { list: title.toLowerCase() })} className="pl-9 rounded-full bg-muted/50 border-0 focus-visible:ring-1" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("Search {list}…", { list: t(title).toLowerCase() })} className="pl-9 rounded-full bg-muted/50 border-0 focus-visible:ring-1" />
         </div>
       </PageHeader>
 
@@ -648,7 +650,7 @@ export default function ResourceListPage({
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={Icon} title={t("No {list} yet", { list: title.toLowerCase() })} description={subtitle} action={<Button onClick={onAdd || openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {t(addItemLabel)}</Button>} />
+        <EmptyState icon={Icon} title={t("No {list} yet", { list: t(title).toLowerCase() })} description={t(subtitle)} action={<Button onClick={onAdd || openNew} className="rounded-full gap-1.5"><Plus className="w-4 h-4" /> {t(addItemLabel)}</Button>} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filtered.map((item) => (

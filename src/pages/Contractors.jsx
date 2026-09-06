@@ -2,6 +2,7 @@ import React from "react";
 import { HardHat, Phone, Star } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const TRADES = ["Plumber", "Electrician", "Pool Technician", "Gardener", "Cleaner", "Locksmith", "HVAC", "Pest Control", "Roofer", "Painter", "General Handyman", "Appliance Repair", "Internet / Telecom", "Other"];
 
@@ -30,6 +31,7 @@ const columns = [
 ];
 
 export default function Contractors() {
+  const { t } = useLanguage();
   return (
     <AppLayout>
       <ResourceListPage
@@ -48,7 +50,7 @@ export default function Contractors() {
           if (!emergency.length) return null;
           return (
             <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-4 mb-4">
-              <div className="flex items-center gap-2 mb-2"><Phone className="w-4 h-4 text-rose-600" /><h3 className="font-medium text-sm text-rose-700 dark:text-rose-400">Emergency Contacts (24/7)</h3></div>
+              <div className="flex items-center gap-2 mb-2"><Phone className="w-4 h-4 text-rose-600" /><h3 className="font-medium text-sm text-rose-700 dark:text-rose-400">{t("Emergency Contacts (24/7)")}</h3></div>
               <div className="flex flex-wrap gap-2">
                 {emergency.slice(0, 8).map((c) => (
                   <span key={c.id} className="text-xs px-2.5 py-1 rounded-full border border-border bg-card flex items-center gap-1.5">

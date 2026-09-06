@@ -3,6 +3,7 @@ import { Wallet, Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { base44 } from "@/api/base44Client";
 
 const fields = [
@@ -30,6 +31,7 @@ const columns = [
 ];
 
 function TotalsSummary({ items }) {
+  const { t } = useLanguage();
   const [props, setProps] = React.useState(null);
   React.useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((p) => setProps(p)).catch(() => setProps([]));
@@ -42,15 +44,15 @@ function TotalsSummary({ items }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       <div className="rounded-2xl border border-border bg-card p-4">
-        <p className="text-xs text-muted-foreground">Total expenses</p>
+        <p className="text-xs text-muted-foreground">{t("Total expenses")}</p>
         <p className="text-xl font-semibold mt-1">€{total.toFixed(2)}</p>
       </div>
       <div className="rounded-2xl border border-border bg-card p-4">
-        <p className="text-xs text-muted-foreground">Awaiting reimbursement</p>
+        <p className="text-xs text-muted-foreground">{t("Awaiting reimbursement")}</p>
         <p className="text-xl font-semibold mt-1 text-amber-600">€{awaiting.toFixed(2)}</p>
       </div>
       <div className="rounded-2xl border border-border bg-card p-4 col-span-2">
-        <p className="text-xs text-muted-foreground mb-2">By property</p>
+        <p className="text-xs text-muted-foreground mb-2">{t("By property")}</p>
         <div className="space-y-1 max-h-24 overflow-y-auto">
           {props.map((p) => byProp[p.id] ? (
             <div key={p.id} className="flex justify-between text-sm">
@@ -58,7 +60,7 @@ function TotalsSummary({ items }) {
               <span className="font-medium">€{byProp[p.id].toFixed(2)}</span>
             </div>
           ) : null)}
-          {!Object.keys(byProp).length && <p className="text-sm text-muted-foreground">No expenses yet.</p>}
+          {!Object.keys(byProp).length && <p className="text-sm text-muted-foreground">{t("No expenses yet.")}</p>}
         </div>
       </div>
     </div>
