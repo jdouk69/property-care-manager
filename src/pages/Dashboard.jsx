@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import {
@@ -178,14 +178,30 @@ function Next3Days({ visits, properties, clients }) {
   );
 }
 
-function QuickNotes({ settingsId, initial }) {
+function QuickNotes({ initial }) {
   const { t: tr } = useLanguage();
   const [val, setVal] = useState(initial || "");
   const [saved, setSaved] = useState(false);
+  // Shared staff scratchpad — its own entity so BusinessSettings configuration
+  // stays admin-only without breaking this staff feature. The legacy
+  // BusinessSettings quick_notes value (still readable) only seeds the display
+  // until the first save creates the StaffNotes record.
+  const noteIdRef = useRef(null);
+  const dirtyRef = useRef(false);
   useEffect(() => {
+    base44.entities.StaffNotes.list("-created_date", 1).then((l) => {
+      const rec = (l || [])[0];
+      if (rec) { noteIdRef.current = rec.id; if (!dirtyRef.current) setVal(rec.notes || ""); }
+    }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!dirtyRef.current) return;
     const t = setTimeout(async () => {
-      if (!settingsId) return;
-      try { await base44.entities.BusinessSettings.update(settingsId, { quick_notes: val }); setSaved(true); setTimeout(() => setSaved(false), 1200); } catch (e) {}
+      try {
+        if (noteIdRef.current) await base44.entities.StaffNotes.update(noteIdRef.current, { notes: val });
+        else { const created = await base44.entities.StaffNotes.create({ notes: val }); noteIdRef.current = created.id; }
+        setSaved(true); setTimeout(() => setSaved(false), 1200);
+      } catch (e) {}
     }, 900);
     return () => clearTimeout(t);
   }, [val]);
@@ -195,7 +211,7 @@ function QuickNotes({ settingsId, initial }) {
         <div className="flex items-center gap-2 font-medium text-sm"><StickyNote className="w-4 h-4 text-muted-foreground" /> {tr("Quick Notes")}</div>
         {saved && <span className="text-xs text-emerald-600">{tr("Saved")}</span>}
       </div>
-      <Textarea value={val} onChange={(e) => setVal(e.target.value)} placeholder={tr("Jot down anything important…")} rows={3} className="resize-none" />
+      <Textarea value={val} onChange={(e) => { dirtyRef.current = true; setVal(e.target.value); }} placeholder={tr("Jot down anything important…")} rows={3} className="resize-none" />
     </div>
   );
 }
@@ -549,7 +565,7 @@ export default function Dashboard() {
         />
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <QuickNotes settingsId={settings?.id} initial={settings?.quick_notes} />
+          <QuickNotes initial={settings?.quick_notes} />
           <div className="grid grid-cols-2 gap-3">
             <StatCard icon={ListChecks} label={tr("Today's tasks")} value={todaysTasks.length} tone="info" />
             <StatCard icon={AlertTriangle} label={tr("Overdue tasks")} value={overdue.length} tone={overdue.length ? "danger" : "success"} />
