@@ -74,7 +74,7 @@ export default function ResourceListPage({
   onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
   showBack = true, sections = [],
   onAdd, reloadSignal,
-  renderCard, filterFn, dictation, emptyTitle,
+  renderCard, filterFn, dictation, emptyTitle, canEditItem,
 }) {
   const { user } = useAuth();
   const { t, tEnum } = useLanguage();
@@ -669,14 +669,14 @@ export default function ResourceListPage({
                   })
                 : (
                   <button
-                    onClick={onOpenItem ? () => onOpenItem(item) : () => openEdit(item)}
+                    onClick={onOpenItem ? () => onOpenItem(item) : () => { if (canEditItem && !canEditItem(item)) return; openEdit(item); }}
                     className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.99] group"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-medium text-foreground truncate flex-1">
                         {columns.find((c) => c.primary) ? renderCellValue(columns.find((c) => c.primary), item) : item.name || t("Untitled")}
                       </div>
-                      <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition shrink-0" />
+                      {!(canEditItem && !canEditItem(item)) && <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition shrink-0" />}
                     </div>
                     <div className="mt-2 space-y-1">
                       {columns.filter((c) => !c.primary && !c.badge).slice(0, 3).map((c) => (

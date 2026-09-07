@@ -56,6 +56,18 @@
       "type": "string",
       "format": "date"
     },
+    "finalized_at": {
+      "type": "string",
+      "description": "ISO timestamp when the invoice was finalized (locked) for issuance. Status remains Draft until it is actually Sent; the presence of finalized_at locks financial/identity editing."
+    },
+    "sent_at": {
+      "type": "string",
+      "description": "ISO timestamp of the successful email delivery to the customer. Never recorded when delivery fails."
+    },
+    "sent_to": {
+      "type": "string",
+      "description": "Customer email address the invoice was emailed to. Comes only from the linked client record \u2014 never guessed."
+    },
     "notes": {
       "type": "string"
     },

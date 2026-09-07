@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Receipt, FileDown, Loader2, CheckCircle2 } from "lucide-react";
+import { Receipt, FileDown, Loader2, CheckCircle2, Lock, Send } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import MarkInvoicePaidDialog from "@/components/invoices/MarkInvoicePaidDialog";
+import FinalizeInvoiceDialog from "@/components/invoices/FinalizeInvoiceDialog";
+import SendInvoiceDialog from "@/components/invoices/SendInvoiceDialog";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
 import { presentInvoiceLineItems } from "@/lib/invoicePresentation";
 import { athensMediumDate } from "@/lib/timezone";
@@ -34,6 +36,8 @@ export default function Invoices() {
   const [clients, setClients] = useState([]);
   const [downloadingId, setDownloadingId] = useState(null);
   const [paidDialog, setPaidDialog] = useState(null);
+  const [finalizeDialog, setFinalizeDialog] = useState(null);
+  const [sendDialog, setSendDialog] = useState(null);
   const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
@@ -91,6 +95,7 @@ export default function Invoices() {
         addItemLabel="Add Invoice"
         archivable
         reloadSignal={reloadTick}
+        canEditItem={(it) => it.status === "Draft" && !it.finalized_at}
         defaultValues={{ status: "Draft", total: 0, amount_paid: 0, vat: 0, expenses_total: 0, reimbursements_total: 0 }}
         renderSummary={(items) => {
           const outstanding = items
@@ -105,25 +110,58 @@ export default function Invoices() {
             </div>
           );
         }}
-        cardExtra={(item, lookups) => (
-          <div className="flex gap-1.5">
-            {!["Paid", "Cancelled"].includes(item.status) && (
-              <button onClick={(e) => { e.stopPropagation(); setPaidDialog(item); }}
-                className="text-[11px] px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-600 border-emerald-500/20 inline-flex items-center gap-1 min-h-[32px]">
-                <CheckCircle2 className="w-3 h-3" /> {t("Mark Paid")}
+        cardExtra={(item, lookups) => {
+          const finalized = !!item.finalized_at;
+          const sendable = !["Paid", "Cancelled"].includes(item.status);
+          return (
+            <div className="flex gap-1.5">
+              {item.status === "Draft" && !finalized && (
+                <button onClick={(e) => { e.stopPropagation(); setFinalizeDialog(item); }}
+                  className="text-[11px] px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 inline-flex items-center gap-1 min-h-[32px]">
+                  <Lock className="w-3 h-3" /> {t("Finalize")}
+                </button>
+              )}
+              {sendable && (
+                <button onClick={(e) => { e.stopPropagation(); setSendDialog({ invoice: item, propertyName: lookups?.Property?.[item.property_id] || "" }); }}
+                  className="text-[11px] px-2.5 py-1 rounded-full border bg-sky-500/10 text-sky-600 border-sky-500/20 inline-flex items-center gap-1 min-h-[32px]">
+                  <Send className="w-3 h-3" /> {item.status === "Sent" ? t("Resend") : t("Send")}
+                </button>
+              )}
+              {!["Paid", "Cancelled"].includes(item.status) && (
+                <button onClick={(e) => { e.stopPropagation(); setPaidDialog(item); }}
+                  className="text-[11px] px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-600 border-emerald-500/20 inline-flex items-center gap-1 min-h-[32px]">
+                  <CheckCircle2 className="w-3 h-3" /> {t("Mark Paid")}
+                </button>
+              )}
+              {item.status === "Draft" && finalized && (
+                <span className="text-xs px-2.5 py-1 rounded-full border bg-muted text-muted-foreground border-border inline-flex items-center min-h-[32px]">
+                  {t("Finalized")}
+                </span>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item, lookups); }} disabled={downloadingId === item.id}
+                className="text-[11px] px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1 min-h-[32px] disabled:opacity-50">
+                {downloadingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileDown className="w-3 h-3" />} PDF
               </button>
-            )}
-            <button onClick={(e) => { e.stopPropagation(); downloadInvoicePdf(item, lookups); }} disabled={downloadingId === item.id}
-              className="text-[11px] px-2.5 py-1 rounded-full border bg-primary/10 text-primary border-primary/20 inline-flex items-center gap-1 min-h-[32px] disabled:opacity-50">
-              {downloadingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileDown className="w-3 h-3" />} PDF
-            </button>
-          </div>
-        )}
+            </div>
+          );
+        }}
       />
       <MarkInvoicePaidDialog
         invoice={paidDialog}
         onClose={() => setPaidDialog(null)}
-        onPaid={() => setReloadTick((t) => t + 1)}
+        onPaid={() => setReloadTick((x) => x + 1)}
+      />
+      <FinalizeInvoiceDialog
+        invoice={finalizeDialog}
+        onClose={() => setFinalizeDialog(null)}
+        onFinalized={() => setReloadTick((x) => x + 1)}
+      />
+      <SendInvoiceDialog
+        data={sendDialog}
+        client={sendDialog ? clients.find((c) => c.id === sendDialog.invoice.client_id) || null : null}
+        business={business}
+        onClose={() => setSendDialog(null)}
+        onSent={() => setReloadTick((x) => x + 1)}
       />
     </AppLayout>
   );

@@ -91,7 +91,7 @@ function clientAddressLines(client) {
   return merged;
 }
 
-export async function generateInvoicePdf(invoice, ctx = {}) {
+export async function generateInvoicePdf(invoice, ctx = {}, opts = {}) {
   const { business = {}, client, property } = ctx;
   const doc = new jsPDF();
   const pageW = doc.internal.pageSize.getWidth();
@@ -287,5 +287,8 @@ export async function generateInvoicePdf(invoice, ctx = {}) {
   text(`Generated ${athensLongDate(new Date().toISOString())}`, margin, pageH - 12);
   doc.setTextColor(0);
 
+  // Default: download the file. opts.returnBlob hands the bytes back instead
+  // (used by the email-send path, which uploads the PDF and links it).
+  if (opts.returnBlob) return doc.output("blob");
   doc.save(`${invoice.invoice_number || "invoice"}.pdf`);
 }
