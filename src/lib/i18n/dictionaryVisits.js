@@ -522,6 +522,10 @@ export const VISITS_EL = {
   "Return to Visit": "Επιστροφή στην Επίσκεψη",
   "Checklist complete. Continue to finish the remaining visit details.": "Το checklist ολοκληρώθηκε. Συνεχίστε για να συμπληρώσετε τα υπόλοιπα στοιχεία της επίσκεψης.",
   "Some checklist items are still unanswered — go back to review them.": "Ορισμένα σημεία του checklist δεν έχουν απαντηθεί — επιστρέψτε για να τα ελέγξετε.",
+  "{period} allowance: {used} of {allowance} visits used": "{period}: χρησιμοποιήθηκαν {used} από {allowance} επισκέψεις",
+  "{count} included visit(s) remaining": "Απομένουν {count} συμπεριλημμένες επισκέψεις",
+  "Next visit will be ADDITIONAL — BILLABLE": "Η επόμενη επίσκεψη θα είναι ΠΡΟΣΘΕΤΗ — ΤΙΜΟΛΟΓΗΣΙΜΗ",
+  "All included visits are used — resume the unfinished included visit instead of starting a duplicate.": "Όλες οι συμπεριλημμένες επισκέψεις έχουν χρησιμοποιηθεί — συνεχίστε την ημιτελή επίσκεψη αντί να ξεκινήσετε νέα.",
   "Back to Checklist": "Πίσω στο Checklist",
   // Shared dictation recorder errors (QA F4) — used by ALL dictation surfaces
   "No audio captured — try again or continue manually.": "Δεν καταγράφηκε ήχος — δοκιμάστε ξανά ή συνεχίστε χειροκίνητα.",

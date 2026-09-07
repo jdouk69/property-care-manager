@@ -438,6 +438,22 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     return f ? t("{count} included visit(s) per {period}", { count: f.visits, period: t(f.periodWord) }) : null;
   };
 
+  // Display label for the CURRENT service (billing) period, derived from the
+  // SAME entitlement resolver used for visit classification — single month
+  // for Monthly, a month range for Quarterly/Annual. Display-only.
+  const periodLabel = (period) => {
+    try {
+      const locale = lang === "el" ? "el-GR" : "en-US";
+      const [sy, sm] = period.startMonth.split("-").map(Number);
+      const start = new Date(Date.UTC(sy, sm - 1, 1));
+      if (period.months === 1) return new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC" }).format(start);
+      const [ey, em] = period.endMonthExclusive.split("-").map(Number);
+      const end = new Date(Date.UTC(ey, em - 2, 1));
+      const f = new Intl.DateTimeFormat(locale, { month: "short", year: "numeric", timeZone: "UTC" });
+      return `${f.format(start)} – ${f.format(end)}`;
+    } catch (e) { return period.startMonth; }
+  };
+
   const resume = async () => {
     if (!resumable) return;
     const pid = resumable.propertyId;
@@ -960,6 +976,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   // ---- STEP: first visit (agreement context) ----
   if (step === "first-visit") {
+    // Current-period allowance from the EXISTING entitlement resolver — the
+    // exact same source of truth that decides whether Start Visit Now is
+    // Included in Package vs Additional - Billable (resolveAdditional /
+    // PackageServiceCard). Informational display only.
+    const recType0 = recommendedVisitType(pkg);
+    const ent = agreement && isRecurringAgreement(agreement) && recType0
+      ? entitlementStatus({ visits, agreement, pkg, recType: recType0, todayStr: athensToday() })
+      : null;
     return (
       <div>
         <div className="flex items-center gap-2 mb-4">
@@ -974,6 +998,18 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Property:")}</span> <span className="font-medium truncate">{properties.find((p) => p.id === propertyId)?.name || "—"}</span></div>
             <div className="flex items-center gap-2"><Package className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Service:")}</span> <span className="font-medium truncate">{pkg?.name || "—"}</span></div>
             <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Frequency:")}</span> <span className="font-medium">{freqText(agreement, pkg) || "—"}</span></div>
+            {ent && (
+              <div className={`rounded-xl border p-2.5 ${ent.remaining > 0 ? "border-border bg-muted/40" : ent.unfinished ? "border-amber-500/30 bg-amber-500/5" : "border-amber-500/50 bg-amber-500/10"}`}>
+                <p className="text-sm font-medium text-foreground">{t("{period} allowance: {used} of {allowance} visits used", { period: periodLabel(ent.period), used: ent.used, allowance: ent.allowance })}</p>
+                {ent.remaining > 0 ? (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">{t("{count} included visit(s) remaining", { count: ent.remaining })}</p>
+                ) : ent.unfinished ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">{t("All included visits are used — resume the unfinished included visit instead of starting a duplicate.")}</p>
+                ) : (
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-500 mt-0.5 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {t("Next visit will be ADDITIONAL — BILLABLE")}</p>
+                )}
+              </div>
+            )}
             <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Expected visit time:")}</span> <span className="font-medium">{pkg?.visit_duration || "—"}</span></div>
           </div>
         </div>
