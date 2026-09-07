@@ -387,6 +387,9 @@ export const EL = {
   "Visits": "Επισκέψεις",
   "Inspections": "Επιθεωρήσεις",
   "Default reminder timing": "Προεπιλεγμένος χρόνος υπενθύμισης",
+  "System managed": "Διαχειρίζεται από το σύστημα",
+  "System managed notifications are triggered automatically when relevant. No reminder timing is required.":
+    "Οι ειδοποιήσεις διαχείρισης συστήματος ενεργοποιούνται αυτόματα όταν είναι σχετικές. Δεν απαιτείται χρόνος υπενθύμισης.",
   "Used by timed reminder categories until a category-specific timing is set.":
     "Χρησιμοποιείται από κατηγορίες με χρονικές υπενθυμίσεις έως ότου οριστεί χρόνος για τη συγκεκριμένη κατηγορία.",
   "Default": "Προεπιλογή",

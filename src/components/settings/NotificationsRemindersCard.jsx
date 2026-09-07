@@ -95,7 +95,11 @@ export default function NotificationsRemindersCard({ settings, setField }) {
         {openRow === "default" && <TimingChips active={globalOffsets} choices={REMINDER_OFFSET_CHOICES} onToggle={setGlobalTiming} />}
       </div>
 
-      {REMINDER_CATEGORIES.map((cat) => {
+      {/* Inspections hidden from this card: standalone inspection notifications
+          were retired (Phase 3) — field work runs through Property Visits. The
+          Inspection entity/records/recurrence remain untouched, and any stored
+          "Inspections" preference is preserved untouched. */}
+      {REMINDER_CATEGORIES.filter((cat) => cat !== "Inspections").map((cat) => {
         const on = enabledCats.includes(cat);
         const timed = TIMED_CATEGORIES[cat];
         const isOpen = openRow === cat;
@@ -103,9 +107,14 @@ export default function NotificationsRemindersCard({ settings, setField }) {
         return (
           <div key={cat} className="py-1.5 border-b border-border last:border-0">
             <div className="flex items-center justify-between gap-2">
-              {timed
-                ? <RowTitle label={t(cat)} isOpen={isOpen} onToggle={toggleOpen} />
-                : <span className="text-sm truncate">{t(cat)}</span>}
+              {timed ? (
+                <RowTitle label={t(cat)} isOpen={isOpen} onToggle={toggleOpen} />
+              ) : (
+                <div className="min-w-0">
+                  <span className="text-sm block leading-tight truncate">{t(cat)}</span>
+                  <span className="text-[10px] leading-tight text-muted-foreground">{t("System managed")}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full ${on ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{t("In-app")}</span>
                 {/* ON/OFF only — turning a category OFF preserves its timing */}
@@ -131,6 +140,9 @@ export default function NotificationsRemindersCard({ settings, setField }) {
           </div>
         );
       })}
+      <p className="text-[11px] text-muted-foreground mt-3 pt-3 border-t border-border">
+        {t("System managed notifications are triggered automatically when relevant. No reminder timing is required.")}
+      </p>
     </div>
   );
 }
