@@ -26,7 +26,15 @@ export default function AdditionalChargeCard({ visit, pkg, clientId, existingCha
     pkg?.additional_visit_price != null && Number(pkg.additional_visit_price) > 0
       ? Number(pkg.additional_visit_price)
       : null;
-  const [amount, setAmount] = useState(existingCharge ? String(existingCharge.amount) : configuredPrice != null ? String(configuredPrice) : "");
+  // Staff-confirmed amount captured on the Finish screen (stored on the
+  // completed record) prefills the field when no package price is configured.
+  const confirmedAmount = Number(visit?.agreed_price) > 0 ? Number(visit.agreed_price) : null;
+  const [amount, setAmount] = useState(
+    existingCharge ? String(existingCharge.amount)
+      : configuredPrice != null ? String(configuredPrice)
+      : confirmedAmount != null ? String(confirmedAmount)
+      : ""
+  );
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(!!existingCharge);
   const [createdAmt, setCreatedAmt] = useState(existingCharge ? Number(existingCharge.amount) : null);

@@ -19,6 +19,7 @@ import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
 import DraftConflictDialog from "@/components/visits/DraftConflictDialog";
 import PackageServiceCard from "@/components/visits/PackageServiceCard";
 import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
+import AdditionalAmountSection from "@/components/visits/AdditionalAmountSection";
 import { Checkbox } from "@/components/ui/checkbox";
 import { billingClassificationFor, billingClassificationTone } from "@/lib/visitBillingClassification";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -145,6 +146,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // staff can uncheck before completing → COURTESY / NO CHARGE. Included
   // package visits never show a checkbox — nothing to charge accidentally.
   const [billable, setBillable] = useState(true);
+  // Staff-confirmed charge amount for an ADDITIONAL — BILLABLE visit, captured
+  // on the Finish screen before completion (null = not entered/confirmed).
+  const [additionalAmount, setAdditionalAmount] = useState(null);
   const [resumable, setResumable] = useState(null);
   const [contractors, setContractors] = useState([]);
   const [expensesCreated, setExpensesCreated] = useState([]);
@@ -279,6 +283,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           // Preserve the visit's existing billing classification across
           // resume/restart — a courtesy visit stays courtesy.
           setBillable(v.billing_classification !== "Courtesy - No Charge");
+          // A charge amount confirmed on a previous session of this same
+          // record resumes with the visit (re-editable on the Finish screen).
+          if (v.is_additional_service && Number(v.agreed_price) > 0) setAdditionalAmount(Number(v.agreed_price));
           // QA F1/F2 fix: restore the fields the resumed-visit persistence
           // already writes on this SAME record — meter readings, summary,
           // internal notes, GPS — plus the existing issue/task linkage, so a
@@ -357,9 +364,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount });
     }
-  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable]);
+  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount]);
 
   // Scheduled/resumed visits (resumeVisitId) previously had NO autosave — the
   // PropertyVisit record was written only at completion, so leaving mid-visit
@@ -383,6 +390,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       follow_up_task_ids: taskIds,
       is_additional_service: additionalService,
       billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }),
+      // Staff-confirmed additional charge amount persists across mid-visit
+      // resume of the same record; absent when not confirmed (field untouched).
+      ...(additionalService && billable && additionalAmount > 0 ? { agreed_price: additionalAmount } : {}),
     };
     resumedSaveRef.current = { id: resumeVisitId, payload };
     const tm = setTimeout(() => {
@@ -390,7 +400,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     }, 1500);
     return () => clearTimeout(tm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, resumeVisitId, checklist, meters, summary, internalNotes, gps, issueIds, taskIds, billable]);
+  }, [step, resumeVisitId, checklist, meters, summary, internalNotes, gps, issueIds, taskIds, billable, additionalAmount]);
 
   // Final flush when the wizard unmounts mid-visit (navigate away / close).
   // After completion this writes the same values the completion already saved,
@@ -500,6 +510,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // choice (Billable unchecked) always persists.
     setAdditionalService(courtesyDraft ? true : resolveAdditional(vtype));
     setBillable(resumable.billable !== false);
+    // The staff-confirmed charge amount (if any) resumes with the draft — it is
+    // re-editable on the Finish screen before completion.
+    setAdditionalAmount(resumable.additionalAmount != null ? resumable.additionalAmount : null);
     if (resumable.agreementId) {
       base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then(async (a) => {
         setAgreement(a);
@@ -748,6 +761,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // Billable default: checked (billable) for additional visits — the app
     // decides the default automatically; staff can override before completing.
     setBillable(opts && opts.billable === false ? false : true);
+    setAdditionalAmount(null);
     const now = new Date();
     setStartTime(now.toISOString());
     if (navigator.geolocation) {
@@ -912,6 +926,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       property_service_agreement_id: agreementId || "",
       is_additional_service: !!additionalService,
       billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }),
+      // Staff-confirmed additional charge amount (Finish screen) is stored on
+      // the completed record — AdditionalChargeCard prefills from it. Never
+      // invented: absent when no amount was entered (staff confirm there).
+      ...(additionalService && billable && additionalAmount > 0 ? { agreed_price: additionalAmount } : {}),
       ...(visitType === "Grocery Stocking" ? { shopping_list: groceryList.trim(), grocery_cost: parseFloat(groceryCost) || 0 } : {}),
     };
     try {
@@ -1616,7 +1634,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           {agreement && isRecurringAgreement(agreement) && (additionalService ? (
             <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4">
               <label className="flex items-start gap-3 cursor-pointer">
-                <Checkbox checked={billable} onCheckedChange={(v) => setBillable(v === true)} className="mt-0.5" />
+                <Checkbox checked={billable} onCheckedChange={(v) => { setBillable(v === true); if (!v) setAdditionalAmount(null); }} className="mt-0.5" />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-foreground">{t("Billable visit")}</span>
                   <span className="block text-xs text-muted-foreground mt-0.5">
@@ -1629,6 +1647,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <p className="text-[10px] uppercase tracking-wide text-amber-600 mt-2">
                 {billable ? t("Additional - Billable") : t("Courtesy - No Charge")}
               </p>
+              {/* Charge amount visible/confirmable BEFORE completing — the
+                  ledger entry itself is still created only after completion
+                  via AdditionalChargeCard (duplicate guard unchanged). */}
+              {billable && (
+                <AdditionalAmountSection pkg={pkg} value={additionalAmount} onChange={setAdditionalAmount} />
+              )}
             </div>
           ) : visitType === recommendedVisitType(pkg) ? (
             <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-center gap-2">
