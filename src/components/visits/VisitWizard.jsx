@@ -372,6 +372,24 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     }
   }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount, agreement, pkg]);
 
+  // ---- CANONICAL CHARGE AMOUNT (establish once) ----
+  // For an ADDITIONAL — BILLABLE visit the charge amount defaults ONCE to the
+  // package's configured additional-visit price, the moment the package context
+  // is available. Semantics: null = not established yet (derive the default);
+  // 0 = deliberately set to zero (never re-derived); a positive number =
+  // established amount (default or staff-entered — never overwritten). The
+  // autosave above persists it the instant it exists, resume() restores it
+  // verbatim, and restartDraftVisit carries it through startVisit — so this
+  // effect only ever fills a TRULY missing (null) amount.
+  useEffect(() => {
+    if (step !== "active" || !additionalService || !billable) return;
+    if (additionalAmount != null) return;
+    const price = pkg?.additional_visit_price;
+    if (price == null || !Number.isFinite(Number(price)) || Number(price) < 0) return;
+    setAdditionalAmount(Number(price));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, additionalService, billable, additionalAmount, pkg]);
+
   // Scheduled/resumed visits (resumeVisitId) previously had NO autosave — the
   // PropertyVisit record was written only at completion, so leaving mid-visit
   // lost in-progress checklist progress. This debounced save persists progress
@@ -706,7 +724,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // legacy drafts without one derive once from live entitlement as before.
     const clsState = classificationState(resumable?.billingClassification);
     const opts = clsState
-      ? { additional: clsState.additionalService, billable: clsState.billable }
+      ? { additional: clsState.additionalService, billable: clsState.billable,
+          // Established charge amount restarts with the visit (default or
+          // staff-entered, including a deliberate 0); only a truly missing
+          // (null) amount is derived once by the establish-once effect.
+          additionalAmount: resumable?.additionalAmount != null ? resumable.additionalAmount : null }
       : {
           additional: resumable?.billable === false ? true : resolveAdditional(vt),
           billable: resumable?.billable !== false,
@@ -790,7 +812,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // Billable default: checked (billable) for additional visits — the app
     // decides the default automatically; staff can override before completing.
     setBillable(opts && opts.billable === false ? false : true);
-    setAdditionalAmount(null);
+    // Charge amount: a restart may carry the already-established amount
+    // through opts (canonical, like the classification); fresh starts begin
+    // unestablished (null) and the establish-once effect derives the default.
+    setAdditionalAmount(opts && opts.additionalAmount != null ? opts.additionalAmount : null);
     const now = new Date();
     setStartTime(now.toISOString());
     if (navigator.geolocation) {

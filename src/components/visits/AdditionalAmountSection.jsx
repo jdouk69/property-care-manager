@@ -1,17 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Receipt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 /**
- * Finish-screen charge amount capture for an ADDITIONAL — BILLABLE visit.
- * Resolution is identical to AdditionalChargeCard: the package's configured
- * additional_visit_price prefills the field when set (editable); when it is
- * NOT configured there is no default and no fallback — staff enter the amount
- * (never invented). No ledger charge is created here: the confirmed amount is
- * stored on the visit at completion and the ledger entry is still created
- * explicitly (duplicate-safe) via AdditionalChargeCard afterwards.
+ * Finish-screen charge amount for an ADDITIONAL — BILLABLE visit.
+ * FULLY CONTROLLED by the wizard's canonical additionalAmount value: the
+ * wizard establishes the default once (the package's configured
+ * additional_visit_price, once the package context is available), the draft
+ * autosave persists it, and this section only displays/edits that value — it
+ * never derives its own amount, so mount timing (package not yet loaded) can
+ * no longer lock in a wrong figure.
+ * Value semantics: null = not established (or deliberately cleared); 0 =
+ * deliberately set to zero (kept as numeric 0, never treated as missing); a
+ * positive number = established amount. No ledger charge is created here: the
+ * amount is stored on the visit at completion and the ledger entry is still
+ * created explicitly (duplicate-safe) via AdditionalChargeCard afterwards.
  */
 export default function AdditionalAmountSection({ pkg, value, onChange }) {
   const { t } = useLanguage();
@@ -19,15 +24,26 @@ export default function AdditionalAmountSection({ pkg, value, onChange }) {
     pkg?.additional_visit_price != null && Number(pkg.additional_visit_price) > 0
       ? Number(pkg.additional_visit_price)
       : null;
-  // Local text keeps intermediate typing ("12.") usable; the parent only
-  // receives a valid positive number (or null when empty/invalid).
-  const [text, setText] = useState(
-    value != null ? String(value) : configuredPrice != null ? String(configuredPrice) : ""
-  );
+  // Local text only keeps intermediate typing ("12.") usable; it re-syncs to
+  // the canonical value whenever the wizard changes it (default established,
+  // resume, restart). While the local text still parses to the canonical
+  // value it is left untouched so typing is not interrupted.
+  const [text, setText] = useState(value != null ? String(value) : "");
+  useEffect(() => {
+    setText((prev) => {
+      const parsed = parseFloat(prev);
+      if (value != null && Number.isFinite(parsed) && parsed === value) return prev;
+      return value != null ? String(value) : "";
+    });
+  }, [value]);
   const handleChange = (v) => {
     setText(v);
-    const amt = parseFloat(v);
-    onChange(Number.isFinite(amt) && amt > 0 ? Math.round(amt * 100) / 100 : null);
+    const s = (v || "").trim();
+    if (s === "") { onChange(null); return; }
+    const amt = parseFloat(s);
+    // 0 is a DELIBERATE amount (kept numeric); only empty/invalid input maps
+    // to null (missing). Never `amt > 0 ? amt : null`.
+    onChange(Number.isFinite(amt) && amt >= 0 ? Math.round(amt * 100) / 100 : null);
   };
   return (
     <div className="rounded-xl border border-border bg-card/60 p-3 mt-3">
