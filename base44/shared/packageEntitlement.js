@@ -1,13 +1,15 @@
 // Package visit entitlements — pure helpers (no platform deps).
 //
-// Frontend twin of base44/shared/packageEntitlement.js (the platform forbids
-// frontend imports from base44/). The two copies MUST stay identical.
-//
 // A recurring package includes a defined number of scheduled visits per
 // service period (the agreement's billing period). These helpers answer:
 // which period are we in, how many included visits does the package allow,
 // and how many are already used. They only READ existing records — nothing
 // is invented, repriced or duplicated.
+//
+// Backend twin of src/lib/packageEntitlement.js (the platform forbids
+// frontend imports from base44/). The two copies MUST stay identical —
+// same convention as visitReminders.js / shared/visitReminders.js. Consumed
+// by the backend Visit Reminders coverage check (shared/visitCoverage.js).
 
 // Calendar math on YYYY-MM strings (pure, timezone-free like recurringCharges).
 const MONTHS_IN_PERIOD = { Monthly: 1, Quarterly: 3, Annual: 12 };

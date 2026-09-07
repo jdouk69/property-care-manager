@@ -1,16 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { buildVisitReminders } from '../../shared/visitReminders.js';
+import { buildCoverageAlerts } from '../../shared/visitCoverage.js';
 import { athensToday, athensTime } from '../../shared/timezone.js';
 
 export default async function(req) {
   const base44 = createClientFromRequest(req);
   try {
-    const [visits, settingsList, properties, clients, existingNotifs] = await Promise.all([
+    const [visits, settingsList, properties, clients, existingNotifs, agreements, packages] = await Promise.all([
       base44.asServiceRole.entities.PropertyVisit.list("-start_time", 500),
       base44.asServiceRole.entities.BusinessSettings.list("-created_date", 1),
       base44.asServiceRole.entities.Property.list("-created_date", 500),
       base44.asServiceRole.entities.Client.list("-created_date", 500),
       base44.asServiceRole.entities.Notification.list("-created_date", 500),
+      base44.asServiceRole.entities.PropertyServiceAgreement.list("-created_date", 500),
+      base44.asServiceRole.entities.ServicePackage.list("-created_date", 500),
     ]);
 
     const settings = (settingsList && settingsList[0]) || {};
@@ -46,8 +49,23 @@ export default async function(req) {
       });
 
     const desired = buildVisitReminders({ visits: enriched, offsets, nowMs: Date.now() });
+
+    // ADDITIONAL warning-only check: recurring packages whose expected
+    // included visit for the current service period was never scheduled.
+    // Uses the RAW visit list — coverage counts Completed / In Progress /
+    // Scheduled visits, not just the Scheduled ones reminders use.
+    // Never creates or modifies visits (see base44/shared/visitCoverage.js).
+    const coverageAlerts = buildCoverageAlerts({
+      agreements: agreements || [],
+      visits: visits || [],
+      packages: packages || [],
+      properties: properties || [],
+      clients: clients || [],
+      todayStr: athensToday(),
+    });
+
     const existingKeys = new Set((existingNotifs || []).map((n) => n.dedup_key).filter(Boolean));
-    const toCreate = desired.filter((d) => d.dedup_key && !existingKeys.has(d.dedup_key));
+    const toCreate = [...desired, ...coverageAlerts].filter((d) => d.dedup_key && !existingKeys.has(d.dedup_key));
 
     let created = 0;
     for (const d of toCreate) {
@@ -73,7 +91,7 @@ export default async function(req) {
     }
 
     if (created > 0) await log(base44, "Visit reminders: generated", created, "success");
-    return Response.json({ ok: true, generated: created, scanned: enriched.length });
+    return Response.json({ ok: true, generated: created, scanned: enriched.length, coverage: coverageAlerts.length });
   } catch (error) {
     try {
       await log(base44, "Visit reminders: failed", 0, "failure", String(error && error.message ? error.message : error));
