@@ -517,9 +517,11 @@ export const VISITS_EL = {
   "Notes will be added to the item's existing notes.": "Οι σημειώσεις θα προστεθούν στις υπάρχουσες σημειώσεις του σημείου.",
   "Needs review — check before applying": "Χρειάζεται έλεγχος — ελέγξτε πριν την εφαρμογή",
   "Already answered — review before applying": "Έχει ήδη απαντηθεί — ελέγξτε πριν την εφαρμογή",
-  "Visit Checklist Complete": "Ολοκλήρωση Checklist Επίσκεψης",
+  "Checklist Review": "Ανασκόπηση Checklist",
   "{count} of {total} reviewed": "{count} από {total} ολοκληρώθηκαν",
   "Return to Visit": "Επιστροφή στην Επίσκεψη",
+  "Checklist complete. Continue to finish the remaining visit details.": "Το checklist ολοκληρώθηκε. Συνεχίστε για να συμπληρώσετε τα υπόλοιπα στοιχεία της επίσκεψης.",
+  "Some checklist items are still unanswered — go back to review them.": "Ορισμένα σημεία του checklist δεν έχουν απαντηθεί — επιστρέψτε για να τα ελέγξετε.",
   "Back to Checklist": "Πίσω στο Checklist",
   // Shared dictation recorder errors (QA F4) — used by ALL dictation surfaces
   "No audio captured — try again or continue manually.": "Δεν καταγράφηκε ήχος — δοκιμάστε ξανά ή συνεχίστε χειροκίνητα.",

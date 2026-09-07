@@ -1,25 +1,29 @@
 import React from "react";
-import { CheckCircle2 } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { STATUSES } from "@/components/visits/VisitChecklistItem";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
-// Guided Checklist completion summary. Display-only: counts the answers
-// already saved on the SAME visit checklist and hands back to the EXISTING
-// Visit Wizard review / completion / report flow — no visit completion,
-// report, PDF, issue, or ledger logic is duplicated here.
-export default function GuidedSummary({ checklist, onClose, onBack }) {
+// Guided Checklist review screen: a REVIEW of the checklist answers and a
+// TRANSITION into the rest of the visit workflow — explicitly NOT a claim
+// that the visit is complete (the visit's own Complete Visit action stays
+// separate, in the wizard). Display-only: counts answers already saved on the
+// SAME visit checklist; "Continue Visit" hands back to the wizard's EXISTING
+// next-step logic (first blocking checklist item, else the next relevant
+// section). No visit completion, report, PDF, issue, or ledger logic here.
+export default function GuidedSummary({ checklist, onContinue, onBack }) {
   const { t } = useLanguage();
   const total = checklist.length;
   const count = (status) => checklist.filter((it) => it.status === status).length;
   const reviewed = STATUSES.reduce((n, s) => n + count(s.value), 0);
+  const allReviewed = reviewed >= total;
 
   return (
     <div className="flex flex-col items-center text-center gap-4 py-4">
-      <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-        <CheckCircle2 className="w-8 h-8" />
+      <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+        <ClipboardCheck className="w-8 h-8" />
       </div>
-      <h2 className="text-xl font-bold text-foreground">{t("Visit Checklist Complete")}</h2>
+      <h2 className="text-xl font-bold text-foreground">{t("Checklist Review")}</h2>
       <p className="text-sm text-muted-foreground">{t("{count} of {total} reviewed", { count: reviewed, total })}</p>
 
       <div className="w-full rounded-2xl border border-border bg-card p-4 space-y-2.5 text-left">
@@ -34,8 +38,14 @@ export default function GuidedSummary({ checklist, onClose, onBack }) {
         ))}
       </div>
 
-      <Button onClick={onClose} className="w-full h-14 rounded-2xl text-base font-semibold">
-        {t("Return to Visit")}
+      <p className="text-sm font-medium text-foreground">
+        {allReviewed
+          ? t("Checklist complete. Continue to finish the remaining visit details.")
+          : t("Some checklist items are still unanswered — go back to review them.")}
+      </p>
+
+      <Button onClick={onContinue} className="w-full h-14 rounded-2xl text-base font-semibold">
+        {t("Continue Visit")}
       </Button>
       <Button variant="outline" onClick={onBack} className="w-full h-12 rounded-2xl">
         {t("Back to Checklist")}

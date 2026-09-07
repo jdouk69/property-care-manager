@@ -1625,6 +1625,19 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         <GuidedChecklistOverlay
           open={guidedOpen}
           onClose={() => setGuidedOpen(false)}
+          // Checklist Review → Continue Visit: reuse the wizard's EXISTING
+          // next-step logic. Unanswered checklist items → jump to the first
+          // item blocking completion (same priority as the completion gate);
+          // otherwise the next relevant section — Issues when flagged items
+          // have no logged issue, else Finish (same rule as the Next step
+          // card). No new workflow logic; Complete Visit stays separate.
+          onContinue={() => {
+            setGuidedOpen(false);
+            setTimeout(() => {
+              if (nextStep.key === "inspection" && firstBlockerIdx >= 0) jumpToItem(firstBlockerIdx);
+              else goToStep(nextStep.target);
+            }, 60);
+          }}
           checklist={checklist}
           initialIndex={guidedStart}
           context={{ serviceLabel: t(visitTypeLabel(visitType)), propertyName, clientName: clientObj?.name || "" }}

@@ -18,7 +18,7 @@ const AUTO_ADVANCE = ["Normal", "N/A"];
 // duplicate records, no new statuses. Progress autosave/resume is inherited
 // from the wizard's draft / visit-record persistence; reopening starts at the
 // first unanswered item (initialIndex, computed by the wizard's focusIdx).
-export default function GuidedChecklistOverlay({ open, onClose, checklist, initialIndex = 0, context, onChangeItem, onUploadPhotos, onRemovePhoto, uploading }) {
+export default function GuidedChecklistOverlay({ open, onClose, onContinue, checklist, initialIndex = 0, context, onChangeItem, onUploadPhotos, onRemovePhoto, uploading }) {
   const { t } = useLanguage();
   const [idx, setIdx] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
@@ -114,7 +114,7 @@ const concernVisibilityPatch = (item, status) =>
 
       {showSummary ? (
         <div className="flex-1 overflow-y-auto px-4 py-2">
-          <GuidedSummary checklist={checklist} onClose={onClose} onBack={() => setShowSummary(false)} />
+          <GuidedSummary checklist={checklist} onContinue={onContinue || onClose} onBack={() => setShowSummary(false)} />
         </div>
       ) : (
         <>
