@@ -2,17 +2,16 @@ import React, { useState, useEffect, useRef } from "react";
 import { Settings as SettingsIcon, Loader2, Check, Plus, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { exportEntityCsv } from "@/lib/exportCsv";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { base44 } from "@/api/base44Client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import NotificationsRemindersCard from "@/components/settings/NotificationsRemindersCard";
 
 const FUTURE_FEATURES = [
   "Client Portal", "Client Mobile App", "Online Payments", "Invoicing", "AI Inspection Assistant",
@@ -118,49 +117,8 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Reminder preferences */}
-        <div className="rounded-2xl border border-border bg-card p-5 mb-4">
-          <h3 className="font-medium text-sm mb-1">{t("Notifications & Reminders")}</h3>
-          <p className="text-xs text-muted-foreground mb-4">{t("Choose when and where you receive reminders. Email and push are coming soon.")}</p>
-
-          <Label className="text-xs font-medium text-muted-foreground mb-2 block">{t("Remind me")}</Label>
-          <div className="flex flex-wrap gap-2 mb-5">
-            {[
-              { v: "due", l: "At due time" },
-              { v: "1h", l: "1 hour before" },
-              { v: "1d", l: "1 day before" },
-              { v: "3d", l: "3 days before" },
-              { v: "7d", l: "7 days before" },
-            ].map((o) => {
-              const arr = settings.reminder_offsets || [];
-              const on = arr.includes(o.v);
-              return (
-                <button key={o.v} onClick={() => setField("reminder_offsets", on ? arr.filter((x) => x !== o.v) : [...arr, o.v])}
-                  className={`text-xs px-2.5 py-1 rounded-full border transition ${on ? "bg-primary/10 text-primary border-primary/30" : "border-border text-muted-foreground hover:bg-muted"}`}>
-                  {t(o.l)}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="space-y-2">
-            {["Tasks", "Inspections", "Maintenance", "Contractors", "Expenses", "Keys", "Reports", "Visits"].map((cat) => {
-              const arr = settings.notif_categories || ["Tasks", "Inspections", "Maintenance", "Contractors", "Expenses", "Keys", "Reports", "Visits"];
-              const on = arr.includes(cat);
-              return (
-                <div key={cat} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
-                  <span className="text-sm">{t(cat)}</span>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${on ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"}`}>{t("In-app")}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground/60">{t("Email · Soon")}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground/60">{t("Push · Soon")}</span>
-                    <Switch checked={on} onCheckedChange={(v) => setField("notif_categories", v ? [...arr, cat] : arr.filter((x) => x !== cat))} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* Reminder preferences — per-category reminder timing */}
+        <NotificationsRemindersCard settings={settings} setField={setField} />
 
         {/* Future features */}
         <div className="rounded-2xl border border-border bg-card p-5">

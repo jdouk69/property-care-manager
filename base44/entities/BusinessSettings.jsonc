@@ -90,6 +90,17 @@
       "type": "array",
       "items": {
         "type": "string"
+      },
+      "description": "Global default reminder timing (offset keys: 'due','1h','1d','3d','7d'). Backward-compatible fallback for any category without its own stored selection. Kept for existing accounts."
+    },
+    "reminder_offsets_by_category": {
+      "type": "object",
+      "description": "Per-category reminder timing selections: category name -> array of offset keys ('due','1h','1d','3d','7d'). A stored array (even empty) is that category's own selection; a category with NO stored array falls back to the global reminder_offsets. Timing selections are preserved when a category is switched OFF.",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
       }
     },
     "notif_categories": {

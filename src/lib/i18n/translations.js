@@ -373,6 +373,25 @@ export const EL = {
   "Add Documents": "Προσθήκη Εγγράφου",
   "New Documents": "Νέο Έγγραφο",
 
+  // ---- Wave 13: Settings — per-category reminder timing ----
+  "Notifications & Reminders": "Ειδοποιήσεις & Υπενθυμίσεις",
+  "Choose when and where you receive reminders. Email and push are coming soon.":
+    "Επιλέξτε πότε και πού λαμβάνετε υπενθυμίσεις. Τα email και οι ειδοποιήσεις push θα προστεθούν σύντομα.",
+  "Remind me": "Υπενθύμισέ μου",
+  "At due time": "Την ώρα λήξης",
+  "1 hour before": "1 ώρα πριν",
+  "1 day before": "1 ημέρα πριν",
+  "3 days before": "3 ημέρες πριν",
+  "7 days before": "7 ημέρες πριν",
+  "In-app": "Στην εφαρμογή",
+  "Visits": "Επισκέψεις",
+  "Inspections": "Επιθεωρήσεις",
+  "Default timing": "Προεπιλεγμένος χρόνος",
+  "Used by categories without custom timing.":
+    "Χρησιμοποιείται από κατηγορίες χωρίς δικό τους χρόνο.",
+  "Default": "Προεπιλογή",
+  "No timed reminders": "Χωρίς χρονικές υπενθυμίσεις",
+
   // Waves 5–9 (Dashboard/agenda, Tasks & Maintenance, Visits, checklist,
   // Visit Detail & report delivery) — see dictionaryVisits.js
   ...VISITS_EL,

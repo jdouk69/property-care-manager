@@ -1,5 +1,6 @@
 import { base44 } from "@/api/base44Client";
 import { buildVisitReminders } from "@/lib/visitReminders";
+import { resolveReminderOffsets } from "@/lib/reminderOffsets";
 
 export async function createNotification(n) {
   try {
@@ -38,11 +39,12 @@ export async function generateTimeBasedNotifications() {
   // The user's saved Settings are the source of truth. An intentionally empty array
   // means "off" — never silently replaced with defaults. Defaults apply only when no
   // BusinessSettings record/field exists at all.
-  let prefs = { reminder_offsets: [], notif_categories: [] };
+  let prefs = { reminder_offsets: [], reminder_offsets_by_category: null, notif_categories: [] };
   try {
     const list = await base44.entities.BusinessSettings.list("-created_date", 1);
     if (list && list[0]) {
       prefs.reminder_offsets = list[0].reminder_offsets || [];
+      prefs.reminder_offsets_by_category = list[0].reminder_offsets_by_category || null;
       prefs.notif_categories = list[0].notif_categories || [];
     }
   } catch (e) {}
@@ -55,11 +57,14 @@ export async function generateTimeBasedNotifications() {
     d.setDate(d.getDate() + n);
     return d.toISOString().slice(0, 10);
   };
-  const soonMax = prefs.reminder_offsets.includes("7d")
+  // "Due soon" horizon for tasks now uses the Tasks category's own timing
+  // (falls back to the global default timing when none is stored).
+  const taskOffsets = resolveReminderOffsets(prefs, "Tasks");
+  const soonMax = taskOffsets.includes("7d")
     ? 7
-    : prefs.reminder_offsets.includes("3d")
+    : taskOffsets.includes("3d")
     ? 3
-    : prefs.reminder_offsets.includes("1d")
+    : taskOffsets.includes("1d")
     ? 1
     : 0;
 
@@ -196,7 +201,7 @@ export async function generateTimeBasedNotifications() {
           clientName: (client && client.name) || "Client",
         };
       });
-    buildVisitReminders({ visits: enriched, offsets: prefs.reminder_offsets, nowMs: Date.now() }).forEach((n) => push(desired, n));
+    buildVisitReminders({ visits: enriched, offsets: resolveReminderOffsets(prefs, "Visits"), nowMs: Date.now() }).forEach((n) => push(desired, n));
   }
 
   if (!desired.length) return;

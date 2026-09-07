@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { buildVisitReminders } from '../../shared/visitReminders.js';
 import { buildCoverageAlerts } from '../../shared/visitCoverage.js';
+import { resolveReminderOffsets } from '../../shared/reminderOffsets.js';
 import { athensToday, athensTime } from '../../shared/timezone.js';
 
 export default async function(req) {
@@ -17,7 +18,10 @@ export default async function(req) {
     ]);
 
     const settings = (settingsList && settingsList[0]) || {};
-    const offsets = settings.reminder_offsets || [];
+    // Per-category timing: the Visits category uses its own stored offsets when
+    // present, otherwise falls back to the global default (backward compat).
+    // Recurring coverage alerts (10th/22nd) are independent of these offsets.
+    const offsets = resolveReminderOffsets(settings, "Visits");
     const categories = settings.notif_categories || [];
 
     if (!categories.includes("Visits")) {
