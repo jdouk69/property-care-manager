@@ -5,6 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import MarkInvoicePaidDialog from "@/components/invoices/MarkInvoicePaidDialog";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
+import { presentInvoiceLineItems } from "@/lib/invoicePresentation";
 import { athensMediumDate } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -45,7 +46,18 @@ export default function Invoices() {
   const downloadInvoicePdf = async (item, lookups) => {
     setDownloadingId(item.id);
     try {
-      await generateInvoicePdf(item, {
+      let invoice = item;
+      // Draft-only presentation cleanup: old Drafts snapshot the
+      // pre-enhancement recurring text; issued snapshots are never rewritten.
+      if (item.status === "Draft" && Array.isArray(item.charge_ids) && item.charge_ids.length) {
+        const [charges, agreements, packages] = await Promise.all([
+          base44.entities.BillingCharge.list("-created_date", 500),
+          base44.entities.PropertyServiceAgreement.list("-created_date", 500),
+          base44.entities.ServicePackage.list("-created_date", 500),
+        ]);
+        invoice = { ...item, line_items: presentInvoiceLineItems(item, { charges, agreements, packages }) };
+      }
+      await generateInvoicePdf(invoice, {
         business,
         client: clients.find((c) => c.id === item.client_id) || { name: lookups?.Client?.[item.client_id] || "" },
         property: { name: lookups?.Property?.[item.property_id] || "" },

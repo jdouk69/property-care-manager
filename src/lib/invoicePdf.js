@@ -258,11 +258,17 @@ export async function generateInvoicePdf(invoice, ctx = {}) {
     doc.setFontSize(9); doc.setFont(undefined, "bold"); doc.setTextColor(110);
     text("PAYMENT INFORMATION", margin, y); y += 6.5;
     doc.setFontSize(9);
+    // Values align in one column placed past the WIDEST label (the fixed
+    // margin+28 used before let "Payment Reference:" run into its value).
+    const labelW = Math.max(
+      ...[...payRows.map(([l]) => l), "Payment Reference"].map((l) => doc.getTextWidth(clean(`${l}:`)))
+    );
+    const payValueX = margin + labelW + 3;
     const payRow = (label, value) => {
       doc.setFont(undefined, "bold"); doc.setTextColor(110);
       text(`${label}:`, margin, y);
       doc.setFont(undefined, "normal"); doc.setTextColor(40);
-      text(value, margin + 28, y);
+      text(value, payValueX, y);
       y += 5;
     };
     payRows.forEach(([l, v]) => payRow(l, v));
