@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Receipt, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +14,17 @@ import { ensureAdditionalVisitCharge } from "@/lib/visitBilling";
  * allowance, so nothing is auto-charged: staff must confirm the amount
  * before a ledger entry is created. The package's one-time price is shown
  * as a REFERENCE only. Duplicate-safe: at most one charge per visit.
+ * Also rendered on the completed-visit detail for reopened visits: passing an
+ * existingCharge switches the card to the created status, so the persistent
+ * action can never produce a duplicate charge.
  */
-export default function AdditionalChargeCard({ visit, pkg, clientId }) {
+export default function AdditionalChargeCard({ visit, pkg, clientId, existingCharge }) {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [amount, setAmount] = useState(pkg?.one_time_price != null ? String(pkg.one_time_price) : "");
+  const [amount, setAmount] = useState(existingCharge ? String(existingCharge.amount) : pkg?.one_time_price != null ? String(pkg.one_time_price) : "");
   const [creating, setCreating] = useState(false);
-  const [created, setCreated] = useState(false);
+  const [created, setCreated] = useState(!!existingCharge);
+  const [createdAmt, setCreatedAmt] = useState(existingCharge ? Number(existingCharge.amount) : null);
 
   const create = async () => {
     const amt = parseFloat(amount);
@@ -27,6 +32,7 @@ export default function AdditionalChargeCard({ visit, pkg, clientId }) {
     setCreating(true);
     try {
       const charge = await ensureAdditionalVisitCharge(visit, { clientId, amount: amt });
+      setCreatedAmt(amt);
       setCreated(true);
       toast({ description: t("Ledger charge created: €{amount} (excl. VAT)", { amount: Number(charge ? charge.amount : amt).toFixed(2) }) });
     } catch (e) {
@@ -51,9 +57,12 @@ export default function AdditionalChargeCard({ visit, pkg, clientId }) {
         </p>
       )}
       {created ? (
-        <p className="text-sm text-emerald-600 font-medium flex items-center gap-1.5">
-          <CheckCircle2 className="w-4 h-4" /> {t("Ledger charge created: €{amount} (excl. VAT)", { amount: Number(parseFloat(amount) || 0).toFixed(2) })}
-        </p>
+        <div className="space-y-1.5">
+          <p className="text-sm text-emerald-600 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4" /> {t("Ledger charge created: €{amount} (excl. VAT)", { amount: Number(createdAmt != null ? createdAmt : parseFloat(amount) || 0).toFixed(2) })}
+          </p>
+          <Link to="/billing" className="text-xs text-primary hover:underline">{t("View in Billing")}</Link>
+        </div>
       ) : (
         <>
           <div className="mb-2">

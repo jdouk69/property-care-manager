@@ -10,6 +10,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { Image as UIImage } from "@/components/ui/image";
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
+import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
@@ -42,6 +43,7 @@ export default function VisitDetail() {
   const [pkg, setPkg] = useState(null);
   const [starting, setStarting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [visitCharge, setVisitCharge] = useState(null);
   const { t, tEnum, lang } = useLanguage();
   const navigate = useNavigate();
 
@@ -63,6 +65,15 @@ export default function VisitDetail() {
             const ag = await base44.entities.PropertyServiceAgreement.get(v.property_service_agreement_id);
             setAgreement(ag);
             if (ag?.service_package_id) { try { setPkg(await base44.entities.ServicePackage.get(ag.service_package_id)); } catch (e) {} }
+          } catch (e) {}
+        }
+        // Completed ADDITIONAL-BILLABLE visit: look up its ledger charge so the
+        // detail page shows either the persistent create action or the
+        // already-created status (shared duplicate-safe billing logic).
+        if (v.status === "Completed" && v.is_additional_service && v.billing_classification === "Additional - Billable") {
+          try {
+            const charges = await base44.entities.BillingCharge.filter({ visit_id: v.id });
+            setVisitCharge((charges && charges[0]) || null);
           } catch (e) {}
         }
         if (v.maintenance_issue_ids?.length) {
@@ -247,6 +258,14 @@ export default function VisitDetail() {
             <h3 className="font-medium text-sm mb-1">{t("Summary & Recommendations")}</h3>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{visit.summary}</p>
           </div>
+        )}
+
+        {/* Persistent billing continuation for a completed ADDITIONAL-BILLABLE
+            visit — the SAME card and shared charge logic as the completion
+            screen. Shows Create Ledger Charge until a charge exists, then only
+            the created status (never a second create action). */}
+        {visit.status === "Completed" && visit.is_additional_service && visit.billing_classification === "Additional - Billable" && (
+          <AdditionalChargeCard visit={visit} pkg={pkg} clientId={client.id || property.owner_id || ""} existingCharge={visitCharge} />
         )}
 
         {/* Owner report delivery workflow */}

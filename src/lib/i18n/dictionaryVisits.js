@@ -337,6 +337,7 @@ export const VISITS_EL = {
   // Wizard — toasts, alerts & confirmations
   "Visit scheduled": "Η επίσκεψη προγραμματίστηκε",
   "Ledger charge created: €{amount} (excl. VAT)": "Δημιουργήθηκε χρέωση: €{amount} (εκτός ΦΠΑ)",
+  "View in Billing": "Προβολή στις Χρεώσεις",
   "Could not schedule visit: {message}": "Δεν ήταν δυνατός ο προγραμματισμός της επίσκεψης: {message}",
   "Could not create issue: {message}": "Δεν ήταν δυνατή η δημιουργία θέματος: {message}",
   "Could not create task: {message}": "Δεν ήταν δυνατή η δημιουργία εργασίας: {message}",
