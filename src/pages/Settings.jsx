@@ -27,6 +27,7 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [newItem, setNewItem] = useState("");
   const debounceRef = useRef(null);
+  const pendingRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -42,16 +43,26 @@ export default function Settings() {
     })();
   }, []);
 
+  // Debounced autosave that batches ALL pending field changes — flipping a
+  // switch and then picking a timing within the debounce window must never
+  // cancel the earlier field's save (each change is kept and flushed together).
   const setField = (k, v) => {
     setSettings((s) => ({ ...s, [k]: v }));
     setSaved(false);
+    pendingRef.current = { ...(pendingRef.current || {}), [k]: v };
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
+      const updates = pendingRef.current;
+      pendingRef.current = null;
       setSaving(true);
       try {
-        await base44.entities.BusinessSettings.update(settings.id, { [k]: v });
+        await base44.entities.BusinessSettings.update(settings.id, updates);
         setSaving(false); setSaved(true);
-      } catch (e) { setSaving(false); }
+      } catch (e) {
+        // keep the failed changes pending so the next change retries them
+        pendingRef.current = { ...(pendingRef.current || {}), ...updates };
+        setSaving(false);
+      }
     }, 900);
   };
 

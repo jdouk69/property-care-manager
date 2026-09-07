@@ -386,9 +386,9 @@ export const EL = {
   "In-app": "Στην εφαρμογή",
   "Visits": "Επισκέψεις",
   "Inspections": "Επιθεωρήσεις",
-  "Default timing": "Προεπιλεγμένος χρόνος",
-  "Used by categories without custom timing.":
-    "Χρησιμοποιείται από κατηγορίες χωρίς δικό τους χρόνο.",
+  "Default reminder timing": "Προεπιλεγμένος χρόνος υπενθύμισης",
+  "Used by timed reminder categories until a category-specific timing is set.":
+    "Χρησιμοποιείται από κατηγορίες με χρονικές υπενθυμίσεις έως ότου οριστεί χρόνος για τη συγκεκριμένη κατηγορία.",
   "Default": "Προεπιλογή",
   "No timed reminders": "Χωρίς χρονικές υπενθυμίσεις",
 
