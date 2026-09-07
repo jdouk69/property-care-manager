@@ -20,7 +20,7 @@ import DraftConflictDialog from "@/components/visits/DraftConflictDialog";
 import PackageServiceCard from "@/components/visits/PackageServiceCard";
 import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
 import { Checkbox } from "@/components/ui/checkbox";
-import { billingClassificationFor } from "@/lib/visitBillingClassification";
+import { billingClassificationFor, billingClassificationTone } from "@/lib/visitBillingClassification";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 import { Link, useNavigate } from "react-router-dom";
@@ -1238,6 +1238,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         ? checklist.findIndex((i) => i.status === "Unable to Check" && !(i.notes || "").trim())
         : checklist.findIndex((it, idx) => !isAnswered(it, idx));
     const issueOptions = issueIds.map((id, i) => [id, createdIssues[i]?.title || "Issue"]);
+    // Active-visit billing classification (UI-only display): a resumed record
+    // shows its persisted classification; a fresh local draft derives it from
+    // the same wizard state the completion flow already stores.
+    const activeClassification = resumeVisit?.billing_classification ||
+      billingClassificationFor({ additionalService, billable, agreement, pkg, visitType });
 
     return (
       <div className="pb-40">
@@ -1246,6 +1251,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{propertyName}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap"><Clock className="w-3 h-3" /> {t("Started")} {(startTime || "").slice(11, 16)} · {t(visitTypeLabel(visitType))}</p>
+              {activeClassification && (
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border mt-1 ${billingClassificationTone(activeClassification)}`}>
+                  <Receipt className="w-3 h-3" /> {t(activeClassification)}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Link to="/checklist-templates" className="text-[10px] px-2 py-0.5 md:text-xs md:px-2.5 md:py-1 2xl:text-[10px] 2xl:px-2 2xl:py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground transition">{templateSource === "None" ? t("No template — manage") : templateSource === "Default" ? t("Default checklist") : t(`${templateSource} template`)}</Link>
