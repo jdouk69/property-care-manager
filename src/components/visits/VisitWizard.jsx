@@ -479,12 +479,23 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // resumed draft still records the same service agreement (old drafts without
     // an agreementId simply resolve to none, exactly as before).
     setAgreementId(resumable.agreementId || "");
-    setAdditionalService(!!resumable.additionalService);
+    // A draft's billing fields are a STALE snapshot from the moment it was
+    // started — they must never decide the resumed visit's classification.
+    // Re-derive the additional-service flag from the SAME live entitlement
+    // resolver the pre-launch screen used, so the classification shown while
+    // resuming always agrees with the allowance warning shown immediately
+    // before launch (e.g. an included draft resumed after the allowance was
+    // consumed initializes as ADDITIONAL — BILLABLE). An explicit staff
+    // Courtesy choice (Billable unchecked) always persists.
+    const courtesyDraft = resumable.billable === false;
+    setAdditionalService(courtesyDraft ? true : !!resumable.additionalService);
     setBillable(resumable.billable !== false);
     if (resumable.agreementId) {
-      base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then((a) => {
+      base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then(async (a) => {
         setAgreement(a);
-        if (a?.service_package_id) base44.entities.ServicePackage.get(a.service_package_id).then(setPkg).catch(() => {});
+        let pk = null;
+        if (a?.service_package_id) { try { pk = await base44.entities.ServicePackage.get(a.service_package_id); setPkg(pk); } catch (e) {} }
+        if (!courtesyDraft) setAdditionalService(resolveAdditional(vtype, { agreement: a, pkg: pk }));
       }).catch(() => {});
     }
     setStartTime(resumable.startTime);
@@ -608,11 +619,19 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // allowance already consumed? Performing it again is then an ADDITIONAL
   // billable service — never a second included entitlement — regardless of
   // which entry point staff used (package card or generic type picker).
-  const resolveAdditional = (vt) => {
-    if (!agreement || !isRecurringAgreement(agreement)) return false;
-    const rec = recommendedVisitType(pkg);
+  // Single source of truth for the Included vs Additional decision. Accepts an
+  // optional explicit context (agreement/pkg/visits) so callers that resolve
+  // context asynchronously (draft resume) can re-derive with the values they
+  // just fetched instead of stale component state; all other callers use the
+  // loaded state exactly as before.
+  const resolveAdditional = (vt, ctx = {}) => {
+    const ag = ctx.agreement !== undefined ? ctx.agreement : agreement;
+    const pk = ctx.pkg !== undefined ? ctx.pkg : pkg;
+    const vis = ctx.visits !== undefined ? ctx.visits : visits;
+    if (!ag || !isRecurringAgreement(ag)) return false;
+    const rec = recommendedVisitType(pk);
     if (!rec || vt !== rec) return false;
-    const ent = entitlementStatus({ visits, agreement, pkg, recType: rec, todayStr: athensToday() });
+    const ent = entitlementStatus({ visits: vis, agreement: ag, pkg: pk, recType: rec, todayStr: athensToday() });
     return !ent || (ent.remaining === 0 && !ent.unfinished);
   };
 
@@ -630,13 +649,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   // RESTART an unfinished device-local draft (confirmed first via
   // RestartVisitDialog). Reuses the same entitlement — a draft is not a
-  // record, so nothing was consumed and no charge is involved.
+  // record, so nothing was consumed and no charge is involved. The
+  // classification is RE-DERIVED from the live entitlement resolver (the
+  // draft's snapshot may be stale if the allowance was consumed after the
+  // draft was started); an explicit staff Courtesy choice persists.
   const restartDraftVisit = () => {
     const vt = resumable?.visitType || visitType;
-    // Preserve the draft's existing billing decision (included/additional
-    // and the Billable checkbox state) — restart reuses the same entitlement,
-    // it never re-decides the classification.
-    const opts = { additional: !!resumable?.additionalService, billable: resumable?.billable !== false };
+    const opts = {
+      additional: resumable?.billable === false ? true : resolveAdditional(vt),
+      billable: resumable?.billable !== false,
+    };
     clearDraft(); setResumable(null);
     startVisit(vt, opts);
   };
