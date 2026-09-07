@@ -548,7 +548,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       } catch (e) {}
     }
     setVisitType(resolvedType);
+    // Client context for the First Visit screen: explicit id first, else the
+    // agreement's own client. Display-only.
     if (cid) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
+    else if (ag.client_id) { try { setClientObj(await base44.entities.Client.get(ag.client_id)); } catch (e) {} }
     return !!resolvedType;
   };
 
@@ -1160,8 +1163,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             visits={visits}
             propertyId={propertyId}
             draft={resumable}
-            onStartIncluded={() => { setVisitType(recType); handleStartNow(recType); }}
-            onStartAdditional={() => { setVisitType(recType); handleStartNow(recType, { additional: true }); }}
+            // Package launch buttons ADVANCE to the existing First Visit /
+            // Agreement Context screen (with the allowance display) — the
+            // actual visit only starts via its Start Visit Now action. This
+            // also keeps the duplicate-visit safeguard visible: a leftover
+            // device draft surfaces as the DraftConflictDialog there instead
+            // of silently blocking this screen (the regression). Included vs
+            // Additional classification is unchanged — Start Visit Now derives
+            // it from the same entitlement resolver (resolveAdditional).
+            onStartIncluded={() => { setVisitType(recType); setStep("first-visit"); }}
+            onStartAdditional={() => { setVisitType(recType); setStep("first-visit"); }}
             onResumeDraft={resume}
             onRestartDraft={restartDraftVisit}
             onRestartRecord={restartExistingVisit}
