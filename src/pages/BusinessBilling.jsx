@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Briefcase, Loader2, Check, ImagePlus, Settings as SettingsIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,8 +19,8 @@ export default function BusinessBilling() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [uploading, setUploading] = useState(false);
-  const debounceRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -38,14 +39,40 @@ export default function BusinessBilling() {
   const setField = (k, v) => {
     setSettings((s) => ({ ...s, [k]: v }));
     setSaved(false);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setSaving(true);
-      try {
-        await base44.entities.BusinessSettings.update(settings.id, { [k]: v });
-        setSaving(false); setSaved(true);
-      } catch (e) { setSaving(false); }
-    }, 900);
+    setSaveError("");
+  };
+
+  // Single explicit save for the whole page — same existing BusinessSettings record.
+  const saveAll = async () => {
+    if (!settings?.id) return;
+    setSaving(true); setSaveError("");
+    try {
+      await base44.entities.BusinessSettings.update(settings.id, {
+        logo: settings.logo || "",
+        business_name: settings.business_name || "",
+        legal_business_name: settings.legal_business_name || "",
+        owner_name: settings.owner_name || "",
+        address: settings.address || "",
+        phone: settings.phone || "",
+        whatsapp: settings.whatsapp || "",
+        email: settings.email || "",
+        website: settings.website || "",
+        currency: settings.currency || "EUR",
+        vat_number: settings.vat_number || "",
+        tax_office: settings.tax_office || "",
+        business_activity: settings.business_activity || "",
+        vat_rate: settings.vat_rate ?? 24,
+        bank_name: settings.bank_name || "",
+        bank_beneficiary: settings.bank_beneficiary || "",
+        bank_iban: settings.bank_iban || "",
+        bank_bic: settings.bank_bic || "",
+        payment_instructions: settings.payment_instructions || "",
+      });
+      setSaved(true);
+    } catch (e) {
+      setSaveError(t("Could not save. Please try again."));
+    }
+    setSaving(false);
   };
 
   const uploadLogo = async (file) => {
@@ -69,10 +96,6 @@ export default function BusinessBilling() {
         <div className="rounded-2xl border border-border bg-card p-5 mb-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-medium text-sm">{t("Business Profile")}</h3>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              {saving && <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Saving…")}</>}
-              {saved && !saving && <><Check className="w-3.5 h-3.5 text-emerald-500" /> {t("Saved")}</>}
-            </div>
           </div>
 
           <div className="flex items-center gap-4 mb-5">
@@ -124,6 +147,17 @@ export default function BusinessBilling() {
               <Textarea rows={2} value={settings.payment_instructions || ""} onChange={(e) => setField("payment_instructions", e.target.value)} placeholder={t("e.g. Please include the invoice number with your payment.")} />
             </div>
           </div>
+        </div>
+
+        {/* Save — full width, above the fixed mobile bottom navigation (container pb-24) */}
+        <div className="mt-6">
+          <Button onClick={saveAll} disabled={saving} size="lg" className="w-full h-12 text-base">
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> {t("Saving…")}</> : t("Save Business & Billing")}
+          </Button>
+          {saved && !saving && !saveError && (
+            <p className="flex items-center gap-1.5 text-sm text-emerald-600 mt-2"><Check className="w-4 h-4" /> {t("Business & billing settings saved.")}</p>
+          )}
+          {saveError && <p className="text-sm text-destructive mt-2">{saveError}</p>}
         </div>
       </div>
     </AppLayout>
