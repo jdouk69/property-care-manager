@@ -75,8 +75,16 @@ export function buildInvoiceDraft({ charges, propertyId, client, invoices = [], 
   const label = monthLabel(period);
   const lineItems = items.map((ch) => {
     const desc = stripMonthSuffix(ch.description || "Charge", label);
+    // Recurring monthly service charges state their billing period on the
+    // invoice ("Standard Property Care — September 2026"). One-time /
+    // additional / reimbursement charges keep their meaningful stored
+    // descriptions. Presentation/snapshot only — the underlying
+    // BillingCharge description and recurring billing rules are never touched.
+    const withPeriod = ch.charge_type === "Service" && ch.property_service_agreement_id && label
+      ? `${desc} — ${label}`
+      : desc;
     const pname = allProperties && propertyNames ? propertyNames[ch.property_id] : null;
-    return { description: pname ? `${desc} (${pname})` : desc, amount: round2(ch.amount) };
+    return { description: pname ? `${withPeriod} (${pname})` : withPeriod, amount: round2(ch.amount) };
   });
   return {
     invoice_number: nextInvoiceNumber(invoices, Number(todayStr.slice(0, 4))),

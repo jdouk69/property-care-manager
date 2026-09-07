@@ -30,12 +30,16 @@ const fields = [
 export default function Invoices() {
   const { t, lang } = useLanguage();
   const [business, setBusiness] = useState({});
+  const [clients, setClients] = useState([]);
   const [downloadingId, setDownloadingId] = useState(null);
   const [paidDialog, setPaidDialog] = useState(null);
   const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     base44.entities.BusinessSettings.list().then((l) => setBusiness((l || [])[0] || {})).catch(() => {});
+    // Full client records (billing address, country) so re-downloaded PDFs get
+    // the same structured Bill To formatting as freshly created invoices.
+    base44.entities.Client.list("-created_date", 500).then((l) => setClients(l || [])).catch(() => {});
   }, []);
 
   const downloadInvoicePdf = async (item, lookups) => {
@@ -43,7 +47,7 @@ export default function Invoices() {
     try {
       await generateInvoicePdf(item, {
         business,
-        client: { name: lookups?.Client?.[item.client_id] || "" },
+        client: clients.find((c) => c.id === item.client_id) || { name: lookups?.Client?.[item.client_id] || "" },
         property: { name: lookups?.Property?.[item.property_id] || "" },
       });
     } catch (e) {}

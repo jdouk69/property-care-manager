@@ -3,7 +3,12 @@
   "type": "object",
   "properties": {
     "business_name": {
-      "type": "string"
+      "type": "string",
+      "description": "Trading / display name of the business."
+    },
+    "legal_business_name": {
+      "type": "string",
+      "description": "Legal business name, used when different from the trading name (customer-facing documents). Empty = same as trading name."
     },
     "logo": {
       "type": "string"
@@ -20,8 +25,44 @@
     "email": {
       "type": "string"
     },
+    "website": {
+      "type": "string",
+      "description": "Business website (optional)."
+    },
     "address": {
       "type": "string"
+    },
+    "vat_number": {
+      "type": "string",
+      "description": "Greek AFM / VAT number. Shown on customer-facing invoices when configured."
+    },
+    "tax_office": {
+      "type": "string",
+      "description": "DOY / tax office (optional). Shown on customer-facing invoices when configured."
+    },
+    "business_activity": {
+      "type": "string",
+      "description": "Business activity / profession description (optional)."
+    },
+    "bank_name": {
+      "type": "string",
+      "description": "Business bank name. Customer-facing payment instruction \u2014 appears on generated invoices only, never on public/internal surfaces."
+    },
+    "bank_beneficiary": {
+      "type": "string",
+      "description": "Account holder / beneficiary for customer payments. Customer-facing payment instruction."
+    },
+    "bank_iban": {
+      "type": "string",
+      "description": "Business IBAN for customer payments. Customer-facing payment instruction."
+    },
+    "bank_bic": {
+      "type": "string",
+      "description": "BIC / SWIFT code (optional). Customer-facing payment instruction."
+    },
+    "payment_instructions": {
+      "type": "string",
+      "description": "Optional payment-instructions note shown beneath the invoice payment information (e.g. include the invoice number with your payment)."
     },
     "currency": {
       "type": "string",

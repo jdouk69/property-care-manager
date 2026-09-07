@@ -107,6 +107,8 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><Label className="text-xs mb-1.5 block">{t("Business Name")}</Label><Input value={settings.business_name || ""} onChange={(e) => setField("business_name", e.target.value)} /></div>
+            <div><Label className="text-xs mb-1.5 block">{t("Legal Business Name")}</Label><Input value={settings.legal_business_name || ""} onChange={(e) => setField("legal_business_name", e.target.value)} placeholder={t("Only if different from the business name")} /></div>
+            <div><Label className="text-xs mb-1.5 block">{t("Website (optional)")}</Label><Input value={settings.website || ""} onChange={(e) => setField("website", e.target.value)} placeholder="https://" /></div>
             <div><Label className="text-xs mb-1.5 block">{t("Owner Name (that's you)")}</Label><Input value={settings.owner_name || ""} onChange={(e) => setField("owner_name", e.target.value)} placeholder="Jim" /></div>
             <div><Label className="text-xs mb-1.5 block">{t("Phone")}</Label><Input value={settings.phone || ""} onChange={(e) => setField("phone", e.target.value)} /></div>
             <div><Label className="text-xs mb-1.5 block">WhatsApp</Label><Input value={settings.whatsapp || ""} onChange={(e) => setField("whatsapp", e.target.value)} /></div>
@@ -121,6 +123,33 @@ export default function Settings() {
               </Select>
             </div>
             <div className="sm:col-span-2"><Label className="text-xs mb-1.5 block">{t("Address")}</Label><Textarea rows={2} value={settings.address || ""} onChange={(e) => setField("address", e.target.value)} /></div>
+          </div>
+        </div>
+
+        {/* Tax details */}
+        <div className="rounded-2xl border border-border bg-card p-5 mb-4">
+          <h3 className="font-medium text-sm mb-1">{t("Tax Details")}</h3>
+          <p className="text-xs text-muted-foreground mb-4">{t("Greek tax information shown on customer invoices. Nothing is printed for empty fields.")}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><Label className="text-xs mb-1.5 block">{t("AFM / VAT Number")}</Label><Input value={settings.vat_number || ""} onChange={(e) => setField("vat_number", e.target.value)} placeholder="e.g. 123456789" /></div>
+            <div><Label className="text-xs mb-1.5 block">{t("Tax Office (DOY)")}</Label><Input value={settings.tax_office || ""} onChange={(e) => setField("tax_office", e.target.value)} placeholder={t("Optional")} /></div>
+            <div className="sm:col-span-2"><Label className="text-xs mb-1.5 block">{t("Business Activity")}</Label><Input value={settings.business_activity || ""} onChange={(e) => setField("business_activity", e.target.value)} placeholder={t("Optional — e.g. Property management services")} /></div>
+          </div>
+        </div>
+
+        {/* Payment details */}
+        <div className="rounded-2xl border border-border bg-card p-5 mb-4">
+          <h3 className="font-medium text-sm mb-1">{t("Payment Details")}</h3>
+          <p className="text-xs text-muted-foreground mb-4">{t("Shown in the Payment Information section of customer invoices. If left empty, the section is omitted from invoices entirely.")}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><Label className="text-xs mb-1.5 block">{t("Bank Name")}</Label><Input value={settings.bank_name || ""} onChange={(e) => setField("bank_name", e.target.value)} /></div>
+            <div><Label className="text-xs mb-1.5 block">{t("Beneficiary / Account Holder")}</Label><Input value={settings.bank_beneficiary || ""} onChange={(e) => setField("bank_beneficiary", e.target.value)} /></div>
+            <div><Label className="text-xs mb-1.5 block">{t("IBAN")}</Label><Input value={settings.bank_iban || ""} onChange={(e) => setField("bank_iban", e.target.value)} placeholder="GR.." /></div>
+            <div><Label className="text-xs mb-1.5 block">{t("BIC / SWIFT (optional)")}</Label><Input value={settings.bank_bic || ""} onChange={(e) => setField("bank_bic", e.target.value)} /></div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs mb-1.5 block">{t("Payment Instructions (optional)")}</Label>
+              <Textarea rows={2} value={settings.payment_instructions || ""} onChange={(e) => setField("payment_instructions", e.target.value)} placeholder={t("e.g. Please include the invoice number with your payment.")} />
+            </div>
           </div>
         </div>
 
