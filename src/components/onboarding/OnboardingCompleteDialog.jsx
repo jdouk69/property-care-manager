@@ -32,7 +32,7 @@ export default function OnboardingCompleteDialog({ handoff, notification, onDism
           </div>
           <h2 className="text-lg font-semibold">{t("Customer Setup Complete")}</h2>
           <p className="text-sm text-muted-foreground mt-1">{handoff.clientName} · {handoff.propertyName}</p>
-          <p className="text-sm text-muted-foreground">{handoff.packageName}{handoff.frequency ? ` · ${t(handoff.frequency)} ${t("service")}` : ""}</p>
+          <p className="text-sm text-muted-foreground">{handoff.packageName}{handoff.frequency ? ` · ${t(handoff.frequency, { count: handoff.frequencyCount, period: t(handoff.frequencyPeriod) })}` : ""}</p>
         </div>
         <div className="rounded-xl bg-muted/40 p-3 mb-4 text-sm text-center">
           <p className="text-foreground">{t("All onboarding stages are complete. This property is ready for regular service.")}</p>

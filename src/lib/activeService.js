@@ -37,3 +37,12 @@ export function serviceFrequency(agreement, pkg) {
   if (billing === "One-time") return null;
   return { visits: includedVisitsPerPeriod(pkg), periodWord: PERIOD_WORD[billing] || billing };
 }
+
+// Localized one-line display label for the same derived frequency — used by
+// every staff-facing agreement display (Completed Visit detail, Client Hub
+// agreement cards, activation review, onboarding handoff). Returns "" for
+// one-time services.
+export function serviceFrequencyText(agreement, pkg, t) {
+  const f = serviceFrequency(agreement, pkg);
+  return f ? t("{count} included visit(s) per {period}", { count: f.visits, period: t(f.periodWord) }) : "";
+}

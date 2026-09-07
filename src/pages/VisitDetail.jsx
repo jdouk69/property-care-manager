@@ -13,6 +13,7 @@ import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
+import { serviceFrequencyText } from "@/lib/activeService";
 import { athensMediumDateTime } from "@/lib/timezone";
 
 const GROUPS = [
@@ -154,7 +155,7 @@ export default function VisitDetail() {
             <div className="text-sm space-y-0.5">
               <p><span className="text-muted-foreground">{t("Package:")}</span> <span className="text-foreground font-medium">{pkg?.name || "—"}</span></p>
               <p><span className="text-muted-foreground">{t("Client / Property:")}</span> <span className="text-foreground">{client.name || "—"} · {property.name || "—"}</span></p>
-              <p><span className="text-muted-foreground">{t("Agreed service:")}</span> <span className="text-foreground">{agreement.billing_type ? t(agreement.billing_type) : "—"}{agreement.inspection_frequency ? ` · ${agreement.inspection_frequency}` : ""}</span></p>
+              <p><span className="text-muted-foreground">{t("Agreed service:")}</span> <span className="text-foreground">{[agreement.billing_type ? t(agreement.billing_type) : "—", serviceFrequencyText(agreement, pkg, t)].filter(Boolean).join(" · ")}</span></p>
               {pkg?.visit_duration && <p><span className="text-muted-foreground">{t("Expected visit time:")}</span> <span className="text-foreground">{pkg.visit_duration}</span></p>}
             </div>
           </div>

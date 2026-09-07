@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { serviceFrequency } from "@/lib/activeService";
 import { deriveOnboarding, resolvePropertyService } from "@/lib/onboarding";
 import { createNotification } from "@/lib/notifications";
 
@@ -39,6 +40,10 @@ export function getReadyHandoff({ client, property, intakes, agreements, visits,
       ACTIVE_VISIT_STATES.includes(v.status)
   );
   if (hasFirstRegularVisit) return null;
+  // Real recurring cadence/allowance from the agreement/package configuration
+  // — never the stale free-text inspection_frequency fields. Stored as a
+  // translation pattern + numbers so consumers can localize it via t().
+  const freq = serviceFrequency(svc.agreement, svc.package);
   return {
     clientId: client.id,
     clientName: client.name,
@@ -47,7 +52,9 @@ export function getReadyHandoff({ client, property, intakes, agreements, visits,
     agreementId: svc.agreement.id,
     packageName: svc.package?.name || "Service",
     visitType: recurringVisitType,
-    frequency: svc.agreement.inspection_frequency || svc.package?.inspection_frequency || "",
+    frequency: freq ? "{count} included visit(s) per {period}" : "",
+    frequencyCount: freq ? freq.visits : 0,
+    frequencyPeriod: freq ? freq.periodWord : "",
     dedupKey: `${ONBOARDING_READY_DEDUP_PREFIX}${property.id}:${svc.agreement.id}`,
   };
 }

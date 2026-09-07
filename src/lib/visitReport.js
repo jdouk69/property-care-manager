@@ -120,28 +120,23 @@ const nextStepFromStatus = (st) => ({
 // described as "no concerns".
 function buildSummaryText({ findings, counts, routineCount, attentionCount, urgentCount }) {
   const n = findings.length;
-  const u = counts.urgent, a = counts.attention, m = counts.monitor;
   if (n === 0 && !attentionCount && !urgentCount) {
     return "All routine checks were completed with no concerns noted during this visit.";
   }
-  const parts = [];
+  // The header area directly above this summary already shows the exact
+  // urgent / attention / monitor and routine counts, so the summary never
+  // repeats those numbers — it gives overall property context and points to
+  // the documented observations. Counts are still used as a guard so the
+  // wording can never read as "no concerns" while abnormal findings exist.
+  const parts = ["Overall, the property appeared secure and generally well maintained."];
   if (n > 0) {
-    parts.push("Overall, the property appeared secure and generally well maintained.");
-    parts.push(`${n} observation${n === 1 ? "" : "s"} ${n === 1 ? "was" : "were"} documented during this visit.`);
-    const clauses = [];
-    if (u) clauses.push(`${u} ${u === 1 ? "requires" : "require"} prompt attention`);
-    if (a) clauses.push(`${a} ${a === 1 ? "has" : "have"} recommended follow-up`);
-    if (m) clauses.push(`${m} will be monitored`);
-    if (clauses.length === 1) parts.push(clauses[0] + ".");
-    else if (clauses.length > 1) parts.push(clauses.slice(0, -1).join(", ") + ", and " + clauses[clauses.length - 1] + ".");
+    parts.push("Observations from this visit are documented in the sections below.");
+    if (counts.urgent || counts.attention) {
+      parts.push("Please review the urgent and attention observations and let us know how you would like to proceed.");
+    }
   } else {
     parts.push("The visit was completed and checks were carried out as scheduled.");
   }
-  const rbits = [];
-  if (routineCount) rbits.push(`${routineCount} routine check${routineCount === 1 ? "" : "s"} completed with no concerns noted`);
-  if (attentionCount) rbits.push(`${attentionCount} item${attentionCount === 1 ? "" : "s"} require${attentionCount === 1 ? "s" : ""} attention`);
-  if (urgentCount) rbits.push(`${urgentCount} urgent condition${urgentCount === 1 ? " was" : "s were"} documented`);
-  if (rbits.length) parts.push(rbits.join(". ") + ".");
   return parts.join(" ");
 }
 

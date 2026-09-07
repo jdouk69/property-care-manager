@@ -4,6 +4,7 @@ import { Zap, Loader2, AlertTriangle, CheckCircle2, FlaskConical } from "lucide-
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { serviceFrequencyText } from "@/lib/activeService";
 
 // Staff-only activation action with an explicit confirmation dialog. Calls the
 // authenticated agreementActivate backend (activate or activateReplacement).
@@ -70,6 +71,7 @@ export default function ActivateServiceButton({ agreementId, isReplacement = fal
   const isTest = !!(details && details.agreement && details.agreement.is_test_agreement === true);
   const ag = details && details.agreement;
   const pkgName = details && details.pkg ? details.pkg.name : ag ? "Service package" : "";
+  const freq = serviceFrequencyText(ag, details && details.pkg, t);
   const priceLabel = ag && ag.agreed_price != null ? `€${Number(ag.agreed_price).toFixed(0)}` : "";
 
   return (
@@ -100,7 +102,7 @@ export default function ActivateServiceButton({ agreementId, isReplacement = fal
                 {details.property && <Row label={t("Property")} value={details.property.name} />}
                 {pkgName && <Row label={t("Service")} value={pkgName} />}
                 {ag.start_date && <Row label={t("Start date")} value={ag.start_date} />}
-                {ag.inspection_frequency && <Row label={t("Visit frequency")} value={ag.inspection_frequency} />}
+                {freq && <Row label={t("Visit frequency")} value={freq} />}
                 {priceLabel && <Row label={t("Billing")} value={`${priceLabel} ${ag.billing_type ? t(ag.billing_type) : ""}`.trim()} />}
               </div>
             ) : null}

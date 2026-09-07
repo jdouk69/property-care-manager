@@ -392,7 +392,7 @@ export const VISITS_EL = {
   // Wizard Issues-section helper sentences (now that statuses are localized,
   // the Greek references the DISPLAYED labels, not the stored values)
   "No items flagged. Mark a checklist item as Important or Emergency to create an issue.": "Δεν έχουν επισημανθεί στοιχεία. Σημειώστε ένα στοιχείο της λίστας ως «Χρειάζεται Προσοχή» ή «Επείγον» για να δημιουργηθεί θέμα.",
-  '{count} checklist item(s) flagged. Tap "Create Issue" on a flagged item to log it.': "Επισημάνθηκαν {count} στοιχεία λίστας. Πατήστε «Δημιουργία θέματος συντήρησης» σε επισημασμένο στοιχείο για να το καταγράψετε.",
+  '{count} checklist item(s) flagged. Tap "Create maintenance issue" on a flagged item to log it.': "Επισημάνθηκαν {count} στοιχεία λίστας. Πατήστε «Δημιουργία θέματος συντήρησης» σε επισημασμένο στοιχείο για να το καταγράψετε.",
 
   // Checklist Templates page (display chrome only — stored template item
   // names are never translated; the exact-name built-in display map lives

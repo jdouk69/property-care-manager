@@ -27,7 +27,7 @@ export default function ScheduleFirstVisitCard({ handoff }) {
       <div className="space-y-1 text-sm opacity-90 mb-3">
         <div className="flex items-center gap-2"><User className="w-4 h-4 shrink-0" /> <span className="truncate">{handoff.clientName}</span></div>
         <div className="flex items-center gap-2"><Building2 className="w-4 h-4 shrink-0" /> <span className="truncate">{handoff.propertyName}</span></div>
-        <div className="flex items-center gap-2"><Package className="w-4 h-4 shrink-0" /> <span className="truncate">{handoff.packageName}{handoff.frequency ? ` · ${t(handoff.frequency)}` : ""}</span></div>
+        <div className="flex items-center gap-2"><Package className="w-4 h-4 shrink-0" /> <span className="truncate">{handoff.packageName}{handoff.frequency ? ` · ${t(handoff.frequency, { count: handoff.frequencyCount, period: t(handoff.frequencyPeriod) })}` : ""}</span></div>
         <div className="flex items-center gap-2"><CalendarClock className="w-4 h-4 shrink-0" /> <span className="truncate">{t(visitTypeLabel(handoff.visitType))}</span></div>
       </div>
       <Button onClick={go} variant="secondary" className="w-full h-auto min-h-11 py-2.5 rounded-xl gap-2 font-semibold whitespace-normal leading-snug text-center">

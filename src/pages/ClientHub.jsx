@@ -20,6 +20,7 @@ import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
 import ScheduleFirstVisitCard from "@/components/onboarding/ScheduleFirstVisitCard";
 import OnboardingCompleteDialog from "@/components/onboarding/OnboardingCompleteDialog";
 import { getReadyHandoff, ensureOnboardingReadyNotification } from "@/lib/onboardingHandoff";
+import { serviceFrequencyText } from "@/lib/activeService";
 import ClientVisitReports from "@/components/clients/ClientVisitReports";
 import ClientBillingCard from "@/components/billing/ClientBillingCard";
 import { useAuth } from "@/lib/AuthContext";
@@ -280,6 +281,7 @@ export default function ClientHub() {
               </div>
             ) : [...agreements].sort((a, b) => (a.status === "Active" ? 0 : 1) - (b.status === "Active" ? 0 : 1)).map((a) => {
               const pkg = servicePackages[a.service_package_id];
+              const freq = serviceFrequencyText(a, pkg, t);
               return (
                 <div key={a.id} className="px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
@@ -296,7 +298,7 @@ export default function ClientHub() {
                     </div>
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                    {a.inspection_frequency && <span>{t("Frequency:")} {a.inspection_frequency}</span>}
+                    {freq && <span>{t("Frequency:")} {freq}</span>}
                     {a.start_date && <span>{t("Start:")} {a.start_date}</span>}
                     {a.renewal_date && <span>{t("Renewal:")} {a.renewal_date}</span>}
                   </div>

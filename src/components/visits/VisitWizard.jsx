@@ -326,6 +326,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     if (autoResume && resumable) resume();
   }, [autoResume, resumable]);
 
+  // Visit Complete screen always opens at the TOP: completion ends a long,
+  // deeply scrolled active-visit page; without this the screen opens partway
+  // down at the billing area. One-time jump per entry — scrolling afterward
+  // is untouched.
+  useEffect(() => { if (step === "done") window.scrollTo(0, 0); }, [step]);
+
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
@@ -1345,7 +1351,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             {flaggedCount === 0 ? (
               <p className="text-sm text-muted-foreground">{t("No items flagged. Mark a checklist item as Important or Emergency to create an issue.")}</p>
             ) : (
-              <p className="text-sm text-muted-foreground mb-2">{t('{count} checklist item(s) flagged. Tap "Create Issue" on a flagged item to log it.', { count: flaggedCount })}</p>
+              <p className="text-sm text-muted-foreground mb-2">{t('{count} checklist item(s) flagged. Tap "Create maintenance issue" on a flagged item to log it.', { count: flaggedCount })}</p>
             )}
             {createdIssues.length > 0 && (
               <div className="space-y-1.5 mt-2">

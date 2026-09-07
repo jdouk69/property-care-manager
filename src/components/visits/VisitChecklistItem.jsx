@@ -96,6 +96,17 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
             </button>
           )}
 
+          {/* Create maintenance issue — always visible on Attention/Emergency
+              items, so staff don't have to guess it lives under the notes
+              area. Creation stays optional and staff-controlled. */}
+          {(item.status === "Important" || item.status === "Emergency") && (
+            <button type="button" onClick={() => onFlagIssue(index)}
+              disabled={flagged}
+              className={`min-h-[44px] text-sm px-4 py-2 md:px-4 md:py-2.5 2xl:min-h-9 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border inline-flex items-center gap-1.5 transition ${flagged ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-primary/30 text-primary hover:bg-primary/10"}`}>
+              <Wrench className="w-3.5 h-3.5" /> {flagged ? t("Issue created") : t("Create maintenance issue")}
+            </button>
+          )}
+
           {detailOpen && (
             <div className="space-y-2">
               {(item.status === "Important" || item.status === "Emergency") && (
@@ -129,13 +140,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
                     onChange={(e) => onUploadPhoto(index, Array.from(e.target.files || []))} />
                 </label>
               </div>
-              {(item.status === "Important" || item.status === "Emergency") && (
-                <button type="button" onClick={() => onFlagIssue(index)}
-                  disabled={flagged}
-                  className={`min-h-[44px] text-sm px-4 py-2 md:px-4 md:py-2.5 2xl:min-h-9 2xl:text-xs 2xl:px-3 2xl:py-1.5 rounded-full border inline-flex items-center gap-1.5 transition ${flagged ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "border-primary/30 text-primary hover:bg-primary/10"}`}>
-                  <Wrench className="w-3.5 h-3.5" /> {flagged ? t("Issue created") : t("Create maintenance issue")}
-                </button>
-              )}
+
             </div>
           )}
         </div>
