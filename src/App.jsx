@@ -28,6 +28,7 @@ import Calendar from '@/pages/Calendar';
 import Reports from '@/pages/Reports';
 import Search from '@/pages/Search';
 import Settings from '@/pages/Settings';
+import BusinessBilling from '@/pages/BusinessBilling';
 import AutomationLog from '@/pages/AutomationLog';
 import Invoices from '@/pages/Invoices';
 import ServicePackages from '@/pages/ServicePackages';
@@ -107,6 +108,7 @@ const AuthenticatedApp = () => {
         <Route path="/search" element={<Search />} />
         <Route element={<AdminRoute />}>
           <Route path="/settings" element={<Settings />} />
+          <Route path="/business-billing" element={<BusinessBilling />} />
           <Route path="/automation" element={<AutomationLog />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/billing" element={<Billing />} />
