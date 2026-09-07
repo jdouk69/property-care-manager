@@ -21,7 +21,7 @@ import PackageServiceCard from "@/components/visits/PackageServiceCard";
 import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
 import AdditionalAmountSection from "@/components/visits/AdditionalAmountSection";
 import { Checkbox } from "@/components/ui/checkbox";
-import { billingClassificationFor, billingClassificationTone } from "@/lib/visitBillingClassification";
+import { billingClassificationFor, billingClassificationTone, classificationState } from "@/lib/visitBillingClassification";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import DictateInspectionDialog from "@/components/dictation/DictateInspectionDialog";
 import { Link, useNavigate } from "react-router-dom";
@@ -364,9 +364,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
-      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount });
+      saveDraft({ propertyId, visitType, startTime, gps, checklist, meters, summary, internalNotes, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount,
+        // CANONICAL classification of this started visit — established once at
+        // start (or via the legacy fallback), restored verbatim on resume and
+        // never re-derived afterward.
+        billingClassification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }) });
     }
-  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount]);
+  }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount, agreement, pkg]);
 
   // Scheduled/resumed visits (resumeVisitId) previously had NO autosave — the
   // PropertyVisit record was written only at completion, so leaving mid-visit
@@ -489,37 +493,56 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // resumed draft still records the same service agreement (old drafts without
     // an agreementId simply resolve to none, exactly as before).
     setAgreementId(resumable.agreementId || "");
-    // A draft's billing fields are a STALE snapshot from the moment it was
-    // started — they must never decide the resumed visit's classification.
-    // Re-derive the additional-service flag from the SAME live entitlement
-    // resolver the pre-launch screen used, so the classification shown while
-    // resuming always agrees with the allowance warning shown immediately
-    // before launch (e.g. an included draft resumed after the allowance was
-    // consumed initializes as ADDITIONAL — BILLABLE). An explicit staff
-    // Courtesy choice (Billable unchecked) always persists.
-    const courtesyDraft = resumable.billable === false;
-    // Live re-derivation FIRST, synchronously from the loaded wizard state —
-    // every launch path that can show a billing badge (First Visit / type
-    // screen) already has agreement + package + visits loaded, so the resumed
-    // visit's classification is correct from the very first paint. The draft's
-    // own additionalService snapshot is NEVER trusted: it is stale by
-    // definition, and older drafts can also lack agreementId, which previously
-    // skipped the async re-derivation below entirely (the live bug). The async
-    // block stays as a safety net for resume paths where the context was not
-    // yet in state (e.g. the property-step banner). An explicit staff Courtesy
-    // choice (Billable unchecked) always persists.
-    setAdditionalService(courtesyDraft ? true : resolveAdditional(vtype));
-    setBillable(resumable.billable !== false);
-    // The staff-confirmed charge amount (if any) resumes with the draft — it is
-    // re-editable on the Finish screen before completion.
-    setAdditionalAmount(resumable.additionalAmount != null ? resumable.additionalAmount : null);
-    if (resumable.agreementId) {
-      base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then(async (a) => {
-        setAgreement(a);
-        let pk = null;
-        if (a?.service_package_id) { try { pk = await base44.entities.ServicePackage.get(a.service_package_id); setPkg(pk); } catch (e) {} }
-        if (!courtesyDraft) setAdditionalService(resolveAdditional(vtype, { agreement: a, pkg: pk }));
-      }).catch(() => {});
+    // ---- CANONICAL BILLING CLASSIFICATION (resume) ----
+    // Once a visit has started, its billing classification is established and
+    // stored in the draft (autosave below). It is restored EXACTLY as stored
+    // and NEVER re-derived on resume: a visit legitimately Included when
+    // started stays Included even if other visits complete later, and an
+    // Additional visit stays Additional. Only drafts with no stored
+    // classification (legacy, saved before the field existed) are classified
+    // once from the live entitlement source.
+    const clsState = classificationState(resumable.billingClassification);
+    if (clsState) {
+      setAdditionalService(clsState.additionalService);
+      setBillable(clsState.billable);
+      // The staff-confirmed charge amount only applies to a billable
+      // additional visit; a restored Courtesy has none. Re-editable on the
+      // Finish screen before completion.
+      setAdditionalAmount(clsState.additionalService && clsState.billable
+        ? (resumable.additionalAmount != null ? resumable.additionalAmount : null)
+        : null);
+    } else if (resumable.billable === false) {
+      // Legacy courtesy draft (predates the stored classification field): the
+      // staff's explicit Courtesy choice persists — never re-derived.
+      setAdditionalService(true);
+      setBillable(false);
+      setAdditionalAmount(null);
+    }
+    // Agreement/package context for the wizard UI (Finish panel, charge
+    // amount, report) — loaded without touching the classification above.
+    const loadResumeContext = async () => {
+      let ag = agreement, pk = pkg;
+      try { if (!ag && resumable.agreementId) ag = await base44.entities.PropertyServiceAgreement.get(resumable.agreementId); } catch (e) {}
+      if (ag) { setAgreement(ag); setAgreementId(ag.id); }
+      if (ag?.service_package_id && !pk) { try { pk = await base44.entities.ServicePackage.get(ag.service_package_id); setPkg(pk); } catch (e) {} }
+      return { ag, pk };
+    };
+    if (!clsState && resumable.billable !== false) {
+      // Legacy/unclassified draft: classify ONCE from explicitly fetched
+      // context — agreement + package + a live visit list — never racing
+      // component state. The autosave below immediately persists the derived
+      // classification into the draft, making it canonical from now on.
+      (async () => {
+        const { ag, pk } = await loadResumeContext();
+        let visList = visits;
+        if (!visList || visList.length === 0) {
+          try { visList = (await base44.entities.PropertyVisit.list("-start_time", 500)).filter((x) => !x.archived); setVisits(visList); } catch (e) {}
+        }
+        setAdditionalService(resolveAdditional(vtype, { agreement: ag, pkg: pk, visits: visList }));
+        setBillable(true);
+      })();
+    } else {
+      loadResumeContext();
     }
     setStartTime(resumable.startTime);
     setGps(resumable.gps || "");
@@ -678,10 +701,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // draft was started); an explicit staff Courtesy choice persists.
   const restartDraftVisit = () => {
     const vt = resumable?.visitType || visitType;
-    const opts = {
-      additional: resumable?.billable === false ? true : resolveAdditional(vt),
-      billable: resumable?.billable !== false,
-    };
+    // Restart resets PROGRESS, never classification: a draft with an
+    // established classification keeps it (same canonical model as resume);
+    // legacy drafts without one derive once from live entitlement as before.
+    const clsState = classificationState(resumable?.billingClassification);
+    const opts = clsState
+      ? { additional: clsState.additionalService, billable: clsState.billable }
+      : {
+          additional: resumable?.billable === false ? true : resolveAdditional(vt),
+          billable: resumable?.billable !== false,
+        };
     clearDraft(); setResumable(null);
     startVisit(vt, opts);
   };

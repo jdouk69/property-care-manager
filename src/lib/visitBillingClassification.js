@@ -27,6 +27,18 @@ export function billingClassificationFor({ additionalService, billable, agreemen
   return "";
 }
 
+// Inverse mapping for resume: restore the wizard state behind an ESTABLISHED
+// classification. Returns null when the value is not one of the three
+// classifications ("" — non-package visits, or a legacy draft saved before the
+// classification was persisted) — callers then use the legacy live-derivation
+// fallback exactly once.
+export function classificationState(cls) {
+  if (cls === "Included in Package") return { additionalService: false, billable: false };
+  if (cls === "Additional - Billable") return { additionalService: true, billable: true };
+  if (cls === "Courtesy - No Charge") return { additionalService: true, billable: false };
+  return null;
+}
+
 // Badge tones for the classification, keyed by the RAW stored values.
 export const BILLING_CLASSIFICATION_TONES = {
   "Included in Package": "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
