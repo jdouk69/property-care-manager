@@ -480,7 +480,10 @@ async function buildDoc(visit, ctx = {}) {
     const fBoxH = fColW * 0.72;
     const measure = (s, w) => s ? doc.splitTextToSize(clean(s), w).length : 0;
     const estFinding = (f) => {
-      let h = 9;
+      // 12 = badge bar (7mm) + clear gap so the "What we observed:" label
+      // never collides with the colored badge above it (matches the y += 12
+      // advance in the render loop below).
+      let h = 12;
       if (f.area) h += 5;
       if (f.observed) h += 5 + measure(f.observed, maxWidth - 4) * 5 + 2;
       if (f.actionTaken) h += 5 + measure(f.actionTaken, maxWidth - 4) * 5 + 2;
@@ -504,7 +507,9 @@ async function buildDoc(visit, ctx = {}) {
       text(f.priorityLabel.toUpperCase(), margin + 3, y + 5);
       doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, "bold");
       text(f.title, margin + 70, y + 5);
-      y += 9;
+      // Reserve badge height (7) + clear vertical space: the next label's
+      // ascenders must never reach the badge bar drawn above (y .. y+7).
+      y += 12;
       if (f.area) {
         doc.setFont(undefined, "normal"); doc.setFontSize(8.5); doc.setTextColor(110);
         text("Area: " + f.area, margin + 2, y); y += 5;
