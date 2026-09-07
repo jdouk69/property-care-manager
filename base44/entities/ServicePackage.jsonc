@@ -22,6 +22,10 @@
     "one_time_price": {
       "type": "number"
     },
+    "additional_visit_price": {
+      "type": "number",
+      "description": "Default price for an Additional - Billable visit performed for an existing recurring-package customer after the package's included visit allowance is used. Independent of standard_price, one_time_price and hourly_charge; never derived from one_time_price. Empty = not configured (staff confirm the amount manually)."
+    },
     "billing_type": {
       "type": "string",
       "enum": [

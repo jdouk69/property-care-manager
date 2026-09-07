@@ -9,19 +9,24 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { ensureAdditionalVisitCharge } from "@/lib/visitBilling";
 
 /**
- * Charge confirmation for a completed ADDITIONAL billable visit (done step).
- * No approved price rule exists for additional visits beyond the package
- * allowance, so nothing is auto-charged: staff must confirm the amount
- * before a ledger entry is created. The package's one-time price is shown
- * as a REFERENCE only. Duplicate-safe: at most one charge per visit.
- * Also rendered on the completed-visit detail for reopened visits: passing an
- * existingCharge switches the card to the created status, so the persistent
- * action can never produce a duplicate charge.
+ * Charge confirmation for a completed ADDITIONAL billable visit (done step and
+ * reopened completed-visit detail). Price resolution:
+ *   1. package.additional_visit_price — the explicit master price configured
+ *      in Admin → Services for an additional recurring-package visit.
+ *   2. Not configured → NO default and NO fallback to one_time_price: staff
+ *      enter and confirm the amount manually.
+ * The amount stays editable until confirmed. Duplicate-safe: at most one
+ * charge per visit (shared ensureAdditionalVisitCharge guard); passing
+ * existingCharge switches the card to the created status.
  */
 export default function AdditionalChargeCard({ visit, pkg, clientId, existingCharge }) {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [amount, setAmount] = useState(existingCharge ? String(existingCharge.amount) : pkg?.one_time_price != null ? String(pkg.one_time_price) : "");
+  const configuredPrice =
+    pkg?.additional_visit_price != null && Number(pkg.additional_visit_price) > 0
+      ? Number(pkg.additional_visit_price)
+      : null;
+  const [amount, setAmount] = useState(existingCharge ? String(existingCharge.amount) : configuredPrice != null ? String(configuredPrice) : "");
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(!!existingCharge);
   const [createdAmt, setCreatedAmt] = useState(existingCharge ? Number(existingCharge.amount) : null);
@@ -49,11 +54,13 @@ export default function AdditionalChargeCard({ visit, pkg, clientId, existingCha
       </div>
       <p className="text-sm font-semibold mb-1">{t("Additional Property Care Visit")}</p>
       <p className="text-xs text-muted-foreground mb-2">
-        {t("No approved price is configured for additional visits. Confirm the amount to charge before a ledger entry is created.")}
+        {configuredPrice != null
+          ? t("The amount defaults to the package's configured additional-visit price. Review and confirm it before a ledger entry is created.")
+          : t("No additional-visit price is configured for this package (Admin → Services). Enter the amount to charge before a ledger entry is created.")}
       </p>
-      {pkg?.one_time_price != null && (
+      {configuredPrice != null && (
         <p className="text-xs text-muted-foreground mb-2">
-          {t("Package one-time price (reference): €{amount}", { amount: Number(pkg.one_time_price).toFixed(2) })}
+          {t("Additional visit price (package): €{amount}", { amount: configuredPrice.toFixed(2) })}
         </p>
       )}
       {created ? (
