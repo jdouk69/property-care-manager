@@ -185,8 +185,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     if (next >= 0) setTimeout(() => itemRefs.current[next]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   };
 
-  // On entering/resuming an active visit: keep answered routine items collapsed,
-  // auto-expand only the first item needing attention, and bring it into view.
+  // On entering/resuming an active visit: keep answered routine items collapsed
+  // and auto-expand the first item needing attention. The page itself opens at
+  // the TOP (see the active-entry scroll effect above) — this only sets
+  // expansion; the expanded item stays reachable by normal scrolling.
   useEffect(() => {
     if (step !== "active") { guidedInitDone.current = false; return; }
     if (guidedInitDone.current || checklist.length === 0) return;
@@ -194,7 +196,6 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const idx = focusIdx(checklist, answered);
     if (idx >= 0) {
       setOpenItems({ [idx]: true });
-      setTimeout(() => itemRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, checklist]);
@@ -331,6 +332,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // down at the billing area. One-time jump per entry — scrolling afterward
   // is untouched.
   useEffect(() => { if (step === "done") window.scrollTo(0, 0); }, [step]);
+
+  // Entering/resuming an active visit always opens at the TOP of the page, one
+  // time per entry (the visit header, billing-classification badge and Guided
+  // Checklist controls are immediately visible). Scrolling while working is
+  // untouched — this only fires when the step value changes.
+  useEffect(() => { if (step === "active") window.scrollTo(0, 0); }, [step]);
 
   // persist draft while a visit is active
   useEffect(() => {
