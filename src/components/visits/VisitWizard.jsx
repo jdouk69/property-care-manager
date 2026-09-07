@@ -488,7 +488,17 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // consumed initializes as ADDITIONAL — BILLABLE). An explicit staff
     // Courtesy choice (Billable unchecked) always persists.
     const courtesyDraft = resumable.billable === false;
-    setAdditionalService(courtesyDraft ? true : !!resumable.additionalService);
+    // Live re-derivation FIRST, synchronously from the loaded wizard state —
+    // every launch path that can show a billing badge (First Visit / type
+    // screen) already has agreement + package + visits loaded, so the resumed
+    // visit's classification is correct from the very first paint. The draft's
+    // own additionalService snapshot is NEVER trusted: it is stale by
+    // definition, and older drafts can also lack agreementId, which previously
+    // skipped the async re-derivation below entirely (the live bug). The async
+    // block stays as a safety net for resume paths where the context was not
+    // yet in state (e.g. the property-step banner). An explicit staff Courtesy
+    // choice (Billable unchecked) always persists.
+    setAdditionalService(courtesyDraft ? true : resolveAdditional(vtype));
     setBillable(resumable.billable !== false);
     if (resumable.agreementId) {
       base44.entities.PropertyServiceAgreement.get(resumable.agreementId).then(async (a) => {
