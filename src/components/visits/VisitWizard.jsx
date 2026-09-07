@@ -339,6 +339,21 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // untouched — this only fires when the step value changes.
   useEffect(() => { if (step === "active") window.scrollTo(0, 0); }, [step]);
 
+  // First Visit screen: the Client row always shows the client linked to the
+  // SELECTED PROPERTY (owner_id) — the same property→client relationship
+  // Property Detail uses as the source of truth. Covers entry paths where no
+  // client context was carried (property-only launches); explicit client
+  // context already resolved earlier (ctxClient / agreement client) wins.
+  // Display-only — no client data is created or duplicated.
+  useEffect(() => {
+    if (step !== "first-visit" || clientObj || !propertyId) return;
+    const owner = properties.find((p) => p.id === propertyId)?.owner_id;
+    if (!owner) return;
+    let cancelled = false;
+    base44.entities.Client.get(owner).then((c) => { if (!cancelled && c) setClientObj(c); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [step, clientObj, propertyId, properties]);
+
   // persist draft while a visit is active
   useEffect(() => {
     if (step === "active" && propertyId && !resumeVisitId) {
