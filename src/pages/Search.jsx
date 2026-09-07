@@ -16,7 +16,7 @@ import { visitTypeLabel } from "@/lib/visitTypeLabels";
 const SOURCES = [
   { entity: "Client", label: "Clients", icon: Users, key: "name", sub: "email", to: "/clients" },
   { entity: "Property", label: "Properties", icon: Home, key: "name", sub: "address", to: "/properties" },
-  { entity: "PropertyVisit", label: "Visits", icon: MapPin, key: "visit_type", sub: "summary", to: "/visits",
+  { entity: "PropertyVisit", label: "Property Visits", icon: MapPin, key: "visit_type", sub: "summary", to: "/visits",
     renderKey: (it, t) => t(visitTypeLabel(it.visit_type || "")) },
   { entity: "Inspection", label: "Inspections", icon: ClipboardCheck, key: "summary_notes", sub: "inspector", to: "/inspections" },
   { entity: "MaintenanceIssue", label: "Issues", icon: Wrench, key: "title", sub: "description", to: "/maintenance" },

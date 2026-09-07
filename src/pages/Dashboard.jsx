@@ -47,13 +47,13 @@ const ACTION_GROUPS = [
       { label: "Add Task", to: "/tasks?add=1", icon: Plus, color: "bg-violet-500" },
       { label: "Prep Arrival", to: "/visits?schedule=1&visit_type=Owner%20Arrival%20Preparation", icon: Plane, color: "bg-fuchsia-500" },
       { label: "One-Time", to: "/one-time", icon: Zap, color: "bg-cyan-500" },
-      { label: "Visits", to: "/visits", icon: History, color: "bg-blue-500" },
+      { label: "Property Visits", to: "/visits", icon: History, color: "bg-blue-500" },
     ],
   },
   {
     label: "Property Visit",
     items: [
-      { label: "Visits", to: "/visits", icon: MapPin, color: "bg-blue-500" },
+      { label: "Property Visits", to: "/visits", icon: MapPin, color: "bg-blue-500" },
       { label: "Key Activity", to: "/keys", icon: KeyRound, color: "bg-cyan-500" },
     ],
   },

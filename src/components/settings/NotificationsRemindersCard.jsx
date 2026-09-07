@@ -17,6 +17,10 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 // appointments, overdue reimbursements, unreturned keys…) and gets an
 // ON/OFF switch only — no timing controls shown. Stored timing values for
 // event-driven categories are preserved, just not exposed.
+// Display-only labels: the row shows "Property Visits" while the internal
+// notification category key stays "Visits" (stored settings untouched).
+const DISPLAY_LABELS = { Visits: "Property Visits" };
+
 const TIMED_CATEGORIES = {
   Visits: { multi: true, choices: REMINDER_OFFSET_CHOICES },
   Tasks: {
@@ -108,7 +112,7 @@ export default function NotificationsRemindersCard({ settings, setField }) {
           <div key={cat} className="py-1.5 border-b border-border last:border-0">
             <div className="flex items-center justify-between gap-2">
               {timed ? (
-                <RowTitle label={t(cat)} isOpen={isOpen} onToggle={toggleOpen} />
+                <RowTitle label={t(DISPLAY_LABELS[cat] || cat)} isOpen={isOpen} onToggle={toggleOpen} />
               ) : (
                 <div className="min-w-0">
                   <span className="text-sm block leading-tight truncate">{t(cat)}</span>
