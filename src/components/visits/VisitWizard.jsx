@@ -1347,7 +1347,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             )}
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-4 mb-4">
+          {/* Anchor for the first post-checklist operational area — the
+              Checklist Review "Continue Visit" lands HERE (top of Meter
+              Readings), not at Finish. Purely a scroll target: nothing about
+              Meter Readings is required and section order is unchanged. */}
+          <div id="step-meters" className="scroll-mt-28 rounded-2xl border border-border bg-card p-4 mb-4">
             <div className="flex items-center gap-2 mb-3"><Gauge className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Meter Readings")}</h3></div>
             <div className="space-y-2">
               {meters.map((m, i) => (
@@ -1625,17 +1629,19 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         <GuidedChecklistOverlay
           open={guidedOpen}
           onClose={() => setGuidedOpen(false)}
-          // Checklist Review → Continue Visit: reuse the wizard's EXISTING
-          // next-step logic. Unanswered checklist items → jump to the first
-          // item blocking completion (same priority as the completion gate);
-          // otherwise the next relevant section — Issues when flagged items
-          // have no logged issue, else Finish (same rule as the Next step
-          // card). No new workflow logic; Complete Visit stays separate.
+          // Checklist Review → Continue Visit: the Guided Checklist only
+          // completes the CHECKLIST portion. Unanswered items → jump to the
+          // first item blocking completion (same priority as the completion
+          // gate); a completed checklist → the FIRST post-checklist
+          // operational section (Meter Readings anchor), so staff continue
+          // through the remaining visit fields in normal order before
+          // Finish / Complete Visit. Reuses the existing jumpToItem /
+          // goToStep navigation — no second workflow, no new requirements.
           onContinue={() => {
             setGuidedOpen(false);
             setTimeout(() => {
-              if (nextStep.key === "inspection" && firstBlockerIdx >= 0) jumpToItem(firstBlockerIdx);
-              else goToStep(nextStep.target);
+              if (firstBlockerIdx >= 0) jumpToItem(firstBlockerIdx);
+              else goToStep("step-meters");
             }, 60);
           }}
           checklist={checklist}
