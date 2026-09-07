@@ -65,18 +65,23 @@ export function findInvoiceContainingCharge(invoices, chargeId) {
 // Build a reviewable draft Invoice from one month's ledger charges.
 // Line items are a snapshot (descriptions cleaned for display only — stored
 // BillingCharges are never modified).
-export function buildInvoiceDraft({ charges, propertyId, client, invoices = [], todayStr = athensToday() }) {
+// allProperties=true is the ALL-PROPERTIES monthly invoice: the invoice is NOT
+// attributed to any single property (property_id stays empty — optional field)
+// and each line item identifies its own property via the propertyNames map,
+// so a charge's property is never misattributed to the first charge's.
+export function buildInvoiceDraft({ charges, propertyId, client, invoices = [], todayStr = athensToday(), allProperties = false, propertyNames = null }) {
   const items = charges || [];
   const period = chargeMonthKey(items[0] || {});
   const label = monthLabel(period);
-  const lineItems = items.map((ch) => ({
-    description: stripMonthSuffix(ch.description || "Charge", label),
-    amount: round2(ch.amount),
-  }));
+  const lineItems = items.map((ch) => {
+    const desc = stripMonthSuffix(ch.description || "Charge", label);
+    const pname = allProperties && propertyNames ? propertyNames[ch.property_id] : null;
+    return { description: pname ? `${desc} (${pname})` : desc, amount: round2(ch.amount) };
+  });
   return {
     invoice_number: nextInvoiceNumber(invoices, Number(todayStr.slice(0, 4))),
     client_id: client?.id || items[0]?.client_id || "",
-    property_id: propertyId || items[0]?.property_id || "",
+    property_id: allProperties ? "" : (propertyId || items[0]?.property_id || ""),
     billing_period: period,
     line_items: lineItems,
     charge_ids: items.map((ch) => ch.id),

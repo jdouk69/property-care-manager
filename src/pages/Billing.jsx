@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Euro } from "lucide-react";
+import { Euro, FilePlus2 } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import BillingChargeCard from "@/components/billing/BillingChargeCard";
 import BillingFilterBar from "@/components/billing/BillingFilterBar";
 import MarkPaidDialog from "@/components/billing/MarkPaidDialog";
+import MonthlyInvoiceFlow from "@/components/billing/MonthlyInvoiceFlow";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensToday, athensMediumDate } from "@/lib/timezone";
 import { CHARGE_TYPES, displayStatus } from "@/lib/billing";
@@ -20,6 +21,7 @@ export default function Billing() {
   const [propertyFilter, setPropertyFilter] = useState("all");
   const [markPaidCharge, setMarkPaidCharge] = useState(null);
   const [reloadSignal, setReloadSignal] = useState(0);
+  const [invoiceFlowOpen, setInvoiceFlowOpen] = useState(false);
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((l) => setProperties(l || [])).catch(() => {});
@@ -129,12 +131,21 @@ export default function Billing() {
           { title: "Notes", fields: ["notes"] },
         ]}
         renderSummary={(items) => (
-          <BillingFilterBar
-            items={items}
-            statusFilter={statusFilter} onStatusFilter={setStatusFilter}
-            clientFilter={clientFilter} onClientFilter={setClientFilter} clientOptions={clients}
-            propertyFilter={propertyFilter} onPropertyFilter={setPropertyFilter} propertyOptions={properties}
-          />
+          <div>
+            <button
+              type="button"
+              onClick={() => setInvoiceFlowOpen(true)}
+              className="mb-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground h-11 px-5 text-sm font-medium hover:bg-primary/90 transition"
+            >
+              <FilePlus2 className="w-4 h-4" /> {t("Create Monthly Invoice")}
+            </button>
+            <BillingFilterBar
+              items={items}
+              statusFilter={statusFilter} onStatusFilter={setStatusFilter}
+              clientFilter={clientFilter} onClientFilter={setClientFilter} clientOptions={clients}
+              propertyFilter={propertyFilter} onPropertyFilter={setPropertyFilter} propertyOptions={properties}
+            />
+          </div>
         )}
         renderCard={(charge, lookups, { open }) => (
           <BillingChargeCard
@@ -155,6 +166,10 @@ export default function Billing() {
           setMarkPaidCharge(null);
           setReloadSignal((x) => x + 1);
         }}
+      />
+      <MonthlyInvoiceFlow
+        open={invoiceFlowOpen}
+        onOpenChange={setInvoiceFlowOpen}
       />
     </>
   );
