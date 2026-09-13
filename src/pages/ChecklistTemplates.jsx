@@ -1,36 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { ScrollText, Plus, ChevronUp, ChevronDown, Trash2, RotateCcw, Copy, Loader2, Check, Archive, AlertTriangle } from "lucide-react";
+import { Plus, Loader2, Archive, AlertTriangle, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
-import { SEED, VISIT_TYPES } from "@/lib/checklistSeed";
+import { VISIT_TYPES } from "@/lib/checklistSeed";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import TemplateEditSheet from "@/components/checklists/TemplateEditSheet";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export default function ChecklistTemplates() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [templates, setTemplates] = useState([]);
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [propFilter, setPropFilter] = useState("all");
   const [editing, setEditing] = useState(null); // template object
-  const [items, setItems] = useState([]);
-  const [newItem, setNewItem] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [copyTarget, setCopyTarget] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState(null); // property-specific template
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newVisitType, setNewVisitType] = useState(VISIT_TYPES[0]);
   const [newItems, setNewItems] = useState([]);
   const [createItem, setCreateItem] = useState("");
   const [createError, setCreateError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -49,58 +52,23 @@ export default function ChecklistTemplates() {
 
   const propName = (id) => properties.find((p) => p.id === id)?.name || "";
 
-  const openEdit = (tpl) => { setEditing(tpl); setItems([...(tpl.items || [])]); setNewItem(""); setSaved(false); };
+  const handleSaved = (updated) => {
+    setTemplates((arr) => arr.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+    if (editing?.id === updated.id) setEditing({ ...editing, ...updated });
+  };
+  const handleCreated = (created) => setTemplates((arr) => [created, ...arr]);
 
-  const persist = async (nextItems) => {
-    if (!editing) return;
-    setSaving(true);
+  const confirmArchive = async () => {
+    const tpl = archiveTarget;
+    setArchiveTarget(null);
+    if (!tpl) return;
     try {
-      await base44.entities.ChecklistTemplate.update(editing.id, { items: nextItems });
-      setTemplates((arr) => arr.map((x) => (x.id === editing.id ? { ...x, items: nextItems } : x)));
-      setSaved(true); setTimeout(() => setSaved(false), 1500);
-    } catch (e) {}
-    setSaving(false);
-  };
-
-  const move = (i, dir) => {
-    const next = [...items];
-    const j = i + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[i], next[j]] = [next[j], next[i]];
-    setItems(next); persist(next);
-  };
-  const rename = (i, val) => { const next = items.map((x, idx) => idx === i ? val : x); setItems(next); };
-  const commitRename = () => persist(items);
-  const remove = (i) => { if (!confirm(t("Remove this checklist item?"))) return; const next = items.filter((_, idx) => idx !== i); setItems(next); persist(next); };
-  const add = () => { if (!newItem.trim()) return; const next = [...items, newItem.trim()]; setItems(next); setNewItem(""); persist(next); };
-
-  const restoreMaster = () => {
-    if (!confirm(t("Restore the original seeded master template? Your customizations to this master will be lost."))) return;
-    const seed = SEED[editing.visit_type] || [];
-    setItems([...seed]); persist([...seed]);
-  };
-
-  const copyToProperty = async () => {
-    if (!copyTarget) { alert(t("Select a property first.")); return; }
-    setBusy(true);
-    try {
-      const created = await base44.entities.ChecklistTemplate.create({
-        name: `${editing.visit_type} — ${propName(copyTarget)}`,
-        visit_type: editing.visit_type,
-        items: [...items],
-        is_master: false,
-        property_id: copyTarget,
-      });
-      setTemplates((arr) => [created, ...arr]);
-      setCopyTarget("");
-      alert(t("Property-specific template created. You can now customize it independently."));
-    } catch (e) { alert(t("Could not copy: {message}", { message: e?.message || e })); }
-    setBusy(false);
-  };
-
-  const archiveTemplate = async (tpl) => {
-    if (!confirm(t("Archive this property-specific template? The master remains unaffected."))) return;
-    try { await base44.entities.ChecklistTemplate.update(tpl.id, { archived: true }); setTemplates((arr) => arr.filter((x) => x.id !== tpl.id)); if (editing?.id === tpl.id) setEditing(null); } catch (e) {}
+      await base44.entities.ChecklistTemplate.update(tpl.id, { archived: true });
+      setTemplates((arr) => arr.filter((x) => x.id !== tpl.id));
+      if (editing?.id === tpl.id) setEditing(null);
+    } catch (e) {
+      toast({ title: t("Could not archive: {message}", { message: e?.message || e }) });
+    }
   };
 
   const openCreate = () => {
@@ -164,12 +132,12 @@ export default function ChecklistTemplates() {
             <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("Master Templates")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
               {masters.map((tpl) => (
-                <button key={tpl.id} onClick={() => openEdit(tpl)} className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
+                <button key={tpl.id} onClick={() => setEditing(tpl)} className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-sm truncate">{t(visitTypeLabel(tpl.visit_type))}</p>
+                    <p className="font-medium text-sm truncate">{tpl.name}</p>
                     <span className="text-[10px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 shrink-0">{t("Master")}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{t("{count} items", { count: (tpl.items || []).length })}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t(visitTypeLabel(tpl.visit_type))} · {t("{count} items", { count: (tpl.items || []).length })}</p>
                 </button>
               ))}
             </div>
@@ -181,14 +149,14 @@ export default function ChecklistTemplates() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {propSpecific.map((tpl) => (
                   <div key={tpl.id} className="rounded-2xl border border-border bg-card p-4 hover:shadow-md transition">
-                    <button onClick={() => openEdit(tpl)} className="text-left w-full">
+                    <button onClick={() => setEditing(tpl)} className="text-left w-full">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-sm truncate">{t(visitTypeLabel(tpl.visit_type))}</p>
+                        <p className="font-medium text-sm truncate">{tpl.name}</p>
                         <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 shrink-0">{t("Property")}</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{propName(tpl.property_id)} · {t("{count} items", { count: (tpl.items || []).length })}</p>
                     </button>
-                    <Button variant="ghost" size="sm" onClick={() => archiveTemplate(tpl)} className="text-muted-foreground hover:text-destructive mt-2 h-7 px-2"><Archive className="w-3.5 h-3.5" /> {t("Archive")}</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setArchiveTarget(tpl)} className="text-muted-foreground hover:text-destructive mt-2 h-7 px-2"><Archive className="w-3.5 h-3.5" /> {t("Archive")}</Button>
                   </div>
                 ))}
               </div>
@@ -197,55 +165,27 @@ export default function ChecklistTemplates() {
         )}
       </div>
 
-      <Sheet open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
-          <SheetHeader>
-            <SheetTitle>{t(visitTypeLabel(editing?.visit_type))}</SheetTitle>
-            <SheetDescription className="sr-only">{t("Edit checklist items")}</SheetDescription>
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] px-2 py-0.5 rounded-full border ${editing?.is_master || !editing?.property_id ? "bg-primary/10 text-primary border-primary/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
-                {editing?.is_master || !editing?.property_id ? t("Master") : t("Property: {name}", { name: propName(editing?.property_id) })}
-              </span>
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : saved ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : null}
-            </div>
-          </SheetHeader>
+      <TemplateEditSheet
+        template={editing}
+        properties={properties}
+        propName={propName}
+        onClose={() => setEditing(null)}
+        onSaved={handleSaved}
+        onCreated={handleCreated}
+      />
 
-          <div className="flex-1 py-4 space-y-2">
-            {items.map((it, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <div className="flex flex-col">
-                  <button onClick={() => move(i, -1)} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={i === 0}><ChevronUp className="w-4 h-4" /></button>
-                  <button onClick={() => move(i, 1)} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={i === items.length - 1}><ChevronDown className="w-4 h-4" /></button>
-                </div>
-                <Input value={it} onChange={(e) => rename(i, e.target.value)} onBlur={commitRename} className="flex-1" />
-                <button onClick={() => remove(i)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            ))}
-            {items.length === 0 && <p className="text-sm text-muted-foreground">{t("No items yet.")}</p>}
-
-            <div className="flex gap-2 pt-2">
-              <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder={t("Add checklist item")} />
-              <Button onClick={add} disabled={!newItem.trim()}><Plus className="w-4 h-4" /></Button>
-            </div>
-          </div>
-
-          <SheetFooter className="flex-col gap-2 border-t pt-4">
-            {(editing?.is_master || !editing?.property_id) && (
-              <>
-                <Button variant="outline" onClick={restoreMaster} className="rounded-full w-full justify-start"><RotateCcw className="w-4 h-4 mr-2" /> {t("Restore original seeded master")}</Button>
-                <div className="flex gap-2 w-full">
-                  <Select value={copyTarget} onValueChange={setCopyTarget}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder={t("Copy to property…")} /></SelectTrigger>
-                    <SelectContent>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button onClick={copyToProperty} disabled={busy || !copyTarget} className="rounded-full"><Copy className="w-4 h-4 mr-1" /> {t("Copy")}</Button>
-                </div>
-              </>
-            )}
-            <Button variant="ghost" onClick={() => setEditing(null)} className="w-full">{t("Close")}</Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+      <AlertDialog open={!!archiveTarget} onOpenChange={(o) => !o && setArchiveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Archive")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("Archive this property-specific template? The master remains unaffected.")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmArchive}>{t("Archive")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Sheet open={creating} onOpenChange={setCreating}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">

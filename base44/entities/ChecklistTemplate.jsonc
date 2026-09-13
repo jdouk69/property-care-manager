@@ -5,6 +5,10 @@
     "name": {
       "type": "string"
     },
+    "description": {
+      "type": "string",
+      "description": "Optional free-text description shown in the Checklist Templates admin screen."
+    },
     "visit_type": {
       "type": "string",
       "enum": [
