@@ -5,6 +5,7 @@ import PageBackButton from "@/components/ui/PageBackButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import {
   Wrench, MapPin, ClipboardList, ArrowRight, ShoppingBasket, Loader2, Search, Home as HomeIcon, ClipboardCheck,
 } from "lucide-react";
@@ -14,9 +15,9 @@ import {
 // are the current package base prices; the assessment (+€40 units,
 // custom-review rules, manual staff approval) always confirms the final price.
 const TIERS = [
-  { tier: "Basic", label: "Basic One-Time Property Check", price: 85, duration: "up to 15 minutes" },
-  { tier: "Standard", label: "Standard One-Time Property Care Visit", price: 150, duration: "30–45 minutes" },
-  { tier: "Premium", label: "Premium One-Time Property Care Visit", price: 175, duration: "up to 60 minutes" },
+  { tier: "Basic", label: "Quick Check — One-Time Non-Subscriber Visit", price: 85, duration: "up to 15 minutes" },
+  { tier: "Standard", label: "Property Care — One-Time Non-Subscriber Visit", price: 150, duration: "30–45 minutes" },
+  { tier: "Premium", label: "Complete Care — One-Time Non-Subscriber Visit", price: 225, duration: "up to 60 minutes" },
 ];
 
 const SERVICES = [
@@ -45,6 +46,7 @@ const SERVICES = [
 
 export default function OneTimeServices() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [selectedTier, setSelectedTier] = useState(null);
   const [properties, setProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(false);
@@ -81,7 +83,7 @@ export default function OneTimeServices() {
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 mb-5">
           <div className="flex items-center gap-2 mb-1">
             <ClipboardCheck className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold">One-Time Property Care Visit</h2>
+            <h2 className="text-sm font-semibold">{t("One-Time Non-Subscriber Visit")}</h2>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             Selecting a level opens the existing Service &amp; Pricing Assessment for the property — size, complexity and
@@ -90,19 +92,19 @@ export default function OneTimeServices() {
             For a single small request instead of a complete whole-property check, use On-Demand Property Assistance below.
           </p>
           <div className="space-y-2">
-            {TIERS.map((t) => (
+            {TIERS.map((tierOpt) => (
               <button
-                key={t.tier}
-                onClick={() => setSelectedTier(t.tier === selectedTier ? null : t.tier)}
+                key={tierOpt.tier}
+                onClick={() => setSelectedTier(tierOpt.tier === selectedTier ? null : tierOpt.tier)}
                 className={`w-full text-left rounded-2xl border p-3.5 transition-colors ${
-                  selectedTier === t.tier ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40"
+                  selectedTier === tierOpt.tier ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-sm">{t.label}</span>
-                  <span className="text-sm font-semibold text-primary shrink-0">From €{t.price} + VAT</span>
+                  <span className="font-medium text-sm">{t(tierOpt.label)}</span>
+                  <span className="text-sm font-semibold text-primary shrink-0">From €{tierOpt.price} + VAT</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">One visit · {t.duration}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("One visit")} · {tierOpt.duration}</p>
               </button>
             ))}
           </div>
@@ -110,7 +112,7 @@ export default function OneTimeServices() {
           {selectedTier && (
             <div className="mt-3 rounded-2xl border border-border bg-card p-3">
               <p className="text-xs font-medium mb-2 flex items-center gap-1.5">
-                <HomeIcon className="w-3.5 h-3.5 text-primary" /> Select property for the {TIERS.find((t) => t.tier === selectedTier).label}
+                <HomeIcon className="w-3.5 h-3.5 text-primary" /> {t("Select property for the {label}", { label: t(TIERS.find((x) => x.tier === selectedTier).label) })}
               </p>
               <div className="relative mb-2">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />

@@ -38,10 +38,10 @@ const fields = [
   // ---- Recurring package pricing (recurring services only) ----
   { name: "standard_price", label: "Standard Price (€)", type: "number" },
   { name: "included_visits_per_period", label: "Included Visits per Period", type: "number", showIf: isRecurring },
-  { name: "additional_visit_price", label: "Additional Package Visit Price (€)", type: "number", showIf: isRecurring },
+  { name: "additional_visit_price", label: "Additional Same-Level Visit Price (€)", type: "number", showIf: isRecurring },
   { name: "visit_duration", label: "Included Visit Duration", type: "text", placeholder: "e.g. 60 min" },
   // ---- One-time service pricing ----
-  { name: "one_time_price", label: "One-Time Inspection/Service Price (€)", type: "number" },
+  { name: "one_time_price", label: "One-Time Non-Subscriber Visit Price (€)", type: "number" },
   // ---- Additional charges & tax ----
   { name: "hourly_charge", label: "Additional Hourly Charge (€)", type: "number" },
   { name: "emergency_surcharge", label: "Emergency Surcharge (€)", type: "number" },
@@ -55,7 +55,7 @@ const fields = [
 const sections = [
   { title: "Service Details", fields: ["name", "description", "service_tier", "billing_type", "recurring", "active", "default_visit_type"] },
   { title: "Recurring Package Pricing", fields: ["standard_price", "included_visits_per_period", "additional_visit_price", "visit_duration"] },
-  { title: "One-Time Service Pricing", fields: ["one_time_price"] },
+  { title: "One-Time Non-Subscriber Pricing", fields: ["one_time_price"] },
   { title: "Additional Charges & Tax", fields: ["hourly_charge", "emergency_surcharge", "travel_charge", "vat_setting"] },
 ];
 

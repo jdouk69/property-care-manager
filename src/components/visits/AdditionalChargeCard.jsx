@@ -60,7 +60,7 @@ export default function AdditionalChargeCard({ visit, pkg, clientId, existingCha
         <Receipt className="w-4 h-4 text-amber-600 shrink-0" />
         <p className="text-[11px] uppercase tracking-wide text-amber-600">{t("Additional service — billable")}</p>
       </div>
-      <p className="text-sm font-semibold mb-1">{t("Additional Property Care Visit")}</p>
+      <p className="text-sm font-semibold mb-1">{t("Additional Same-Level Visit")}</p>
       <p className="text-xs text-muted-foreground mb-2">
         {configuredPrice != null
           ? t("The amount defaults to the package's configured additional-visit price. Review and confirm it before a ledger entry is created.")

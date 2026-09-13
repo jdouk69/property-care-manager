@@ -8,8 +8,11 @@ export const PROPERTY_ASSISTANCE_TYPE = "Property Assistance";
 
 export const VISIT_TYPE_LABELS = {
   "Initial Property Onboarding Inspection": "Initial Property Onboarding Visit",
-  "Home Watch Inspection": "Home Watch Visit",
+  // Package visit types display with their package's customer-facing name:
+  // Quick Check (Basic), Property Care (Standard), Complete Care (Premium).
+  "Home Watch Inspection": "Quick Check Visit",
   "Property Care Inspection": "Property Care Visit",
+  "Complete Care Property Visit": "Complete Care Visit",
   "Departure Inspection": "Departure Visit",
 };
 

@@ -1,12 +1,13 @@
 // Built-in default checklist items per visit type.
 // Shared between ChecklistTemplates (seed/restore) and VisitWizard (fallback when no template record exists).
-// CORE FALLBACK SAFETY: the two core visit types (Home Watch Inspection,
-// Property Care Inspection) ALWAYS have a built-in fallback here — if their
-// master template is ever missing or archived, a new visit can never silently
-// start with an empty checklist. These mirror the approved master templates:
-// Home Watch = the finalized 7-item visual checklist; Property Care = the
-// approved 35-item checklist. (The old 31-item Basic list and the archived
-// 35-item Monthly Property Watch list are intentionally NOT restored.)
+// CORE FALLBACK SAFETY: the three core package visit types (Home Watch
+// Inspection = Quick Check, Property Care Inspection = Property Care,
+// Complete Care Property Visit) ALWAYS have a built-in fallback here — if
+// their master template is ever missing or archived, a new visit can never
+// silently start with an empty checklist. These mirror the approved master
+// package checklists (Quick Check / Property Care / Complete Care walk-through
+// scopes). The old legacy lists (31-item Basic, archived 35-item Monthly
+// Property Watch) are intentionally NOT restored.
 export const SEED = {
   "Monthly Property Watch": ["Gates","Fences","Doors","Windows","Shutters","Roof","Balconies","Exterior walls","Drainage","Storm damage","Signs of forced entry","Water leaks","Humidity","Mold","Unusual odors","Electrical supply","Lights","Air conditioning","Heating","Appliances","Internet","Security system","Insects or pests","Cleanliness","General condition","Pool water level","Pool clarity","Pool equipment","Irrigation","Garden condition","Outdoor lighting","Electricity meter","Water meter","Water pressure","Hot water"],
   "Owner Arrival Preparation": ["Open and air out property","Turn on electricity","Turn on water","Turn on hot water","Start air conditioning","Check refrigerator","Check Wi-Fi","Test lights","Inspect bathrooms","Inspect bedrooms","Prepare linens","Confirm cleaning","Check pool","Check garden","Place welcome items","Confirm keys","Final photo"],
@@ -15,14 +16,19 @@ export const SEED = {
   "Seasonal Opening": ["Turn on main water","Turn on electricity","Check water heater","Start pool system","Start irrigation","Test AC units","Check appliances","Inspect for winter damage","Clean and air property","Test security system"],
   "Seasonal Closing": ["Drain pipes if needed","Turn off water","Set AC to frost protection","Close shutters","Lock all doors and gates","Empty refrigerator","Secure outdoor furniture","Check alarm","Leave keys with caretaker"],
   "Owner Representative Construction Visit": ["Record arrival time and site access","Contractors present","Materials delivered","Work expected","Work observed","Workmanship concerns","Incomplete work","Photos of progress","Questions for owner decision","Record departure time"],
-  "Home Watch Inspection": ["Exterior — obvious leaks or water issues (pooling, drips, outdoor plumbing)","Visible moisture, dampness or humidity concerns","Obvious visible damage — walls, roof, terrace, gates, fences","Obvious signs of forced entry or security concerns","Doors — visibly open, damaged or broken; locks intact","Windows and shutters — visibly open, damaged or broken","Other clearly unusual conditions (odors, pests, storm debris, mail buildup)"],
-  "Property Care Inspection": ["Exterior condition","Gates and fences","Doors and locks","Windows","Shutters","Security systems","Exterior lighting","Roof / visible exterior damage","Water leaks","Visible leaks / plumbing concerns","Electrical power","Electrical supply appears on","Air conditioning / heating","Humidity / dampness","Mold / odors","Ceilings","Walls","Floors","Kitchen","Appliances","Bathrooms","Water pressure","Hot water","Pool condition","Pool visible condition / water level","Garden / landscaping","Irrigation","Pest activity","Cleaning condition","Maintenance items","Contractor work requiring follow-up","Meter readings","General property condition","Photos / documentation","Owner update required"],
+  // Quick Check walk-through scope (short visual check — no routine photos/report required)
+  "Home Watch Inspection": ["Quick exterior walk-around","Quick interior walk-through","Doors/gates/windows visibly secure","Look for obvious damage or vandalism","Look for obvious visible water/leaks","Look for obvious pest activity","Confirm electricity appears available where reasonably observable","Quick visual check of grounds/balconies","Quick visual check of pool condition where applicable","Observe obvious moisture/water intrusion encountered during walk-through","Notify owner if a concerning problem is discovered","Take photos of a PROBLEM when a problem is discovered","Confirm property is secured before leaving"],
+  // Property Care walk-through scope (visual care + documentation + written report)
+  "Property Care Inspection": ["More complete exterior visual check","More complete interior visual walk-through","Doors/gates/windows visibly secure","Look for obvious damage/vandalism","Look for visible water/leaks","Look for pest concerns/signs","Confirm electricity appears available where reasonably observable","Grounds/balconies visual condition","Pool visual condition where applicable","Owner-selected monitoring priorities","Visible moisture/mold observations","Visual checks under accessible sinks for obvious leaks","Routine property photos","Written visit report","Documentation of concerns","Problem photographs when applicable","Owner notification when necessary","Confirm property is secured before leaving"],
+  // Complete Care walk-through scope (Property Care depth PLUS limited agreed
+  // operational checks and ongoing concern tracking)
+  "Complete Care Property Visit": ["More detailed exterior visual review","More detailed interior visual review","Doors/gates/windows visibly secure","Damage/vandalism observations","Visible water/leak observations","Pest concerns/signs","Electricity appears available where reasonably observable","Detailed grounds/balcony visual condition","Detailed pool visual condition where applicable","Visible moisture/mold observations","Visual checks under accessible sinks","Expanded owner-selected monitoring priorities","Routine property photos","More detailed photo documentation","Detailed written visit report","Documentation of concerns","Problem photographs when applicable","Owner notification when necessary","Run agreed/selected faucets","Flush agreed/selected toilets","Operate selected lights","Check whether agreed refrigerator/freezer or other agreed appliances appear to operate","Briefly operate agreed AC units","Visually observe pool equipment condition","Recheck previously identified concerns","Track unresolved concerns","Give priority attention/assistance to identified concerns","Confirm property is secured before leaving"],
   "Grocery Stocking": ["Confirm owner shopping list and budget","Purchase requested groceries","Deliver groceries to the property","Put away / stock basics","Record grocery cost and attach receipt photo","Send owner update with photos"],
 };
 
 export const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
-  "Home Watch Inspection", "Property Care Inspection", "Emergency Visit", "Owner Representative Site Visit",
+  "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Emergency Visit", "Owner Representative Site Visit",
   "Initial Property Onboarding Inspection", "Grocery Stocking",
 ];

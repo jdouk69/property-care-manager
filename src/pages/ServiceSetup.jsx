@@ -22,7 +22,7 @@ import {
 const TIERS = ["Basic", "Standard", "Premium"];
 const PURCHASE_TYPES = [
   { value: "Recurring", label: "Recurring Property Care Plan", icon: Repeat, hint: "Monthly plan with scheduled visits" },
-  { value: "One-time", label: "One-Time Property Care Visit", icon: CalendarClock, hint: "Single visit — no recurring agreement" },
+  { value: "One-time", label: "One-Time Non-Subscriber Visit", icon: CalendarClock, hint: "Single visit — no recurring agreement" },
 ];
 
 const EMPTY_ASSESSMENT = {
@@ -33,10 +33,12 @@ const EMPTY_ASSESSMENT = {
   assessment_service_area: "Within normal service area",
 };
 
+// Internal tier keys (Basic/Standard/Premium) are preserved; these are the
+// customer-facing package display names.
 const TIER_CARD_LABELS = {
-  Basic: "Basic Home Watch",
-  Standard: "Standard Property Care",
-  Premium: "Premium Property Care",
+  Basic: "Quick Check",
+  Standard: "Property Care",
+  Premium: "Complete Care",
 };
 
 export default function ServiceSetup() {
@@ -306,7 +308,7 @@ export default function ServiceSetup() {
                   </p>
                   {purchaseType === "One-time" && tierOpt === "Premium" && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t("Compared with Standard one-time: longer visit allowance, more time for owner-selected monitoring priorities, more detailed documentation where appropriate, and a more detailed owner update/follow-up.")}
+                      {t("Compared with Property Care one-time: adds limited agreed operational checks (faucets, toilets, lights, agreed appliances/AC, visual pool-equipment observation) and tracking of previously identified concerns.")}
                     </p>
                   )}
                 </button>

@@ -15,10 +15,13 @@ import { ON_DEMAND_ASSISTANCE_TYPE } from "@/lib/propertyAssistance";
 
 const ONE_TIME_TIERS = ["Basic", "Standard", "Premium"];
 
+// Customer-facing names per tier (internal Basic/Standard/Premium keys are
+// preserved — only the ledger description text for NEW charges uses the
+// package display names).
 const TIER_SERVICE_NAMES = {
-  Basic: "Basic One-Time Property Check",
-  Standard: "Standard One-Time Property Care Visit",
-  Premium: "Premium One-Time Property Care Visit",
+  Basic: "Quick Check One-Time Non-Subscriber Visit",
+  Standard: "Property Care One-Time Non-Subscriber Visit",
+  Premium: "Complete Care One-Time Non-Subscriber Visit",
 };
 
 // Matches the existing billing model: ledger amounts are the BASE price
@@ -81,7 +84,7 @@ export async function ensureAdditionalVisitCharge(visit, { clientId = "", amount
     client_id: clientId || "",
     property_id: visit.property_id || "",
     visit_id: visit.id,
-    description: "Additional Property Care Visit — additional service",
+    description: "Additional Same-Level Visit — additional service",
     amount: amt,
     charge_type: "Visit",
     billing_date: athensToday(),

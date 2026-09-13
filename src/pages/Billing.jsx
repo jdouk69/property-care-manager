@@ -69,7 +69,7 @@ export default function Billing() {
         );
       },
     },
-    { name: "description", label: "Description", required: true, placeholder: "e.g. Standard Property Care — September" },
+    { name: "description", label: "Description", required: true, placeholder: "e.g. Property Care — September" },
     { name: "charge_type", label: "Charge type", type: "select", options: CHARGE_TYPES, placeholder: "Select type" },
     { name: "amount", label: "Amount (€)", type: "number", required: true },
     { name: "billing_date", label: "Billing date", type: "date", required: true },

@@ -21,9 +21,9 @@ export default function ServicePackageCard({ item, onOpen }) {
   ];
   if (recurring) {
     rows.push([t("Included Visits"), `${Number(p.included_visits_per_period) || 1} / ${period}`]);
-    rows.push([t("Additional Visit Price"), eur(p.additional_visit_price) || t("Not configured")]);
+    rows.push([t("Additional Same-Level Visit Price"), eur(p.additional_visit_price) || t("Not configured")]);
   }
-  rows.push([t("One-Time Price"), eur(p.one_time_price) || "—"]);
+  rows.push([t("One-Time Non-Subscriber Price"), eur(p.one_time_price) || "—"]);
   if (p.hourly_charge) rows.push([t("Additional Time Rate"), `${eur(p.hourly_charge)} / ${t("hour")}`]);
   if (p.emergency_surcharge) rows.push([t("Emergency Increment (30 min)"), eur(p.emergency_surcharge)]);
 
