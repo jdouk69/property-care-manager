@@ -1056,4 +1056,7 @@ export const OPS_EL = {
   "Customer Intake — reference only": "Φόρμα Αρχικών Στοιχείων — μόνο για αναφορά",
   "Form": "Φόρμα",
   "These values were provided by the customer in their intake form. They are shown for reference only and are not applied to the agreement automatically. Decide what goes into the agreement fields below.": "Αυτές οι τιμές δόθηκαν από τον πελάτη στη φόρμα αρχικών στοιχείων. Εμφανίζονται μόνο για αναφορά και δεν εφαρμόζονται αυτόματα στη σύμβαση. Αποφασίστε τι θα καταχωριστεί στα πεδία της σύμβασης παρακάτω.",
+
+  // Manual Add Charge — linked-visit duplicate warning (warning only, never a block)
+  "This visit already has a service charge (€{amount}). Check the billing ledger before saving to avoid a duplicate.": "Αυτή η επίσκεψη έχει ήδη χρέωση υπηρεσίας (€{amount}). Ελέγξτε το μητρώο χρεώσεων πριν την αποθήκευση για αποφυγή διπλότυπου.",
 };

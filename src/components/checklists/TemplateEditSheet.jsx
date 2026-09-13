@@ -172,6 +172,13 @@ export default function TemplateEditSheet({ template, properties = [], propName 
                 <span className={`text-[10px] px-2 py-0.5 rounded-full border ${isMaster ? "bg-primary/10 text-primary border-primary/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
                   {isMaster ? t("Master") : t("Property: {name}", { name: propName(template.property_id) })}
                 </span>
+                {/* Edit Template is ALSO available right in the header — it no
+                    longer requires scrolling below a long checklist to find. */}
+                {mode === "view" && (
+                  <Button variant="outline" size="sm" onClick={() => setMode("edit")} className="rounded-full h-8 gap-1.5 ml-auto shrink-0">
+                    <Pencil className="w-3.5 h-3.5" /> {t("Edit Template")}
+                  </Button>
+                )}
                 {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               </div>
             )}

@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import {
   Phone, MessageCircle, Mail, Pencil, Home, Plus, Package, CalendarClock,
   ClipboardCheck, Wrench, Wallet, FileText, MessageSquare, FileWarning,
-  ArrowRight, ArrowLeft, Globe, Languages, Loader2, MapPin, CheckCircle2,
+  ArrowRight, ArrowLeft, Globe, Languages, Loader2, MapPin, CheckCircle2, CalendarPlus,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -23,6 +23,7 @@ import { getReadyHandoff, ensureOnboardingReadyNotification } from "@/lib/onboar
 import { serviceFrequencyText } from "@/lib/activeService";
 import ClientVisitReports from "@/components/clients/ClientVisitReports";
 import ClientBillingCard from "@/components/billing/ClientBillingCard";
+import AddServiceSheet from "@/components/services/AddServiceSheet";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
@@ -89,6 +90,7 @@ export default function ClientHub() {
   const [downloadingPdf, setDownloadingPdf] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
   const [readyNotif, setReadyNotif] = useState(null);
+  const [addServiceOpen, setAddServiceOpen] = useState(false);
 
   const handleDownloadSigned = async (token) => {
     if (!token) return;
@@ -237,6 +239,12 @@ export default function ClientHub() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2 font-medium text-sm"><Home className="w-4 h-4 text-muted-foreground" /> {t("Properties")} <span className="text-xs text-muted-foreground">({properties.length})</span></div>
             <div className="flex gap-2">
+              {/* Add Service — schedule a special-purpose one-time / add-on
+                  service for this client (property auto-selected when there
+                  is exactly one). */}
+              {properties.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setAddServiceOpen(true)} className="gap-1.5"><CalendarPlus className="w-4 h-4" /> {t("Add Service")}</Button>
+              )}
               <Link to={`/property-assistance?client=${id}`}><Button size="sm" variant="outline" className="gap-1.5"><Wrench className="w-4 h-4" /> {t("On-Demand Assistance")}</Button></Link>
               <Link to={`/properties?add=1&owner=${id}`}><Button size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> {t("Add Property")}</Button></Link>
             </div>
@@ -263,6 +271,13 @@ export default function ClientHub() {
             ))}
           </div>
         </div>
+
+        {/* Add Service — special-purpose one-time / add-on service for this
+            client (auto-selects the single property; otherwise staff choose
+            the property inside the sheet). */}
+        {properties.length > 0 && (
+          <AddServiceSheet open={addServiceOpen} onOpenChange={setAddServiceOpen} clientId={id} />
+        )}
 
         {/* Service agreement */}
         <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">

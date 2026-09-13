@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Euro, FilePlus2 } from "lucide-react";
+import { Euro, FilePlus2, AlertTriangle } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import BillingChargeCard from "@/components/billing/BillingChargeCard";
@@ -22,10 +22,16 @@ export default function Billing() {
   const [markPaidCharge, setMarkPaidCharge] = useState(null);
   const [reloadSignal, setReloadSignal] = useState(0);
   const [invoiceFlowOpen, setInvoiceFlowOpen] = useState(false);
+  // Lookup data for the Add Charge form's linked-visit duplicate warning
+  // (read-only, display purpose only).
+  const [charges, setCharges] = useState([]);
+  const [visits, setVisits] = useState([]);
 
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((l) => setProperties(l || [])).catch(() => {});
     base44.entities.Client.list("-created_date", 500).then((l) => setClients(l || [])).catch(() => {});
+    base44.entities.BillingCharge.list("-created_date", 500).then((l) => setCharges((l || []).filter((c) => !c.archived))).catch(() => {});
+    base44.entities.PropertyVisit.list("-start_time", 500).then((l) => setVisits(l || [])).catch(() => {});
   }, []);
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
@@ -80,9 +86,37 @@ export default function Billing() {
       optionLabel: (a) => `${t(a.billing_type || "Billing")} · €${(a.agreed_price || 0).toFixed(0)} · ${t(a.status)}`,
     },
     {
-      name: "visit_id", label: "Linked visit (optional)", type: "entity-select",
-      entity: "PropertyVisit", placeholder: "Optional",
-      optionLabel: (v) => `${t(visitTypeLabel(v.visit_type))} · ${v.start_time ? athensMediumDate(v.start_time, lang) : ""}`,
+      name: "visit_id", label: "Linked visit (optional)", type: "custom",
+      // MANUAL Add Charge duplicate warning: the most likely duplicate is
+      // re-charging a visit's SERVICE fee (automated flows store charge_type
+      // "Visit" with the visit linked). If one exists, staff see an explicit
+      // warning before saving — the visit can still be linked for a legitimate
+      // separate expense/reimbursement (warning only, never a block).
+      render: (values, setField) => {
+        const dup = values.visit_id
+          ? charges.find((c) => c.visit_id === values.visit_id && c.charge_type === "Visit" && c.status !== "Waived")
+          : null;
+        return (
+          <div className="space-y-1.5">
+            <Select value={values.visit_id || ""} onValueChange={(v) => setField("visit_id", v)}>
+              <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder="Optional" /></SelectTrigger>
+              <SelectContent>
+                {visits.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>{`${t(visitTypeLabel(v.visit_type))} · ${v.start_time ? athensMediumDate(v.start_time, lang) : ""}`}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {dup && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  {t("This visit already has a service charge (€{amount}). Check the billing ledger before saving to avoid a duplicate.", { amount: Number(dup.amount || 0).toFixed(2) })}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       name: "expense_id", label: "Linked expense (optional)", type: "entity-select",
@@ -90,7 +124,7 @@ export default function Billing() {
       optionLabel: (e) => `${e.vendor} · €${(e.amount || 0).toFixed(2)} · ${e.date || ""}`,
     },
     { name: "notes", label: "Notes", type: "textarea" },
-  ], [properties, t, lang]);
+  ], [properties, charges, visits, t, lang]);
 
   // Display-only renders: enums and dates localized at render time; stored
   // values are never touched. exportValue keeps the CSV export raw/stable —

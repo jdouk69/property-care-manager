@@ -583,4 +583,20 @@ export const VISITS_EL = {
   "Courtesy / No Charge — no customer charge will be created. The visit record, checklist, photos and report are kept.": "Χωρίς χρέωση — δεν θα δημιουργηθεί χρέωση πελάτη. Η εγγραφή επίσκεψης, η λίστα ελέγχου, οι φωτογραφίες και η αναφορά διατηρούνται.",
   "Included in the customer's package — no separate charge.": "Συμπεριλαμβάνεται στο πακέτο του πελάτη — χωρίς ξεχωριστή χρέωση.",
   "Courtesy visit — no customer charge. The full visit record, checklist, notes, photos and report are kept.": "Ευγενική επίσκεψη — χωρίς χρέωση πελάτη. Η πλήρης εγγραφή επίσκεψης, η λίστα ελέγχου, οι σημειώσεις, οι φωτογραφίες και η αναφορά διατηρούνται.",
+
+  // ---- Add Service (special-purpose one-time / add-on services) and the
+  // staff-confirmed special-service charge card ----
+  "Choose Service": "Επιλογή Υπηρεσίας",
+  "Price Not Configured": "Δεν έχει οριστεί τιμή",
+  "Schedule Service": "Προγραμματισμός Υπηρεσίας",
+  "Service scheduled": "Η υπηρεσία προγραμματίστηκε",
+  "Could not schedule service: {message}": "Δεν ήταν δυνατός ο προγραμματισμός της υπηρεσίας: {message}",
+  "Special service — staff-confirmed charge": "Ειδική υπηρεσία — χρέωση με επιβεβαίωση προσωπικού",
+  "Service charge": "Χρέωση υπηρεσίας",
+  "Scheduled service price: €{amount}": "Τιμή προγραμματισμένης υπηρεσίας: €{amount}",
+  "Configured service price: €{amount}": "Ρυθμισμένη τιμή υπηρεσίας: €{amount}",
+  "The amount is prefilled from the price scheduled with this service. Review and confirm before a ledger entry is created.": "Το ποσό συμπληρώνεται αυτόματα από την τιμή που ορίστηκε με τον προγραμματισμό της υπηρεσίας. Ελέγξτε και επιβεβαιώστε πριν δημιουργηθεί εγγραφή στο μητρώο χρεώσεων.",
+  "The amount is prefilled from the service's configured package price. Review and confirm before a ledger entry is created.": "Το ποσό συμπληρώνεται αυτόματα από τη ρυθμισμένη τιμή του πακέτου υπηρεσίας. Ελέγξτε και επιβεβαιώστε πριν δημιουργηθεί εγγραφή στο μητρώο χρεώσεων.",
+  "No service price is configured for this visit type (Admin → Services). Enter the amount to charge before a ledger entry is created.": "Δεν έχει οριστεί τιμή υπηρεσίας για αυτόν τον τύπο επίσκεψης (Διαχείριση → Υπηρεσίες). Σημειώστε το ποσό χρέωσης πριν δημιουργηθεί εγγραφή στο μητρώο χρεώσεων.",
+  "Grocery purchase cost (€{amount}) is recorded separately on the visit — it is never part of this service fee.": "Το κόστος αγορών (€{amount}) καταγράφεται ξεχωριστά στην επίσκεψη — δεν αποτελεί ποτέ μέρος του τέλους υπηρεσίας.",
 };

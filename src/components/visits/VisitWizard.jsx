@@ -20,6 +20,8 @@ import DraftConflictDialog from "@/components/visits/DraftConflictDialog";
 import PackageServiceCard from "@/components/visits/PackageServiceCard";
 import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
 import AdditionalAmountSection from "@/components/visits/AdditionalAmountSection";
+import SpecialServiceChargeCard from "@/components/visits/SpecialServiceChargeCard";
+import { isSpecialServiceVisit } from "@/lib/specialServices";
 import { Checkbox } from "@/components/ui/checkbox";
 import { billingClassificationFor, billingClassificationTone, classificationState } from "@/lib/visitBillingClassification";
 import { useSidebar } from "@/components/layout/SidebarContext";
@@ -34,7 +36,7 @@ import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
-  "Home Watch Inspection", "Property Care Inspection", "Emergency Visit", "Owner Representative Site Visit",
+  "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Emergency Visit", "Owner Representative Site Visit",
   "Initial Property Onboarding Inspection", "Grocery Stocking",
 ];
 
@@ -1861,6 +1863,18 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <AdditionalChargeCard
               visit={completed}
               pkg={pkg}
+              clientId={reportClient?.id || properties.find((p) => p.id === propertyId)?.owner_id || ""}
+            />
+          </div>
+        )}
+        {/* Special-purpose service (Owner Arrival Preparation, Emergency,
+            Owner-Rep Site Visit, Grocery Stocking, Seasonal…): the service
+            charge is staff-confirmed AFTER completion — nothing was charged at
+            scheduling or start. Same duplicate-safe shared charge logic. */}
+        {!completed?.is_additional_service && isSpecialServiceVisit(completed) && (
+          <div className="mb-4">
+            <SpecialServiceChargeCard
+              visit={completed}
               clientId={reportClient?.id || properties.find((p) => p.id === propertyId)?.owner_id || ""}
             />
           </div>

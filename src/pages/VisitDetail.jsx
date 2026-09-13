@@ -11,6 +11,8 @@ import PageBackButton from "@/components/ui/PageBackButton";
 import { Image as UIImage } from "@/components/ui/image";
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import AdditionalChargeCard from "@/components/visits/AdditionalChargeCard";
+import SpecialServiceChargeCard from "@/components/visits/SpecialServiceChargeCard";
+import { isSpecialServiceVisit } from "@/lib/specialServices";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
@@ -70,7 +72,14 @@ export default function VisitDetail() {
         // Completed ADDITIONAL-BILLABLE visit: look up its ledger charge so the
         // detail page shows either the persistent create action or the
         // already-created status (shared duplicate-safe billing logic).
-        if (v.status === "Completed" && v.is_additional_service && v.billing_classification === "Additional - Billable") {
+        // Completed ADDITIONAL-BILLABLE visit, or a completed special-purpose
+        // service visit (staff-confirmed charge) — look up its ledger charge so
+        // the detail page shows the already-created status instead of a second
+        // create action (shared duplicate-safe billing logic).
+        if (v.status === "Completed" && (
+          (v.is_additional_service && v.billing_classification === "Additional - Billable") ||
+          (!v.is_additional_service && isSpecialServiceVisit(v))
+        )) {
           try {
             const charges = await base44.entities.BillingCharge.filter({ visit_id: v.id });
             setVisitCharge((charges && charges[0]) || null);
@@ -266,6 +275,14 @@ export default function VisitDetail() {
             the created status (never a second create action). */}
         {visit.status === "Completed" && visit.is_additional_service && visit.billing_classification === "Additional - Billable" && (
           <AdditionalChargeCard visit={visit} pkg={pkg} clientId={client.id || property.owner_id || ""} existingCharge={visitCharge} />
+        )}
+
+        {/* Special-purpose service visit (Owner Arrival Preparation, Emergency,
+            Owner-Rep Site Visit, Grocery Stocking, Seasonal…): the same
+            staff-confirmed service-charge card as the completion screen —
+            create once, then only the created status (never a second charge). */}
+        {visit.status === "Completed" && !visit.is_additional_service && isSpecialServiceVisit(visit) && (
+          <SpecialServiceChargeCard visit={visit} clientId={client.id || property.owner_id || ""} existingCharge={visitCharge} />
         )}
 
         {/* Owner report delivery workflow */}

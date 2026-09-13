@@ -12,6 +12,8 @@
 import { base44 } from "@/api/base44Client";
 import { athensToday, athensDateOffset } from "@/lib/timezone";
 import { ON_DEMAND_ASSISTANCE_TYPE } from "@/lib/propertyAssistance";
+import { SPECIAL_VISIT_TYPES } from "@/lib/specialServices";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 
 const ONE_TIME_TIERS = ["Basic", "Standard", "Premium"];
 
@@ -122,6 +124,41 @@ export async function ensureOnDemandAssistanceCharge(visit, { clientId = "" } = 
     visit_id: visit.id,
     description: "On-Demand Property Assistance — one-time service",
     amount,
+    charge_type: "Visit",
+    billing_date: athensToday(),
+    due_date: athensDateOffset(NET_DUE_DAYS),
+    status: "Due",
+    source_key: `visit:${visit.id}`,
+  });
+}
+
+// SPECIAL-PURPOSE one-time / add-on service (Owner Arrival Preparation,
+// Emergency Visit, Owner-Rep Site Visit, Grocery Stocking, Guest Arrival,
+// Construction Visit, Departure, Seasonal). Executed ONLY after an explicit
+// staff confirmation of the amount on the COMPLETED visit
+// (SpecialServiceChargeCard) — scheduling and starting never charge, and no
+// price is ever invented (the amount comes from the staff-confirmed input,
+// normally prefilled from the price snapshotted on the visit at scheduling
+// or the ServicePackage's configured standard_price).
+// Grocery Stocking: this is the SERVICE fee only — the grocery purchase cost
+// is captured separately on the visit and is never part of this charge.
+// DUPLICATE PROTECTION: any existing charge for the visit blocks a second —
+// safe on repeated taps and reopens.
+export async function ensureSpecialServiceCharge(visit, { clientId = "", amount } = {}) {
+  if (!visit || visit.status !== "Completed" || visit.is_additional_service) return null;
+  if (!SPECIAL_VISIT_TYPES.includes(visit.visit_type)) return null;
+  const amt = Math.round(Number(amount) * 100) / 100;
+  if (!Number.isFinite(amt) || amt <= 0) return null;
+
+  const existing = await base44.entities.BillingCharge.filter({ visit_id: visit.id });
+  if (existing && existing.length > 0) return null;
+
+  return base44.entities.BillingCharge.create({
+    client_id: clientId || "",
+    property_id: visit.property_id || "",
+    visit_id: visit.id,
+    description: `${visitTypeLabel(visit.visit_type)} — one-time service`,
+    amount: amt,
     charge_type: "Visit",
     billing_date: athensToday(),
     due_date: athensDateOffset(NET_DUE_DAYS),

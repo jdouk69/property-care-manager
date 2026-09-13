@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft, Home, ListChecks, ClipboardCheck, Wrench, Wallet, Clock,
   MapPin, KeyRound, Wifi, Image as ImageIcon, Calendar, Truck, MessageSquare,
-  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2, Navigation, CalendarClock, Pencil, Euro
+  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2, Navigation, CalendarClock, Pencil, Euro, CalendarPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -18,6 +18,7 @@ import PropertyInlineAdd from "@/components/properties/PropertyInlineAdd";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
 import MonitoringPrioritiesEditor from "@/components/properties/MonitoringPrioritiesEditor";
+import AddServiceSheet from "@/components/services/AddServiceSheet";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -50,6 +51,7 @@ export default function PropertyDetail() {
   const [pkgMap, setPkgMap] = useState({});
   const [charges, setCharges] = useState([]);
   const [tick, setTick] = useState(0);
+  const [addServiceOpen, setAddServiceOpen] = useState(false);
 
   const reload = () => setTick((x) => x + 1);
 
@@ -151,11 +153,18 @@ export default function PropertyDetail() {
             <Link to={`/visits?schedule=1&property=${id}`}>
               <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><CalendarClock className="w-4 h-4 sm:w-5 sm:h-5" /> {t("Schedule Visit")}</Button>
             </Link>
+            {/* Add Service — schedule a special-purpose one-time / add-on
+                service for THIS client & property (existing PropertyVisit +
+                configured ServicePackage price; staff-confirmed charge after
+                completion). */}
+            <Button variant="outline" onClick={() => setAddServiceOpen(true)} className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><CalendarPlus className="w-4 h-4 sm:w-5 sm:h-5" /> {t("Add Service")}</Button>
             <Link to={`/properties?edit=${id}`}>
               <Button variant="outline" className="w-full h-12 rounded-2xl gap-2 text-sm sm:text-base"><Pencil className="w-4 h-4 sm:w-5 sm:h-5" /> {t("Edit Property")}</Button>
             </Link>
           </div>
         </div>
+
+        <AddServiceSheet open={addServiceOpen} onOpenChange={setAddServiceOpen} propertyId={id} clientId={prop.owner_id || ""} />
 
         {/* Quick info */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
