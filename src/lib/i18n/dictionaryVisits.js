@@ -406,6 +406,8 @@ export const VISITS_EL = {
   "Filter by property": "Φίλτρο ανά ακίνητο",
   "All (masters + property-specific)": "Όλα (κύρια + ειδικά για ακίνητο)",
   "Master Templates": "Κύρια Πρότυπα",
+  "Primary Package Checklists": "Πρότυπα Κύριων Πακέτων",
+  "Other Master Templates": "Λοιπά Κύρια Πρότυπα",
   "Master": "Κύριο",
   "{count} items": "{count} στοιχεία",
   "Property-Specific": "Ειδικά για Ακίνητο",

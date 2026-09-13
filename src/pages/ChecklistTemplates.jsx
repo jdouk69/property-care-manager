@@ -18,6 +18,17 @@ import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import TemplateEditSheet from "@/components/checklists/TemplateEditSheet";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
+// The three recurring package checklists are pinned to the top of the page,
+// identified ONLY by their stable visit_type — the exact routing key shared
+// with the Quick Check / Property Care / Complete Care ServicePackages.
+// Never by editable display name: renaming a template cannot move it out of
+// the primary section. Order = package tier order (Basic → Standard → Premium).
+const PRIMARY_PACKAGE_VISIT_TYPES = [
+  "Home Watch Inspection",       // Quick Check
+  "Property Care Inspection",    // Property Care
+  "Complete Care Property Visit", // Complete Care
+];
+
 export default function ChecklistTemplates() {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -103,6 +114,23 @@ export default function ChecklistTemplates() {
   const masters = visible.filter((tpl) => tpl.is_master || !tpl.property_id);
   const propSpecific = visible.filter((tpl) => !tpl.is_master && tpl.property_id);
 
+  // Pinned primary package checklists (stable visit_type order), then every
+  // other master template. Renaming only changes what the card displays.
+  const primaryMasters = PRIMARY_PACKAGE_VISIT_TYPES
+    .map((vt) => masters.find((tpl) => tpl.visit_type === vt))
+    .filter(Boolean);
+  const otherMasters = masters.filter((tpl) => !PRIMARY_PACKAGE_VISIT_TYPES.includes(tpl.visit_type));
+
+  const renderMasterCard = (tpl) => (
+    <button key={tpl.id} onClick={() => setEditing(tpl)} className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-medium text-sm truncate">{tpl.name}</p>
+        <span className="text-[10px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 shrink-0">{t("Master")}</span>
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">{t(visitTypeLabel(tpl.visit_type))} · {t("{count} items", { count: (tpl.items || []).length })}</p>
+    </button>
+  );
+
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
@@ -129,17 +157,14 @@ export default function ChecklistTemplates() {
           <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
         ) : (
           <>
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("Master Templates")}</h2>
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("Primary Package Checklists")}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
-              {masters.map((tpl) => (
-                <button key={tpl.id} onClick={() => setEditing(tpl)} className="text-left rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-sm truncate">{tpl.name}</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full border bg-primary/10 text-primary border-primary/20 shrink-0">{t("Master")}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{t(visitTypeLabel(tpl.visit_type))} · {t("{count} items", { count: (tpl.items || []).length })}</p>
-                </button>
-              ))}
+              {primaryMasters.map(renderMasterCard)}
+            </div>
+
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("Other Master Templates")}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
+              {otherMasters.map(renderMasterCard)}
             </div>
 
             <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("Property-Specific")}</h2>
