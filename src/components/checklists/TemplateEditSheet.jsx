@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
@@ -163,13 +163,18 @@ export default function TemplateEditSheet({ template, properties = [], propName 
   return (
     <>
       <Sheet open={!!template} onOpenChange={(o) => { if (!o) { setMode("view"); onClose?.(); } }}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
-          <SheetHeader>
-            <SheetTitle>{template ? t(visitTypeLabel(template.visit_type)) : ""}</SheetTitle>
+        {/* Layout contract: the SHEET never scrolls as a whole. The sheet is
+            overflow-hidden; the header (shrink-0) and footer (shrink-0) stay
+            visible, and ONLY the checklist content area scrolls vertically.
+            Width is constrained by the container itself (w-full on mobile,
+            sm:max-w-lg on desktop) — children can never push it wider. */}
+        <SheetContent className="w-full sm:max-w-lg overflow-hidden flex flex-col">
+          <SheetHeader className="shrink-0">
+            <SheetTitle className="pr-9 break-words">{template ? t(visitTypeLabel(template.visit_type)) : ""}</SheetTitle>
             <SheetDescription className="sr-only">{t("Edit checklist items")}</SheetDescription>
             {template && (
-              <div className="flex items-center gap-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${isMaster ? "bg-primary/10 text-primary border-primary/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border max-w-full min-w-0 truncate ${isMaster ? "bg-primary/10 text-primary border-primary/20" : "bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>
                   {isMaster ? t("Master") : t("Property: {name}", { name: propName(template.property_id) })}
                 </span>
                 {/* Edit Template is ALSO available right in the header — it no
@@ -186,7 +191,7 @@ export default function TemplateEditSheet({ template, properties = [], propName 
 
           {!template ? null : mode === "view" ? (
             <>
-              <div className="flex-1 py-4 space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto py-4 space-y-4">
                 <div>
                   <p className="text-base font-semibold leading-tight break-words">{template.name}</p>
                   {template.description ? <p className="text-sm text-muted-foreground mt-1">{template.description}</p> : null}
@@ -201,14 +206,20 @@ export default function TemplateEditSheet({ template, properties = [], propName 
                   {!(template.items || []).length && <p className="text-sm text-muted-foreground">{t("No items yet.")}</p>}
                 </div>
               </div>
-              <SheetFooter className="flex-col gap-2 border-t pt-4">
+              {/* Plain flex column (NOT the shared SheetFooter): SheetFooter's
+                  built-in sm:flex-row silently turned these stacked full-width
+                  actions into ONE horizontal row on desktop — ~4× the sheet
+                  width, overflowing off the sheet/viewport (e.g. the Restore
+                  button clipped outside). A plain column keeps every action
+                  inside the sheet at every width. */}
+              <div className="flex flex-col gap-2 border-t pt-4 shrink-0">
                 <Button onClick={() => setMode("edit")} className="rounded-full w-full gap-1.5"><Pencil className="w-4 h-4" /> {t("Edit Template")}</Button>
                 {isMaster && (
                   <>
                     <Button variant="outline" onClick={() => setConfirmRestore(true)} className="rounded-full w-full justify-start"><RotateCcw className="w-4 h-4 mr-2" /> {t("Restore original seeded master")}</Button>
-                    <div className="flex gap-2 w-full">
+                    <div className="flex gap-2 w-full min-w-0">
                       <Select value={copyTarget} onValueChange={setCopyTarget}>
-                        <SelectTrigger className="flex-1"><SelectValue placeholder={t("Copy to property…")} /></SelectTrigger>
+                        <SelectTrigger className="flex-1 min-w-0"><SelectValue placeholder={t("Copy to property…")} /></SelectTrigger>
                         <SelectContent>{properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                       </Select>
                       <Button onClick={copyToProperty} disabled={busy || !copyTarget} className="rounded-full"><Copy className="w-4 h-4 mr-1" /> {t("Copy")}</Button>
@@ -216,11 +227,11 @@ export default function TemplateEditSheet({ template, properties = [], propName 
                   </>
                 )}
                 <Button variant="ghost" onClick={() => { setMode("view"); onClose?.(); }} className="w-full">{t("Close")}</Button>
-              </SheetFooter>
+              </div>
             </>
           ) : (
             <>
-              <div className="flex-1 py-4 space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto py-4 space-y-4">
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Template Name")}</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -238,24 +249,24 @@ export default function TemplateEditSheet({ template, properties = [], propName 
                           <button onClick={() => move(i, -1)} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={i === 0} aria-label={t("Move up")}><ChevronUp className="w-4 h-4" /></button>
                           <button onClick={() => move(i, 1)} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={i === items.length - 1} aria-label={t("Move down")}><ChevronDown className="w-4 h-4" /></button>
                         </div>
-                        <Input value={it} onChange={(e) => renameItem(i, e.target.value)} className="flex-1" />
+                        <Input value={it} onChange={(e) => renameItem(i, e.target.value)} className="flex-1 min-w-0" />
                         <button onClick={() => removeItem(i)} aria-label={t("Remove Item")} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
                     {!items.length && <p className="text-sm text-muted-foreground">{t("No items yet.")}</p>}
-                    <div className="flex gap-2 pt-1">
-                      <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addItem()} placeholder={t("Add checklist item")} />
+                    <div className="flex gap-2 pt-1 min-w-0">
+                      <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addItem()} placeholder={t("Add checklist item")} className="min-w-0" />
                       <Button onClick={addItem} disabled={!newItem.trim()}><Plus className="w-4 h-4" /></Button>
                     </div>
                   </div>
                 </div>
               </div>
-              <SheetFooter className="flex-col gap-2 border-t pt-4">
-                <div className="flex gap-2 w-full">
-                  <Button variant="outline" onClick={cancelEdit} className="flex-1 rounded-full">{t("Cancel")}</Button>
-                  <Button onClick={save} disabled={saving} className="flex-1 rounded-full">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Save")}</Button>
+              <div className="flex flex-col gap-2 border-t pt-4 shrink-0">
+                <div className="flex flex-wrap gap-2 w-full">
+                  <Button variant="outline" onClick={cancelEdit} className="flex-1 min-w-[120px] rounded-full">{t("Cancel")}</Button>
+                  <Button onClick={save} disabled={saving} className="flex-1 min-w-[120px] rounded-full">{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Save")}</Button>
                 </div>
-              </SheetFooter>
+              </div>
             </>
           )}
         </SheetContent>
