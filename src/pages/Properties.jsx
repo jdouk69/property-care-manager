@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Home } from "lucide-react";
+import { Home, CalendarClock, CalendarOff } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import PropertyLocationFields from "@/components/properties/PropertyLocationFields";
+import { athensMediumDate } from "@/lib/timezone";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const fields = [
   { name: "name", label: "Property Name", type: "text", required: true, placeholder: "e.g. Villa Sunset" },
@@ -59,14 +62,41 @@ const columns = [
   { key: "owner_id", label: "Owner" },
   { key: "status", label: "Status", badge: true },
   { key: "condition", label: "Condition", badge: true },
+  { key: "service_package_id", label: "Package", badge: true },
 ];
+
+// Earliest still-upcoming Scheduled visit per property, keyed by property_id.
+// Only real scheduled visits are used here (never the free-text
+// inspection_frequency field, which can hold stale onboarding defaults —
+// see src/lib/activeService.js), so "no visit scheduled" is shown instead
+// of a guessed overdue date when nothing is actually on the calendar.
+function useNextVisitByProperty() {
+  const [nextVisitByProperty, setNextVisitByProperty] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    base44.entities.PropertyVisit.list("start_time", 500).then((visits) => {
+      if (cancelled) return;
+      const nowIso = new Date().toISOString();
+      const map = {};
+      for (const v of visits || []) {
+        if (v.status !== "Scheduled" || !v.start_time || v.start_time < nowIso) continue;
+        if (!map[v.property_id] || v.start_time < map[v.property_id]) map[v.property_id] = v.start_time;
+      }
+      setNextVisitByProperty(map);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  return nextVisitByProperty;
+}
 
 export default function Properties() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [params] = useSearchParams();
   const ownerId = params.get("owner");
   const autoOpen = params.get("add") === "1";
   const defaultValues = { property_type: "Villa", status: "Vacant", condition: "Good", ...(ownerId ? { owner_id: ownerId } : {}) };
+  const nextVisitByProperty = useNextVisitByProperty();
   return (
     <AppLayout>
       <ResourceListPage
@@ -91,6 +121,24 @@ export default function Properties() {
           if (autoOpen && ownerId) navigate(`/clients/${ownerId}`);
         }}
         onOpenItem={(item) => navigate(`/properties/${item.id}`)}
+        cardExtra={(item) => {
+          const nextVisit = nextVisitByProperty[item.id];
+          return (
+            <div className="w-full mt-2 pt-2 border-t border-border flex items-center gap-1.5 text-xs">
+              {nextVisit ? (
+                <>
+                  <CalendarClock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-emerald-600 font-medium">{t("Next visit: {date}", { date: athensMediumDate(nextVisit) })}</span>
+                </>
+              ) : (
+                <>
+                  <CalendarOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="text-amber-600 font-medium">{t("No visit scheduled")}</span>
+                </>
+              )}
+            </div>
+          );
+        }}
       />
     </AppLayout>
   );
