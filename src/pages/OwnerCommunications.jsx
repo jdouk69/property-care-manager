@@ -40,9 +40,9 @@ function TemplatesBar({ onUse }) {
   // Only one template expanded at a time (index or null).
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState("");
-  const copy = (t) => {
-    navigator.clipboard?.writeText(t);
-    setCopied(t);
+  const copy = (template) => {
+    navigator.clipboard?.writeText(template);
+    setCopied(template);
     setTimeout(() => setCopied(""), 1500);
   };
   const toggle = (i) => setExpanded((cur) => (cur === i ? null : i));
@@ -51,9 +51,9 @@ function TemplatesBar({ onUse }) {
       <h3 className="font-medium text-sm mb-2">{t("Message Templates")}</h3>
       <p className="text-xs text-muted-foreground mb-3">{t("Tap a template to read the full message, then copy.")}</p>
       <div className="flex flex-col gap-2">
-        {TEMPLATES.map((t, i) => {
+        {TEMPLATES.map((template, i) => {
           const isOpen = expanded === i;
-          const isCopied = copied === t;
+          const isCopied = copied === template;
           return (
             <div key={i} className="rounded-xl border border-border overflow-hidden">
               <div className="flex items-stretch">
@@ -63,7 +63,7 @@ function TemplatesBar({ onUse }) {
                   aria-expanded={isOpen}
                   className="flex-1 flex items-center gap-2 px-3 py-3 text-left min-w-0 hover:bg-muted/60 transition-colors"
                 >
-                  <span className="text-xs leading-snug flex-1 min-w-0 truncate">{t}</span>
+                  <span className="text-xs leading-snug flex-1 min-w-0 truncate">{template}</span>
                   <ChevronDown
                     className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                   />
@@ -71,7 +71,7 @@ function TemplatesBar({ onUse }) {
                 {/* Quick-copy for users who already know the message — does not expand. */}
                 <button
                   type="button"
-                  onClick={() => copy(t)}
+                  onClick={() => copy(template)}
                   aria-label={t("Copy template")}
                   className="px-3 py-3 shrink-0 text-muted-foreground hover:bg-muted/60 transition-colors"
                 >
@@ -80,11 +80,11 @@ function TemplatesBar({ onUse }) {
               </div>
               {isOpen && (
                 <div className="px-3 pb-3 pt-3 border-t border-border bg-muted/30">
-                  <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">{t}</p>
+                  <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words leading-relaxed">{template}</p>
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => copy(t)}
+                    onClick={() => copy(template)}
                     className="mt-3 rounded-lg gap-1.5 h-9 min-h-[44px]"
                   >
                     {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
