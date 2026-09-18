@@ -71,20 +71,43 @@ const columns = [
 // of a guessed overdue date when nothing is actually on the calendar.
 function useNextVisitByProperty() {
   const [nextVisitByProperty, setNextVisitByProperty] = useState({});
+
   useEffect(() => {
     let cancelled = false;
-    base44.entities.PropertyVisit.list("start_time", 500).then((visits) => {
-      if (cancelled) return;
-      const nowIso = new Date().toISOString();
-      const map = {};
-      for (const v of visits || []) {
-        if (v.status !== "Scheduled" || !v.start_time || v.start_time < nowIso) continue;
-        if (!map[v.property_id] || v.start_time < map[v.property_id]) map[v.property_id] = v.start_time;
-      }
-      setNextVisitByProperty(map);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+
+    base44.entities.PropertyVisit.list("start_time", 500)
+      .then((visits) => {
+        if (cancelled) return;
+
+        const nowIso = new Date().toISOString();
+        const map = {};
+
+        for (const v of visits || []) {
+          if (
+            v.status !== "Scheduled" ||
+            !v.start_time ||
+            v.start_time < nowIso
+          ) {
+            continue;
+          }
+
+          if (
+            !map[v.property_id] ||
+            v.start_time < map[v.property_id]
+          ) {
+            map[v.property_id] = v.start_time;
+          }
+        }
+
+        setNextVisitByProperty(map);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
   return nextVisitByProperty;
 }
 
@@ -92,10 +115,19 @@ export default function Properties() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [params] = useSearchParams();
+
   const ownerId = params.get("owner");
   const autoOpen = params.get("add") === "1";
-  const defaultValues = { property_type: "Villa", status: "Vacant", condition: "Good", ...(ownerId ? { owner_id: ownerId } : {}) };
+
+  const defaultValues = {
+    property_type: "Villa",
+    status: "Vacant",
+    condition: "Good",
+    ...(ownerId ? { owner_id: ownerId } : {}),
+  };
+
   const nextVisitByProperty = useNextVisitByProperty();
+
   return (
     <AppLayout>
       <ResourceListPage
@@ -106,8 +138,14 @@ export default function Properties() {
         fields={fields}
         columns={columns}
         sections={[
-          { title: "Property Details", fields: ["name", "owner_id", "property_type", "status", "condition"] },
-          { title: "Location", fields: ["location"] },
+          {
+            title: "Property Details",
+            fields: ["name", "owner_id", "property_type", "status", "condition"],
+          },
+          {
+            title: "Location",
+            fields: ["location"],
+          },
         ]}
         searchKeys={["name", "address"]}
         addItemLabel="Add Property"
@@ -117,25 +155,45 @@ export default function Properties() {
         autoOpenEditId={params.get("edit") || undefined}
         saveLabel="Save Property"
         onCreated={(values) => {
-          if (autoOpen && ownerId) navigate(`/clients/${ownerId}`);
+          if (autoOpen && ownerId) {
+            navigate(`/clients/${ownerId}`);
+          }
         }}
         onOpenItem={(item) => navigate(`/properties/${item.id}`)}
-        cardExtra={(item) => {
+
+        cardExtra={(item, lookups) => {
           const nextVisit = nextVisitByProperty[item.id];
+          const packageName =
+            lookups?.ServicePackage?.[item.service_package_id];
+
           return (
-            <div className="w-full mt-2 pt-2 border-t border-border flex items-center gap-1.5 text-xs">
-              {nextVisit ? (
-                <>
-                  <CalendarClock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="text-emerald-600 font-medium">{t("Next visit: {date}", { date: athensMediumDate(nextVisit) })}</span>
-                </>
-              ) : (
-                <>
-                  <CalendarOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span className="text-amber-600 font-medium">{t("No visit scheduled")}</span>
-                </>
+            <>
+              {packageName && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                  {packageName}
+                </span>
               )}
-            </div>
+
+              <div className="w-full mt-2 pt-2 border-t border-border flex items-center gap-1.5 text-xs">
+                {nextVisit ? (
+                  <>
+                    <CalendarClock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-emerald-600 font-medium">
+                      {t("Next visit: {date}", {
+                        date: athensMediumDate(nextVisit),
+                      })}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CalendarOff className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span className="text-amber-600 font-medium">
+                      {t("No visit scheduled")}
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
           );
         }}
       />
