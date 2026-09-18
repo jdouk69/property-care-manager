@@ -62,7 +62,6 @@ const columns = [
   { key: "owner_id", label: "Owner" },
   { key: "status", label: "Status", badge: true },
   { key: "condition", label: "Condition", badge: true },
-  { key: "service_package_id", label: "Package", badge: true },
 ];
 
 // Earliest still-upcoming Scheduled visit per property, keyed by property_id.
