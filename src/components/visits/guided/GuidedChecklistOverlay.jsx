@@ -7,9 +7,10 @@ import DictateItemDialog from "@/components/dictation/DictateItemDialog";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const ANSWERED = ["Normal", "Important", "Emergency", "Unable to Check", "N/A"];
-// Normal / N/A save immediately and auto-advance (fast routine workflow).
-// Important / Emergency / Unable to Check stay on the card for notes / photos.
-const AUTO_ADVANCE = ["Normal", "N/A"];
+// Every response now STAYS on the current card so the optional + Add Note /
+// + Add Photo documentation row is visible immediately underneath the
+// response buttons. Staff tap Next to continue. (Previously Normal / N/A
+// auto-advanced away, which made those controls unreachable after an OK.)
 
 // Full-screen, mobile-first Guided Checklist overlay over the EXISTING Visit
 // Wizard checklist state: ONE item per screen, big touch targets, "X of Y"
@@ -39,19 +40,7 @@ export default function GuidedChecklistOverlay({ open, onClose, onContinue, chec
   if (!open || checklist.length === 0) return null;
 
   const total = checklist.length;
-  const isAnswered = (it) => ANSWERED.includes(it?.status);
   const item = checklist[idx];
-
-  // Auto-advance to the next unanswered item after a Normal / N/A tap (or an
-  // approved Normal / N/A dictation); when none remain ahead, show the summary.
-  // Only the CURRENT item's status is changing here, so the current (possibly
-  // one-render-stale) array is safe to scan for items after idx.
-  const advanceAfter = (fromIdx, status) => {
-    if (!AUTO_ADVANCE.includes(status)) return;
-    const next = checklist.findIndex((it, i) => i > fromIdx && !isAnswered(it));
-    if (next >= 0) setIdx(next);
-    else setShowSummary(true);
-  };
 
 // Concern statuses: the first time an item becomes Important/Emergency it is
 // automatically surfaced to the owner (same owner_visible field/semantics the
@@ -66,7 +55,6 @@ const concernVisibilityPatch = (item, status) =>
 
   const handleSetStatus = (status) => {
     onChangeItem(idx, { ...item, status, ...concernVisibilityPatch(item, status) });
-    advanceAfter(idx, status);
   };
 
   // Approved item-level dictation applies to THIS item only: the proposed
@@ -80,7 +68,6 @@ const concernVisibilityPatch = (item, status) =>
     const status = keepStatus ? item.status : proposal.status;
     const mergedNotes = [item.notes || "", proposal.notes || ""].filter((s) => s.trim()).join("\n").trim();
     onChangeItem(idx, { ...item, status, notes: mergedNotes, ...concernVisibilityPatch(item, status) });
-    advanceAfter(idx, status);
   };
 
   // Same owner_visible field the accordion toggles — flips through the same

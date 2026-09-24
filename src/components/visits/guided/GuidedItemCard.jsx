@@ -19,9 +19,9 @@ const DETAIL_STATUSES = ["Important", "Emergency", "Unable to Check"];
 // the wizard's existing update handlers — no parallel state or records.
 export default function GuidedItemCard({ item, index, uploading, onSetStatus, onDictate, onNotes, onToggleOwnerVisible, onUploadPhotos, onRemovePhoto }) {
   const { t, lang } = useLanguage();
-  // Optional note for routine answers: Normal / N/A stay fast (one tap,
-  // auto-advance), but staff can open the notes area at any time — e.g. after
-  // navigating back with Previous — same affordance as the accordion rows.
+  // Optional note for routine answers: after ANY response the + Add Note /
+  // + Add Photo row below stays visible until Next is tapped — staff can
+  // document without slowing down if they don't need to.
   const [manualDetailOpen, setManualDetailOpen] = useState(false);
   const showDetails =
     DETAIL_STATUSES.includes(item.status) ||
@@ -51,7 +51,7 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
               item.status === s.value ? s.cls + " font-bold ring-2 ring-inset ring-primary" : s.idleCls
             }`}
           >
-            <s.icon className="w-4 h-4 shrink-0" />
+            {!s.hideIcon && <s.icon className="w-4 h-4 shrink-0" />}
             {t(s.label)}
           </button>
         ))}
@@ -66,7 +66,7 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
               item.status === s.value ? s.cls + " font-bold ring-2 ring-inset ring-primary" : s.idleCls
             }`}
           >
-            <s.icon className="w-4 h-4 shrink-0" />
+            {!s.hideIcon && <s.icon className="w-4 h-4 shrink-0" />}
             {t(s.label)}
           </button>
         ))}
