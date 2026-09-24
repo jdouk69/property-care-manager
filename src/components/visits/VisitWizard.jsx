@@ -1380,11 +1380,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const expensesDone = inspectionDone && issuesDone && (expensesCreated.length > 0 || !!skipped.expenses);
     const ownerDone = inspectionDone && issuesDone && (commSent.length > 0 || !!skipped.owner);
     const canComplete = inspectionDone;
+    // Grocery Stocking only: Tasks/Contractor and Expenses/Receipts sections
+    // (and their step chips) don't apply to this visit type.
+    const isGroceryStocking = visitType === "Grocery Stocking";
     const STEPS = [
       { key: "inspection", label: "Checklist", icon: ClipboardCheck, target: "step-inspection", done: inspectionDone },
       { key: "issues", label: "Issues", icon: Wrench, target: "step-issues", done: issuesDone },
-      { key: "tasks", label: "Tasks", icon: ListChecks, target: "step-tasks", done: tasksDone },
-      { key: "expenses", label: "Expenses", icon: Wallet, target: "step-expenses", done: expensesDone },
+      ...(isGroceryStocking ? [] : [
+        { key: "tasks", label: "Tasks", icon: ListChecks, target: "step-tasks", done: tasksDone },
+        { key: "expenses", label: "Expenses", icon: Wallet, target: "step-expenses", done: expensesDone },
+      ]),
       { key: "owner", label: "Owner", icon: MessageSquare, target: "step-owner", done: ownerDone },
       { key: "finish", label: "Finish", icon: CheckCircle2, target: "step-finish", done: false },
     ];
@@ -1519,6 +1524,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               Checklist Review "Continue Visit" lands HERE (top of Meter
               Readings), not at Finish. Purely a scroll target: nothing about
               Meter Readings is required and section order is unchanged. */}
+          {!isGroceryStocking && (
           <div id="step-meters" className="scroll-mt-28 rounded-2xl border border-border bg-card p-4 mb-4">
             <div className="flex items-center gap-2 mb-3"><Gauge className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Meter Readings")}</h3></div>
             <div className="space-y-2">
@@ -1531,6 +1537,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <Button variant="outline" size="sm" onClick={() => setMeters((arr) => [...arr, { label: "", value: "", photo: "" }])} className={`rounded-full ${BTN_SM}`}><Plus className="w-4 h-4" /> {t("Add reading")}</Button>
             </div>
           </div>
+          )}
         </div>
 
         {/* Issues */}
@@ -1556,7 +1563,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           </div>
         </div>
 
-        {/* Tasks / Contractor */}
+        {/* Tasks / Contractor — hidden for Grocery Stocking visits */}
+        {!isGroceryStocking && (
         <div id="step-tasks" className="scroll-mt-28">
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">{t("Tasks / Contractor")}</p>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
@@ -1576,8 +1584,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             </div>
           </div>
         </div>
+        )}
 
-        {/* Expenses / Receipts */}
+        {/* Expenses / Receipts — hidden for Grocery Stocking visits */}
+        {!isGroceryStocking && (
         <div id="step-expenses" className="scroll-mt-28">
           <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><Wallet className="w-3 h-3" /> {t("Expenses / Receipts")}</p>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4 space-y-2.5">
@@ -1628,6 +1638,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             </div>
           </div>
         </div>
+        )}
 
         {/* Owner Update */}
         <div id="step-owner" className="scroll-mt-28">
@@ -1815,7 +1826,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             setGuidedOpen(false);
             setTimeout(() => {
               if (firstBlockerIdx >= 0) jumpToItem(firstBlockerIdx);
-              else goToStep("step-meters");
+              else goToStep(isGroceryStocking ? "step-issues" : "step-meters");
             }, 60);
           }}
           checklist={checklist}
