@@ -77,31 +77,36 @@ function AgendaCard({ item, onAction }) {
       </div>
     );
   }
+  // Due Today / non-overdue card — MOBILE: block layout, info gets the full
+  // card width (wraps naturally), action button on its own row underneath.
+  // At sm+ it renders exactly as the original side-by-side row.
   return (
-    <div className="flex items-stretch gap-3 px-4 py-3 hover:bg-muted/40 transition">
-      <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10 text-primary">
-        <Icon className="w-5 h-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          {item.timeLabel && <span className="text-sm font-semibold text-foreground">{item.timeLabel}</span>}
-          <span className="text-sm font-medium text-foreground truncate">{item.propertyName || t(item.typeLabel)}</span>
-        </div>
-        <p className="text-xs text-muted-foreground truncate">
-          {t(item.typeLabel)}
-          {item.clientName ? ` · ${t("Owner")}: ${item.clientName}` : ""}
-        </p>
-        <div className="flex items-center gap-2 mt-1">
-          <span className={`text-[11px] px-2 py-0.5 rounded-full border ${item.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : item.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : "bg-muted text-muted-foreground border-border"}`}>{t(item.status)}</span>
+    <div className="px-4 py-3 hover:bg-muted/40 transition sm:flex sm:items-stretch sm:gap-3">
+      <div className="flex items-start gap-3 min-w-0 flex-1">
+        <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10 text-primary">
+          <Icon className="w-5 h-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            {item.timeLabel && <span className="text-sm font-semibold text-foreground shrink-0">{item.timeLabel}</span>}
+            <span className="text-sm font-medium text-foreground sm:truncate">{item.propertyName || t(item.typeLabel)}</span>
+          </div>
+          <p className="text-xs text-muted-foreground sm:truncate">
+            {t(item.typeLabel)}
+            {item.clientName ? ` · ${t("Owner")}: ${item.clientName}` : ""}
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={`text-[11px] px-2 py-0.5 rounded-full border ${item.status === "In Progress" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : item.status === "Scheduled" ? "bg-sky-500/10 text-sky-600 border-sky-500/20" : "bg-muted text-muted-foreground border-border"}`}>{t(item.status)}</span>
+          </div>
         </div>
       </div>
-      <div className="flex items-center shrink-0">
+      <div className="mt-3 w-full shrink-0 sm:mt-0 sm:w-auto sm:flex sm:items-center">
         {actionPrimary ? (
-          <Button size="sm" onClick={() => onAction(item)} className="rounded-xl gap-1.5 h-9 px-3">
+          <Button size="sm" onClick={() => onAction(item)} className="rounded-xl gap-1.5 h-9 px-3 w-full sm:w-auto">
             {actionIcon && React.createElement(actionIcon, { className: "w-4 h-4" })} {t(item.actionLabel)}
           </Button>
         ) : (
-          <Button asChild size="sm" variant="outline" className="rounded-xl gap-1.5 h-9 px-3">
+          <Button asChild size="sm" variant="outline" className="rounded-xl gap-1.5 h-9 px-3 w-full sm:w-auto">
             <Link to={item.to}>{t(item.actionLabel)} <ArrowRight className="w-4 h-4" /></Link>
           </Button>
         )}

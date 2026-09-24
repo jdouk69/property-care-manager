@@ -35,18 +35,22 @@ export default function ReportsToSendReminder({ visits = [], properties = [], cl
       </div>
       <div className="divide-y divide-border">
         {waiting.slice(0, 4).map((v) => (
-          <div key={v.id} className="flex items-center justify-between gap-3 px-4 py-3">
+          // MOBILE: info gets the full card width and wraps; Review & Send sits
+          // on its own row underneath. At sm+ it renders exactly as before.
+          <div key={v.id} className="px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">
+              <p className="text-sm font-medium sm:truncate">
                 {propName(v.property_id)}{clientFor(v.property_id) ? ` · ${clientFor(v.property_id)}` : ""}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground sm:truncate">
                 {t(visitTypeLabel(v.visit_type))} · {t("Visit completed {date}", { date: athensMediumDate(v.start_time, lang) })}
               </p>
             </div>
-            <Button asChild size="sm" className="rounded-xl gap-1.5 h-9 px-3 shrink-0">
-              <Link to={`/reports?open=${v.id}`}>{t("Review & Send")} <ArrowRight className="w-3.5 h-3.5" /></Link>
-            </Button>
+            <div className="mt-3 sm:mt-0">
+              <Button asChild size="sm" className="rounded-xl gap-1.5 h-9 px-3 w-full sm:w-auto shrink-0">
+                <Link to={`/reports?open=${v.id}`}>{t("Review & Send")} <ArrowRight className="w-3.5 h-3.5" /></Link>
+              </Button>
+            </div>
           </div>
         ))}
       </div>
