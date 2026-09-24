@@ -246,3 +246,17 @@ export function buildTodayAgenda(data = {}) {
 
   return { today: items, overdue, completed };
 }
+
+/**
+ * Completed visits whose owner report has NOT been delivered — the exact rule
+ * the former ReportsToSendReminder widget used (Ready to Send, Draft, or
+ * Delivery Failed; unsent reports from previous days keep appearing until
+ * delivered or resolved). Single source of truth for the unified TODAY
+ * "Reports to Send" subsection and the Quick Actions "Send Reports" count.
+ */
+export function unsentReports(visits = []) {
+  const statusOf = (v) => v.report_status || (v.report_sent ? "Sent" : "Draft");
+  return visits
+    .filter((v) => v.status === "Completed" && !v.archived && statusOf(v) !== "Sent")
+    .sort((a, b) => (b.start_time || "").localeCompare(a.start_time || ""));
+}

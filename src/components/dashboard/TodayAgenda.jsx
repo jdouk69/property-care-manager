@@ -5,10 +5,17 @@ import {
   ClipboardList, ClipboardCheck, ChevronDown, ChevronRight, Play, Navigation, ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { buildTodayAgenda } from "@/lib/todayAgenda";
+import { buildTodayAgenda, unsentReports } from "@/lib/todayAgenda";
 import { startScheduledVisit } from "@/lib/visitStart";
 import { athensToday } from "@/lib/timezone";
+import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+
+const OVERDUE_LIMIT = 6;
+const TODAY_LIMIT = 8;
+const REPORT_LIMIT = 4;
+const ISSUE_LIMIT = 4;
+const ISSUE_RANK = { Emergency: 0, High: 1, Medium: 2, Routine: 3 };
 
 const KIND_ICON = {
   visit: MapPin, "arrival-prep": CalendarClock, task: ListChecks,
@@ -34,15 +41,10 @@ function AgendaCard({ item, onAction }) {
     : item.actionKind === "continue-visit" ? Navigation
     : item.actionKind === "start-service" ? Play
     : ArrowRight;
-  const actionPrimary = item.actionKind === "start-visit" || item.actionKind === "continue-visit" || item.actionKind === "start-service";
-  // Layout: overdue (Needs Attention) cards stack vertically on mobile so the
-  // action button sits below the full-width visit info; at sm+ they render
-  // exactly as before (icon | info | action side by side, via display:contents).
-  // Non-overdue cards keep the single side-by-side row at every width.
+  const actionPrimary = ["start-visit", "continue-visit", "start-service", "view-report"].includes(item.actionKind);
   // Overdue (Needs Attention) card — MOBILE: plain block layout so all text
   // gets full card width and the action button sits on its OWN row underneath
   // (never beside the text). At sm+ it becomes the original side-by-side row.
-  // Non-overdue cards keep the single side-by-side row at every width.
   if (item.overdue) {
     return (
       <div className="px-4 py-3 hover:bg-muted/40 transition sm:flex sm:items-stretch sm:gap-3">
@@ -77,7 +79,7 @@ function AgendaCard({ item, onAction }) {
       </div>
     );
   }
-  // Due Today / non-overdue card — MOBILE: block layout, info gets the full
+  // Due Today / report / issue card — MOBILE: block layout, info gets the full
   // card width (wraps naturally), action button on its own row underneath.
   // At sm+ it renders exactly as the original side-by-side row.
   return (
@@ -115,11 +117,68 @@ function AgendaCard({ item, onAction }) {
   );
 }
 
+function Subsection({ label, count, to, viewAllLabel, tone, children }) {
+  const { t } = useLanguage();
+  return (
+    <div>
+      <div className={`flex items-center gap-2 px-4 py-2 ${tone === "danger" ? "bg-rose-500/10" : "bg-muted/40"}`}>
+        {tone === "danger" && <AlertTriangle className="w-4 h-4 text-rose-600" />}
+        <p className={`text-xs font-semibold tracking-wide ${tone === "danger" ? "text-rose-700 dark:text-rose-400" : "text-foreground"}`}>{t(label)}</p>
+        {!!count && <span className="text-xs text-muted-foreground">{count}</span>}
+        {to && <Link to={to} className="ml-auto text-xs text-primary flex items-center gap-1 hover:underline">{t(viewAllLabel || "View all")} <ArrowRight className="w-3 h-3" /></Link>}
+      </div>
+      <div className="divide-y divide-border">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Unified TODAY section — the single Home source of truth for actionable
+ * work. Aggregates the EXISTING agenda builder (visits, tasks, maintenance
+ * coordination, owner-rep reports, inspections — no duplicate records or
+ * logic), unsent visit reports (unsentReports), and open maintenance issues,
+ * and takes staff directly to the existing destination for each item.
+ * Empty categories are omitted entirely.
+ */
 export default function TodayAgenda({ data }) {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
   const [showCompleted, setShowCompleted] = useState(false);
-  const { today, overdue, completed } = useMemo(() => buildTodayAgenda(data), [data]);
+  const { today: dueToday, overdue, completed } = useMemo(() => buildTodayAgenda(data), [data]);
+
+  const properties = data.properties || [];
+  const clients = data.clients || [];
+  const propName = (id) => properties.find((p) => p.id === id)?.name || t("Property");
+  const clientFor = (propId) => clients.find((c) => c.id === properties.find((x) => x.id === propId)?.owner_id)?.name || "";
+
+  // Reports waiting to be reviewed/sent — existing report workflow (/reports?open=<id>).
+  const reports = useMemo(() => unsentReports(data.visits || []), [data.visits]);
+  const reportItems = reports.map((v) => ({
+    id: v.id, kind: "visit", overdue: false,
+    propertyName: propName(v.property_id), clientName: clientFor(v.property_id),
+    typeLabel: `${visitTypeLabel(v.visit_type)} · ${t("Visit Report")}`,
+    status: v.report_status || "Draft",
+    to: `/reports?open=${v.id}`, actionLabel: "Review & Send", actionKind: "view-report",
+  }));
+
+  // Open issues requiring follow-up (existing status model: not Completed,
+  // not Cancelled, not archived). Issues already surfaced by the agenda via a
+  // today/past appointment or follow-up date are excluded to avoid duplicates.
+  const surfacedIssueIds = useMemo(
+    () => new Set([...dueToday, ...overdue].filter((i) => i.kind === "maintenance").map((i) => i.id)),
+    [dueToday, overdue]
+  );
+  const issueItems = useMemo(() => (data.maintenance || [])
+    .filter((m) => !m.archived && m.status !== "Completed" && m.status !== "Cancelled" && !surfacedIssueIds.has(m.id))
+    .sort((a, b) => (ISSUE_RANK[a.priority] ?? 2) - (ISSUE_RANK[b.priority] ?? 2) || (b.created_date || "").localeCompare(a.created_date || ""))
+    .map((m) => ({
+      id: m.id, kind: "maintenance", overdue: false,
+      propertyName: propName(m.property_id), clientName: clientFor(m.property_id),
+      typeLabel: m.title || m.category || "Issue", status: m.status,
+      to: `/maintenance/${m.id}`, actionLabel: "View Issue", actionKind: "view-issue",
+    })),
+    [data.maintenance, surfacedIssueIds]
+  );
 
   const handleAction = (item) => {
     if (item.actionKind === "start-visit") {
@@ -133,7 +192,8 @@ export default function TodayAgenda({ data }) {
     }
   };
 
-  const empty = today.length === 0 && overdue.length === 0 && completed.length === 0;
+  const empty = dueToday.length === 0 && overdue.length === 0 && completed.length === 0
+    && reportItems.length === 0 && issueItems.length === 0;
 
   // Header date follows the interface language, formatted from the SAME Athens
   // calendar date (UTC-noon anchor) — pure formatting, no timezone conversion.
@@ -141,50 +201,50 @@ export default function TodayAgenda({ data }) {
   const header = `${t("TODAY")} — ${new Date(todayIso + "T12:00:00Z").toLocaleDateString(lang === "el" ? "el-GR" : "en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })}`;
 
   return (
-    <div className="mb-6">
+    <div className="mb-5">
       <div className="flex items-center gap-2 mb-3">
         <CalendarClock className="w-5 h-5 text-primary" />
         <h2 className="text-base font-semibold tracking-tight">{header}</h2>
       </div>
 
       {empty ? (
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-6 text-center">
-          <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-          <p className="text-sm font-medium text-foreground">{t("You're all caught up — nothing scheduled today.")}</p>
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-5 flex items-center gap-3">
+          <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+          <p className="text-sm font-medium text-foreground">{t("You're caught up — nothing needs attention right now.")}</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {/* Needs attention */}
+        <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
+          {/* Overdue / In-Progress work — most urgent, first */}
           {overdue.length > 0 && (
-            <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-rose-500/20 bg-rose-500/10">
-                <AlertTriangle className="w-4 h-4 text-rose-600" />
-                <p className="text-sm font-semibold text-rose-700 dark:text-rose-400">{t("NEEDS ATTENTION")}</p>
-                <span className="text-xs text-rose-600/80 ml-auto">{t("{count} overdue", { count: overdue.length })}</span>
-              </div>
-              <div className="divide-y divide-border">
-                {overdue.map((it) => <AgendaCard key={`${it.kind}-${it.id}`} item={it} onAction={handleAction} />)}
-              </div>
-            </div>
+            <Subsection tone="danger" label="NEEDS ATTENTION" count={overdue.length} to={overdue.length > OVERDUE_LIMIT ? "/visits" : null} viewAllLabel="View all visits">
+              {overdue.slice(0, OVERDUE_LIMIT).map((it) => <AgendaCard key={`od-${it.id}`} item={it} onAction={handleAction} />)}
+            </Subsection>
           )}
 
-          {/* Today's work */}
-          {today.length > 0 && (
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-primary/5">
-                <CalendarClock className="w-4 h-4 text-primary" />
-                <p className="text-sm font-semibold text-foreground">{t("Due Today")}</p>
-                <span className="text-xs text-muted-foreground ml-auto">{today.length}</span>
-              </div>
-              <div className="divide-y divide-border">
-                {today.map((it) => <AgendaCard key={`${it.kind}-${it.id}`} item={it} onAction={handleAction} />)}
-              </div>
-            </div>
+          {/* Work due today */}
+          {dueToday.length > 0 && (
+            <Subsection label="DUE TODAY" count={dueToday.length} to={dueToday.length > TODAY_LIMIT ? "/calendar" : null} viewAllLabel="View Full Calendar">
+              {dueToday.slice(0, TODAY_LIMIT).map((it) => <AgendaCard key={`td-${it.kind}-${it.id}`} item={it} onAction={handleAction} />)}
+            </Subsection>
           )}
 
-          {/* Completed today */}
+          {/* Reports waiting to be reviewed/sent */}
+          {reportItems.length > 0 && (
+            <Subsection label="REPORTS TO SEND" count={reportItems.length} to={reportItems.length > REPORT_LIMIT ? "/reports" : null} viewAllLabel="Open Reports">
+              {reportItems.slice(0, REPORT_LIMIT).map((it) => <AgendaCard key={`rp-${it.id}`} item={it} onAction={handleAction} />)}
+            </Subsection>
+          )}
+
+          {/* Open issues requiring follow-up */}
+          {issueItems.length > 0 && (
+            <Subsection label="OPEN ISSUES" count={issueItems.length} to={issueItems.length > ISSUE_LIMIT ? "/maintenance" : null} viewAllLabel="View all issues">
+              {issueItems.slice(0, ISSUE_LIMIT).map((it) => <AgendaCard key={`is-${it.id}`} item={it} onAction={handleAction} />)}
+            </Subsection>
+          )}
+
+          {/* Completed today — collapsed by default */}
           {completed.length > 0 && (
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
+            <div>
               <button
                 type="button"
                 onClick={() => setShowCompleted((s) => !s)}
@@ -198,7 +258,7 @@ export default function TodayAgenda({ data }) {
               {showCompleted && (
                 <div className="divide-y divide-border border-t border-border">
                   {completed.map((it) => (
-                    <div key={`${it.kind}-${it.id}`} className="flex items-center gap-3 px-4 py-3 opacity-70">
+                    <div key={`cp-${it.kind}-${it.id}`} className="flex items-center gap-3 px-4 py-3 opacity-70">
                       <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{it.propertyName || it.typeLabel}</p>
