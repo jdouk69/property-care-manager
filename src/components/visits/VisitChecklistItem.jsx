@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff, ChevronDown, Check, CircleSlash, Minus, Circle } from "lucide-react";
+import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff, ChevronDown, Check, CircleSlash, Minus, Circle, Plus, StickyNote } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -8,7 +8,7 @@ import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 // "Not Checked" stays the stored default (item not yet answered) but is no
 // longer a deliberate field choice — workers pick Unable to Check or N/A instead.
 export const STATUSES = [
-  { value: "Normal", label: "Normal", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", idleCls: "bg-emerald-500/5 border-emerald-500/25 text-emerald-700 dark:text-emerald-400" },
+  { value: "Normal", label: "OK", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", idleCls: "bg-emerald-500/5 border-emerald-500/25 text-emerald-700 dark:text-emerald-400" },
   { value: "Important", label: "Attention", icon: AlertTriangle, cls: "bg-amber-500/10 text-amber-600 border-amber-500/30", idleCls: "bg-amber-500/5 border-amber-500/25 text-amber-700 dark:text-amber-500" },
   { value: "Emergency", label: "Emergency", icon: AlertTriangle, cls: "bg-rose-500/10 text-rose-600 border-rose-500/30", idleCls: "bg-rose-500/5 border-rose-500/25 text-rose-700 dark:text-rose-400" },
   { value: "Unable to Check", label: "Unable to Check", icon: CircleSlash, cls: "bg-sky-500/10 text-sky-600 border-sky-500/30", idleCls: "bg-muted/60 border-border text-muted-foreground" },
@@ -85,15 +85,63 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
             ))}
           </div>
 
+          {/* Optional documentation — available after ANY response, never required.
+              detailOpen keeps the existing note textarea + photo grid + owner
+              visibility toggle below. */}
           {item.status !== "Not Checked" && (
-            <button
-              type="button"
-              onClick={() => setDetailOpen(!detailOpen)}
-              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition 2xl:min-h-9 2xl:px-3 2xl:py-1.5 2xl:text-xs"
-            >
-              {detailOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              {detailOpen ? t("Hide notes / photos") : t("Add note / photo")}
-            </button>
+            detailOpen ? (
+              <button
+                type="button"
+                onClick={() => setDetailOpen(false)}
+                className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition 2xl:min-h-9 2xl:px-3 2xl:py-1.5 2xl:text-xs"
+              >
+                <EyeOff className="w-4 h-4" />
+                {t("Hide notes / photos")}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                {/* Saved note/photos stay visible and tappable even while the
+                    detail area is collapsed — they never silently disappear. */}
+                {(((item.notes || "").trim()) || ((item.photos || []).length > 0)) && (
+                  <button
+                    type="button"
+                    onClick={() => setDetailOpen(true)}
+                    className="w-full flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-left hover:bg-muted transition"
+                  >
+                    {(item.notes || "").trim() && (
+                      <p className="flex-1 text-xs text-muted-foreground truncate">
+                        <StickyNote className="w-3.5 h-3.5 inline mr-1 -mt-0.5 shrink-0" />
+                        {item.notes}
+                      </p>
+                    )}
+                    {(item.photos || []).length > 0 && (
+                      <span className="flex gap-1 shrink-0">
+                        {(item.photos || []).slice(0, 3).map((url, pi) => (
+                          <UIImage key={pi} src={url} className="w-8 h-8 rounded-md shrink-0" fittingType="fill" />
+                        ))}
+                      </span>
+                    )}
+                  </button>
+                )}
+                {/* Compact entry points — one tap opens the shared note/photo area */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDetailOpen(true)}
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition 2xl:min-h-9 2xl:px-3 2xl:py-1.5 2xl:text-xs"
+                  >
+                    <Plus className="w-4 h-4" /> {t("Add Note")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDetailOpen(true)}
+                    className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition 2xl:min-h-9 2xl:px-3 2xl:py-1.5 2xl:text-xs"
+                  >
+                    <Plus className="w-4 h-4" /> {t("Add Photo")}
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {/* Create maintenance issue — always visible on Attention/Emergency

@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import useDictationRecorder from "@/hooks/useDictationRecorder";
 import { dictationProposalsFromAudio } from "@/lib/inspectionDictation";
 import { checklistStatusLabel } from "@/lib/visitTypeLabels";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const statusTone = {
   Normal: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -30,6 +31,7 @@ const UNANSWERED = "Not Checked";
 // silently overwritten, and dictation can never complete/submit/send/bill
 // the inspection.
 export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, context, title = "Dictate Inspection", onApply }) {
+  const { t } = useLanguage();
   const recorder = useDictationRecorder();
   const [result, setResult] = useState(null); // { transcript, proposals }
   const [selected, setSelected] = useState({});
@@ -175,7 +177,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium truncate">{it.name}</p>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${toneFor(p.status)}`}>{checklistStatusLabel(p.status)}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${toneFor(p.status)}`}>{t(checklistStatusLabel(p.status))}</span>
                             {p.needs_review && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
                                 Needs review — ambiguous, check before applying

@@ -21,9 +21,10 @@ export function visitTypeLabel(vt) {
   return VISIT_TYPE_LABELS[vt] || vt;
 }
 
-// Checklist finding status display names: "Important" is shown as "Attention".
-// The stored enum value is NEVER changed — this only controls on-screen wording.
-export const CHECKLIST_STATUS_LABELS = { Important: "Attention" };
+// Checklist finding status display names: "Important" is shown as "Attention",
+// "Normal" is shown as "OK". The stored enum value is NEVER changed — this only
+// controls on-screen wording.
+export const CHECKLIST_STATUS_LABELS = { Important: "Attention", Normal: "OK" };
 
 export function checklistStatusLabel(s) {
   return CHECKLIST_STATUS_LABELS[s] || s || "";

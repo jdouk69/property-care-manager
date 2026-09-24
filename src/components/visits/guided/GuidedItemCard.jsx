@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mic, Camera, Loader2, X, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Mic, Camera, Loader2, X, AlertTriangle, Eye, EyeOff, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -72,15 +72,39 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
         ))}
       </div>
 
+      {/* Optional documentation — available after ANY response, never required.
+          In Guided mode notes/photos (or a manual open) keep the detail area
+          visible; the two entry points only appear while it is closed. */}
       {item.status !== "Not Checked" && !DETAIL_STATUSES.includes(item.status) && (
-        <button
-          type="button"
-          onClick={() => setManualDetailOpen(!manualDetailOpen)}
-          className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition"
-        >
-          {manualDetailOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          {manualDetailOpen ? t("Hide notes / photos") : t("Add note / photo")}
-        </button>
+        showDetails ? (
+          !((item.notes || "").trim() || (item.photos || []).length > 0) ? (
+            <button
+              type="button"
+              onClick={() => setManualDetailOpen(false)}
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition"
+            >
+              <EyeOff className="w-4 h-4" />
+              {t("Hide notes / photos")}
+            </button>
+          ) : null
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setManualDetailOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition"
+            >
+              <Plus className="w-4 h-4" /> {t("Add Note")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setManualDetailOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2 rounded-full border border-border text-sm text-foreground hover:bg-muted transition"
+            >
+              <Plus className="w-4 h-4" /> {t("Add Photo")}
+            </button>
+          </div>
+        )
       )}
 
       {showDetails && (
