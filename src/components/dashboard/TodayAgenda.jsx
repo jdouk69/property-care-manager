@@ -35,21 +35,30 @@ function AgendaCard({ item, onAction }) {
     : item.actionKind === "start-service" ? Play
     : ArrowRight;
   const actionPrimary = item.actionKind === "start-visit" || item.actionKind === "continue-visit" || item.actionKind === "start-service";
+  // Layout: overdue (Needs Attention) cards stack vertically on mobile so the
+  // action button sits below the full-width visit info; at sm+ they render
+  // exactly as before (icon | info | action side by side, via display:contents).
+  // Non-overdue cards keep the single side-by-side row at every width.
+  const od = item.overdue;
+  const actionBtnCls = od ? "rounded-xl gap-1.5 h-9 px-3 w-full sm:w-auto" : "rounded-xl gap-1.5 h-9 px-3";
   return (
-    <div className="flex items-stretch gap-3 px-4 py-3 hover:bg-muted/40 transition">
-      <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.overdue ? "bg-rose-500/10 text-rose-600" : "bg-primary/10 text-primary"}`}>
+    <div className={od
+      ? "flex flex-col gap-2 px-4 py-3 hover:bg-muted/40 transition sm:flex-row sm:items-stretch sm:gap-3"
+      : "flex items-stretch gap-3 px-4 py-3 hover:bg-muted/40 transition"}>
+      <div className="flex items-start gap-3 min-w-0 flex-1 sm:contents">
+      <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${od ? "bg-rose-500/10 text-rose-600" : "bg-primary/10 text-primary"}`}>
         <Icon className="w-5 h-5" />
       </span>
       <div className="min-w-0 flex-1">
-        {item.overdue ? (
+        {od ? (
           <>
-            <div className="text-sm font-medium text-foreground truncate">{item.propertyName || t(item.typeLabel)}</div>
-            <p className="text-xs text-muted-foreground truncate">
+            <div className="text-sm font-medium text-foreground sm:truncate">{item.propertyName || t(item.typeLabel)}</div>
+            <p className="text-xs text-muted-foreground sm:truncate">
               {item.propertyName ? t(item.typeLabel) : t("Overdue")}
               {item.clientName ? ` · ${t("Owner")}: ${item.clientName}` : ""}
             </p>
             <div className="mt-1">
-              <span className="text-[11px] px-2 py-0.5 rounded-full border bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20 font-medium">
+              <span className="block text-[11px] px-2 py-1 rounded-md border bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20 font-medium sm:inline-block sm:rounded-full sm:py-0.5">
                 {odLabel}
               </span>
             </div>
@@ -70,13 +79,14 @@ function AgendaCard({ item, onAction }) {
           </>
         )}
       </div>
-      <div className="flex items-center shrink-0">
+      </div>
+      <div className={od ? "w-full shrink-0 sm:w-auto sm:flex sm:items-center" : "flex items-center shrink-0"}>
         {actionPrimary ? (
-          <Button size="sm" onClick={() => onAction(item)} className="rounded-xl gap-1.5 h-9 px-3">
+          <Button size="sm" onClick={() => onAction(item)} className={actionBtnCls}>
             {actionIcon && React.createElement(actionIcon, { className: "w-4 h-4" })} {t(item.actionLabel)}
           </Button>
         ) : (
-          <Button asChild size="sm" variant="outline" className="rounded-xl gap-1.5 h-9 px-3">
+          <Button asChild size="sm" variant="outline" className={actionBtnCls}>
             <Link to={item.to}>{t(item.actionLabel)} <ArrowRight className="w-4 h-4" /></Link>
           </Button>
         )}
