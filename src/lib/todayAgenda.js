@@ -78,13 +78,24 @@ export function buildTodayAgenda(data = {}) {
     const normalStart = { actionKind: "start-visit", actionLabel: "Start Visit" };
     const startAction = isAssistance ? assistanceStart : normalStart;
     if (!isToday && !completedVisit) {
-      // also detect overdue scheduled visits (past, still scheduled)
-      if (v.status === "Scheduled" && st && new Date(st).getTime() < Date.now() - 3600000) {
+      // Past-dated active visits stay visible under NEEDS ATTENTION:
+      // - Scheduled: flagged overdue after the existing 1-hour buffer (unchanged).
+      // - In Progress: a started visit must never disappear from the Dashboard
+      //   just because its scheduled Athens date has passed. No buffer applies
+      //   (the visit has already started), only that the scheduled time is past.
+      const inProgress = v.status === "In Progress";
+      const isPastDue = inProgress
+        ? !!(st && new Date(st).getTime() < Date.now())
+        : !!(st && new Date(st).getTime() < Date.now() - 3600000);
+      if ((v.status === "Scheduled" || inProgress) && isPastDue) {
+        const contAction = inProgress
+          ? { actionKind: "continue-visit", actionLabel: isAssistance ? "Continue" : "Continue Visit", to: isAssistance ? visitTo : `/visits?resume=${v.id}` }
+          : startAction;
         overdue.push({
           id: v.id, kind: "visit", time: st, timeLabel: athensTime(st),
           propertyId: v.property_id, propertyName: propName(v.property_id), clientName: clientFor(v.property_id),
           typeLabel: visitTypeLabel(v.visit_type), status: v.status, date: day,
-          to: visitTo, ...startAction,
+          to: visitTo, ...contAction,
           completed: false, overdue: true,
         });
       }
