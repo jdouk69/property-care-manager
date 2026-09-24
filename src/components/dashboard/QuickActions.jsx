@@ -5,15 +5,15 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 function ActionTile({ to, onClick, icon: Icon, label, sub, tone, className }) {
   const inner = (
-    <div className={`flex items-center gap-3 h-14 rounded-xl border px-3.5 transition ${tone}`}>
+    <div className={`flex items-center gap-3 min-h-14 py-2 rounded-xl border px-3.5 transition ${tone}`}>
       <span className="w-10 h-10 rounded-lg bg-black/5 dark:bg-white/10 flex items-center justify-center shrink-0">
         <Icon className="w-5 h-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-semibold text-sm truncate">{label}</p>
-        {sub && <p className="text-xs opacity-70 truncate">{sub}</p>}
+        <p className="font-semibold text-sm leading-tight">{label}</p>
+        {sub && <p className="text-xs opacity-70 leading-tight">{sub}</p>}
       </div>
-      <ArrowRight className="w-4 h-4 ml-auto shrink-0 opacity-60" />
+      <ArrowRight className="w-4 h-4 ml-auto shrink-0 opacity-60 hidden sm:block" />
     </div>
   );
   if (to) return <Link to={to} className={className}>{inner}</Link>;

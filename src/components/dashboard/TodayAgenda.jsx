@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarClock, AlertTriangle, CheckCircle2, MapPin, ListChecks, Wrench,
   ClipboardList, ClipboardCheck, ChevronDown, ChevronRight, Play, Navigation, ArrowRight,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildTodayAgenda, unsentReports } from "@/lib/todayAgenda";
@@ -13,8 +14,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const OVERDUE_LIMIT = 6;
 const TODAY_LIMIT = 8;
-const REPORT_LIMIT = 4;
-const ISSUE_LIMIT = 4;
+const ISSUE_LIMIT = 2;
 const ISSUE_RANK = { Emergency: 0, High: 1, Medium: 2, Routine: 3 };
 
 const KIND_ICON = {
@@ -228,16 +228,29 @@ export default function TodayAgenda({ data }) {
             </Subsection>
           )}
 
-          {/* Reports waiting to be reviewed/sent */}
+          {/* Reports waiting to be reviewed/sent — ONE compact summary row, not a
+              list of cards. The existing Reports page is the full queue. */}
           {reportItems.length > 0 && (
-            <Subsection label="REPORTS TO SEND" count={reportItems.length} to={reportItems.length > REPORT_LIMIT ? "/reports" : null} viewAllLabel="Open Reports">
-              {reportItems.slice(0, REPORT_LIMIT).map((it) => <AgendaCard key={`rp-${it.id}`} item={it} onAction={handleAction} />)}
-            </Subsection>
+            <Link to="/reports" className="block px-4 py-3 hover:bg-muted/40 transition sm:flex sm:items-center sm:gap-3">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-amber-500/10 text-amber-600">
+                  <FileText className="w-5 h-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">{t("REPORTS TO SEND")}</p>
+                  <p className="text-xs text-muted-foreground">{t("{count} waiting", { count: reportItems.length })} · {t("Completed visit reports waiting to be reviewed or sent")}</p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-1 text-sm font-medium text-primary shrink-0 sm:mt-0">
+                {t("Review Reports")} <ArrowRight className="w-4 h-4" />
+              </div>
+            </Link>
           )}
 
-          {/* Open issues requiring follow-up */}
+          {/* Open issues requiring follow-up — at most the 2 highest-priority
+              cards on Home; View All Issues routes to the existing list. */}
           {issueItems.length > 0 && (
-            <Subsection label="OPEN ISSUES" count={issueItems.length} to={issueItems.length > ISSUE_LIMIT ? "/maintenance" : null} viewAllLabel="View all issues">
+            <Subsection label="OPEN ISSUES" count={issueItems.length} to={issueItems.length > ISSUE_LIMIT ? "/maintenance" : null} viewAllLabel="View All Issues">
               {issueItems.slice(0, ISSUE_LIMIT).map((it) => <AgendaCard key={`is-${it.id}`} item={it} onAction={handleAction} />)}
             </Subsection>
           )}
