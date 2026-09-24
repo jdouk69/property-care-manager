@@ -851,7 +851,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // toggle-off stays off.
     const wasConcern = prev?.status === "Important" || prev?.status === "Emergency";
     const isConcern = updated.status === "Important" || updated.status === "Emergency";
-    const applied = isConcern && !wasConcern ? { ...updated, owner_visible: true } : updated;
+    let applied = isConcern && !wasConcern ? { ...updated, owner_visible: true } : updated;
+    // ONE canonical owner-visible observation: the note entered under the
+    // "Required: describe what was observed … appears in the owner report"
+    // message IS the owner-facing observation. Typing/editing that note on an
+    // Attention/Emergency item marks it owner-visible, so the visible note and
+    // the completion validator can never disagree again. A DELIBERATE private
+    // toggle (an update that does not change the note text) is preserved.
+    const noteChanged = (updated.notes || "") !== (prev?.notes || "");
+    if (isConcern && noteChanged && (updated.notes || "").trim()) applied = { ...applied, owner_visible: true };
     setChecklist((arr) => arr.map((it, i) => (i === idx ? applied : it)));
     setAnswered((a) => ({ ...a, [idx]: true }));
     // Normal / N/A: collapse and auto-advance to the next unanswered item.
@@ -875,8 +883,19 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         // deliberate status (anything but "Not Checked"), dictation can only
         // document the observation — it never changes the status.
         const keepStatus = (prev.status || "Not Checked") !== "Not Checked";
+        const status = keepStatus ? prev.status : u.status;
         const mergedNotes = [prev.notes || "", u.notes || ""].filter((s) => s.trim()).join("\n").trim();
-        next = next.map((it, i) => (i === u.item_index ? { ...it, status: keepStatus ? prev.status : u.status, notes: mergedNotes } : it));
+        const isConcern = status === "Important" || status === "Emergency";
+        const wasConcern = prev.status === "Important" || prev.status === "Emergency";
+        // SAME canonical owner-visible observation rule as updateItem: a
+        // dictated/merged observation on an Attention/Emergency item is
+        // owner-visible (the whole reason this path could previously store a
+        // fully documented concern as private), and a first-time concern
+        // defaults to owner-visible like every other entry path.
+        const ownerVisible = isConcern
+          ? (mergedNotes ? true : (wasConcern ? !!prev.owner_visible : true))
+          : prev.owner_visible;
+        next = next.map((it, i) => (i === u.item_index ? { ...it, status, notes: mergedNotes, owner_visible: ownerVisible } : it));
       });
       return next;
     });
@@ -1773,9 +1792,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                     : t("There are still unanswered checklist items.")}
               </p>
               {firstBlockerIdx >= 0 && (
-                <p className="text-sm font-medium text-foreground mb-4 -mt-1">
-                  {t("First incomplete: #{number} · {name}", { number: firstBlockerIdx + 1, name: checklistItemDisplay(checklist[firstBlockerIdx].name, lang) })}
-                </p>
+                <>
+                  <p className="text-sm font-medium text-foreground mb-1 -mt-1">
+                    {t("First incomplete: #{number} · {name}", { number: firstBlockerIdx + 1, name: checklistItemDisplay(checklist[firstBlockerIdx].name, lang) })}
+                  </p>
+                  {missingConcernNotes.length > 0 && (checklist[firstBlockerIdx].notes || "").trim() && !checklist[firstBlockerIdx].owner_visible && (
+                    <p className="text-xs text-muted-foreground mb-4">
+                      {t("This item has an observation, but it is marked Private (staff only). Open the item and make the observation Owner-visible.")}
+                    </p>
+                  )}
+                </>
               )}
               <div className="flex flex-col gap-2">
                 <Button onClick={() => { setShowIncomplete(false); if (firstBlockerIdx >= 0) jumpToItem(firstBlockerIdx); else goToStep("step-inspection"); }} className="rounded-2xl h-11">

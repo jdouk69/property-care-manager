@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff, ChevronDown, Check, CircleSlash, Minus, Circle, Plus, StickyNote } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
@@ -26,6 +26,14 @@ const AUTO_OPEN = ["Important", "Emergency", "Unable to Check"];
 export default function VisitChecklistItem({ item, index, onChange, onUploadPhoto, onRemovePhoto, uploading, onFlagIssue, flagged, expanded = false, onToggle }) {
   const { t, lang } = useLanguage();
   const [detailOpen, setDetailOpen] = useState(AUTO_OPEN.includes(item.status));
+  // When the row is expanded from outside (completion dialog's "Go to item",
+  // guided auto-focus), re-open the notes area on items that need their
+  // observation documented — the staff lands on the actual missing input, not
+  // a collapsed row. Manual "Hide notes / photos" keeps working while the row
+  // stays open (this only reacts to the expanded flag itself).
+  useEffect(() => {
+    if (expanded && AUTO_OPEN.includes(item.status)) setDetailOpen(true);
+  }, [expanded, item.status]);
   const setStatus = (status) => {
     onChange({ ...item, status });
     setDetailOpen(AUTO_OPEN.includes(status));
