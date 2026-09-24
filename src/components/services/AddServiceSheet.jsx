@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { CalendarPlus, Loader2, Home as HomeIcon } from "lucide-react";
+import { CalendarPlus, CalendarClock, Loader2, Home as HomeIcon, Navigation } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,10 +45,17 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
   const [time, setTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Two ways to proceed once a service is selected: start it NOW (create the
+  // visit already in the started state and jump straight into the wizard) or
+  // schedule it for later (the existing scheduling flow).
+  const [scheduleLater, setScheduleLater] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return;
     setServiceType(""); setDate(""); setTime(""); setError("");
+    setScheduleLater(false); setStarting(false);
     setPid(propertyId || "");
     (async () => {
       setLoading(true);
@@ -126,6 +134,47 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
     setSaving(false);
   };
 
+  // Start Now — create the service visit in the SAME started state the
+  // existing Start Visit action produces (status "In Progress" + start_time
+  // now, same price snapshot as scheduling) as ONE record, then open the
+  // Visit Wizard through the same /visits?resume=<id> route. The wizard's
+  // resume mode loads the checklist template and applies the visit-type
+  // workflow (e.g. Grocery Stocking sections) — no duplicate record is made
+  // and nothing is charged at start (charges stay staff-confirmed after
+  // completion, exactly as with a scheduled visit that is started).
+  const startNow = async () => {
+    if (!pid || !serviceType) return;
+    setStarting(true);
+    setError("");
+    try {
+      const { pkg, price } = chosen || {};
+      const nowIso = new Date().toISOString();
+      const created = await base44.entities.PropertyVisit.create({
+        property_id: pid,
+        visit_type: serviceType,
+        status: "In Progress",
+        start_time: nowIso,
+        // Same price snapshot as the scheduling flow (price safety): only
+        // stored when a price is actually configured.
+        ...(price != null ? { agreed_price: price } : {}),
+        ...(pkg ? {
+          pricing_snapshot: {
+            purchase_type: "Special Service",
+            service_package_id: pkg.id,
+            package_name: pkg.name,
+            standard_price: price,
+            started_at: nowIso,
+          },
+        } : {}),
+      });
+      onOpenChange(false);
+      navigate(`/visits?resume=${created.id}`);
+    } catch (e) {
+      setError(t("Could not start service: {message}", { message: e?.message || e }));
+    }
+    setStarting(false);
+  };
+
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) setError(""); onOpenChange(o); }}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto flex flex-col">
@@ -188,8 +237,20 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
                 </div>
               </div>
 
-              {/* Date / time */}
-              {serviceType && (
+              {/* Start Now / Schedule for Later — the two ways to proceed */}
+              {serviceType && !scheduleLater && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button onClick={startNow} disabled={starting} className="h-14 rounded-2xl text-base gap-2">
+                    {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Navigation className="w-5 h-5" />} {t("Start Now")}
+                  </Button>
+                  <Button variant="outline" onClick={() => setScheduleLater(true)} disabled={starting} className="h-14 rounded-2xl text-base gap-2">
+                    <CalendarClock className="w-5 h-5" /> {t("Schedule for Later")}
+                  </Button>
+                </div>
+              )}
+
+              {/* Date / time — only for the Schedule for Later choice */}
+              {serviceType && scheduleLater && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Visit Date")}</Label>
@@ -224,9 +285,11 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
 
         <SheetFooter className="border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full">{t("Cancel")}</Button>
-          <Button onClick={save} disabled={saving || !pid || !serviceType || !date || !time} className="rounded-full gap-1.5">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />} {t("Schedule Service")}
-          </Button>
+          {scheduleLater && (
+            <Button onClick={save} disabled={saving || !pid || !serviceType || !date || !time} className="rounded-full gap-1.5">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />} {t("Schedule Service")}
+            </Button>
+          )}
         </SheetFooter>
       </SheetContent>
     </Sheet>
