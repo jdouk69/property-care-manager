@@ -1,6 +1,7 @@
-import jsPDF from "jspdf";
-import { visitTypeLabel } from "@/lib/visitTypeLabels";
-import { athensMediumDateTime } from "@/lib/timezone";
+import * as __jspdfMod from "jspdf";
+const jsPDF = __jspdfMod.jsPDF || __jspdfMod.default || __jspdfMod;
+import { visitTypeLabel } from "../src/lib/visitTypeLabels.js";
+import { athensMediumDateTime } from "../src/lib/timezone.js";
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -354,7 +355,7 @@ function drawImageFit(doc, entry, x, y, boxW, boxH) {
   return boxH;
 }
 
-async function buildDoc(visit, ctx = {}) {
+export async function buildDoc(visit, ctx = {}) {
   const model = buildOwnerReportModel(visit, ctx);
   const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, concernSummary, findings, routineChecks, routineCount, unableToCheck, naLine, docPhotos, issues, tasks, nextVisit } = model;
 

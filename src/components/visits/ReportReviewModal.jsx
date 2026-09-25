@@ -166,9 +166,10 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             </div>
           )}
 
-          {/* Routine Checks — status-by-status result of every checklist item.
-              Green check = checked, no concern observed; abnormal items show
-              their own checklist-specific note. Unable/N/A render gray. */}
+          {/* Routine Checks — ONLY items completed without a concern (plus
+              informational Unable/N-A/Not-checked rows in gray). Attention/
+              Emergency findings are documented once, in Visit Observations
+              above — never repeated here. */}
           {routineChecks.length > 0 && (
             <div className="rounded-xl border border-border p-3">
               <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
@@ -181,27 +182,6 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
                       <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {rc.name}
                       </p>
-                    );
-                  }
-                  if (rc.status === "Important" || rc.status === "Emergency") {
-                    const urgent = rc.status === "Emergency";
-                    return (
-                      <div key={i} className={`rounded-lg border p-2 ${urgent ? "border-rose-500/25 bg-rose-500/5" : "border-amber-500/25 bg-amber-500/5"}`}>
-                        <div className="flex items-start gap-1.5 flex-wrap">
-                          {urgent
-                            ? <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                            : <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />}
-                          <p className="text-xs font-semibold leading-snug">{rc.name}</p>
-                          <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border shrink-0 ${urgent ? "text-rose-600 border-rose-500/30 bg-rose-500/10" : "text-amber-600 border-amber-500/30 bg-amber-500/10"}`}>
-                            {urgent ? "Urgent" : "Attention Recommended"}
-                          </span>
-                        </div>
-                        {rc.note && (
-                          <p className="text-[11px] text-foreground/80 mt-1 whitespace-pre-wrap">
-                            <span className="font-medium text-muted-foreground">What we observed: </span>{rc.note}
-                          </p>
-                        )}
-                      </div>
                     );
                   }
                   const label = rc.status === "Unable to Check" ? "Unable to check" : rc.status === "N/A" ? "N/A" : "Not checked";
