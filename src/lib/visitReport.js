@@ -667,7 +667,8 @@ async function buildDoc(visit, ctx = {}) {
   ensure(18);
   doc.setDrawColor(210); doc.line(margin, y, pageW - margin, y); y += 5;
   doc.setFontSize(8); doc.setTextColor(120);
-  wrap("This Property Care Visit Report documents visual observations made during a routine property-care visit. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.", maxWidth, margin, 4);
+  const pdfVisitType = visitTypeLabel(visit?.visit_type);
+  wrap(`This Property Care Visit Report documents visual observations made during ${pdfVisitType ? `this ${pdfVisitType}` : "a property-care visit"}. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.`, maxWidth, margin, 4);
   doc.setTextColor(0);
 
   // Footer (page numbers)

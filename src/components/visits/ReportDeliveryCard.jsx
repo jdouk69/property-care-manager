@@ -129,7 +129,10 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
         <span className={`text-xs px-2.5 py-1 rounded-full border ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{t(status)}</span>
       </div>
 
-      {visit.report_sent_at && (
+      {/* Delivery history shows ONLY for a report that has actually been sent
+          (status "Sent") — legacy/stale fields from an earlier report cycle of
+          the same record must never appear on a freshly completed report. */}
+      {sent && visit.report_sent_at && (
         <p className="text-xs text-muted-foreground">
           {t("Sent {date}", { date: athensMediumDateTime(visit.report_sent_at) })}
           {visit.report_sent_to ? ` · ${visit.report_sent_to}` : ""}

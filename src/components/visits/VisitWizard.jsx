@@ -998,6 +998,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       meter_readings: meters.filter((m) => m.label || m.value),
       summary, internal_notes: internalNotes, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
       owner_report: "", report_sent: false, report_status: "Ready to Send",
+      // Fresh report lifecycle: a (re)completed visit's report starts unsent.
+      // Clears delivery history + stored PDF from any PREVIOUS report cycle of
+      // this same visit record (e.g. sent, then restarted and re-completed) so
+      // the new report can never display or deliver a prior cycle's metadata.
+      report_sent_at: "", report_sent_to: "", report_sent_by: "",
+      report_delivery_method: "", report_pdf_url: "",
       property_service_agreement_id: agreementId || "",
       is_additional_service: !!additionalService,
       billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }),
@@ -1879,7 +1885,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <p className="text-sm text-muted-foreground">{propertyName} · {visitTypeLabel(visitType)}</p>
           <div className="rounded-2xl border border-border bg-card p-3 text-left text-xs text-muted-foreground space-y-0.5 mt-4 mb-5 inline-block text-left">
             <p>{t("Duration: {start} – {end}", { start: (startTime || "").slice(11, 16), end: (endTime || "").slice(11, 16) })}</p>
-            <p>{t("Checklist items: {items} · Issues: {issues} · Follow-ups: {followUps}", { items: checklist.length, issues: issueIds.length, followUps: taskIds.length })}</p>
+            <p>{t("Checklist items: {items} · Findings: {findings} · Issues created: {issues} · Follow-ups: {followUps}", { items: checklist.length, findings: checklist.filter((it) => it.status === "Important" || it.status === "Emergency").length, issues: issueIds.length, followUps: taskIds.length })}</p>
           </div>
         </div>
         {/* Final billing classification — always visible on the completed visit. */}

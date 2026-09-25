@@ -280,7 +280,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
           )}
 
           <p className="text-[11px] text-muted-foreground italic leading-relaxed">
-            This Property Care Visit Report documents visual observations made during a routine property-care visit. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.
+            This Property Care Visit Report documents visual observations made during {model?.visitTypeLabel ? `this ${model.visitTypeLabel}` : "a property-care visit"}. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.
           </p>
 
           <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5">
