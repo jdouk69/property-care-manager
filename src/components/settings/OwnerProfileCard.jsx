@@ -74,10 +74,12 @@ export default function OwnerProfileCard({ settings, applyFields }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(null);
+  const [error, setError] = useState(null);
 
   const set = (k, v) => {
     setDraft((d) => ({ ...d, [k]: v }));
     setSaved(false);
+    setError(null);
   };
 
   const uploadPhoto = async (file, key, e) => {
@@ -87,7 +89,9 @@ export default function OwnerProfileCard({ settings, applyFields }) {
     try {
       const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
       set(key, file_url);
-    } catch (err) {}
+    } catch (err) {
+      setError(t("Photo upload failed — please try again."));
+    }
     setUploading(null);
   };
 
@@ -98,8 +102,10 @@ export default function OwnerProfileCard({ settings, applyFields }) {
       applyFields(draft);
       setSaving(false);
       setSaved(true);
+      setError(null);
     } catch (err) {
       setSaving(false);
+      setError(t("Save failed — your changes were NOT saved. Please try again."));
     }
   };
 
@@ -108,8 +114,9 @@ export default function OwnerProfileCard({ settings, applyFields }) {
       <div className="flex items-center justify-between gap-2 mb-1">
         <h3 className="font-medium text-sm">{t("Owner Profile")}</h3>
         {saving && <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Saving…")}</span>}
-        {saved && !saving && <span className="flex items-center gap-1.5 text-xs text-emerald-600"><Check className="w-3.5 h-3.5" /> {t("Saved")}</span>}
+        {saved && !saving && !error && <span className="flex items-center gap-1.5 text-xs text-emerald-600"><Check className="w-3.5 h-3.5" /> {t("Saved")}</span>}
       </div>
+      {error && <p className="mb-3 text-xs text-destructive">{error}</p>}
       <p className="text-xs text-muted-foreground mb-4">
         {t("Shown in the 'Meet your local contact' section of the public landing page. Empty fields keep the placeholder look.")}
       </p>
