@@ -7,6 +7,7 @@ import useDictationRecorder from "@/hooks/useDictationRecorder";
 import { dictationProposalsFromAudio } from "@/lib/inspectionDictation";
 import { checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 import InspectionReferenceGuide from "@/components/dictation/InspectionReferenceGuide";
 import { referenceItemsFromChecklist } from "@/lib/inspectionReference";
 
@@ -101,9 +102,9 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <DialogContent className="max-w-sm sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{t(title)}</DialogTitle>
           <DialogDescription className="text-left">
-            An optional shortcut for the checklist below — nothing changes until you review and apply.
+            {t("An optional shortcut for the checklist below — nothing changes until you review and apply.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -111,15 +112,15 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
             all context comes from the inspection the user already opened, never from voice. */}
         {validContext ? (
           <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
-            <p className="text-[11px] uppercase tracking-wide text-primary/80 flex items-center gap-1"><MapPin className="w-3 h-3" /> Dictating for:</p>
+            <p className="text-[11px] uppercase tracking-wide text-primary/80 flex items-center gap-1"><MapPin className="w-3 h-3" /> {t("Dictating for:")}</p>
             <p className="text-sm font-medium text-foreground truncate">{context.propertyName || context.inspectionLabel}</p>
             {context.propertyName && context.inspectionLabel && <p className="text-xs text-muted-foreground truncate">{context.inspectionLabel}</p>}
-            {context.clientName && <p className="text-xs text-muted-foreground truncate">Owner: {context.clientName}</p>}
+            {context.clientName && <p className="text-xs text-muted-foreground truncate">{t("Owner: {name}", { name: context.clientName })}</p>}
           </div>
         ) : (
           <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700 dark:text-amber-500">Open or start an inspection for a property before using dictation.</p>
+            <p className="text-xs text-amber-700 dark:text-amber-500">{t("Open or start an inspection for a property before using dictation.")}</p>
           </div>
         )}
 
@@ -140,13 +141,13 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
               <span className="flex items-center gap-2 text-sm font-semibold text-rose-600 min-w-0">
                 <span className="w-3 h-3 rounded-full bg-rose-500 animate-pulse shrink-0" />
                 <Mic className="w-4 h-4 shrink-0" />
-                Recording {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+                {t("Recording")} {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
               </span>
               <Button variant="destructive" size="sm" onClick={recorder.stop} className="rounded-xl h-11 px-4 gap-1.5 shrink-0">
-                <Square className="w-4 h-4" /> Stop
+                <Square className="w-4 h-4" /> {t("Stop")}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Use the reference below as a reminder while you dictate.</p>
+            <p className="text-xs text-muted-foreground">{t("Use the reference below as a reminder while you dictate.")}</p>
             {/* Read-only Inspection Reference — built from the SAME checklist
                 this dialog already operates on (the visit's/inspection's own
                 assigned checklist). Scrolling happens inside the guide's own
@@ -159,17 +160,17 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
         {recorder.phase === "processing" && (
           <div className="space-y-3 text-center py-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Transcribing your observations…</p>
+            <p className="text-sm text-muted-foreground">{t("Transcribing your observations…")}</p>
           </div>
         )}
 
         {!showReview && recorder.phase === "idle" && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Speak your observations for this inspection, e.g. <span className="italic">"Front gate is broken, the pool pump is leaking, windows are all fine."</span>
+              {t("Speak your observations for this inspection, e.g.")} <span className="italic">"Front gate is broken, the pool pump is leaking, windows are all fine."</span>
             </p>
             <Button onClick={startRecording} disabled={!validContext} className="w-full rounded-2xl h-14 text-base gap-2">
-              <Mic className="w-5 h-5" /> Start Recording
+              <Mic className="w-5 h-5" /> {t("Start Recording")}
             </Button>
           </div>
         )}
@@ -178,18 +179,18 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
           <div className="space-y-3">
             {result.transcript && (
               <div className="rounded-xl border border-border bg-muted/30 p-3">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">What we heard</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">{t("What we heard")}</p>
                 <p className="text-xs text-foreground whitespace-pre-wrap">{result.transcript}</p>
               </div>
             )}
             {proposals.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No checklist items matched your dictation. You can dictate again or simply continue manually.
+                {t("No checklist items matched your dictation. You can dictate again or simply continue manually.")}
               </p>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Review the proposed updates. Unselected items and items you didn't mention stay exactly as they are.
+                  {t("Review the proposed updates. Unselected items and items you didn't mention stay exactly as they are.")}
                 </p>
                 <div className="space-y-2">
                   {proposals.map((p) => {
@@ -204,16 +205,16 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium truncate">{it.name}</p>
+                            <p className="text-sm font-medium truncate">{checklistItemDisplay(it.name, lang)}</p>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full border ${toneFor(p.status)}`}>{t(checklistStatusLabel(p.status))}</span>
                             {p.needs_review && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
-                                Needs review — ambiguous, check before applying
+                                {t("Needs review — ambiguous, check before applying")}
                               </span>
                             )}
                             {manual && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20">
-                                Answered manually — your status stays; only the note is added
+                                {t("Answered manually — your status stays; only the note is added")}
                               </span>
                             )}
                           </div>
@@ -230,11 +231,13 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
 
         <DialogFooter className="flex-row gap-2">
           <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }} className="flex-1 rounded-xl h-12">
-            Cancel
+            {t("Cancel")}
           </Button>
           {showReview && proposals.length > 0 && (
             <Button onClick={apply} disabled={!selectedCount} className="flex-1 rounded-xl h-12">
-              Apply {selectedCount} Update{selectedCount === 1 ? "" : "s"}
+              {selectedCount === 1
+                ? t("Apply {count} Update", { count: selectedCount })
+                : t("Apply {count} Updates", { count: selectedCount })}
             </Button>
           )}
         </DialogFooter>

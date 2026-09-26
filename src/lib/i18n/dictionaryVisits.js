@@ -523,6 +523,35 @@ export const VISITS_EL = {
   "No usable speech was recognized. You can try again or continue manually.": "Δεν αναγνωρίστηκε χρήσιμη ομιλία. Μπορείτε να δοκιμάσετε ξανά ή να συνεχίσετε χειροκίνητα.",
   "Open a checklist item before using dictation.": "Ανοίξτε ένα σημείο checklist πριν χρησιμοποιήσετε την εκφώνηση.",
   "Notes will be added to the item's existing notes.": "Οι σημειώσεις θα προστεθούν στις υπάρχουσες σημειώσεις του σημείου.",
+  // Inspection-level dictation (Dictate Visit / Dictate Inspection) + reference guide
+  "Dictate Visit": "Υπαγόρευση Επίσκεψης",
+  "Dictate Inspection": "Υπαγόρευση Ελέγχου Ακινήτου",
+  "Optional — dictate observations, review them, then apply to the checklist":
+    "Προαιρετικό — υπαγορεύστε παρατηρήσεις, ελέγξτε τις και μετά εφαρμόστε τις στο checklist",
+  "Optional — dictate observations, review them, then apply to this checklist":
+    "Προαιρετικό — υπαγορεύστε παρατηρήσεις, ελέγξτε τις και μετά εφαρμόστε τις σε αυτό το checklist",
+  "An optional shortcut for the checklist below — nothing changes until you review and apply.":
+    "Προαιρετική συντόμευση για το παρακάτω checklist — καμία αλλαγή πριν το ελέγξετε και το εφαρμόσετε.",
+  "Dictating for:": "Υπαγόρευση για:",
+  "Owner: {name}": "Ιδιοκτήτης: {name}",
+  "Open or start an inspection for a property before using dictation.":
+    "Ανοίξτε ή ξεκινήστε έναν έλεγχο ακινήτου πριν χρησιμοποιήσετε την υπαγόρευση.",
+  "Recording": "Εγγραφή",
+  "Use the reference below as a reminder while you dictate.":
+    "Χρησιμοποιήστε τον παρακάτω οδηγό ως υπενθύμιση καθώς υπαγορεύετε.",
+  "Inspection Reference": "Οδηγός Ελέγχου",
+  "{count} item · read-only": "{count} σημείο · μόνο για ανάγνωση",
+  "{count} items · read-only": "{count} σημεία · μόνο για ανάγνωση",
+  "Finish Dictation": "Ολοκλήρωση Υπαγόρευσης",
+  "Transcribing your observations…": "Μεταγράφονται οι παρατηρήσεις σας…",
+  "Speak your observations for this inspection, e.g.": "Πείτε τις παρατηρήσεις σας για αυτόν τον έλεγχο, π.χ.",
+  "No checklist items matched your dictation. You can dictate again or simply continue manually.":
+    "Κανένα σημείο του checklist δεν ταίριαξε με την υπαγόρευσή σας. Μπορείτε να υπαγορεύσετε ξανά ή απλώς να συνεχίσετε χειροκίνητα.",
+  "Review the proposed updates. Unselected items and items you didn't mention stay exactly as they are.":
+    "Ελέγξτε τις προτεινόμενες ενημερώσεις. Τα μη επιλεγμένα σημεία και τα σημεία που δεν αναφέρατε παραμένουν ακριβώς ως έχουν.",
+  "Needs review — ambiguous, check before applying": "Χρειάζεται έλεγχος — ασάφεια, ελέγξτε πριν την εφαρμογή",
+  "Apply {count} Update": "Εφαρμογή {count} Ενημέρωσης",
+  "Apply {count} Updates": "Εφαρμογή {count} Ενημερώσεων",
   "Needs review — check before applying": "Χρειάζεται έλεγχος — ελέγξτε πριν την εφαρμογή",
   "Already answered — review before applying": "Έχει ήδη απαντηθεί — ελέγξτε πριν την εφαρμογή",
   "Checklist Review": "Ανασκόπηση Checklist",

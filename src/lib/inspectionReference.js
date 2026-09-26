@@ -1,4 +1,5 @@
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
+import { EXACT_EL, RULES_EL } from "@/lib/inspectionReferenceEl";
 
 // Display-only reference descriptions for the dictation recording screen.
 // PURE PRESENTATION: nothing here reads or writes checklist statuses, notes,
@@ -238,19 +239,35 @@ const cleanTitle = (name) => {
 };
 
 // Prefer an existing description/help/instructions field on the item when one
-// is present; otherwise match the cleaned title against the exact map, then the
-// keyword rules; the last resort references the item title itself.
-export function referenceDescriptionFor(item) {
+// is present — user-authored text is shown exactly as authored in BOTH
+// languages (there is no Greek field or translation helper for custom
+// checklist text, and none is invented here). Otherwise match the cleaned
+// title against the exact map, then the keyword rules; the last resort
+// references the item title itself. With lang = "el" the Greek twins of the
+// built-in descriptions, keyword rules and fallback are shown; English
+// fallbacks appear only where no Greek version exists (e.g. custom items
+// matched by no rule cannot be auto-translated).
+export function referenceDescriptionFor(item, lang = "en") {
   const existing = [item?.description, item?.help_text, item?.instructions]
     .map((s) => (s || "").trim())
     .find(Boolean);
   if (existing) return existing;
   const name = typeof item === "string" ? item : item?.name || "";
   const key = cleanTitle(name).toLowerCase().replace(/\s+/g, " ").trim();
+  if (lang === "el" && EXACT_EL[key]) return EXACT_EL[key];
   if (EXACT[key]) return EXACT[key];
-  const rule = RULES.find(([re]) => re.test(name));
-  if (rule) return rule[1];
+  const idx = RULES.findIndex(([re]) => re.test(name));
+  if (idx >= 0) {
+    if (lang === "el" && RULES_EL[idx]) return RULES_EL[idx];
+    return RULES[idx][1];
+  }
   const title = cleanTitle(name);
+  if (lang === "el") {
+    const displayTitle = checklistItemDisplay(title, "el") || title;
+    return displayTitle
+      ? `Εργαστείτε στο «${displayTitle}» όπως συμφωνήθηκε για αυτή την επίσκεψη, και σημειώστε οτιδήποτε ξεχωρίζει ή χρειάζεται ακόμη την προσοχή του ιδιοκτήτη.`
+      : "Εργαστείτε σε αυτό το σημείο όπως συμφωνήθηκε για αυτή την επίσκεψη, και σημειώστε οτιδήποτε ξεχωρίζει ή χρειάζεται ακόμη την προσοχή του ιδιοκτήτη.";
+  }
   return title
     ? `Work through “${title}” as agreed for this visit, and note anything that stands out or still needs the owner's attention.`
     : "Work through this item as agreed for this visit, and note anything that stands out or still needs the owner's attention.";
@@ -263,7 +280,7 @@ export function referenceItemsFromChecklist(checklist, lang) {
     const item = typeof it === "string" ? { name: it } : it || {};
     return {
       title: checklistItemDisplay(cleanTitle(item.name), lang) || item.name,
-      description: referenceDescriptionFor(item),
+      description: referenceDescriptionFor(item, lang),
     };
   });
 }

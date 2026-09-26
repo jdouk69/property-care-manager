@@ -1503,8 +1503,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <button type="button" onClick={() => setDictateOpen(true)} className="w-full flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 px-3.5 py-3 mb-3 hover:bg-primary/10 transition min-h-[48px] text-left">
               <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><Mic className="w-4 h-4" /></span>
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-foreground">Dictate Visit</span>
-                <span className="block text-xs text-muted-foreground">Optional — dictate observations, review them, then apply to the checklist</span>
+                <span className="block text-sm font-semibold text-foreground">{t("Dictate Visit")}</span>
+                <span className="block text-xs text-muted-foreground">{t("Optional — dictate observations, review them, then apply to the checklist")}</span>
               </span>
             </button>
           )}
