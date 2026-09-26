@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Mic, Square, Loader2, AlertTriangle, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import useDictationRecorder from "@/hooks/useDictationRecorder";
 import { dictationProposalsFromAudio } from "@/lib/inspectionDictation";
 import { checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import InspectionReferenceGuide from "@/components/dictation/InspectionReferenceGuide";
+import { referenceItemsFromChecklist } from "@/lib/inspectionReference";
 
 const statusTone = {
   Normal: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -31,10 +33,22 @@ const UNANSWERED = "Not Checked";
 // silently overwritten, and dictation can never complete/submit/send/bill
 // the inspection.
 export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, context, title = "Dictate Inspection", onApply }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const recorder = useDictationRecorder();
   const [result, setResult] = useState(null); // { transcript, proposals }
   const [selected, setSelected] = useState({});
+  // Elapsed recording timer — DISPLAY ONLY: it never drives the recorder,
+  // the microphone capture or the transcription; it just shows how long the
+  // current recording has been running (e.g. "Recording 03:42").
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (recorder.phase !== "recording") return;
+    const startedAt = Date.now();
+    setElapsed(0);
+    const tm = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 500);
+    return () => clearInterval(tm);
+  }, [recorder.phase]);
 
   // Context lock: dictation runs ONLY for the inspection the user already
   // opened in the app. The active inspection ID, property ID, property name,
@@ -117,14 +131,28 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
         )}
 
         {recorder.phase === "recording" && (
-          <div className="space-y-3 text-center py-2">
-            <span className="inline-flex w-16 h-16 rounded-full bg-rose-500/10 text-rose-600 items-center justify-center animate-pulse">
-              <Mic className="w-7 h-7" />
-            </span>
-            <p className="text-sm text-muted-foreground">Recording… speak your observations, then tap Stop.</p>
-            <Button variant="destructive" onClick={recorder.stop} className="rounded-2xl h-12 px-6 gap-2 mx-auto">
-              <Square className="w-4 h-4" /> Stop
-            </Button>
+          <div className="space-y-3 py-1">
+            {/* Recording status + timer — sits ABOVE the scrolling reference
+                guide, so it stays visible while the list is scrolled. Same
+                recorder.stop handler as before; nothing about capture,
+                transcription or saving changed. */}
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 px-3 py-2.5">
+              <span className="flex items-center gap-2 text-sm font-semibold text-rose-600 min-w-0">
+                <span className="w-3 h-3 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                <Mic className="w-4 h-4 shrink-0" />
+                Recording {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+              </span>
+              <Button variant="destructive" size="sm" onClick={recorder.stop} className="rounded-xl h-11 px-4 gap-1.5 shrink-0">
+                <Square className="w-4 h-4" /> Stop
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Speak your observations — scrolling the reference guide below does not pause, stop or interrupt the recording.</p>
+            {/* Read-only Inspection Reference — built from the SAME checklist
+                this dialog already operates on (the visit's/inspection's own
+                assigned checklist). Scrolling happens inside the guide's own
+                area, fully detached from the recorder. Finish Dictation calls
+                the same recorder.stop as the Stop control above. */}
+            <InspectionReferenceGuide items={referenceItemsFromChecklist(checklist, lang)} onFinish={recorder.stop} />
           </div>
         )}
 
