@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.49';
+import { waitUntil } from 'base44:runtime';
 
 // Public endpoint for the website's "Request a Property Assessment" form.
 // Anyone can reach it, so input is strictly validated and a honeypot field
@@ -43,6 +44,56 @@ export default async function (req) {
       language,
       status: 'New',
     });
+
+    // Non-critical: notify registered admin users by email after the response.
+    waitUntil((async () => {
+      try {
+        const users = await base44.asServiceRole.entities.User.list();
+        const admins = (users || []).filter((u) => u.role === 'admin' && u.email);
+        const el = language === 'Greek';
+        const subject = el
+          ? 'Νέο αίτημα αξιολόγησης ακινήτου — ' + name
+          : 'New property assessment request — ' + name;
+        const body = (el
+          ? [
+              'Υπάρχει νέο αίτημα αξιολόγησης από την ιστοσελίδα.',
+              '',
+              'Ονοματεπώνυμο: ' + name,
+              'Email: ' + email,
+              'Τηλέφωνο: ' + (phone || '—'),
+              'Τοποθεσία ακινήτου: ' + property_location,
+              'Τύπος ακινήτου: ' + (property_type || '—'),
+              '',
+              'Μήνυμα:',
+              notes,
+              '',
+              'Δείτε το στο app: https://propertycarecrete.base44.app/assessment-requests',
+            ]
+          : [
+              'A new assessment request was submitted from the website.',
+              '',
+              'Name: ' + name,
+              'Email: ' + email,
+              'Phone: ' + (phone || '—'),
+              'Property location: ' + property_location,
+              'Property type: ' + (property_type || '—'),
+              '',
+              'Message:',
+              notes,
+              '',
+              'View it in the app: https://propertycarecrete.base44.app/assessment-requests',
+            ]).join('\n');
+        for (const admin of admins) {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            to: admin.email,
+            subject,
+            body,
+          });
+        }
+      } catch (error) {
+        // Email failure must never affect the customer's submission.
+      }
+    })());
 
     return Response.json({ ok: true });
   } catch (error) {
