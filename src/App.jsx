@@ -50,7 +50,8 @@ import PropertyAssistance from '@/pages/PropertyAssistance';
 import OneTimeServices from '@/pages/OneTimeServices';
 import Billing from '@/pages/Billing';
 import AdminUsers from '@/pages/AdminUsers';
-import WebsitePrices from '@/pages/website/WebsitePrices';
+import WebsiteHome from '@/pages/website/WebsiteHome';
+import AssessmentRequests from '@/pages/AssessmentRequests';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -84,8 +85,10 @@ const AuthenticatedApp = () => {
       {/* Public customer intake — NOT protected. Gated by secure token server-side. */}
       <Route path="/intake/:token" element={<IntakeForm />} />
       <Route path="/agreement/:token" element={<AgreementPublic />} />
-      {/* Public website pricing — NOT protected. Prices fetched server-side. */}
-      <Route path="/prices" element={<WebsitePrices />} />
+      {/* Public website homepage — ONE scrolling page; pricing section at #services (live, server-side). */}
+      <Route path="/home" element={<WebsiteHome />} />
+      {/* Old prices URL now redirects to the homepage pricing section. */}
+      <Route path="/prices" element={<Navigate to="/home#services" replace />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />
@@ -117,6 +120,7 @@ const AuthenticatedApp = () => {
           <Route path="/billing" element={<Billing />} />
           <Route path="/services" element={<ServicePackages />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/assessment-requests" element={<AssessmentRequests />} />
         </Route>
         <Route path="/communications" element={<OwnerCommunications />} />
         <Route path="/deliveries" element={<Deliveries />} />

@@ -1,0 +1,73 @@
+{
+  "name": "AssessmentRequest",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Requester's full name."
+    },
+    "email": {
+      "type": "string",
+      "description": "Requester's email address."
+    },
+    "phone": {
+      "type": "string",
+      "description": "Requester's phone number (optional)."
+    },
+    "property_location": {
+      "type": "string",
+      "description": "Where the property is located, as entered on the public website form."
+    },
+    "property_type": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string",
+      "description": "What the requester needs, in their own words."
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "English",
+        "Greek"
+      ],
+      "default": "English",
+      "description": "Language the requester used on the website form."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "New",
+        "Contacted",
+        "Archived"
+      ],
+      "default": "New"
+    }
+  },
+  "required": [
+    "name",
+    "email"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
