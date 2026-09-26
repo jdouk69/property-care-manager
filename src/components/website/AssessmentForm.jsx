@@ -120,7 +120,7 @@ export default function AssessmentForm() {
             ? "Το αίτημά σας φτάνει απευθείας σε εμάς και χρησιμοποιείται μόνο για να σας απαντήσουμε."
             : "Your enquiry goes directly to us and is used only to respond to you."}
         </p>
-        <Button type="submit" disabled={status === "sending"} className="rounded-full h-11 px-6">
+        <Button type="submit" disabled={status === "sending"} className="rounded-lg h-11 px-6">
           {status === "sending" ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (

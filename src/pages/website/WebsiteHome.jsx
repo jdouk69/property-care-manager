@@ -20,7 +20,7 @@ export default function WebsiteHome() {
   const el = lang === "el";
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="website-theme min-h-screen bg-background">
       <WebsiteHeader />
       <main>
         <WebsiteHero />

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -98,4 +100,34 @@
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Stone & Brass — public website visual identity, scoped to the .website-theme
+   wrapper. The operational app keeps its own theme tokens untouched. */
+.website-theme {
+  --background: 40 32% 94%;
+  --foreground: 230 19% 13%;
+  --card: 0 0% 100%;
+  --card-foreground: 230 19% 13%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 230 19% 13%;
+  --primary: 39 33% 49%;
+  --primary-foreground: 230 19% 13%;
+  --secondary: 40 22% 91%;
+  --secondary-foreground: 230 19% 13%;
+  --muted: 40 20% 91%;
+  --muted-foreground: 40 10% 38%;
+  --accent: 40 25% 90%;
+  --accent-foreground: 39 33% 30%;
+  --border: 40 12% 85%;
+  --input: 40 12% 85%;
+  --ring: 39 33% 49%;
+  --font-heading: 'Sora', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --sb-navy: #1A262E;
+  --sb-brass: #A68953;
+}
+
+.website-navy {
+  background-color: var(--sb-navy);
 }

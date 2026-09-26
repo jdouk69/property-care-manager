@@ -1,15 +1,17 @@
 import React from "react";
 import { Check, Clock } from "lucide-react";
+import { CardArches } from "@/components/website/ArchMotif";
 
 // One pricing card. The price headline, unit and every euro amount come from
 // the LIVE feed service object; the wording around them is bilingual static copy.
 export default function ServiceTermCard({ service, terms, unitLabel, highlight }) {
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl border p-5 ${
+      className={`relative flex flex-col gap-3 rounded-2xl border p-5 ${
         highlight ? "border-primary/40 bg-primary/5" : "border-border bg-card"
       }`}
     >
+      <CardArches className="pointer-events-none absolute inset-x-4 top-2 h-3 text-primary/50" />
       <div>
         <h3 className="font-heading text-lg font-semibold text-foreground">{terms.name}</h3>
         <p className="mt-1 font-heading text-2xl font-bold text-primary">
