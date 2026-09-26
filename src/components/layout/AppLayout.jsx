@@ -6,7 +6,7 @@ import {
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
   MapPin, FolderOpen, ClipboardList, ScrollText, Euro, ChevronLeft, UserCog,
-  Briefcase
+  Briefcase, Inbox
 } from "lucide-react";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { useAuth } from "@/lib/AuthContext";
@@ -39,11 +39,12 @@ export const NAV_ITEMS = [
   { to: "/rep-reports", label: "Owner-Rep Reports", icon: ClipboardList },
   { to: "/deliveries", label: "Deliveries", icon: Truck },
   { to: "/automation", label: "Automation Log", icon: History },
+  { to: "/assessment-requests", label: "Assessment Requests", icon: Inbox },
 ];
 
 // Owner/Admin-only navigation entries. Hidden for staff, and also while the
 // user role is still loading (no privileged items flash for partial loads).
-const ADMIN_ONLY_NAV = new Set(["/services", "/checklist-templates", "/billing", "/invoices", "/automation"]);
+const ADMIN_ONLY_NAV = new Set(["/services", "/checklist-templates", "/billing", "/invoices", "/automation", "/assessment-requests"]);
 
 const MOBILE_NAV = [
   { to: "/", label: "Home", icon: LayoutDashboard, end: true },

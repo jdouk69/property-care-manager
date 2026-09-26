@@ -30,6 +30,7 @@ export const EL = {
   "Owner-Rep Reports": "Αναφορές Αντιπροσώπου",
   "Deliveries": "Παραδόσεις",
   "Automation Log": "Αρχείο Αυτοματισμών",
+  "Assessment Requests": "Αιτήματα Αξιολόγησης",
   "Search": "Αναζήτηση",
   "Settings": "Ρυθμίσεις",
   "Users & Staff": "Χρήστες & Προσωπικό",
