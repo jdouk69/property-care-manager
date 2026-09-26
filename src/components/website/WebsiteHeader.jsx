@@ -48,7 +48,7 @@ export default function WebsiteHeader() {
             <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex rounded-full">
               <a href={LOGIN_URL}>
                 <LockKeyhole className="w-3.5 h-3.5" />
-                {el ? "Σύνδεση Πελάτη / Προσωπικού" : "Client / Staff Login"}
+                {el ? "Είσοδος Προσωπικού" : "Staff Login"}
               </a>
             </Button>
             <button
@@ -87,7 +87,7 @@ export default function WebsiteHeader() {
               className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent"
             >
               <LockKeyhole className="w-4 h-4" />
-              {el ? "Σύνδεση Πελάτη / Προσωπικού" : "Client / Staff Login"}
+              {el ? "Είσοδος Προσωπικού" : "Staff Login"}
             </a>
           </div>
         )}
