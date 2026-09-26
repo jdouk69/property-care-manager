@@ -36,9 +36,9 @@ export default function LocalContact() {
     : profile?.intro_en || profile?.intro_el || null;
 
   const contacts = [
-    { icon: Phone, value: profile?.phone || null, placeholder: "[Phone]" },
-    { icon: Mail, value: profile?.email || null, placeholder: "[Email]" },
-    { icon: MessageCircle, value: profile?.whatsapp || null, placeholder: "[WhatsApp]" },
+    { icon: Phone, kind: "phone", value: profile?.phone || null, placeholder: "[Phone]" },
+    { icon: Mail, kind: "email", value: profile?.email || null, placeholder: "[Email]" },
+    { icon: MessageCircle, kind: "whatsapp", value: profile?.whatsapp || null, placeholder: "[WhatsApp]" },
   ].filter((c) => c.value || !name);
   const showPlaceholderNote = !name && !photo && !intro && !localPhoto && contacts.every((c) => !c.value);
 
@@ -74,14 +74,57 @@ export default function LocalContact() {
                   : "[A short personal introduction — who you are, how long you have lived and worked in the Chania area, and why you started caring for properties.]")}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {contacts.map((c) => (
-                <span
-                  key={c.placeholder}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
-                >
-                  <c.icon className="w-3.5 h-3.5" /> {c.value || c.placeholder}
-                </span>
-              ))}
+              {contacts.map((c) => {
+                const cls =
+                  "inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground";
+                const inner = (
+                  <>
+                    <c.icon className="w-3.5 h-3.5" /> {c.value || c.placeholder}
+                  </>
+                );
+                // Placeholder chips (no value yet) stay inert spans; real values
+                // become actionable links. Content and appearance are unchanged.
+                if (!c.value) {
+                  return (
+                    <span key={c.placeholder} className={cls}>
+                      {inner}
+                    </span>
+                  );
+                }
+                if (c.kind === "phone") {
+                  return (
+                    <a key={c.placeholder} href={`tel:${c.value.replace(/\s+/g, "")}`} className={cls}>
+                      {inner}
+                    </a>
+                  );
+                }
+                if (c.kind === "email") {
+                  return (
+                    <a key={c.placeholder} href={`mailto:${c.value}`} className={cls}>
+                      {inner}
+                    </a>
+                  );
+                }
+                const digits = c.value.replace(/\D/g, "");
+                if (!digits) {
+                  return (
+                    <span key={c.placeholder} className={cls}>
+                      {inner}
+                    </span>
+                  );
+                }
+                return (
+                  <a
+                    key={c.placeholder}
+                    href={`https://wa.me/${digits}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cls}
+                  >
+                    {inner}
+                  </a>
+                );
+              })}
             </div>
             {showPlaceholderNote && (
               <p className="mt-3 text-xs italic text-muted-foreground">

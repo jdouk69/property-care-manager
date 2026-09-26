@@ -45,6 +45,12 @@ export default function WebsiteHeader() {
 
           <div className="flex items-center gap-2 shrink-0">
             <LanguageToggle />
+            <Button asChild size="sm" className="hidden md:inline-flex rounded-full">
+              <a href="#assessment">
+                <span className="hidden lg:inline">{el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}</span>
+                <span className="lg:hidden">{el ? "Ζητήστε Αξιολόγηση" : "Request Assessment"}</span>
+              </a>
+            </Button>
             <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex rounded-full">
               <a href={LOGIN_URL} target="_blank" rel="noopener noreferrer">
                 <LockKeyhole className="w-3.5 h-3.5" />

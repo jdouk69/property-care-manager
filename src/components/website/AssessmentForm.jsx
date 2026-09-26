@@ -30,7 +30,13 @@ export default function AssessmentForm() {
     e.preventDefault();
     setStatus("sending");
     try {
-      await base44.functions.invoke("assessmentSubmit", form);
+      // Send the active interface language so the stored request and the admin
+      // notification use the language the visitor was reading (entity enum:
+      // English / Greek).
+      await base44.functions.invoke("assessmentSubmit", {
+        ...form,
+        language: el ? "Greek" : "English",
+      });
       setStatus("sent");
     } catch (err) {
       setStatus("error");

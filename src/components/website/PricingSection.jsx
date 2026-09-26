@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import ServiceTermCard from "@/components/website/ServiceTermCard";
+import UnavailableServiceCard from "@/components/website/UnavailableServiceCard";
 import {
   serviceTerms,
   billingUnitLabel,
@@ -52,7 +53,12 @@ export default function PricingSection() {
   });
   const card = (key, highlight) => {
     const s = byKey[key];
-    return <ServiceTermCard key={key} service={s} terms={serviceTerms(s, lang)} unitLabel={billingUnitLabel(s.billing_unit, lang)} highlight={highlight} />;
+    // Fail-closed per card: if the live feed is missing this service or any
+    // required price component for its copy (e.g. hourly rate), the service is
+    // shown as unavailable — never a crash, never invented or partial pricing.
+    const terms = s ? serviceTerms(s, lang) : null;
+    if (!s || !terms) return <UnavailableServiceCard key={key} name={s ? s.name : null} />;
+    return <ServiceTermCard key={key} service={s} terms={terms} unitLabel={billingUnitLabel(s.billing_unit, lang)} highlight={highlight} />;
   };
 
   return (

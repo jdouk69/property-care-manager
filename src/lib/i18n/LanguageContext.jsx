@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { EL } from "./translations";
 
 // Central interface-language context. English is the default; Greek is a
@@ -22,6 +22,11 @@ export function LanguageProvider({ children }) {
       localStorage.setItem(STORAGE_KEY, next === "el" ? "el" : "en");
     } catch (e) {}
   }, []);
+
+  // Keep <html lang> in sync with the active interface language (en / el).
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   // t(englishText, vars) — returns the Greek display string when Greek is
   // active and a translation exists; otherwise returns the English source
