@@ -27,7 +27,19 @@ export async function dictationProposalsFromAudio({ checklist, statuses, context
       "For each mentioned item choose exactly one status from the allowed list that best matches the worker's words " +
       "(fine/OK → the status meaning fine, a problem → the status meaning needs attention, urgent → the most severe status, " +
       "could not check → that status, not applicable → that status). " +
-      'Set "notes" to the relevant part of the transcript (the worker\'s own words, kept short).\n' +
+      'Set "notes" to a short professional observation PARAPHRASED from the relevant part of the transcript, using observational ' +
+      "property-care / home-watch wording based ONLY on what the worker actually said:\n" +
+      "- Prefer phrasing like: \"appears to…\", \"no obvious concerns noted\", \"no visible signs of…\", \"visually checked\", " +
+      "\"appeared to operate normally\", \"was not accessible for a visual check\", \"was not checked during this visit\", " +
+      "\"no obvious damage observed\", \"staff observed…\".\n" +
+      "- Avoid strong or technical wording such as: inspected, passed inspection, certified, safe, perfect, fully functional, " +
+      "no mold, structurally sound, electrically safe, plumbing is good, all systems are working — never expand an observation " +
+      "into a safety, diagnostic, or systems assessment. If the worker literally dictated such a phrase, use the safer " +
+      "observational paraphrase instead.\n" +
+      "- Stay faithful: if the worker reported an issue or concern, keep it clearly and specifically in the note — do not soften, " +
+      "remove, or reinterpret it. Do not state anything was checked or is fine when the worker said it was not, was inaccessible, " +
+      "or does not exist.\n" +
+      "- Do not invent observations, measurements, or conclusions the worker did not state.\n" +
       "Set needs_review to true when the observation is ambiguous — you cannot confidently match it to exactly ONE checklist item or ONE status. Do NOT guess in that case.\n" +
       "Do NOT invent checklist items. Do NOT include items the worker did not mention. " +
       "Do NOT mark an unmentioned item as fine/OK. If nothing matches, return an empty updates list.",
@@ -172,7 +184,17 @@ export async function dictationItemProposalFromAudio({ itemName, statuses, conte
       "Choose exactly one status from the allowed list that best matches the worker's words " +
       "(fine/OK/no problem → the status meaning fine, a problem or concern → the status meaning needs attention, " +
       "urgent or serious → the most severe status, could not check or access → that status, not applicable → that status). " +
-      'Set "notes" to the worker\'s own words describing the observation, kept short and factual. ' +
+      'Set "notes" to a short professional observation PARAPHRASED from the worker\'s words, kept short and factual, using observational ' +
+      "property-care / home-watch wording based ONLY on what the worker actually said. " +
+      "Prefer phrasing like: \"appears to…\", \"no obvious concerns noted\", \"no visible signs of…\", \"visually checked\", " +
+      "\"appeared to operate normally\", \"was not accessible for a visual check\", \"was not checked during this visit\", " +
+      "\"no obvious damage observed\", \"staff observed…\". " +
+      "Avoid strong or technical wording such as: inspected, passed inspection, certified, safe, perfect, fully functional, " +
+      "no mold, structurally sound, electrically safe, plumbing is good, all systems are working — never expand an observation " +
+      "into a safety, diagnostic, or systems assessment; if the worker literally dictated such a phrase, use the safer " +
+      "observational paraphrase instead. " +
+      "Stay faithful: keep any reported issue or concern clearly in the note, and never state something was checked or is fine " +
+      "when the worker said it was not, was inaccessible, or does not exist. " +
       "Keep wording within visual property-care / home-watch observation scope — never introduce professional inspection, engineering, certification, or code-compliance language. " +
       "Do not invent facts the worker did not say. " +
       "Set needs_review to true when the speech does not clearly relate to this item or you cannot confidently choose one status. Do NOT guess in that case.",
