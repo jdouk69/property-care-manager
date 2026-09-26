@@ -50,6 +50,7 @@ import PropertyAssistance from '@/pages/PropertyAssistance';
 import OneTimeServices from '@/pages/OneTimeServices';
 import Billing from '@/pages/Billing';
 import AdminUsers from '@/pages/AdminUsers';
+import WebsitePrices from '@/pages/website/WebsitePrices';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -83,6 +84,8 @@ const AuthenticatedApp = () => {
       {/* Public customer intake — NOT protected. Gated by secure token server-side. */}
       <Route path="/intake/:token" element={<IntakeForm />} />
       <Route path="/agreement/:token" element={<AgreementPublic />} />
+      {/* Public website pricing — NOT protected. Prices fetched server-side. */}
+      <Route path="/prices" element={<WebsitePrices />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />
