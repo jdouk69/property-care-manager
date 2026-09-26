@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
       // Use the SDK's logout method which handles token cleanup and redirect.
       // Post-logout destination: the public Property Care Crete landing page.
       // The SDK clears the session/token first, then redirects here.
-      base44.auth.logout(`${window.location.origin}/home`);
+      base44.auth.logout(`${window.location.origin}/landing-page`);
     } else {
       // Just remove the token without redirect
       base44.auth.logout();

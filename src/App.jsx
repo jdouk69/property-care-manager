@@ -87,10 +87,12 @@ const AuthenticatedApp = () => {
       <Route path="/agreement/:token" element={<AgreementPublic />} />
       {/* Root: public website homepage when logged out, Dashboard when logged in. */}
       <Route path="/" element={<RootPage />} />
-      {/* Public website homepage — ONE scrolling page; pricing section at #services (live, server-side). */}
-      <Route path="/home" element={<WebsiteHome />} />
-      {/* Old prices URL now redirects to the homepage pricing section. */}
-      <Route path="/prices" element={<Navigate to="/home#services" replace />} />
+      {/* Public website landing page — ONE scrolling page; pricing section at #services (live, server-side). */}
+      <Route path="/landing-page" element={<WebsiteHome />} />
+      {/* Old /home URL redirects to the landing page, preserving any section hash. */}
+      <Route path="/home" element={<Navigate to={`/landing-page${window.location.hash}`} replace />} />
+      {/* Old prices URL now redirects to the landing page pricing section. */}
+      <Route path="/prices" element={<Navigate to="/landing-page#services" replace />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientHub />} />
