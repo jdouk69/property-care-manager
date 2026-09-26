@@ -46,7 +46,7 @@ export default function WebsiteHeader() {
           <div className="flex items-center gap-2 shrink-0">
             <LanguageToggle />
             <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex rounded-full">
-              <a href={LOGIN_URL}>
+              <a href={LOGIN_URL} target="_blank" rel="noopener noreferrer">
                 <LockKeyhole className="w-3.5 h-3.5" />
                 {el ? "Είσοδος Προσωπικού" : "Staff Login"}
               </a>
@@ -83,6 +83,8 @@ export default function WebsiteHeader() {
             </a>
             <a
               href={LOGIN_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={close}
               className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent"
             >

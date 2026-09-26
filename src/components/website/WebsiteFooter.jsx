@@ -27,7 +27,7 @@ export default function WebsiteFooter() {
             <a href="#how-it-works" className="hover:text-foreground">{el ? "Πώς Λειτουργεί" : "How It Works"}</a>
             <a href="#faq" className="hover:text-foreground">FAQ</a>
             <a href="#assessment" className="hover:text-foreground">{el ? "Αξιολόγηση" : "Assessment"}</a>
-            <a href={LOGIN_URL} className="inline-flex items-center gap-1 hover:text-foreground">
+            <a href={LOGIN_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-foreground">
               <LockKeyhole className="w-3.5 h-3.5" />
               {el ? "Σύνδεση" : "Login"}
             </a>
