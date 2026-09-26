@@ -13,7 +13,7 @@ import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
-import Dashboard from '@/pages/Dashboard';
+import RootPage from '@/components/RootPage';
 import Clients from '@/pages/Clients';
 import Properties from '@/pages/Properties';
 import PropertyDetail from '@/pages/PropertyDetail';
@@ -85,12 +85,13 @@ const AuthenticatedApp = () => {
       {/* Public customer intake — NOT protected. Gated by secure token server-side. */}
       <Route path="/intake/:token" element={<IntakeForm />} />
       <Route path="/agreement/:token" element={<AgreementPublic />} />
+      {/* Root: public website homepage when logged out, Dashboard when logged in. */}
+      <Route path="/" element={<RootPage />} />
       {/* Public website homepage — ONE scrolling page; pricing section at #services (live, server-side). */}
       <Route path="/home" element={<WebsiteHome />} />
       {/* Old prices URL now redirects to the homepage pricing section. */}
       <Route path="/prices" element={<Navigate to="/home#services" replace />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route path="/" element={<Dashboard />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientHub />} />
         <Route element={<AdminRoute />}>
