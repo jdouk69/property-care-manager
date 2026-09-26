@@ -11,36 +11,36 @@ export default function TrustSection() {
       icon: FileCheck,
       title: el ? "Καταγεγραμμένες επισκέψεις" : "Documented visits",
       text: el
-        ? "Κάθε επίσκεψη καταγράφεται με ημερομηνία, ώρα, λίστα ελέγχου και παρατηρήσεις."
-        : "Every visit is recorded with date, time, checklist, and observations.",
+        ? "Κάθε προγραμματισμένη επίσκεψη καταγράφεται εσωτερικά με ημερομηνία, ώρα, λίστα ελέγχου και παρατηρήσεις."
+        : "Every scheduled visit is recorded internally with date, time, checklist, and observations.",
     },
     {
       icon: Camera,
       title: el ? "Φωτογραφίες & αναφορές" : "Photos & reports",
       text: el
-        ? "Τα πακέτα Φροντίδας και Πλήρους Φροντίδας περιλαμβάνουν φωτογραφίες και αναφορά μετά από κάθε επίσκεψη."
-        : "Property Care and Complete Care plans include photos and a report after every visit.",
+        ? "Οι τακτικές φωτογραφίες και η αναφορά προς τον ιδιοκτήτη περιλαμβάνονται μόνο στα πακέτα Φροντίδας και Πλήρους Φροντίδας — όχι στον Γρήγορο Έλεγχο."
+        : "Routine photos and a customer-facing visit report are included only with Property Care and Complete Care — not with Quick Check.",
     },
     {
       icon: BadgeEuro,
-      title: el ? "Διαφανείς σταθερές τιμές" : "Transparent fixed prices",
+      title: el ? "Ξεκάθαρες τιμές, συμφωνημένη εργασία" : "Clear prices, agreed work",
       text: el
-        ? "Οι τιμές αυτής της σελίδας συγχρονίζονται απευθείας από τα αρχεία υπηρεσιών μας — όχι παλιοί αριθμοί."
-        : "The prices on this page are synchronized live from our service records — never stale numbers.",
+        ? "Βλέπετε τις τρέχουσες τιμές μας εκ των προτέρων και συμφωνούμε την εργασία και την τιμή γραπτώς πριν ξεκινήσουμε."
+        : "You see our current prices up front, and we agree the work and the price with you in writing before we start.",
     },
     {
       icon: UserCheck,
       title: el ? "Ένας τοπικός επαφής" : "One local point of contact",
       text: el
-        ? "Γνωρίζετε ποιος μπαίνει στο σπίτι σας — πάντα ο ίδιος αξιόπιστος τοπικός επαγγελματίας."
-        : "You know who enters your home — always the same trusted local professional.",
+        ? "Γνωρίζετε εξ ονόματος τον τοπικό σας επαφή — και κάθε επίσκεψη καταγράφει ποιος παρευρέθηκε στο ακίνητο."
+        : "You know your local point of contact by name — and every visit record shows who attended.",
     },
     {
       icon: KeySquare,
       title: el ? "Ασφαλής διαχείριση κλειδιών" : "Careful key handling",
       text: el
-        ? "Τα κλειδιά και οι κωδικοί πρόσβασης φυλάσσονται με ασφάλεια και καταγράφονται σε κάθε χρήση."
-        : "Keys and access codes are stored securely, and every use is logged.",
+        ? "Τα κλειδιά και τα στοιχεία πρόσβασης φυλάσσονται στα προστατευμένα αρχεία μας και χρησιμοποιούνται μόνο για επισκέψεις που έχετε συμφωνήσει."
+        : "Keys and access details are kept in our protected records and used only for visits you have agreed to.",
     },
     {
       icon: ShieldCheck,
@@ -52,7 +52,7 @@ export default function TrustSection() {
   ];
 
   return (
-    <section id="trust" className="scroll-mt-20 border-y border-border bg-secondary/40 py-14 sm:py-20">
+    <section id="trust" className="scroll-mt-20 border-y border-border bg-secondary/40 py-10 sm:py-20">
       <div className="mx-auto max-w-6xl px-4">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -62,9 +62,9 @@ export default function TrustSection() {
             {el ? "Τεκμηρίωση, όχι υποσχέσεις." : "Documentation, not promises."}
           </h2>
         </div>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((i) => (
-            <div key={i.title} className="flex gap-4 rounded-2xl border border-border bg-card p-5">
+            <div key={i.title} className="flex gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
               <i.icon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-semibold text-foreground text-sm">{i.title}</h3>

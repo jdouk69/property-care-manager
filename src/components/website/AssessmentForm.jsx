@@ -38,7 +38,7 @@ export default function AssessmentForm() {
   };
 
   const types = el
-    ? ["Βίλα", "Διαμέρισμα", "Μονοκατοικία", "Στούντιο", "Κottage"]
+    ? ["Βίλα", "Διαμέρισμα", "Μονοκατοικία", "Στούντιο", "Εξοχικό"]
     : ["Villa", "Apartment", "House", "Studio", "Cottage"];
 
   if (status === "sent") {
@@ -117,8 +117,8 @@ export default function AssessmentForm() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <p className="text-xs text-muted-foreground">
           {el
-            ? "Οι αιτήσεις είναι ορατές μόνο στον διαχειριστή του ιστότοπου."
-            : "Submissions are visible only to the website administrator."}
+            ? "Το αίτημά σας φτάνει απευθείας σε εμάς και χρησιμοποιείται μόνο για να σας απαντήσουμε."
+            : "Your enquiry goes directly to us and is used only to respond to you."}
         </p>
         <Button type="submit" disabled={status === "sending"} className="rounded-full h-11 px-6">
           {status === "sending" ? (

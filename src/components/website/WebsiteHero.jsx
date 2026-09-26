@@ -10,7 +10,7 @@ export default function WebsiteHero() {
   return (
     <section id="top" className="relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-accent via-background to-background" aria-hidden="true" />
-      <div className="relative mx-auto max-w-6xl px-4 pt-14 pb-16 sm:pt-20 sm:pb-24 text-center">
+      <div className="relative mx-auto max-w-6xl px-4 pt-10 pb-12 sm:pt-20 sm:pb-24 text-center">
         <p className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
           <MapPin className="w-3.5 h-3.5" />
           {el ? "Χανιά · Δυτική Κρήτη" : "Chania · Western Crete"}

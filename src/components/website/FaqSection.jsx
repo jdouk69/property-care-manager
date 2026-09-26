@@ -39,8 +39,8 @@ export default function FaqSection() {
     {
       q: el ? "Χρειάζεται να σας δώσω κλειδιά;" : "Do I need to give you keys?",
       a: el
-        ? "Ναι, για τις επισκέψεις που το απαιτούν. Τα κλειδιά και οι κωδικοί φυλάσσονται με ασφάλεια, και κάθε χρήση τους καταγράφεται."
-        : "Yes, for visits that require access. Keys and codes are stored securely, and every use is logged.",
+        ? "Ναι, για τις επισκέψεις που το απαιτούν. Τα κλειδιά και τα στοιχεία πρόσβασης φυλάσσονται στα προστατευμένα αρχεία μας και χρησιμοποιούνται μόνο για επισκέψεις που έχετε συμφωνήσει."
+        : "Yes, for visits that require access. Keys and access details are kept in our protected records and used only for visits you have agreed to.",
     },
     {
       q: el ? "Είναι οι επισκέψεις σας επιθεώρηση ακινήτου;" : "Are your visits a property inspection?",
@@ -51,7 +51,7 @@ export default function FaqSection() {
   ];
 
   return (
-    <section id="faq" className="scroll-mt-20 py-14 sm:py-20">
+    <section id="faq" className="scroll-mt-20 py-10 sm:py-20">
       <div className="mx-auto max-w-3xl px-4">
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">FAQ</p>

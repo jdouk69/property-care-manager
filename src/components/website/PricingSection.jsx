@@ -56,24 +56,24 @@ export default function PricingSection() {
   };
 
   return (
-    <section id="services" className="scroll-mt-20 py-14 sm:py-20">
+    <section id="services" className="scroll-mt-20 py-10 sm:py-20">
       <div className="mx-auto max-w-6xl px-4">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">
             {el ? "Υπηρεσίες & Τιμές" : "Services & Pricing"}
           </p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-foreground">
-            {el ? "Σταθερές τιμές, χωρίς εκπλήξεις." : "Fixed prices, no surprises."}
+            {el ? "Ξεκάθαρες τιμές και συμφωνημένη εργασία." : "Clear prices and agreed work."}
           </h2>
           <p className="mt-3 text-muted-foreground leading-relaxed">
             {el
-              ? "Όλες οι τιμές αυτής της σελίδας ανακτώνται απευθείας, ζωντανά, από τα αρχεία υπηρεσιών μας — δεν υπάρχουν παλιοί αριθμοί."
-              : "Every price on this page is fetched live from our service records — there are no outdated numbers."}
+              ? "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Μετά την αξιολόγηση του ακινήτου, συμφωνούμε μαζί σας κάθε προτεινόμενη εργασία και την τιμή της πριν προχωρήσουμε."
+              : "These are our current service prices. After a property assessment, we agree any proposed work and its price with you before we proceed."}
           </p>
         </div>
 
         {error && (
-          <div className="mt-10 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-10 text-center">
+          <div className="mt-6 sm:mt-10 flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-10 text-center">
             <TriangleAlert className="w-8 h-8 text-amber-500" />
             <p className="font-medium text-foreground">
               {el ? "Οι τιμές είναι προσωρινά μη διαθέσιμες." : "Prices are temporarily unavailable."}
@@ -87,7 +87,7 @@ export default function PricingSection() {
         )}
 
         {!error && !services && (
-          <div className="mt-10 flex flex-col items-center gap-3 py-12">
+          <div className="mt-6 sm:mt-10 flex flex-col items-center gap-3 py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">
               {el ? "Φόρτωση τρεχουσών τιμών…" : "Loading current prices…"}
@@ -96,12 +96,12 @@ export default function PricingSection() {
         )}
 
         {services && !error && (
-          <div className="mt-10 space-y-10">
+          <div className="mt-6 sm:mt-10 space-y-10">
             <div>
               <h3 className="mb-4 font-heading text-lg font-semibold text-foreground">
                 {el ? "Μηνιαία Πακέτα Φροντίδας — μία επίσκεψη τον μήνα" : "Recurring Care Plans — one scheduled visit per month"}
               </h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {MONTHLY_KEYS.map((k) => card(k, k === "complete_care"))}
               </div>
             </div>
@@ -109,14 +109,14 @@ export default function PricingSection() {
               <h3 className="mb-4 font-heading text-lg font-semibold text-foreground">
                 {el ? "Υπηρεσίες κατ' Απαίτηση" : "On-Demand Services"}
               </h3>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {ON_DEMAND_KEYS.map((k) => card(k, false))}
               </div>
             </div>
             <p className="text-center text-xs text-muted-foreground">
               {el
-                ? "Οι τιμές συγχρονίζονται αυτόματα από τα αρχεία υπηρεσιών μας και επιβεβαιώνονται κατά την κράτηση."
-                : "Prices are synchronized automatically from our service records and may be confirmed at the time of booking."}
+                ? "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα γραπτώς μαζί σας πριν ξεκινήσουμε."
+                : "The exact work and final price for your property are always agreed with you in writing before we start."}
             </p>
           </div>
         )}

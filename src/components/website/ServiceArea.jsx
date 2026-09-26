@@ -11,7 +11,7 @@ export default function ServiceArea() {
     : ["Chania (town)", "Akrotiri", "Platanias", "Kolymvari", "Apokoronas", "Kissamos"];
 
   return (
-    <section id="area" className="scroll-mt-20 border-y border-border bg-secondary/40 py-14 sm:py-20">
+    <section id="area" className="scroll-mt-20 border-y border-border bg-secondary/40 py-10 sm:py-20">
       <div className="mx-auto max-w-6xl px-4">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">

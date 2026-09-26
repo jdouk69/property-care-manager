@@ -25,13 +25,13 @@ export default function WhoWeHelp() {
       icon: KeyRound,
       title: el ? "Ενοικίαση & επισκέπτες" : "Rentals & guests",
       text: el
-        ? "Υποδέχεστε ενοικιαστές ή επισκέπτες; Φροντίζουμε ώστε το ακίνητο να είναι έτοιμο πριν από κάθε άφιξη."
-        : "You host tenants or guests. We make sure the property is ready before every arrival.",
+        ? "Υποδέχεστε ενοικιαστές ή επισκέπτες; Κατόπιν εντολής σας, ετοιμάζουμε το ακίνητο πριν από κάποια άφιξη."
+        : "You host tenants or guests. On your instruction, we prepare the property before an arrival.",
     },
   ];
 
   return (
-    <section id="who-we-help" className="scroll-mt-20 py-14 sm:py-20">
+    <section id="who-we-help" className="scroll-mt-20 py-10 sm:py-20">
       <div className="mx-auto max-w-6xl px-4">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -43,9 +43,9 @@ export default function WhoWeHelp() {
               : "Any owner who wants to know their property is in good hands."}
           </h2>
         </div>
-        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+        <div className="mt-6 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-3">
           {cards.map((c) => (
-            <div key={c.title} className="rounded-2xl border border-border bg-card p-6">
+            <div key={c.title} className="rounded-2xl border border-border bg-card p-4 sm:p-6">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-primary">
                 <c.icon className="w-5 h-5" />
               </span>

@@ -9,12 +9,16 @@ export default function RoleAndLimits() {
   const doItems = el
     ? [
         "Κάνουμε οπτικές επισκέψεις φροντίδας και καταγράφουμε τις παρατηρήσεις μας.",
+        "Ελέγχουμε τις προτεραιότητες που έχετε επιλέξει για το ακίνητό σας.",
+        "Παρευρισκόμαστε σε επισκέψεις επιτόπου εξ ονόματός σας, για εργασίες που έχετε συμφωνήσει.",
         "Σας ενημερώνουμε για οτιδήποτε ορατό χρειάζεται προσοχή.",
         "Εκτελούμε συμφωνημένες εργασίες: αερισμός, προμήθεια ειδών, παραλαβές με εντολή.",
         "Επικοινωνούμε με τεχνικούς ή εργολάβους μόνο με τη δική σας έγκριση.",
       ]
     : [
         "We perform visual property-care visits and record what we observe.",
+        "We check the priorities you have selected for your property.",
+        "We attend site visits on your behalf, for work you have agreed with us.",
         "We alert you to anything visibly needing attention.",
         "We carry out agreed tasks: airing, stocking, receiving deliveries on instruction.",
         "We contact tradespeople or contractors only with your approval.",
@@ -35,7 +39,7 @@ export default function RoleAndLimits() {
       ];
 
   return (
-    <section id="role" className="scroll-mt-20 py-14 sm:py-20">
+    <section id="role" className="scroll-mt-20 py-10 sm:py-20">
       <div className="mx-auto max-w-6xl px-4">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">
@@ -45,8 +49,8 @@ export default function RoleAndLimits() {
             {el ? "Τι είμαστε — και τι δεν είμαστε." : "What we are — and what we are not."}
           </h2>
         </div>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="mt-6 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
             <h3 className="font-semibold text-foreground">{el ? "Τι κάνουμε" : "What we do"}</h3>
             <ul className="mt-4 space-y-2.5">
               {doItems.map((x) => (
@@ -56,7 +60,7 @@ export default function RoleAndLimits() {
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
             <h3 className="font-semibold text-foreground">{el ? "Τι δεν κάνουμε" : "What we do not do"}</h3>
             <ul className="mt-4 space-y-2.5">
               {dontItems.map((x) => (

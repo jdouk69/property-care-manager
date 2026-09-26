@@ -35,7 +35,7 @@ export default function WebsiteFooter() {
         </div>
         <div className="mt-6 border-t border-border pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} Property Care Crete. {el ? "Με επιφύλαξη κάθε δικαιώματος." : "All rights reserved."}</p>
-          <p>{el ? "Οι τιμές συγχρονίζονται ζωντανά από τα αρχεία υπηρεσιών μας." : "Prices are synchronized live from our service records."}</p>
+          <p>{el ? "Όλες οι τιμές και οι εργασίες συμφωνούνται γραπτώς μαζί σας πριν ξεκινήσουμε." : "All prices and work are agreed with you in writing before we start."}</p>
         </div>
       </div>
     </footer>

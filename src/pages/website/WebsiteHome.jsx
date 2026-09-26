@@ -32,7 +32,7 @@ export default function WebsiteHome() {
         <ServiceArea />
         <FaqSection />
         <LocalContact />
-        <section id="assessment" className="scroll-mt-20 py-14 sm:py-20">
+        <section id="assessment" className="scroll-mt-20 py-10 sm:py-20">
           <div className="mx-auto max-w-3xl px-4">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary">
