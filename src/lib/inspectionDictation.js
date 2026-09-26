@@ -1,5 +1,20 @@
 import { base44 } from "@/api/base44Client";
 
+// Dictation audio is sensitive on-site voice material. It is uploaded to
+// PRIVATE storage only — never public storage. Transcription receives a
+// short-lived signed URL (10 minutes) that is used in-memory for the
+// transcription call and never returned to callers, shown in UI, logged, or
+// saved to any record. Note: Base44 currently provides no API to delete an
+// uploaded private file, so the raw audio remains in private storage
+// (authenticated/signed access only) after processing — see security audit.
+async function transcribeDictationAudio(audioBlob) {
+  const file = new File([audioBlob], `dictation-${Date.now()}.webm`, { type: audioBlob.type || "audio/webm" });
+  const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+  const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 600 });
+  const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: signed_url });
+  return typeof transcript === "string" ? transcript : transcript?.text || "";
+}
+
 // Shared Dictate Inspection service — reusable across every inspection /
 // checklist type (Property Visits, Inspections, and future types). It receives
 // the CURRENTLY OPEN inspection's checklist, that checklist's OWN status
@@ -8,10 +23,7 @@ import { base44 } from "@/api/base44Client";
 // PROPOSED updates only; the caller reviews and approves before anything is
 // applied to the checklist.
 export async function dictationProposalsFromAudio({ checklist, statuses, contextLabel, audioBlob }) {
-  const file = new File([audioBlob], `dictation-${Date.now()}.webm`, { type: audioBlob.type || "audio/webm" });
-  const { file_url } = await base44.integrations.Core.UploadFile({ file });
-  const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
-  const text = (typeof transcript === "string" ? transcript : transcript?.text || "").trim();
+  const text = (await transcribeDictationAudio(audioBlob)).trim();
   if (!text) return { transcript: "", proposals: [] };
 
   const itemsText = checklist.map((it, i) => `${i}: ${it.name}`).join("\n");
@@ -89,10 +101,7 @@ export async function dictationProposalsFromAudio({ checklist, statuses, context
 // context. Speech is interpreted ONLY against those fields; the result is a
 // reviewable draft — nothing is applied here.
 export async function dictationFormProposalsFromAudio({ fields, values, contextLabel, audioBlob }) {
-  const file = new File([audioBlob], `dictation-${Date.now()}.webm`, { type: audioBlob.type || "audio/webm" });
-  const { file_url } = await base44.integrations.Core.UploadFile({ file });
-  const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
-  const text = (typeof transcript === "string" ? transcript : transcript?.text || "").trim();
+  const text = (await transcribeDictationAudio(audioBlob)).trim();
   if (!text) return { transcript: "", proposals: [] };
 
   const fieldLines = fields
@@ -168,10 +177,7 @@ export async function dictationFormProposalsFromAudio({ fields, values, contextL
 // transcription / AI pipeline as all other dictation surfaces; no new
 // infrastructure, statuses, or fields.
 export async function dictationItemProposalFromAudio({ itemName, statuses, contextLabel, audioBlob }) {
-  const file = new File([audioBlob], `dictation-${Date.now()}.webm`, { type: audioBlob.type || "audio/webm" });
-  const { file_url } = await base44.integrations.Core.UploadFile({ file });
-  const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
-  const text = (typeof transcript === "string" ? transcript : transcript?.text || "").trim();
+  const text = (await transcribeDictationAudio(audioBlob)).trim();
   if (!text) return { transcript: "", proposal: null };
 
   const res = await base44.integrations.Core.InvokeLLM({
