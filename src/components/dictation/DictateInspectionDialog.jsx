@@ -146,7 +146,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
                 <Square className="w-4 h-4" /> Stop
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Speak your observations — scrolling the reference guide below does not pause, stop or interrupt the recording.</p>
+            <p className="text-xs text-muted-foreground">Use the reference below as a reminder while you dictate.</p>
             {/* Read-only Inspection Reference — built from the SAME checklist
                 this dialog already operates on (the visit's/inspection's own
                 assigned checklist). Scrolling happens inside the guide's own

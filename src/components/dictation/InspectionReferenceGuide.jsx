@@ -19,7 +19,7 @@ export default function InspectionReferenceGuide({ items, onFinish, finishLabel 
 
       {/* Vertically scrollable list — scrolls independently of the recording.
           overscroll-contain keeps iOS momentum scrolling inside this area. */}
-      <div className="max-h-[42vh] overflow-y-auto overscroll-contain">
+      <div className="max-h-[48vh] min-h-[180px] overflow-y-auto overscroll-contain">
         <div className="divide-y divide-border">
           {items.map((it, i) => (
             <div key={i} className="px-3.5 py-3">
