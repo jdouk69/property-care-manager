@@ -12,6 +12,7 @@ import PageBackButton from "@/components/ui/PageBackButton";
 import { base44 } from "@/api/base44Client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import NotificationsRemindersCard from "@/components/settings/NotificationsRemindersCard";
+import OwnerProfileCard from "@/components/settings/OwnerProfileCard";
 
 const FUTURE_FEATURES = [
   "Client Portal", "Client Mobile App", "Online Payments", "Invoicing", "AI Inspection Assistant",
@@ -65,6 +66,10 @@ export default function Settings() {
       }
     }, 900);
   };
+
+  // Merge externally-saved fields into the page state WITHOUT triggering the
+  // debounced autosave (the Owner Profile card saves itself on its Save button).
+  const applyFields = (fields) => setSettings((s) => ({ ...s, ...fields }));
 
   const addChecklistItem = () => {
     if (!newItem.trim()) return;
@@ -127,6 +132,9 @@ export default function Settings() {
             ))}
           </div>
         </div>
+
+        {/* Owner profile — public landing page 'Meet your local contact' section */}
+        <OwnerProfileCard settings={settings} applyFields={applyFields} />
 
         {/* Reminder preferences — per-category reminder timing */}
         <NotificationsRemindersCard settings={settings} setField={setField} />

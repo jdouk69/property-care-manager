@@ -104,7 +104,30 @@ export default async function(req) {
         time_allowance: rec.visit_duration || null,
       });
     }
-    return Response.json({ services });
+
+    // Owner profile for the landing page 'Meet your local contact' section.
+    // Strict field allowlisting — only the owner_profile_* fields below are
+    // ever exposed. A settings read failure leaves the profile null (the
+    // website keeps its placeholders) without affecting prices.
+    let owner_profile = null;
+    try {
+      const settingsList = await base44.asServiceRole.entities.BusinessSettings.list('-created_date', 10);
+      const s = settingsList && settingsList[0];
+      if (s) {
+        owner_profile = {
+          name: s.owner_profile_name || null,
+          photo: s.owner_profile_photo || null,
+          intro_en: s.owner_profile_intro_en || null,
+          intro_el: s.owner_profile_intro_el || null,
+          phone: s.owner_profile_phone || null,
+          email: s.owner_profile_email || null,
+          whatsapp: s.owner_profile_whatsapp || null,
+          local_photo: s.owner_profile_local_photo || null,
+        };
+      }
+    } catch (e) {}
+
+    return Response.json({ services, owner_profile });
   } catch (error) {
     return Response.json({ error: 'Internal error' }, { status: 500 });
   }

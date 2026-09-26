@@ -111,6 +111,38 @@
     },
     "quick_notes": {
       "type": "string"
+    },
+    "owner_profile_name": {
+      "type": "string",
+      "description": "Owner's display name shown in the public landing page 'Meet your local contact' section."
+    },
+    "owner_profile_photo": {
+      "type": "string",
+      "description": "Owner's profile photo (public file URL) for the landing page contact section. Empty = placeholder avatar."
+    },
+    "owner_profile_intro_en": {
+      "type": "string",
+      "description": "Owner's short personal introduction, English version, for the landing page contact section."
+    },
+    "owner_profile_intro_el": {
+      "type": "string",
+      "description": "Owner's short personal introduction, Greek version, for the landing page contact section."
+    },
+    "owner_profile_phone": {
+      "type": "string",
+      "description": "Owner's phone number shown on the public landing page contact section."
+    },
+    "owner_profile_email": {
+      "type": "string",
+      "description": "Owner's email shown on the public landing page contact section."
+    },
+    "owner_profile_whatsapp": {
+      "type": "string",
+      "description": "Owner's WhatsApp number shown on the public landing page contact section."
+    },
+    "owner_profile_local_photo": {
+      "type": "string",
+      "description": "Genuine local / property photo (public file URL) shown beneath the owner profile on the landing page. Empty = placeholder."
     }
   },
   "rls": {
@@ -143,5 +175,6 @@
         "role": "admin"
       }
     }
-  }
+  },
+  "required": []
 }

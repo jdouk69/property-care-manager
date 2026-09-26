@@ -26,7 +26,11 @@ export default async function(req) {
     }
     const data = await feedRes.json();
     const services = Array.isArray(data && data.services) ? data.services : [];
-    return Response.json({ services });
+    const ownerProfile =
+      data && typeof data.owner_profile === 'object' && data.owner_profile !== null
+        ? data.owner_profile
+        : null;
+    return Response.json({ services, ownerProfile });
   } catch (error) {
     return Response.json({ error: 'Pricing temporarily unavailable' }, { status: 502 });
   }
