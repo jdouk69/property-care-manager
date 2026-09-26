@@ -17,6 +17,7 @@ import NotificationBell from "@/components/layout/NotificationBell";
 import AccountMenu from "@/components/layout/AccountMenu";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import useNewAssessmentCount from "@/hooks/useNewAssessmentCount";
 
 export const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -56,6 +57,7 @@ const MOBILE_NAV = [
 
 function SidebarContent({ onNavigate, isAdmin = false }) {
   const { t } = useLanguage();
+  const newRequests = useNewAssessmentCount(isAdmin);
   return (
     <nav className="flex flex-col gap-1 px-3 py-4">
       {NAV_ITEMS.filter((item) => isAdmin || !ADMIN_ONLY_NAV.has(item.to)).map((item) => (
@@ -72,6 +74,11 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
         >
           <item.icon className="w-[18px] h-[18px] shrink-0" />
           {t(item.label)}
+          {item.to === "/assessment-requests" && newRequests > 0 && (
+            <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">
+              {newRequests}
+            </span>
+          )}
         </NavLink>
       ))}
       {isAdmin && (
