@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { User, Phone, Mail, MessageCircle, Image as ImageIcon } from "lucide-react";
+import { User, Phone, Mail, MessageCircle, MessageSquare, Image as ImageIcon } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Image } from "@/components/ui/image";
@@ -39,6 +39,7 @@ export default function LocalContact() {
     { icon: Phone, kind: "phone", value: profile?.phone || null, placeholder: "[Phone]" },
     { icon: Mail, kind: "email", value: profile?.email || null, placeholder: "[Email]" },
     { icon: MessageCircle, kind: "whatsapp", value: profile?.whatsapp || null, placeholder: "[WhatsApp]" },
+    { icon: MessageSquare, kind: "viber", value: profile?.viber || null, placeholder: "[Viber]" },
   ].filter((c) => c.value || !name);
   const showPlaceholderNote = !name && !photo && !intro && !localPhoto && contacts.every((c) => !c.value);
 
@@ -111,6 +112,17 @@ export default function LocalContact() {
                     <span key={c.placeholder} className={cls}>
                       {inner}
                     </span>
+                  );
+                }
+                if (c.kind === "viber") {
+                  return (
+                    <a
+                      key={c.placeholder}
+                      href={`viber://chat?number=${encodeURIComponent("+" + digits)}`}
+                      className={cls}
+                    >
+                      {inner}
+                    </a>
                   );
                 }
                 return (

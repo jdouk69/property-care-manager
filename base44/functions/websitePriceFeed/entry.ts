@@ -122,6 +122,7 @@ export default async function(req) {
           phone: s.owner_profile_phone || null,
           email: s.owner_profile_email || null,
           whatsapp: s.owner_profile_whatsapp || null,
+          viber: s.owner_profile_viber || null,
           local_photo: s.owner_profile_local_photo || null,
         };
       }

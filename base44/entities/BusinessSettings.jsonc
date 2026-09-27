@@ -140,6 +140,10 @@
       "type": "string",
       "description": "Owner's WhatsApp number shown on the public landing page contact section."
     },
+    "owner_profile_viber": {
+      "type": "string",
+      "description": "Owner's Viber number shown on the public landing page contact section."
+    },
     "owner_profile_local_photo": {
       "type": "string",
       "description": "Genuine local / property photo (public file URL) shown beneath the owner profile on the landing page. Empty = placeholder."

@@ -19,6 +19,7 @@ const FIELDS = [
   "owner_profile_phone",
   "owner_profile_email",
   "owner_profile_whatsapp",
+  "owner_profile_viber",
   "owner_profile_local_photo",
 ];
 
@@ -159,7 +160,7 @@ export default function OwnerProfileCard({ settings, applyFields }) {
           <Textarea id="owner-intro-el" rows={3} value={draft.owner_profile_intro_el} onChange={(e) => set("owner_profile_intro_el", e.target.value)} placeholder="Σύντομη προσωπική παρουσίαση — ποιος είστε και γιατί φροντίζετε ακίνητα." />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-2">
             <Label htmlFor="owner-phone">{t("Phone")}</Label>
             <Input id="owner-phone" value={draft.owner_profile_phone} onChange={(e) => set("owner_profile_phone", e.target.value)} />
@@ -171,6 +172,10 @@ export default function OwnerProfileCard({ settings, applyFields }) {
           <div className="space-y-2">
             <Label htmlFor="owner-whatsapp">WhatsApp</Label>
             <Input id="owner-whatsapp" value={draft.owner_profile_whatsapp} onChange={(e) => set("owner_profile_whatsapp", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="owner-viber">Viber</Label>
+            <Input id="owner-viber" value={draft.owner_profile_viber} onChange={(e) => set("owner_profile_viber", e.target.value)} />
           </div>
         </div>
       </div>
