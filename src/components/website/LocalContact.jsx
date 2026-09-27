@@ -56,7 +56,7 @@ export default function LocalContact() {
         <div className="mt-6 sm:mt-10 grid gap-6 rounded-2xl border border-border bg-card p-4 sm:p-8 sm:grid-cols-[auto_1fr] sm:items-center">
           {photo ? (
             <div className="h-28 w-28 shrink-0 overflow-hidden rounded-2xl border border-border">
-              <Image src={photo} alt={name || "Owner"} className="h-full w-full" fittingType="fill" />
+              <Image src={photo} alt={name || "Owner"} className="h-full w-full object-cover object-[center_35%]" fittingType="fill" focalPointX={0.5} focalPointY={0.35} />
             </div>
           ) : (
             <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted text-muted-foreground">
