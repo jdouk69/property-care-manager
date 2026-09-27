@@ -137,7 +137,7 @@ export default function LocalContact() {
         </div>
         {localPhoto ? (
           <div className="mt-4 aspect-[3/2] sm:aspect-[21/10] lg:aspect-[12/5] w-full overflow-hidden rounded-2xl border border-border">
-            <Image src={localPhoto} alt={el ? "Τοπική φωτογραφία" : "Local photo"} className="h-full w-full" fittingType="fill" focalPointY={0.55} />
+            <Image src={localPhoto} alt={el ? "Τοπική φωτογραφία" : "Local photo"} className="h-full w-full object-cover object-[center_55%]" fittingType="fill" focalPointX={0.5} focalPointY={0.55} />
           </div>
         ) : (
           <div className="mt-4 flex aspect-[3/2] sm:aspect-[21/10] lg:aspect-[12/5] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card text-muted-foreground">
