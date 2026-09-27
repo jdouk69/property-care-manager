@@ -23,8 +23,8 @@ export default function WebsiteHero() {
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-white/75 leading-relaxed">
           {el
-            ? "Τακτικές επισκέψεις φροντίδας, προετοιμασία πριν την άφιξη και αξιόπιστη τοπική υποστήριξη για ιδιοκτήτες ακινήτων στα Χανιά. Κάθε επίσκεψη τεκμηριώνεται — πάντα ξέρετε τι είδαμε και τι κάναμε."
-            : "Regular property-care visits, arrival preparation, and trusted local support for homeowners near Chania. Every visit is documented — you always know what we saw and what we did."}
+            ? "Είτε λείπετε για λίγες εβδομάδες είτε για το μεγαλύτερο μέρος του χρόνου, το Property Care Crete σας προσφέρει μια αξιόπιστη τοπική παρουσία στα Χανιά και τη Δυτική Κρήτη. Πραγματοποιούμε προγραμματισμένες επισκέψεις στο ακίνητό σας, καταγράφουμε όσα βλέπουμε, σας κρατάμε ενήμερους και σας βοηθάμε να συντονίσετε τους κατάλληλους επαγγελματίες όταν κάτι χρειάζεται προσοχή."
+            : "Whether you're away for a few weeks or most of the year, Property Care Crete gives you a dependable local presence in Chania and Western Crete. We carry out scheduled property visits, document what we see, keep you informed, and help coordinate the right professionals when something needs attention."}
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button asChild size="lg" className="w-full sm:w-auto rounded-lg h-12 px-7">

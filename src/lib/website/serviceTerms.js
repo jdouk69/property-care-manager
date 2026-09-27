@@ -68,8 +68,8 @@ const TERMS = {
   owner_representative_site_visit: {
     name_el: "Επίσκεψη Εκπροσώπου Ιδιοκτήτη",
     desc: {
-      en: "An observational site visit during works at your property, reporting visible progress and concerns to you.",
-      el: "Παρατηρητική επίσκεψη επιτόπου κατά τη διάρκεια εργασιών στο ακίνητό σας, με αναφορά ορατής προόδου και παρατηρήσεων σε εσάς.",
+      en: "Can't be there when a contractor, delivery or service provider arrives? We can meet them at the property, provide access, document the visit and keep you informed.",
+      el: "Δεν μπορείτε να βρίσκεστε εκεί όταν φτάνει εργολάβος, παράδοση ή πάροχος υπηρεσιών; Μπορούμε να τον συναντήσουμε στο ακίνητο, να δώσουμε πρόσβαση, να καταγράψουμε την επίσκεψη και να σας κρατήσουμε ενήμερους.",
     },
     included: {
       en: "Includes the first 60 minutes on site.",
