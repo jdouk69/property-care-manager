@@ -114,6 +114,15 @@ const TERMS = {
 
 const pick = (o, lang) => (o ? (lang === "el" ? o.el : o.en) : null);
 
+// Price display: whole euros without decimals (€65), real cents preserved
+// (€45.50). Applied to the LIVE feed value only — never a fallback number.
+export function formatPrice(n) {
+  if (n == null) return "";
+  const v = Number(n);
+  if (Number.isNaN(v)) return String(n);
+  return Number.isInteger(v) ? String(v) : v.toFixed(2);
+}
+
 // Returns the display terms for a live feed service, or null when the live
 // amounts this wording depends on are missing (fail-closed — never a fallback).
 export function serviceTerms(service, lang) {
