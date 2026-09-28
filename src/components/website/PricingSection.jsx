@@ -59,7 +59,7 @@ export default function PricingSection() {
     // Fail-closed per card: if the live feed is missing this service or any
     // required price component for its copy (e.g. hourly rate), the service is
     // shown as unavailable — never a crash, never invented or partial pricing.
-    const terms = s ? serviceTerms(s, lang, { completeCareDescEl: sc.complete_care_desc }) : null;
+    const terms = s ? serviceTerms(s, lang, sc.cards) : null;
     if (!s || !terms) return <UnavailableServiceCard key={key} name={s ? s.name : null} />;
     return <ServiceTermCard key={key} service={s} terms={terms} unitLabel={billingUnitLabel(s.billing_unit, lang)} highlight={highlight} />;
   };

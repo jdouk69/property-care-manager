@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Info, Plus, Trash2 } from "lucide-react";
 import { EDITOR_SCHEMA } from "@/lib/website/contentModel";
 import { StringListField, TrustItemsField, FaqsField } from "./ListFields";
+import ServiceCardsField from "./ServiceCardsEditor";
 
 const LANG_LABELS = { en: "English", el: "Ελληνικά" };
 
@@ -56,6 +57,8 @@ export default function SectionEditor({ sectionKey, content, onChange }) {
           return <TrustItemsField key={f.key} field={f} content={content} onChange={onChange} />;
         if (f.type === "faqs")
           return <FaqsField key={f.key} field={f} content={content} onChange={onChange} />;
+        if (f.type === "serviceCards")
+          return <ServiceCardsField key={f.key} content={content} onChange={onChange} />;
         return null;
       })}
     </div>

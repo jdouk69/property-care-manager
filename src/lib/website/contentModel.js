@@ -8,11 +8,12 @@
 // live source and these defaults no longer reach visitors for that section.
 //
 // Every field is bilingual: content = { en: {...}, el: {...} }.
-// NO price, duration, or package data lives here — those come live from
-// ServicePackage records through the secure pricing feed. The only
-// record-sourced text this module touches is the Complete Care Greek
-// translation (services.el.complete_care_desc), which translates the
-// English description that flows live from the service record.
+// NO price, hourly rate, or package data lives here — those come live from
+// ServicePackage records through the secure pricing feed. The public wording
+// for all seven service cards lives in services.<lang>.cards (title,
+// description, inclusions, extra-time note); {price} and {hourly}
+// placeholders inside that wording are filled with the LIVE amounts from
+// the feed at display time, so no editable copy can carry a stale amount.
 
 export const SECTION_META = [
   { key: "hero", label: "Hero" },
@@ -52,6 +53,54 @@ export const DEFAULT_CONTENT = {
         "These are our current service prices. After a property assessment, we agree any proposed work and its price with you before we proceed.",
       groupHeading: "Recurring Care Plans — scheduled visits every month",
       note: "The exact work and final price for your property are always agreed with you in writing before we start.",
+      // Public wording for the seven service cards. The seed values mirror
+      // exactly what the cards showed when this content became editable.
+      // {price} / {hourly} placeholders are filled LIVE from the pricing
+      // feed — never edit an amount into this text.
+      cards: {
+        quick_check: {
+          name: "Quick Check",
+          desc: "A quick monthly visual check of your property: obvious leaks or water issues, visible damage, signs of forced entry, and anything clearly unusual.",
+          included: "One scheduled visit per month (up to 15 minutes). Every visit is recorded.",
+          extras: "Does not include routine photos or a customer-facing visit report.",
+        },
+        property_care: {
+          name: "Property Care",
+          desc: "A thorough monthly visit covering leaks, moisture, visible damage, doors and windows, plus your selected monitoring priorities.",
+          included: "One scheduled visit per month (30–45 minutes), including photos and a visit report.",
+          extras: "Additional time is charged at €{hourly}/hour.",
+        },
+        complete_care: {
+          name: "Complete Care",
+          desc: "Our most comprehensive care, with two visits each month.",
+          included: "One full visit (up to 60 minutes) covering your chosen priorities, with photos and a detailed report. Plus one brief follow-up check (up to 15 minutes) with a photo update.",
+          extras: "Additional time is charged at €{hourly}/hour.",
+        },
+        owner_arrival_preparation: {
+          name: "Owner Arrival Preparation",
+          desc: "A pre-arrival visual check and airing of the property so everything is in order when you arrive.",
+          included: "Includes up to 60 minutes on site.",
+          extras: "Additional time is charged at €{hourly}/hour.",
+        },
+        owner_representative_site_visit: {
+          name: "Owner Representative Site Visit",
+          desc: "Can't be there when a contractor, delivery or service provider arrives? We can meet them at the property, provide access, document the visit and keep you informed.",
+          included: "Includes the first 60 minutes on site.",
+          extras: "Additional time is charged at €{hourly}/hour.",
+        },
+        grocery_stocking: {
+          name: "Grocery Stocking",
+          desc: "We shop for your groceries and stock the property before you or your guests arrive.",
+          included: "Includes up to 15 minutes of shopping.",
+          extras: "Additional time is charged at €{hourly}/hour. Groceries are charged separately.",
+        },
+        emergency_visit: {
+          name: "Emergency Visit",
+          desc: "Urgent attendance for concerns such as a water leak, intrusion, storm or power issue at your property.",
+          included: "€{price} covers the first hour on site.",
+          extras: "Time beyond the first hour is charged at €{hourly}/hour.",
+        },
+      },
     },
     el: {
       kicker: "Υπηρεσίες & Τιμές",
@@ -60,12 +109,50 @@ export const DEFAULT_CONTENT = {
         "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Μετά την αξιολόγηση του ακινήτου, συμφωνούμε μαζί σας κάθε προτεινόμενη εργασία και την τιμή της πριν προχωρήσουμε.",
       groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
       note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα γραπτώς μαζί σας πριν ξεκινήσουμε.",
-      // Greek translation of Complete Care's record description. English comes
-      // LIVE from the Service Package record via the pricing feed; this is the
-      // maintained translation. Two paragraphs separated by a blank line
-      // (paragraph 1 -> card intro, paragraph 2 -> the included line).
-      complete_care_desc:
-        "Η πιο ολοκληρωμένη φροντίδα μας, με δύο επισκέψεις τον μήνα.\n\nΜια πλήρης επίσκεψη τον μήνα (έως 60 λεπτά) για τις προτεραιότητες που έχετε επιλέξει, με φωτογραφίες και αναλυτική αναφορά, καθώς και ένας σύντομος πρόσθετος έλεγχος (έως 15 λεπτά) με φωτογραφική ενημέρωση.",
+      cards: {
+        quick_check: {
+          name: "Γρήγορος Έλεγχος",
+          desc: "Ένας γρήγορος μηνιαίος οπτικός έλεγχος του ακινήτου σας: εμφανή διαρροή ή προβλήματα νερού, ορατές ζημιές, ενδείξεις παραβίασης και οτιδήποτε προφανώς ασυνήθιστο.",
+          included: "Μια προγραμματισμένη επίσκεψη τον μήνα (έως 15 λεπτά). Κάθε επίσκεψη καταγράφεται.",
+          extras: "Δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά επίσκεψης προς τον ιδιοκτήτη.",
+        },
+        property_care: {
+          name: "Φροντίδα Ακινήτου",
+          desc: "Μια διεξοδική μηνιαία επίσκεψη για διαρροές, υγρασία, ορατές ζημιές, πόρτες και παράθυρα, καθώς και τις προτεραιότητες παρακολούθησης που έχετε επιλέξει.",
+          included: "Μια προγραμματισμένη επίσκεψη τον μήνα (30–45 λεπτά), με φωτογραφίες και αναφορά επίσκεψης.",
+          extras: "Ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα.",
+        },
+        complete_care: {
+          name: "Πλήρης Φροντίδα",
+          desc: "Η πιο ολοκληρωμένη φροντίδα μας, με δύο επισκέψεις τον μήνα.",
+          included: "Μια πλήρης επίσκεψη τον μήνα (έως 60 λεπτά) για τις προτεραιότητες που έχετε επιλέξει, με φωτογραφίες και αναλυτική αναφορά, καθώς και ένας σύντομος πρόσθετος έλεγχος (έως 15 λεπτά) με φωτογραφική ενημέρωση.",
+          extras: "Ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα.",
+        },
+        owner_arrival_preparation: {
+          name: "Προετοιμασία Πριν την Άφιξη Ιδιοκτήτη",
+          desc: "Οπτικός έλεγχος και αερισμός του ακινήτου πριν την άφιξή σας, ώστε όλα να είναι σε τάξη.",
+          included: "Περιλαμβάνει έως 60 λεπτά επιτόπου.",
+          extras: "Ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα.",
+        },
+        owner_representative_site_visit: {
+          name: "Επίσκεψη Εκπροσώπου Ιδιοκτήτη",
+          desc: "Δεν μπορείτε να βρίσκεστε εκεί όταν φτάνει εργολάβος, παράδοση ή πάροχος υπηρεσιών; Μπορούμε να τον συναντήσουμε στο ακίνητο, να δώσουμε πρόσβαση, να καταγράψουμε την επίσκεψη και να σας κρατήσουμε ενήμερους.",
+          included: "Περιλαμβάνει τα πρώτα 60 λεπτά επιτόπου.",
+          extras: "Ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα.",
+        },
+        grocery_stocking: {
+          name: "Προμήθεια Τροφίμων",
+          desc: "Αγοράζουμε τα είδη διατροφής σας και εφοδιάζουμε το ακίνητο πριν φτάσετε εσείς ή οι επισκέπτες σας.",
+          included: "Περιλαμβάνει έως 15 λεπτά αγορών.",
+          extras: "Ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα. Τα τρόφιμα χρεώνονται ξεχωριστά.",
+        },
+        emergency_visit: {
+          name: "Επείγουσα Επίσκεψη",
+          desc: "Επείγουσα προσέλευση για ζητήματα όπως διαρροή νερού, παραβίαση, καταιγίδα ή πρόβλημα ρεύματος στο ακίνητό σας.",
+          included: "Τα €{price} καλύπτουν την πρώτη ώρα επιτόπου.",
+          extras: "Ο χρόνος πέρα από την πρώτη ώρα χρεώνεται με €{hourly}/ώρα.",
+        },
+      },
     },
   },
   add_on_services: {
@@ -295,20 +382,16 @@ export const EDITOR_SCHEMA = {
   },
   services: {
     label: "Services",
-    info: "Prices, time allowances, hourly rates and package details are never edited here — they come live from your Service Package records via the secure pricing feed. Complete Care's English description also flows live from its service record; its Greek translation is maintained in this tab.",
+    info:
+      "Prices, hourly rates, time allowances and visit counts are never edited here — they come live from your Service Package records via the secure pricing feed. " +
+      "This tab manages the public wording of all seven service cards. In the wording you can use the placeholders {price} and {hourly}; they are replaced with the live amounts when the page is viewed, so the text can never show a stale price.",
     fields: [
       { key: "kicker", label: "Small label above the heading", type: "text" },
       { key: "heading", label: "Heading", type: "text" },
       { key: "intro", label: "Intro paragraph", type: "textarea", rows: 3 },
       { key: "groupHeading", label: "Recurring plans — group heading", type: "text" },
       { key: "note", label: "Bottom note", type: "textarea", rows: 2 },
-      {
-        key: "complete_care_desc",
-        label: "Complete Care — Greek translation (two paragraphs, blank line between)",
-        type: "textarea",
-        rows: 5,
-        elOnly: true,
-      },
+      { key: "cards", label: "Service card wording", type: "serviceCards" },
     ],
   },
   add_on_services: {
