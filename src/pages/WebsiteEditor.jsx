@@ -5,12 +5,21 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/AuthContext";
 import PageBackButton from "@/components/ui/PageBackButton";
-import { DEFAULT_CONTENT, SECTION_META } from "@/lib/website/contentModel";
+import { DEFAULT_CONTENT, SECTION_META, mergeSection } from "@/lib/website/contentModel";
 import SectionEditor from "@/components/website-editor/SectionEditor";
 import PreviewOverlay from "@/components/website-editor/PreviewOverlay";
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// Effective editor value for a section: the stored draft (or, failing that,
+// the published content) merged OVER the built-in default copy. Untouched
+// fields always show the current effective public wording in both languages —
+// a stored draft that predates a newer field (e.g. the service-card wording)
+// can no longer render blank. Saved values always win; nothing is overwritten.
+const effectiveDraft = (k, rec) =>
+  mergeSection(DEFAULT_CONTENT[k], rec?.draft || rec?.published || null);
+const effectiveLive = (k, rec) => mergeSection(DEFAULT_CONTENT[k], rec?.published || null);
 
 // Admin-only editor for the public homepage copy (EN/EL). Draft → preview →
 // publish: editing only ever changes the DRAFT; visitors keep seeing the last
@@ -38,8 +47,7 @@ export default function WebsiteEditor() {
         if (prev) return prev; // keep any unsaved edits across refreshes
         const d = {};
         SECTION_META.forEach((m) => {
-          const r = recs[m.key];
-          d[m.key] = clone(r?.draft || r?.published || DEFAULT_CONTENT[m.key]);
+          d[m.key] = clone(effectiveDraft(m.key, recs[m.key]));
         });
         return d;
       });
@@ -54,8 +62,8 @@ export default function WebsiteEditor() {
   }, [load]);
 
   // What is saved as draft vs what the public currently sees.
-  const savedDraft = (k) => records?.[k]?.draft || records?.[k]?.published || DEFAULT_CONTENT[k];
-  const liveVersion = (k) => records?.[k]?.published || DEFAULT_CONTENT[k];
+  const savedDraft = (k) => effectiveDraft(k, records?.[k]);
+  const liveVersion = (k) => effectiveLive(k, records?.[k]);
   const isDirty = (k) => !!drafts && !same(drafts[k], savedDraft(k));
   const isUnpublished = (k) => !!drafts && !same(drafts[k], liveVersion(k));
   const publishCount = SECTION_META.filter((m) => isUnpublished(m.key)).length;
