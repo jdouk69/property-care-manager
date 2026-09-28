@@ -8,7 +8,9 @@ const KEY_HEADER = 'x-website-price-feed-key';
 // Only the seven approved services are ever exposed, matched by stable record
 // ID. Prices, hourly rates, time allowances and availability are read LIVE
 // from the service records, so updating a price in this app updates the
-// website automatically. Nothing else from any record is returned.
+// website automatically. Services flagged live_description also return the
+// record's customer-facing description live; all other copy is curated
+// here. Nothing else from any record is returned.
 // Fail-closed: until the WEBSITE_PRICE_FEED_KEY secret is set in this app's
 // Secrets settings, EVERY request is denied, and the response never reveals
 // whether the secret is configured.
@@ -32,7 +34,11 @@ const APPROVED_SERVICES = [
     service_key: 'complete_care',
     name: 'Complete Care',
     billing_unit: 'month',
-    description: 'The most comprehensive monthly package: a detailed visit of up to 60 minutes covering your chosen priorities, with photos and a full visit report.',
+    // Website copy flows LIVE from this record's description field — backend
+    // edits appear on the site without a code change. Services without this
+    // flag keep their curated static description below (their record
+    // descriptions are operational notes, not public copy).
+    live_description: true,
   },
   {
     record_id: '6a626bd947df156e4c466656',
@@ -97,7 +103,7 @@ export default async function(req) {
       services.push({
         service_key: cfg.service_key,
         name: cfg.name,
-        description: cfg.description,
+        description: cfg.live_description ? (rec.description || null) : cfg.description,
         price: rec.standard_price,
         billing_unit: cfg.billing_unit,
         hourly_rate: rec.hourly_charge != null ? rec.hourly_charge : null,

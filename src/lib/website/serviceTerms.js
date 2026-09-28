@@ -3,6 +3,9 @@
 // the billing unit come LIVE from the price feed. Nothing in this module can
 // serve as a price fallback — if a live amount is missing, the caller must
 // show the unavailable state, never a number from here.
+// Exception: services in LIVE_DESC_KEYS take their English copy LIVE from
+// the backend record's description through the feed (the Greek wording below
+// is the static translation). The copy here stays as their fail-safe fallback.
 
 const TERMS = {
   quick_check: {
@@ -38,12 +41,12 @@ const TERMS = {
   complete_care: {
     name_el: "Πλήρης Φροντίδα",
     desc: {
-      en: "Our most comprehensive monthly visit: your chosen priorities checked in detail, with photos and a full visit report.",
-      el: "Η πιο ολοκληρωμένη μηνιαία επίσκεψή μας: οι προτεραιότητες που έχετε επιλέξει ελέγχονται λεπτομερώς, με φωτογραφίες και πλήρη αναφορά επίσκεψης.",
+      en: "Our most comprehensive care, with two visits each month.",
+      el: "Η πιο ολοκληρωμένη φροντίδα μας, με δύο επισκέψεις τον μήνα.",
     },
     included: {
-      en: "One scheduled visit per month (up to 60 minutes), including photos and a full visit report.",
-      el: "Μια προγραμματισμένη επίσκεψη τον μήνα (έως 60 λεπτά), με φωτογραφίες και πλήρη αναφορά επίσκεψης.",
+      en: "One full visit per month (up to 60 minutes) covering your chosen priorities, with photos and a detailed report, plus one brief follow-up check (up to 15 minutes) with a photo update.",
+      el: "Μια πλήρης επίσκεψη τον μήνα (έως 60 λεπτά) για τις προτεραιότητες που έχετε επιλέξει, με φωτογραφίες και αναλυτική αναφορά, καθώς και ένας σύντομος πρόσθετος έλεγχος (έως 15 λεπτά) με φωτογραφική ενημέρωση.",
     },
     extras: {
       en: "Additional time is charged at €{hourly}/hour.",
@@ -114,6 +117,15 @@ const TERMS = {
 
 const pick = (o, lang) => (o ? (lang === "el" ? o.el : o.en) : null);
 
+// Services whose customer-facing description flows LIVE from the backend
+// record through the price feed (English only — Greek is the static
+// translation above).
+const LIVE_DESC_KEYS = new Set(["complete_care"]);
+// A description paragraph that only states the hourly charge is never shown —
+// the card's clock line renders the LIVE hourly_rate, so that amount can
+// never go stale inside the description text.
+const HOURLY_SENTENCE = /^additional time\b[\s\S]*€\s*\d[\s\S]*\/\s*hour\.?$/i;
+
 // Price display: whole euros without decimals (€65), real cents preserved
 // (€45.50). Applied to the LIVE feed value only — never a fallback number.
 export function formatPrice(n) {
@@ -132,10 +144,22 @@ export function serviceTerms(service, lang) {
     s.split("{price}").join(service.price).split("{hourly}").join(service.hourly_rate);
   let extras = pick(def.extras, lang);
   if (extras && extras.includes("{hourly}") && service.hourly_rate == null) return null;
+  let desc = pick(def.desc, lang);
+  let included = sub(pick(def.included, lang));
+  // Live English copy: the record's description paragraphs map onto the card
+  // (paragraph 1 -> intro, paragraph 2 -> the included line).
+  if (lang !== "el" && LIVE_DESC_KEYS.has(service?.service_key) && service.description) {
+    const paras = String(service.description)
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter((p) => p && !HOURLY_SENTENCE.test(p));
+    if (paras[0]) desc = paras[0];
+    if (paras[1]) included = paras[1];
+  }
   return {
     name: lang === "el" ? def.name_el : service.name,
-    desc: pick(def.desc, lang),
-    included: sub(pick(def.included, lang)),
+    desc,
+    included,
     extras: extras ? sub(extras) : null,
   };
 }

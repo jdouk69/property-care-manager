@@ -105,7 +105,7 @@ export default function PricingSection() {
           <div className="mt-6 sm:mt-10 space-y-10">
             <div>
               <h3 className="mb-4 font-heading text-lg font-semibold text-foreground">
-                {el ? "Μηνιαία Πακέτα Φροντίδας — μία επίσκεψη τον μήνα" : "Recurring Care Plans — one scheduled visit per month"}
+                {el ? "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα" : "Recurring Care Plans — scheduled visits every month"}
               </h3>
               <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {MONTHLY_KEYS.map((k) => card(k, k === "complete_care"))}
