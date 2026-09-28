@@ -6,7 +6,7 @@ import {
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
   MapPin, FolderOpen, ClipboardList, ScrollText, Euro, ChevronLeft, UserCog,
-  Briefcase, Inbox
+  Briefcase, Inbox, Globe
 } from "lucide-react";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { useAuth } from "@/lib/AuthContext";
@@ -103,6 +103,16 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
           >
             <Briefcase className="w-[18px] h-[18px] shrink-0" />
             {t("Business & Billing")}
+          </NavLink>
+          <NavLink
+            to="/website-editor"
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`
+            }
+          >
+            <Globe className="w-[18px] h-[18px] shrink-0" />
+            {t("Edit Website")}
           </NavLink>
         </>
       )}

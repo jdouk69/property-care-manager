@@ -52,6 +52,7 @@ import Billing from '@/pages/Billing';
 import AdminUsers from '@/pages/AdminUsers';
 import WebsiteHome from '@/pages/website/WebsiteHome';
 import AssessmentRequests from '@/pages/AssessmentRequests';
+import WebsiteEditor from '@/pages/WebsiteEditor';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -124,6 +125,7 @@ const AuthenticatedApp = () => {
           <Route path="/services" element={<ServicePackages />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/assessment-requests" element={<AssessmentRequests />} />
+          <Route path="/website-editor" element={<WebsiteEditor />} />
         </Route>
         <Route path="/communications" element={<OwnerCommunications />} />
         <Route path="/deliveries" element={<Deliveries />} />

@@ -1,0 +1,67 @@
+{
+  "name": "WebsiteSection",
+  "type": "object",
+  "properties": {
+    "section_key": {
+      "type": "string",
+      "enum": [
+        "hero",
+        "services",
+        "add_on_services",
+        "how_it_works",
+        "why_us",
+        "service_area",
+        "faqs",
+        "contact"
+      ],
+      "description": "Which public homepage section this record holds."
+    },
+    "draft": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Bilingual (en/el) section content being edited. Never shown to the public."
+    },
+    "published": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Bilingual (en/el) section content currently live on the public homepage."
+    },
+    "draft_updated_at": {
+      "type": "string"
+    },
+    "draft_updated_by": {
+      "type": "string"
+    },
+    "published_at": {
+      "type": "string"
+    },
+    "published_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "section_key"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

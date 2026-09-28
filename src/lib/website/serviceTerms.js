@@ -117,9 +117,20 @@ const TERMS = {
 
 const pick = (o, lang) => (o ? (lang === "el" ? o.el : o.en) : null);
 
+// Splits a multi-paragraph description into display paragraphs, dropping any
+// paragraph that only states the hourly charge (the card's clock line renders
+// the LIVE hourly_rate, so that amount can never go stale inside copy).
+function splitParas(text) {
+  return String(text)
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter((p) => p && !HOURLY_SENTENCE.test(p));
+}
+
 // Services whose customer-facing description flows LIVE from the backend
-// record through the price feed (English only — Greek is the static
-// translation above).
+// record through the price feed (English only — the Greek translation is
+// maintained in the website editor's Services tab and passed to serviceTerms
+// as options.completeCareDescEl; the wording above stays as its fallback).
 const LIVE_DESC_KEYS = new Set(["complete_care"]);
 // A description paragraph that only states the hourly charge is never shown —
 // the card's clock line renders the LIVE hourly_rate, so that amount can
@@ -137,7 +148,7 @@ export function formatPrice(n) {
 
 // Returns the display terms for a live feed service, or null when the live
 // amounts this wording depends on are missing (fail-closed — never a fallback).
-export function serviceTerms(service, lang) {
+export function serviceTerms(service, lang, options) {
   const def = TERMS[service?.service_key];
   if (!def || service.price == null) return null;
   const sub = (s) =>
@@ -146,15 +157,23 @@ export function serviceTerms(service, lang) {
   if (extras && extras.includes("{hourly}") && service.hourly_rate == null) return null;
   let desc = pick(def.desc, lang);
   let included = sub(pick(def.included, lang));
-  // Live English copy: the record's description paragraphs map onto the card
-  // (paragraph 1 -> intro, paragraph 2 -> the included line).
-  if (lang !== "el" && LIVE_DESC_KEYS.has(service?.service_key) && service.description) {
-    const paras = String(service.description)
-      .split(/\n\s*\n/)
-      .map((p) => p.trim())
-      .filter((p) => p && !HOURLY_SENTENCE.test(p));
-    if (paras[0]) desc = paras[0];
-    if (paras[1]) included = paras[1];
+  // Live copy for record-sourced services: the source description's
+  // paragraphs map onto the card (paragraph 1 -> intro, paragraph 2 -> the
+  // included line). ENGLISH comes LIVE from the service record through the
+  // feed; GREEK uses the translation maintained in the website editor
+  // (Services tab), passed as options.completeCareDescEl.
+  if (LIVE_DESC_KEYS.has(service?.service_key)) {
+    const liveText =
+      lang !== "el"
+        ? service.description
+        : typeof options?.completeCareDescEl === "string"
+        ? options.completeCareDescEl
+        : null;
+    if (liveText && liveText.trim()) {
+      const paras = splitParas(liveText);
+      if (paras[0]) desc = paras[0];
+      if (paras[1]) included = paras[1];
+    }
   }
   return {
     name: lang === "el" ? def.name_el : service.name,

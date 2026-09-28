@@ -3,6 +3,7 @@ import { User, Phone, Mail, MessageCircle, MessageSquare, Image as ImageIcon } f
 import { base44 } from "@/api/base44Client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Image } from "@/components/ui/image";
+import { useSectionContent } from "@/components/website/WebsiteContentContext";
 
 // 'Meet your local contact' — reads the owner profile from the server-side
 // websitePrices function (key stays server-side; only owner_profile_* fields
@@ -11,6 +12,7 @@ import { Image } from "@/components/ui/image";
 export default function LocalContact() {
   const { lang } = useLanguage();
   const el = lang === "el";
+  const c = useSectionContent("contact");
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
@@ -48,10 +50,10 @@ export default function LocalContact() {
       <div className="mx-auto max-w-6xl px-4">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-            {el ? "Ο τοπικός σας επαφή" : "Meet your local contact"}
+            {c.kicker}
           </p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-foreground">
-            {el ? "Ένα πρόσωπο που γνωρίζετε εξ ονόματός σας." : "One person you know by name."}
+            {c.heading}
           </h2>
         </div>
         <div className="mt-6 sm:mt-10 grid gap-6 rounded-2xl border border-border bg-card p-4 sm:p-8 sm:grid-cols-[auto_1fr] sm:items-center">

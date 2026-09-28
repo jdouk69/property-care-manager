@@ -3,7 +3,7 @@ import { EL } from "./translations";
 
 // Central interface-language context. English is the default; Greek is a
 // display-only layer — stored data and enum values are never modified.
-const LanguageContext = createContext({ lang: "en", setLang: () => {}, t: (s) => s, tEnum: (v) => v });
+export const LanguageContext = createContext({ lang: "en", setLang: () => {}, t: (s) => s, tEnum: (v) => v });
 
 const STORAGE_KEY = "pcm-interface-language";
 

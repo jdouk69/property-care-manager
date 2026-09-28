@@ -1,0 +1,359 @@
+// Editable website copy — single model for the public homepage sections.
+//
+// DEFAULT_CONTENT mirrors the copy that was previously hard-coded in the
+// section components. It serves as (a) the initial value in the website
+// editor and (b) the resilience fallback on the public page when a section
+// has never been published or the content feed fails — so the site can never
+// go blank. Once an admin publishes a section, the published record is the
+// live source and these defaults no longer reach visitors for that section.
+//
+// Every field is bilingual: content = { en: {...}, el: {...} }.
+// NO price, duration, or package data lives here — those come live from
+// ServicePackage records through the secure pricing feed. The only
+// record-sourced text this module touches is the Complete Care Greek
+// translation (services.el.complete_care_desc), which translates the
+// English description that flows live from the service record.
+
+export const SECTION_META = [
+  { key: "hero", label: "Hero" },
+  { key: "services", label: "Services" },
+  { key: "add_on_services", label: "Add-on Services" },
+  { key: "how_it_works", label: "How It Works" },
+  { key: "why_us", label: "Why Us" },
+  { key: "service_area", label: "Service Area" },
+  { key: "faqs", label: "FAQs" },
+  { key: "contact", label: "Contact" },
+];
+
+export const DEFAULT_CONTENT = {
+  hero: {
+    en: {
+      badge: "Chania · Western Crete",
+      title: "Your home in Crete, cared for as if it were our own.",
+      subtitle:
+        "Whether you're away for a few weeks or most of the year, Property Care Crete gives you a dependable local presence in Chania and Western Crete. We carry out scheduled property visits, document what we see, keep you informed, and help coordinate the right professionals when something needs attention.",
+      ctaPrimary: "Request a Property Assessment",
+      ctaSecondary: "Services & Prices",
+    },
+    el: {
+      badge: "Χανιά · Δυτική Κρήτη",
+      title: "Το σπίτι σας στην Κρήτη, με φροντίδα σαν να ήταν δικό μας.",
+      subtitle:
+        "Είτε λείπετε για λίγες εβδομάδες είτε για το μεγαλύτερο μέρος του χρόνου, το Property Care Crete σας προσφέρει μια αξιόπιστη τοπική παρουσία στα Χανιά και τη Δυτική Κρήτη. Πραγματοποιούμε προγραμματισμένες επισκέψεις στο ακίνητό σας, καταγράφουμε όσα βλέπουμε, σας κρατάμε ενήμερους και σας βοηθάμε να συντονίσετε τους κατάλληλους επαγγελματίες όταν κάτι χρειάζεται προσοχή.",
+      ctaPrimary: "Ζητήστε Αξιολόγηση Ακινήτου",
+      ctaSecondary: "Υπηρεσίες & Τιμές",
+    },
+  },
+  services: {
+    en: {
+      kicker: "Services & Pricing",
+      heading: "Clear prices and agreed work.",
+      intro:
+        "These are our current service prices. After a property assessment, we agree any proposed work and its price with you before we proceed.",
+      groupHeading: "Recurring Care Plans — scheduled visits every month",
+      note: "The exact work and final price for your property are always agreed with you in writing before we start.",
+    },
+    el: {
+      kicker: "Υπηρεσίες & Τιμές",
+      heading: "Ξεκάθαρες τιμές και συμφωνημένη εργασία.",
+      intro:
+        "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Μετά την αξιολόγηση του ακινήτου, συμφωνούμε μαζί σας κάθε προτεινόμενη εργασία και την τιμή της πριν προχωρήσουμε.",
+      groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
+      note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα γραπτώς μαζί σας πριν ξεκινήσουμε.",
+      // Greek translation of Complete Care's record description. English comes
+      // LIVE from the Service Package record via the pricing feed; this is the
+      // maintained translation. Two paragraphs separated by a blank line
+      // (paragraph 1 -> card intro, paragraph 2 -> the included line).
+      complete_care_desc:
+        "Η πιο ολοκληρωμένη φροντίδα μας, με δύο επισκέψεις τον μήνα.\n\nΜια πλήρης επίσκεψη τον μήνα (έως 60 λεπτά) για τις προτεραιότητες που έχετε επιλέξει, με φωτογραφίες και αναλυτική αναφορά, καθώς και ένας σύντομος πρόσθετος έλεγχος (έως 15 λεπτά) με φωτογραφική ενημέρωση.",
+    },
+  },
+  add_on_services: {
+    en: { heading: "On-Demand Services" },
+    el: { heading: "Υπηρεσίες κατ' Απαίτηση" },
+  },
+  how_it_works: {
+    en: {
+      kicker: "How it works",
+      heading: "Simple steps, full transparency.",
+      steps: [
+        "You request a property assessment and tell us a little about your home.",
+        "We assess the property and agree the care plan and price with you.",
+        "We carry out scheduled visits, using a detailed checklist for each visit type.",
+        "You receive photos and a visit report after each visit (Property Care and Complete Care plans).",
+        "If anything needs attention, we let you know and proceed only with your approval.",
+      ],
+    },
+    el: {
+      kicker: "Πώς λειτουργεί",
+      heading: "Απλά βήματα, πλήρης διαφάνεια.",
+      steps: [
+        "Ζητάτε αξιολόγηση ακινήτου και μας λέτε λίγα λόγια για το σπίτι σας.",
+        "Επιθεωρούμε το ακίνητο και συμφωνούμε το πλάνο φροντίδας και την τιμή μαζί σας.",
+        "Εκτελούμε προγραμματισμένες επισκέψεις με λεπτομερή λίστα ελέγχου για κάθε τύπο επίσκεψης.",
+        "Λαμβάνετε φωτογραφίες και αναφορά επίσκεψης μετά από κάθε επίσκεψη (πακέτα Φροντίδας και Πλήρους Φροντίδας).",
+        "Εάν κάτι χρειάζεται προσοχή, σας ενημερώνουμε και προχωράμε μόνο με την έγκρισή σας.",
+      ],
+    },
+  },
+  why_us: {
+    en: {
+      kicker: "How we earn your trust",
+      heading: "Documentation, not promises.",
+      items: [
+        {
+          title: "Documented visits",
+          text: "Every scheduled visit is recorded internally with date, time, checklist, and observations.",
+        },
+        {
+          title: "Photos & reports",
+          text: "Routine photos and a customer-facing visit report are included only with Property Care and Complete Care — not with Quick Check.",
+        },
+        {
+          title: "Clear prices, agreed work",
+          text: "You see our current prices up front, and we agree the work and the price with you in writing before we start.",
+        },
+        {
+          title: "One local point of contact",
+          text: "You know your local point of contact by name — and every visit record shows who attended.",
+        },
+        {
+          title: "Careful key handling",
+          text: "Keys and access details are kept in our protected records and used only for visits you have agreed to.",
+        },
+        {
+          title: "Clear role limits",
+          text: "We state plainly what we do and what we do not do — no exaggeration, no vague promises.",
+        },
+      ],
+    },
+    el: {
+      kicker: "Πώς κερδίζουμε την εμπιστοσύνη σας",
+      heading: "Τεκμηρίωση, όχι υποσχέσεις.",
+      items: [
+        {
+          title: "Καταγεγραμμένες επισκέψεις",
+          text: "Κάθε προγραμματισμένη επίσκεψη καταγράφεται εσωτερικά με ημερομηνία, ώρα, λίστα ελέγχου και παρατηρήσεις.",
+        },
+        {
+          title: "Φωτογραφίες & αναφορές",
+          text: "Οι τακτικές φωτογραφίες και η αναφορά προς τον ιδιοκτήτη περιλαμβάνονται μόνο στα πακέτα Φροντίδας και Πλήρους Φροντίδας — όχι στον Γρήγορο Έλεγχο.",
+        },
+        {
+          title: "Ξεκάθαρες τιμές, συμφωνημένη εργασία",
+          text: "Βλέπετε τις τρέχουσες τιμές μας εκ των προτέρων και συμφωνούμε την εργασία και την τιμή γραπτώς πριν ξεκινήσουμε.",
+        },
+        {
+          title: "Ένας τοπικός επαφής",
+          text: "Γνωρίζετε εξ ονόματος τον τοπικό σας επαφή — και κάθε επίσκεψη καταγράφει ποιος παρευρέθηκε στο ακίνητο.",
+        },
+        {
+          title: "Ασφαλής διαχείριση κλειδιών",
+          text: "Τα κλειδιά και τα στοιχεία πρόσβασης φυλάσσονται στα προστατευμένα αρχεία μας και χρησιμοποιούνται μόνο για επισκέψεις που έχετε συμφωνήσει.",
+        },
+        {
+          title: "Σαφή όρια ρόλου",
+          text: "Λέμε καθαρά τι κάνουμε και τι δεν κάνουμε — χωρίς υπερβολές ή ασαφείς υποσχέσεις.",
+        },
+      ],
+    },
+  },
+  service_area: {
+    en: {
+      kicker: "Service area",
+      heading: "Based in the greater Chania area.",
+      intro:
+        "We cover the town of Chania and the surrounding areas of western Crete. If your property lies further afield, just ask — we review it during the assessment.",
+      areas: ["Chania (town)", "Akrotiri", "Platanias", "Kolymvari", "Apokoronas", "Kissamos"],
+    },
+    el: {
+      kicker: "Περιοχή εξυπηρέτησης",
+      heading: "Με έδρα την ευρύτερη περιοχή των Χανίων.",
+      intro:
+        "Καλύπτουμε την πόλη των Χανίων και τις γύρω περιοχές της Δυτικής Κρήτης. Αν το ακίνητό σας βρίσκεται πιο μακριά, ρωτήστε μας — το εξετάζουμε κατά την αξιολόγηση.",
+      areas: ["Χανιά (πόλη)", "Ακρωτήρι", "Πλατανιάς", "Κολυμβάρι", "Αποκόρωνας", "Κίσσαμος"],
+    },
+  },
+  faqs: {
+    en: {
+      kicker: "FAQ",
+      heading: "Frequently asked questions",
+      items: [
+        {
+          q: "Will I receive photos and a report after each visit?",
+          a: "Property Care and Complete Care plans include photos and a visit report after every visit. Quick Check does not include routine photos or a customer-facing report — but every visit is still recorded.",
+        },
+        {
+          q: "What happens if you notice a problem?",
+          a: "We notify you immediately with what we observed. Any work or spending proceeds only with your approval, or in line with the written emergency authorization you have given us.",
+        },
+        {
+          q: "Can you let in tradespeople or accept deliveries?",
+          a: "Yes — arranged in advance and on your instruction. Every such visit is documented and charged as an on-demand service.",
+        },
+        {
+          q: "How do I pay?",
+          a: "Monthly plans are billed per month and on-demand services per visit. Payment details are agreed in writing before we start.",
+        },
+        {
+          q: "Do I need to give you keys?",
+          a: "Yes, for visits that require access. Keys and access details are kept in our protected records and used only for visits you have agreed to.",
+        },
+        {
+          q: "Are your visits a property inspection?",
+          a: "No. Our visits document visual observations — they are not a professional building inspection, engineering evaluation, or certification. See our role and limits section.",
+        },
+      ],
+    },
+    el: {
+      kicker: "FAQ",
+      heading: "Συχνές ερωτήσεις",
+      items: [
+        {
+          q: "Θα λάβω φωτογραφίες και αναφορά μετά από κάθε επίσκεψη;",
+          a: "Τα πακέτα Φροντίδα Ακινήτου και Πλήρης Φροντίδα περιλαμβάνουν φωτογραφίες και αναφορά επίσκεψης μετά από κάθε επίσκεψη. Ο Γρήγορος Έλεγχος δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά προς τον ιδιοκτήτη — κάθε επίσκεψη όμως καταγράφεται.",
+        },
+        {
+          q: "Τι γίνεται αν παρατηρήσετε κάποιο πρόβλημα;",
+          a: "Σας ενημερώνουμε αμέσως με τις παρατηρήσεις μας. Κάθε εργασία ή δαπάνη προχωρά μόνο με την έγκρισή σας ή σύμφωνα με την γραπτή εξουσιοδότηση έκτακτης ανάγκης που έχετε δώσει.",
+        },
+        {
+          q: "Μπορείτε να δεχτείτε τεχνικούς ή παραλαβές;",
+          a: "Ναι — κατόπιν συνεννόησης και εντολής σας. Κάθε τέτοια εξυπηρέτηση καταγράφεται και χρεώνεται ως υπηρεσία κατ' απαίτηση.",
+        },
+        {
+          q: "Πώς πληρώνω;",
+          a: "Τα μηνιαία πακέτα χρεώνονται ανά μήνα και οι υπηρεσίες κατ' απαίτηση ανά επίσκεψη. Οι λεπτομέρειες πληρωμής συμφωνούν γραπτώς πριν ξεκινήσουμε.",
+        },
+        {
+          q: "Χρειάζεται να σας δώσω κλειδιά;",
+          a: "Ναι, για τις επισκέψεις που το απαιτούν. Τα κλειδιά και τα στοιχεία πρόσβασης φυλάσσονται στα προστατευμένα αρχεία μας και χρησιμοποιούνται μόνο για επισκέψεις που έχετε συμφωνήσει.",
+        },
+        {
+          q: "Είναι οι επισκέψεις σας επιθεώρηση ακινήτου;",
+          a: "Όχι. Οι επισκέψεις μας τεκμηριώνουν οπτικές παρατηρήσεις — δεν αποτελούν επαγγελματική επιθεώρηση κτιρίου, μηχανική αξιολόγηση ή πιστοποίηση. Δείτε την ενότητα «Ο ρόλος μας και τα όριά μας».",
+        },
+      ],
+    },
+  },
+  contact: {
+    en: {
+      kicker: "Meet your local contact",
+      heading: "One person you know by name.",
+    },
+    el: {
+      kicker: "Ο τοπικός σας επαφή",
+      heading: "Ένα πρόσωπο που γνωρίζετε εξ ονόματός σας.",
+    },
+  },
+};
+
+// ---- Merge / resolve ------------------------------------------------------
+
+function isPlainObject(v) {
+  return v != null && typeof v === "object" && !Array.isArray(v);
+}
+
+// Merges stored section content over the defaults. Objects merge per field;
+// arrays replace the default whenever present (an explicitly emptied list is
+// respected); null/undefined values fall back to the default.
+export function mergeSection(defaults, stored) {
+  if (!isPlainObject(stored) || !isPlainObject(defaults)) return defaults;
+  const out = { ...defaults };
+  for (const k of Object.keys(stored)) {
+    const s = stored[k];
+    if (s == null) continue;
+    const d = defaults[k];
+    if (isPlainObject(s) && isPlainObject(d)) out[k] = mergeSection(d, s);
+    else out[k] = s;
+  }
+  return out;
+}
+
+// Language-resolved content for one section. `sections` is the raw published
+// map from the feed (or null), falling back to DEFAULT_CONTENT.
+export function sectionContent(sections, key, lang) {
+  const merged = mergeSection(DEFAULT_CONTENT[key], sections && sections[key]);
+  return lang === "el" ? merged.el : merged.en;
+}
+
+// ---- Editor field schema --------------------------------------------------
+
+// Field types: "text" | "textarea" | "stringList" | "steps" | "trustItems" | "faqs"
+// elOnly fields render a single Greek input (their English counterpart comes
+// from elsewhere — e.g. the Complete Care service record).
+export const EDITOR_SCHEMA = {
+  hero: {
+    label: "Hero",
+    fields: [
+      { key: "badge", label: "Location badge", type: "text" },
+      { key: "title", label: "Headline", type: "text" },
+      { key: "subtitle", label: "Intro paragraph", type: "textarea", rows: 5 },
+      { key: "ctaPrimary", label: "Primary button", type: "text" },
+      { key: "ctaSecondary", label: "Secondary button", type: "text" },
+    ],
+  },
+  services: {
+    label: "Services",
+    info: "Prices, time allowances, hourly rates and package details are never edited here — they come live from your Service Package records via the secure pricing feed. Complete Care's English description also flows live from its service record; its Greek translation is maintained in this tab.",
+    fields: [
+      { key: "kicker", label: "Small label above the heading", type: "text" },
+      { key: "heading", label: "Heading", type: "text" },
+      { key: "intro", label: "Intro paragraph", type: "textarea", rows: 3 },
+      { key: "groupHeading", label: "Recurring plans — group heading", type: "text" },
+      { key: "note", label: "Bottom note", type: "textarea", rows: 2 },
+      {
+        key: "complete_care_desc",
+        label: "Complete Care — Greek translation (two paragraphs, blank line between)",
+        type: "textarea",
+        rows: 5,
+        elOnly: true,
+      },
+    ],
+  },
+  add_on_services: {
+    label: "Add-on Services",
+    info: "Heading for the On-Demand Services group inside the pricing section. The services and their prices come live from the pricing feed.",
+    fields: [{ key: "heading", label: "Group heading", type: "text" }],
+  },
+  how_it_works: {
+    label: "How It Works",
+    fields: [
+      { key: "kicker", label: "Small label above the heading", type: "text" },
+      { key: "heading", label: "Heading", type: "text" },
+      { key: "steps", label: "Steps (in order)", type: "steps" },
+    ],
+  },
+  why_us: {
+    label: "Why Us",
+    fields: [
+      { key: "kicker", label: "Small label above the heading", type: "text" },
+      { key: "heading", label: "Heading", type: "text" },
+      { key: "items", label: "Trust cards", type: "trustItems" },
+    ],
+  },
+  service_area: {
+    label: "Service Area",
+    fields: [
+      { key: "kicker", label: "Small label above the heading", type: "text" },
+      { key: "heading", label: "Heading", type: "text" },
+      { key: "intro", label: "Intro paragraph", type: "textarea", rows: 3 },
+      { key: "areas", label: "Area chips", type: "stringList" },
+    ],
+  },
+  faqs: {
+    label: "FAQs",
+    fields: [
+      { key: "heading", label: "Heading", type: "text" },
+      { key: "items", label: "Questions", type: "faqs" },
+    ],
+  },
+  contact: {
+    label: "Contact",
+    info: "This tab edits the section's display text. The contact details, profile photo and local photo are managed in Settings → Owner Profile and appear on the website live via the secure feed.",
+    fields: [
+      { key: "kicker", label: "Small label above the heading", type: "text" },
+      { key: "heading", label: "Heading", type: "text" },
+    ],
+  },
+};
