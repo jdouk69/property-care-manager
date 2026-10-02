@@ -24,15 +24,16 @@ export default function FaqSection() {
         </div>
         <Accordion type="single" collapsible className="mt-8">
           {faqs.map((f, i) => (
-            <AccordionItem key={i} value={`faq-${i}`}>
+            <AccordionItem key={i} value={`faq-${i}`} className="group/faq">
               <AccordionTrigger className="text-left text-sm sm:text-base">{f.q}</AccordionTrigger>
-              {/* forceMount keeps the answer text in the rendered DOM even
-                  while closed — crawlable without a click. display:none while
-                  closed restores the visual collapse and correct aria-expanded
-                  semantics; the height animation still plays on expand. */}
+              {/* forceMount keeps the answer text in the DOM while closed
+                  (crawlable without a click). Radix never hides force-mounted
+                  content itself, so the answer is hidden from view and screen
+                  readers via the ITEM's data-state (the inner wrapper that
+                  receives className has no data-state of its own). */}
               <AccordionContent
                 forceMount
-                className="text-sm leading-relaxed text-muted-foreground data-[state=closed]:hidden"
+                className="text-sm leading-relaxed text-muted-foreground group-data-[state=closed]/faq:hidden"
               >
                 {f.a}
               </AccordionContent>

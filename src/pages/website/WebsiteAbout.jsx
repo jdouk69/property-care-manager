@@ -1,6 +1,6 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import WebsiteHashLink from "@/components/website/WebsiteHashLink";
 import WebsiteHeader from "@/components/website/WebsiteHeader";
 import WebsiteFooter from "@/components/website/WebsiteFooter";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -48,14 +48,14 @@ export default function WebsiteAbout() {
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Button asChild size="lg" className="rounded-full">
-            <Link to="/#assessment">
+            <WebsiteHashLink href="#assessment">
               {el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}
-            </Link>
+            </WebsiteHashLink>
           </Button>
           <Button asChild size="lg" variant="outline" className="rounded-full">
-            <Link to="/#services">
+            <WebsiteHashLink href="#services">
               {el ? "Δείτε τις Υπηρεσίες & Τιμές" : "See Services & Pricing"}
-            </Link>
+            </WebsiteHashLink>
           </Button>
         </div>
       </main>

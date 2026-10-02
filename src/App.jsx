@@ -12,6 +12,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
+import LoginRedirect from '@/components/LoginRedirect';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 import RootPage from '@/components/RootPage';
 import Clients from '@/pages/Clients';
@@ -99,7 +100,7 @@ const AuthenticatedApp = () => {
       {/* Public About and Contact pages. */}
       <Route path="/about" element={<WebsiteAbout />} />
       <Route path="/contact" element={<WebsiteContact />} />
-      <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+      <Route element={<ProtectedRoute unauthenticatedElement={<LoginRedirect />} />}>
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientHub />} />
         <Route element={<AdminRoute />}>

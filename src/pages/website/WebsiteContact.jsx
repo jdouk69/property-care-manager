@@ -1,6 +1,6 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import WebsiteHashLink from "@/components/website/WebsiteHashLink";
 import WebsiteHeader from "@/components/website/WebsiteHeader";
 import WebsiteFooter from "@/components/website/WebsiteFooter";
 import LocalContact from "@/components/website/LocalContact";
@@ -36,9 +36,9 @@ export default function WebsiteContact() {
               : "The quickest way to reach us is the contact details below — we are happy to talk in English or Greek. If you prefer, fill in the assessment form and we will get in touch with you instead."}
           </p>
           <Button asChild size="lg" className="mt-6 rounded-full">
-            <Link to="/#assessment">
+            <WebsiteHashLink href="#assessment">
               {el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}
-            </Link>
+            </WebsiteHashLink>
           </Button>
         </div>
 
