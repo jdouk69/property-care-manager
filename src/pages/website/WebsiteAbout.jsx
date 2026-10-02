@@ -4,12 +4,18 @@ import { Button } from "@/components/ui/button";
 import WebsiteHeader from "@/components/website/WebsiteHeader";
 import WebsiteFooter from "@/components/website/WebsiteFooter";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import usePageMeta from "@/lib/seo";
 
 // Public About page — static, bilingual copy describing the service,
 // who it is for, and who owns/operates it.
 export default function WebsiteAbout() {
   const { lang } = useLanguage();
   const el = lang === "el";
+  usePageMeta({
+    title: "About | Property Care Crete",
+    description:
+      "Property Care Crete is a locally owned property care and home watch service in Chania, Western Crete — scheduled visits, arrival preparation and local support for owners who are away.",
+  });
 
   return (
     <div className="website-theme min-h-screen bg-background">

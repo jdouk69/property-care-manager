@@ -26,7 +26,10 @@ export default function FaqSection() {
           {faqs.map((f, i) => (
             <AccordionItem key={i} value={`faq-${i}`}>
               <AccordionTrigger className="text-left text-sm sm:text-base">{f.q}</AccordionTrigger>
-              <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
+              {/* forceMount keeps the answer text in the rendered DOM even
+                  while closed — crawlable without a click; collapsed purely
+                  via the existing height animation. */}
+              <AccordionContent forceMount className="text-sm leading-relaxed text-muted-foreground">
                 {f.a}
               </AccordionContent>
             </AccordionItem>

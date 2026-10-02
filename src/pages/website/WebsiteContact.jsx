@@ -5,6 +5,7 @@ import WebsiteHeader from "@/components/website/WebsiteHeader";
 import WebsiteFooter from "@/components/website/WebsiteFooter";
 import LocalContact from "@/components/website/LocalContact";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import usePageMeta from "@/lib/seo";
 
 // Public Contact page — h1 plus the owner's real contact methods (from
 // business settings, with bilingual placeholders) and a link to the
@@ -12,6 +13,11 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 export default function WebsiteContact() {
   const { lang } = useLanguage();
   const el = lang === "el";
+  usePageMeta({
+    title: "Contact | Property Care Crete",
+    description:
+      "Contact Property Care Crete in Chania — phone, WhatsApp, Viber or email. We speak English and Greek, or send a property assessment request.",
+  });
 
   return (
     <div className="website-theme min-h-screen bg-background">

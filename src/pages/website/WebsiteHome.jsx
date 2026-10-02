@@ -13,6 +13,7 @@ import FaqSection from "@/components/website/FaqSection";
 import LocalContact from "@/components/website/LocalContact";
 import AssessmentForm from "@/components/website/AssessmentForm";
 import WebsiteFooter from "@/components/website/WebsiteFooter";
+import LocalBusinessJsonLd from "@/components/website/LocalBusinessJsonLd";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Public Property Care Crete homepage — ONE scrolling page with all sections,
@@ -43,6 +44,7 @@ export default function WebsiteHome() {
   return (
     <WebsiteContentProvider sections={sections}>
     <div className="website-theme min-h-screen bg-background">
+      <LocalBusinessJsonLd />
       <WebsiteHeader />
       <main>
         <WebsiteHero />
