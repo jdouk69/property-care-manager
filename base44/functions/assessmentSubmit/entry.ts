@@ -67,7 +67,7 @@ export default async function (req) {
               'Μήνυμα:',
               notes,
               '',
-              'Δείτε το στο app: https://propertycarecrete.base44.app/assessment-requests',
+              'Δείτε το στο app: https://propertycarecrete.com/assessment-requests',
             ]
           : [
               'A new assessment request was submitted from the website.',
@@ -81,7 +81,7 @@ export default async function (req) {
               'Message:',
               notes,
               '',
-              'View it in the app: https://propertycarecrete.base44.app/assessment-requests',
+              'View it in the app: https://propertycarecrete.com/assessment-requests',
             ]).join('\n');
         for (const admin of admins) {
           await base44.asServiceRole.integrations.Core.SendEmail({

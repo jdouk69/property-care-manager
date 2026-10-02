@@ -4,9 +4,8 @@ import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 
-// PREVIEW-ONLY login destination: the EXISTING operational app's login page.
-// Must be verified against the operational app's public URL before publication.
-export const LOGIN_URL = "https://propertycarecrete.base44.app/login";
+// Staff login on the custom domain (the app's existing /login route).
+export const LOGIN_URL = "https://propertycarecrete.com/login";
 
 export default function WebsiteHeader() {
   const { lang } = useLanguage();

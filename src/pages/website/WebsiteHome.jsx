@@ -15,6 +15,7 @@ import AssessmentForm from "@/components/website/AssessmentForm";
 import WebsiteFooter from "@/components/website/WebsiteFooter";
 import LocalBusinessJsonLd from "@/components/website/LocalBusinessJsonLd";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import usePageMeta from "@/lib/seo";
 
 // Public Property Care Crete homepage — ONE scrolling page with all sections,
 // including the live Services & Pricing (fetched server-side; no fallbacks).
@@ -25,6 +26,11 @@ export default function WebsiteHome() {
   // failure or nothing published yet) falls back to the built-in default
   // copy — the page never goes blank. Drafts are never returned.
   const [sections, setSections] = useState(null);
+  usePageMeta({
+    title: "Property Care & Home Watch in Chania | Property Care Crete",
+    description:
+      "Property care and home watch in Chania, Crete. Scheduled visits, photos and reports, arrival preparation and local support for owners who are away.",
+  });
 
   useEffect(() => {
     let active = true;

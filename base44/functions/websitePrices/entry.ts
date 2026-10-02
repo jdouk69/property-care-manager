@@ -6,7 +6,7 @@ import { secrets } from 'base44:runtime';
 // server-side secret and NEVER reaches browser code, responses, or logs.
 // Fail-closed: on any failure it returns a generic error — there are NO
 // hard-coded fallback prices, so the site can never show stale prices.
-const FEED_URL = 'https://propertycarecrete.base44.app/functions/websitePriceFeed';
+const FEED_URL = 'https://property-care-crete.base44.app/functions/websitePriceFeed';
 
 export default async function(req) {
   try {
