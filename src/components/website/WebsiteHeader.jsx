@@ -4,8 +4,10 @@ import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
 
-// Staff login on the custom domain (the app's existing /login route).
-export const LOGIN_URL = "https://propertycarecrete.com/login";
+// Staff login — same-app relative path, so it always opens the sign-in screen
+// on whichever address the visitor is on (https://propertycarecrete.com/login
+// on the live site). Never hardcode a hostname here.
+export const LOGIN_URL = "/login";
 
 export default function WebsiteHeader() {
   const { lang } = useLanguage();

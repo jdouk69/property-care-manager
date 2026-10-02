@@ -188,8 +188,8 @@ export default async function(req) {
       });
     } catch (e) {}
 
-    // --- Public link from the actual request origin (never hardcoded) ---
-    const origin = new URL(req.url).origin;
+    // --- Public customer link: always the verified custom domain ---
+    const origin = 'https://propertycarecrete.com';
     const public_link = `${origin}/agreement/${token}`;
 
     return Response.json({

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { PUBLIC_SITE_URL } from "@/lib/siteUrl";
 
 const STATUS_TONE = {
   Draft: "bg-slate-100 text-slate-600 border-slate-200",
@@ -65,7 +66,7 @@ export default function ClientIntakePanel({ client, intakes, onChanged }) {
         active = created;
         if (onChanged) await onChanged();
       }
-      const url = `${window.location.origin}/intake/${active.secure_token}`;
+      const url = `${PUBLIC_SITE_URL}/intake/${active.secure_token}`;
       setLink(url);
       setEmailState(null); setEmailErr("");
       setCopied(false);

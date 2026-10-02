@@ -28,6 +28,7 @@ import TestAgreementControl from "@/components/agreements/TestAgreementControl";
 import AgreementHistory from "@/components/agreements/AgreementHistory";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { PUBLIC_SITE_URL } from "@/lib/siteUrl";
 
 const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
 // Pending is the default for NEW agreements. Legacy agreements keep their stored status.
@@ -336,7 +337,7 @@ export default function ServiceAgreement() {
   }, [business, client, selectedProperty, selectedPackage, values, selectedTemplate]);
 
   const publicLink = values.public_token
-    ? `${window.location.origin}/agreement/${values.public_token}`
+    ? `${PUBLIC_SITE_URL}/agreement/${values.public_token}`
     : (sendResult && sendResult.public_link) || "";
 
   const handleSend = async () => {
