@@ -2,6 +2,7 @@ import React from "react";
 import { MapPin, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ArchMotif from "@/components/website/ArchMotif";
+import WebsiteHashLink from "@/components/website/WebsiteHashLink";
 import { useSectionContent } from "@/components/website/WebsiteContentContext";
 
 // Copy comes from the website content model (published via the admin
@@ -25,10 +26,10 @@ export default function WebsiteHero() {
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button asChild size="lg" className="w-full sm:w-auto rounded-lg h-12 px-7">
-            <a href="#assessment">
+            <WebsiteHashLink href="#assessment">
               <ClipboardCheck className="w-4 h-4" />
               {c.ctaPrimary}
-            </a>
+            </WebsiteHashLink>
           </Button>
           <Button
             asChild
@@ -36,7 +37,7 @@ export default function WebsiteHero() {
             size="lg"
             className="w-full sm:w-auto rounded-lg h-12 px-7 border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white"
           >
-            <a href="#services">{c.ctaSecondary}</a>
+            <WebsiteHashLink href="#services">{c.ctaSecondary}</WebsiteHashLink>
           </Button>
         </div>
       </div>

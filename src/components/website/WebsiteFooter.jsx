@@ -4,6 +4,7 @@ import { House, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { LOGIN_URL } from "@/components/website/WebsiteHeader";
+import WebsiteHashLink from "@/components/website/WebsiteHashLink";
 import ArchMotif from "@/components/website/ArchMotif";
 
 export default function WebsiteFooter() {
@@ -20,9 +21,9 @@ export default function WebsiteFooter() {
             size="lg"
             className="mt-6 w-full max-w-md rounded-lg h-12 px-7 sm:w-auto"
           >
-            <a href="#assessment">
+            <WebsiteHashLink href="#assessment">
               {el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}
-            </a>
+            </WebsiteHashLink>
           </Button>
         </div>
 
@@ -39,10 +40,10 @@ export default function WebsiteFooter() {
             </div>
           </div>
           <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-white/70">
-            <a href="#services" className="hover:text-white">{el ? "Υπηρεσίες & Τιμές" : "Services & Pricing"}</a>
-            <a href="#how-it-works" className="hover:text-white">{el ? "Πώς Λειτουργεί" : "How It Works"}</a>
-            <a href="#faq" className="hover:text-white">FAQ</a>
-            <a href="#assessment" className="hover:text-white">{el ? "Αξιολόγηση" : "Assessment"}</a>
+            <WebsiteHashLink href="#services" className="hover:text-white">{el ? "Υπηρεσίες & Τιμές" : "Services & Pricing"}</WebsiteHashLink>
+            <WebsiteHashLink href="#how-it-works" className="hover:text-white">{el ? "Πώς Λειτουργεί" : "How It Works"}</WebsiteHashLink>
+            <WebsiteHashLink href="#faq" className="hover:text-white">FAQ</WebsiteHashLink>
+            <WebsiteHashLink href="#assessment" className="hover:text-white">{el ? "Αξιολόγηση" : "Assessment"}</WebsiteHashLink>
             <Link to="/about" className="hover:text-white">{el ? "Σχετικά" : "About"}</Link>
             <Link to="/contact" className="hover:text-white">{el ? "Επικοινωνία" : "Contact"}</Link>
             <a href={LOGIN_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-white">

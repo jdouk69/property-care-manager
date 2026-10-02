@@ -3,6 +3,7 @@ import { Menu, X, LockKeyhole, House } from "lucide-react";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Button } from "@/components/ui/button";
+import WebsiteHashLink from "@/components/website/WebsiteHashLink";
 
 // Staff login — same-app relative path, so it always opens the sign-in screen
 // on whichever address the visitor is on (https://propertycarecrete.com/login
@@ -29,30 +30,36 @@ export default function WebsiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex h-16 items-center justify-between gap-3">
-          <a href="#top" className="flex items-center gap-2 min-w-0">
+          <WebsiteHashLink href="#top" className="flex items-center gap-2 min-w-0">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shrink-0">
               <House className="w-5 h-5" />
             </span>
             <span className="font-heading font-bold text-foreground truncate">
               Property Care Crete
             </span>
-          </a>
+          </WebsiteHashLink>
 
           <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-muted-foreground">
-            {links.map((l) => (
-              <a key={l.href} href={l.href} className="hover:text-foreground transition-colors">
-                {l.label}
-              </a>
-            ))}
+            {links.map((l) =>
+              l.href.startsWith("#") ? (
+                <WebsiteHashLink key={l.href} href={l.href} className="hover:text-foreground transition-colors">
+                  {l.label}
+                </WebsiteHashLink>
+              ) : (
+                <a key={l.href} href={l.href} className="hover:text-foreground transition-colors">
+                  {l.label}
+                </a>
+              )
+            )}
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
             <LanguageToggle />
             <Button asChild size="sm" className="hidden md:inline-flex rounded-full">
-              <a href="#assessment">
+              <WebsiteHashLink href="#assessment">
                 <span className="hidden lg:inline">{el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}</span>
                 <span className="lg:hidden">{el ? "Ζητήστε Αξιολόγηση" : "Request Assessment"}</span>
-              </a>
+              </WebsiteHashLink>
             </Button>
             <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex rounded-full">
               <a href={LOGIN_URL} target="_blank" rel="noopener noreferrer">
@@ -73,23 +80,34 @@ export default function WebsiteHeader() {
 
         {open && (
           <div className="md:hidden border-t border-border py-3 space-y-1">
-            {links.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                onClick={close}
-                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent"
-              >
-                {l.label}
-              </a>
-            ))}
-            <a
+            {links.map((l) =>
+              l.href.startsWith("#") ? (
+                <WebsiteHashLink
+                  key={l.href}
+                  href={l.href}
+                  onNavigate={close}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent"
+                >
+                  {l.label}
+                </WebsiteHashLink>
+              ) : (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={close}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-accent"
+                >
+                  {l.label}
+                </a>
+              )
+            )}
+            <WebsiteHashLink
               href="#assessment"
-              onClick={close}
+              onNavigate={close}
               className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-primary hover:bg-accent"
             >
               {el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}
-            </a>
+            </WebsiteHashLink>
             <a
               href={LOGIN_URL}
               target="_blank"

@@ -14,6 +14,7 @@ import LocalContact from "@/components/website/LocalContact";
 import AssessmentForm from "@/components/website/AssessmentForm";
 import WebsiteFooter from "@/components/website/WebsiteFooter";
 import LocalBusinessJsonLd from "@/components/website/LocalBusinessJsonLd";
+import HashScrollManager from "@/components/website/HashScrollManager";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import usePageMeta from "@/lib/seo";
 
@@ -51,6 +52,7 @@ export default function WebsiteHome() {
     <WebsiteContentProvider sections={sections}>
     <div className="website-theme min-h-screen bg-background">
       <LocalBusinessJsonLd />
+      <HashScrollManager />
       <WebsiteHeader />
       <main>
         <WebsiteHero />
