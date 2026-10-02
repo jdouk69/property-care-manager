@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { House, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -42,6 +43,8 @@ export default function WebsiteFooter() {
             <a href="#how-it-works" className="hover:text-white">{el ? "Πώς Λειτουργεί" : "How It Works"}</a>
             <a href="#faq" className="hover:text-white">FAQ</a>
             <a href="#assessment" className="hover:text-white">{el ? "Αξιολόγηση" : "Assessment"}</a>
+            <Link to="/about" className="hover:text-white">{el ? "Σχετικά" : "About"}</Link>
+            <Link to="/contact" className="hover:text-white">{el ? "Επικοινωνία" : "Contact"}</Link>
             <a href={LOGIN_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-white">
               <LockKeyhole className="w-3.5 h-3.5" />
               {el ? "Σύνδεση" : "Login"}

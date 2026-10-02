@@ -51,6 +51,8 @@ import OneTimeServices from '@/pages/OneTimeServices';
 import Billing from '@/pages/Billing';
 import AdminUsers from '@/pages/AdminUsers';
 import WebsiteHome from '@/pages/website/WebsiteHome';
+import WebsiteAbout from '@/pages/website/WebsiteAbout';
+import WebsiteContact from '@/pages/website/WebsiteContact';
 import AssessmentRequests from '@/pages/AssessmentRequests';
 import WebsiteEditor from '@/pages/WebsiteEditor';
 
@@ -94,6 +96,9 @@ const AuthenticatedApp = () => {
       <Route path="/home" element={<Navigate to={`/landing-page${window.location.hash}`} replace />} />
       {/* Old prices URL now redirects to the landing page pricing section. */}
       <Route path="/prices" element={<Navigate to="/landing-page#services" replace />} />
+      {/* Public About and Contact pages. */}
+      <Route path="/about" element={<WebsiteAbout />} />
+      <Route path="/contact" element={<WebsiteContact />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientHub />} />

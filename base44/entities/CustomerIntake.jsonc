@@ -39,6 +39,11 @@
       "type": "object",
       "additionalProperties": true
     },
+    "description": {
+      "type": "string",
+      "description": "Optional free-text description (up to 1000 characters).",
+      "maxLength": 1000
+    },
     "archived": {
       "type": "boolean",
       "default": false

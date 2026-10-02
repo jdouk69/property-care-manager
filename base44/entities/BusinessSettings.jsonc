@@ -147,6 +147,11 @@
     "owner_profile_local_photo": {
       "type": "string",
       "description": "Genuine local / property photo (public file URL) shown beneath the owner profile on the landing page. Empty = placeholder."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional free-text description (up to 1000 characters).",
+      "maxLength": 1000
     }
   },
   "rls": {

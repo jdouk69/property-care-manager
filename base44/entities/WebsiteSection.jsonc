@@ -37,6 +37,11 @@
     },
     "published_by": {
       "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional free-text description (up to 1000 characters).",
+      "maxLength": 1000
     }
   },
   "required": [

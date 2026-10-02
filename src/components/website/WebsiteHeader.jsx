@@ -18,6 +18,8 @@ export default function WebsiteHeader() {
     { href: "#how-it-works", label: el ? "Πώς Λειτουργεί" : "How It Works" },
     { href: "#role", label: el ? "Ο Ρόλος μας" : "Our Role" },
     { href: "#faq", label: "FAQ" },
+    { href: "/about", label: el ? "Σχετικά" : "About" },
+    { href: "/contact", label: el ? "Επικοινωνία" : "Contact" },
   ];
 
   const close = () => setOpen(false);
