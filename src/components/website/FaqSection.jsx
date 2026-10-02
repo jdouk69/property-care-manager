@@ -27,9 +27,13 @@ export default function FaqSection() {
             <AccordionItem key={i} value={`faq-${i}`}>
               <AccordionTrigger className="text-left text-sm sm:text-base">{f.q}</AccordionTrigger>
               {/* forceMount keeps the answer text in the rendered DOM even
-                  while closed — crawlable without a click; collapsed purely
-                  via the existing height animation. */}
-              <AccordionContent forceMount className="text-sm leading-relaxed text-muted-foreground">
+                  while closed — crawlable without a click. display:none while
+                  closed restores the visual collapse and correct aria-expanded
+                  semantics; the height animation still plays on expand. */}
+              <AccordionContent
+                forceMount
+                className="text-sm leading-relaxed text-muted-foreground data-[state=closed]:hidden"
+              >
                 {f.a}
               </AccordionContent>
             </AccordionItem>
