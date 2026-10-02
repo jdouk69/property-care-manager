@@ -21,7 +21,7 @@ const DATA = {
     "https://media.base44.com/images/public/6a6261eafdd1874f2f1eb998/808b3ab1a_logo.png/v1/fill/w_1200,h_630/808b3ab1a_logo.png",
   areaServed: ["Chania", "Western Crete"],
   description:
-    "Property care and home watch in Chania, Crete. Scheduled visits, photos and reports, arrival preparation and local support for owners who are away.",
+    "Property care and home watch in Chania, Crete. Scheduled visits, arrival preparation and local support for owners who are away. Photos and reports included with selected plans.",
 };
 
 export default function LocalBusinessJsonLd() {

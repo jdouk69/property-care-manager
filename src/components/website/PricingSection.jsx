@@ -27,26 +27,36 @@ export default function PricingSection() {
 
   useEffect(() => {
     let active = true;
-    base44.functions
-      .invoke("websitePrices", {})
-      .then((res) => {
-        if (!active) return;
-        const list = res?.data?.services;
-        // Fail-closed: ALL approved services must arrive with live prices.
-        const ok =
-          Array.isArray(list) &&
-          REQUIRED_KEYS.every((k) => {
-            const s = list.find((x) => x && x.service_key === k);
-            return s && s.price != null;
-          });
-        if (ok) setServices(list);
-        else setError(true);
-      })
-      .catch(() => {
-        if (active) setError(true);
-      });
+    let timer;
+    const retry = (attempt) => {
+      // One automatic retry before failing closed — a transient feed hiccup
+      // must not get baked into a crawler snapshot as "prices unavailable".
+      if (attempt < 1) timer = window.setTimeout(() => attemptLoad(attempt + 1), 1500);
+      else if (active) setError(true);
+    };
+    const attemptLoad = (attempt) => {
+      if (!active) return;
+      base44.functions
+        .invoke("websitePrices", {})
+        .then((res) => {
+          if (!active) return;
+          const list = res?.data?.services;
+          // Fail-closed: ALL approved services must arrive with live prices.
+          const ok =
+            Array.isArray(list) &&
+            REQUIRED_KEYS.every((k) => {
+              const s = list.find((x) => x && x.service_key === k);
+              return s && s.price != null;
+            });
+          if (ok) setServices(list);
+          else retry(attempt);
+        })
+        .catch(() => retry(attempt));
+    };
+    attemptLoad(0);
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, []);
 

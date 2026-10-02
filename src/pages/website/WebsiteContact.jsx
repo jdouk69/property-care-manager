@@ -16,7 +16,7 @@ export default function WebsiteContact() {
   usePageMeta({
     title: "Contact | Property Care Crete",
     description:
-      "Contact Property Care Crete in Chania — phone, WhatsApp, Viber or email. We speak English and Greek, or send a property assessment request.",
+      "Contact Property Care Crete to discuss home watch, scheduled property visits and arrival preparation in Chania and Western Crete.",
   });
 
   return (

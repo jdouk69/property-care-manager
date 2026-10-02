@@ -14,7 +14,7 @@ export default function WebsiteAbout() {
   usePageMeta({
     title: "About | Property Care Crete",
     description:
-      "Property Care Crete is a locally owned property care and home watch service in Chania, Western Crete — scheduled visits, arrival preparation and local support for owners who are away.",
+      "Learn about Property Care Crete and our practical home watch, property care and owner support services in Chania and Western Crete.",
   });
 
   return (
