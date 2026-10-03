@@ -292,6 +292,51 @@
       "type": "number",
       "default": 0
     },
+    "owner_approval": {
+      "type": "object",
+      "description": "Per-visit owner approval recorded BEFORE staff perform the work (required for Seasonal Opening / Seasonal Closing). Captures the specific approved tasks, approved price, access/key instructions and any extra-time approval, plus how the owner's approval was given \u2014 the evidence behind 'agreed in writing'.",
+      "properties": {
+        "approved_via": {
+          "type": "string",
+          "enum": [
+            "Email",
+            "WhatsApp",
+            "Phone",
+            "In-person",
+            "Signed document"
+          ]
+        },
+        "approved_reference": {
+          "type": "string",
+          "description": "Where the approval is recorded (e.g. email subject and date, WhatsApp message date) \u2014 the evidence behind 'agreed in writing'."
+        },
+        "approved_tasks": {
+          "type": "string",
+          "description": "The specific opening/closing steps the owner approved for this visit."
+        },
+        "approved_price": {
+          "type": "number",
+          "description": "The price the owner approved for this visit."
+        },
+        "key_instructions": {
+          "type": "string",
+          "description": "The owner's recorded access / key return-or-store instructions for this visit."
+        },
+        "extra_time_approved": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the owner pre-approved extra time beyond the included allowance at the agreed hourly rate."
+        },
+        "approved_at": {
+          "type": "string",
+          "description": "When the owner's approval was recorded."
+        },
+        "recorded_by": {
+          "type": "string",
+          "description": "Which staff member recorded the approval."
+        }
+      }
+    },
     "archived": {
       "type": "boolean",
       "default": false

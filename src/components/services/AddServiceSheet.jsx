@@ -6,6 +6,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetDescrip
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { createNotification } from "@/lib/notifications";
 import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
@@ -50,20 +52,30 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
   // schedule it for later (the existing scheduling flow).
   const [scheduleLater, setScheduleLater] = useState(false);
   const [starting, setStarting] = useState(false);
+  // Owner approval — required for Seasonal Opening / Closing BEFORE the work
+  // is performed: records the specific approved tasks, the approved price,
+  // access/key instructions and any extra-time approval (the per-visit
+  // approval record; the general property agreement alone is not enough).
+  const [approval, setApproval] = useState({ via: "", reference: "", tasks: "", keys: "", extraTime: false });
+  const [recordedBy, setRecordedBy] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return;
     setServiceType(""); setDate(""); setTime(""); setError("");
     setScheduleLater(false); setStarting(false);
+    setApproval({ via: "", reference: "", tasks: "", keys: "", extraTime: false });
+    setRecordedBy("");
     setPid(propertyId || "");
     (async () => {
       setLoading(true);
       try {
-        const [allProps, pkgs] = await Promise.all([
+        const [allProps, pkgs, me] = await Promise.all([
           base44.entities.Property.list("-created_date", 500),
           base44.entities.ServicePackage.list("-created_date", 500),
+          base44.auth.me().catch(() => null),
         ]);
+        setRecordedBy(me?.full_name || me?.email || "");
         const clientProps = (allProps || []).filter((p) => !p.archived && (!clientId || p.owner_id === clientId));
         setProperties(clientProps);
         setPackages((pkgs || []).filter((p) => p.active !== false));
@@ -77,8 +89,23 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
   const chosen = serviceType ? specialServicePrice(packages, serviceType) : null;
   const prop = properties.find((p) => p.id === pid);
 
+  // Seasonal services require the per-visit owner approval before work.
+  const isSeasonal = serviceType === "Seasonal Opening" || serviceType === "Seasonal Closing";
+  const approvalValid = !isSeasonal || (!!approval.via && !!approval.tasks.trim());
+  const hourly = chosen?.pkg?.hourly_charge != null ? Number(chosen.pkg.hourly_charge) : null;
+  const buildOwnerApproval = () => ({
+    approved_via: approval.via,
+    approved_reference: approval.reference.trim(),
+    approved_tasks: approval.tasks.trim(),
+    key_instructions: approval.keys.trim(),
+    extra_time_approved: approval.extraTime,
+    approved_price: chosen?.price != null ? chosen.price : null,
+    approved_at: new Date().toISOString(),
+    recorded_by: recordedBy,
+  });
+
   const save = async () => {
-    if (!pid || !serviceType || !date || !time) return;
+    if (!pid || !serviceType || !date || !time || !approvalValid) return;
     setSaving(true);
     setError("");
     try {
@@ -103,6 +130,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
             scheduled_at: new Date().toISOString(),
           },
         } : {}),
+        ...(isSeasonal ? { owner_approval: buildOwnerApproval() } : {}),
       });
       // Same on-schedule confirmation notification as the wizard's flow
       // (respects the Visits category setting).
@@ -143,7 +171,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
   // and nothing is charged at start (charges stay staff-confirmed after
   // completion, exactly as with a scheduled visit that is started).
   const startNow = async () => {
-    if (!pid || !serviceType) return;
+    if (!pid || !serviceType || !approvalValid) return;
     setStarting(true);
     setError("");
     try {
@@ -166,6 +194,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
             started_at: nowIso,
           },
         } : {}),
+        ...(isSeasonal ? { owner_approval: buildOwnerApproval() } : {}),
       });
       onOpenChange(false);
       navigate(`/visits?resume=${created.id}`);
@@ -237,13 +266,56 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
                 </div>
               </div>
 
+              {/* Owner approval — per-visit record, required for seasonal services */}
+              {serviceType && isSeasonal && (
+                <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-3.5 space-y-3">
+                  <p className="text-[11px] uppercase tracking-wide text-amber-600">{t("Owner approval — required before the visit")}</p>
+                  <p className="text-xs text-muted-foreground">{t("Record how the owner approved this specific visit: the steps, the price, and access/key instructions.")}</p>
+                  <div>
+                    <Label className="text-xs mb-1.5 block">{t("Approved via")}</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Email", "WhatsApp", "Phone", "In-person", "Signed document"].map((v) => (
+                        <button key={v} onClick={() => setApproval((a) => ({ ...a, via: v }))}
+                          className={`px-3 py-2 rounded-xl border text-xs transition ${approval.via === v ? "border-primary bg-primary/10 text-primary font-medium" : "border-border bg-card"}`}>
+                          {t(v)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5 block">{t("Approval reference (e.g. email subject / message date)")}</Label>
+                    <Input value={approval.reference} onChange={(e) => setApproval((a) => ({ ...a, reference: e.target.value }))} className="rounded-xl" />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5 block">{t("Approved steps for this visit")}</Label>
+                    <Textarea value={approval.tasks} onChange={(e) => setApproval((a) => ({ ...a, tasks: e.target.value }))} className="rounded-xl min-h-20" />
+                  </div>
+                  <div>
+                    <Label className="text-xs mb-1.5 block">{t("Access / key instructions (optional)")}</Label>
+                    <Textarea value={approval.keys} onChange={(e) => setApproval((a) => ({ ...a, keys: e.target.value }))} className="rounded-xl min-h-16" />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox checked={approval.extraTime} onCheckedChange={(c) => setApproval((a) => ({ ...a, extraTime: !!c }))} />
+                    {t(hourly != null ? "Owner pre-approved extra time at €{hourly}/hour" : "Owner pre-approved extra time", { hourly: hourly != null ? hourly.toFixed(0) : "" })}
+                  </label>
+                  {chosen?.price != null && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("Price to approve")}: <span className="font-semibold text-foreground">€{chosen.price.toFixed(0)}</span>
+                    </p>
+                  )}
+                  {!approvalValid && (
+                    <p className="text-xs text-amber-600">{t("Select how the owner approved and enter the approved steps to continue.")}</p>
+                  )}
+                </div>
+              )}
+
               {/* Start Now / Schedule for Later — the two ways to proceed */}
               {serviceType && !scheduleLater && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <Button onClick={startNow} disabled={starting} className="h-14 rounded-2xl text-base gap-2">
+                  <Button onClick={startNow} disabled={starting || !approvalValid} className="h-14 rounded-2xl text-base gap-2">
                     {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Navigation className="w-5 h-5" />} {t("Start Now")}
                   </Button>
-                  <Button variant="outline" onClick={() => setScheduleLater(true)} disabled={starting} className="h-14 rounded-2xl text-base gap-2">
+                  <Button variant="outline" onClick={() => setScheduleLater(true)} disabled={starting || !approvalValid} className="h-14 rounded-2xl text-base gap-2">
                     <CalendarClock className="w-5 h-5" /> {t("Schedule for Later")}
                   </Button>
                 </div>
@@ -286,7 +358,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
         <SheetFooter className="border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full">{t("Cancel")}</Button>
           {scheduleLater && (
-            <Button onClick={save} disabled={saving || !pid || !serviceType || !date || !time} className="rounded-full gap-1.5">
+            <Button onClick={save} disabled={saving || !pid || !serviceType || !date || !time || !approvalValid} className="rounded-full gap-1.5">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />} {t("Schedule Service")}
             </Button>
           )}
