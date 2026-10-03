@@ -105,12 +105,13 @@ export function athensMediumDate(iso, lang = "en") {
   } catch (e) { return String(iso); }
 }
 
-// Athens-local "long" date, e.g. "August 30, 2026". Used in owner-facing email
-// subject/body so the visit date reflects property/local time, not the sender's
-// browser timezone.
-export function athensLongDate(iso) {
+// Athens-local "long" date, e.g. "August 30, 2026" / Greek "30 Αυγούστου 2026".
+// Used in owner-facing email subject/body so the visit date reflects
+// property/local time, not the sender's browser timezone. The optional lang
+// parameter is DISPLAY-ONLY: the timezone is always Europe/Athens.
+export function athensLongDate(iso, lang = "en") {
   if (!iso) return "—";
   try {
-    return new Intl.DateTimeFormat("en-US", { timeZone: TZ, dateStyle: "long" }).format(new Date(iso));
+    return new Intl.DateTimeFormat(lang === "el" ? "el-GR" : "en-US", { timeZone: TZ, dateStyle: "long" }).format(new Date(iso));
   } catch (e) { return String(iso); }
 }

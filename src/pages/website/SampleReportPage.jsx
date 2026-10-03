@@ -29,6 +29,12 @@ export default function SampleReportPage() {
     try {
       const { visit, ctx } = buildSampleVisit(lang);
       await generateVisitReportPdf(visit, ctx);
+    } catch (e) {
+      // A failed font/photo load must stop the download with an actionable
+      // message — never a silently degraded (garbled) PDF.
+      alert(el
+        ? "Δεν ήταν δυνατή η δημιουργία του PDF. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά."
+        : "The PDF could not be created. Check the connection and try again.");
     } finally {
       setBusy(false);
     }

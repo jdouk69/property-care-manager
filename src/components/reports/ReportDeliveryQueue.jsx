@@ -9,8 +9,9 @@ import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import ReportReviewModal from "@/components/visits/ReportReviewModal";
 import MarkSentExternallyDialog from "@/components/reports/MarkSentExternallyDialog";
-import { buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPdf } from "@/lib/visitReport";
-import { sendOwnerReportEmail } from "@/lib/visitReportSend";
+import { buildOwnerReportModel, generateVisitReportPdf } from "@/lib/visitReport";
+import { approveReport, dispatchReportEmail, reviewStateFor, reportGenerationError } from "@/lib/reportDelivery";
+import { isQuickCheckVisit } from "@/lib/visitTypeLabels";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
 import { qaPropertyIds } from "@/lib/qaGuard";
@@ -67,6 +68,8 @@ export default function ReportDeliveryQueue() {
   const [model, setModel] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [sendingId, setSendingId] = useState(null);
+  const [approving, setApproving] = useState(false);
+  const [photoWarn, setPhotoWarn] = useState(0);
   const [downloadingId, setDownloadingId] = useState(null);
   const [markExtFor, setMarkExtFor] = useState(null);
   const [error, setError] = useState("");
@@ -87,7 +90,8 @@ export default function ReportDeliveryQueue() {
       ]);
       // QA test property's synthetic visits stay out of the real delivery queue.
       const qaIds = qaPropertyIds(props || []);
-      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id)));
+      // Quick Check visits have no customer-facing report at all — never queued.
+      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id) && !isQuickCheckVisit(v.visit_type)));
       setProperties(props || []);
       setClients(cls || []);
       setBusiness((bss && bss[0]) || {});
@@ -115,23 +119,31 @@ export default function ReportDeliveryQueue() {
   });
   const applyUpdate = (id, patch) => setVisits((arr) => arr.map((v) => (v.id === id ? { ...v, ...patch } : v)));
 
+  // Opening the review modal is read-only: it builds the model from the
+  // CURRENT data and never writes or sends anything. Approval is explicit.
   const openReview = async (v) => {
     setError("");
     setReviewVisit(v);
     setModel(null);
     setGenerating(true);
     try {
-      const ctx = ctxFor(v);
-      let pdfUrl = v.report_pdf_url;
-      if (!pdfUrl || statusOf(v) === "Draft") {
-        const { file_url } = await generateAndStoreReportPdf(v, ctx);
-        await base44.entities.PropertyVisit.update(v.id, { report_pdf_url: file_url, report_status: "Ready to Send" });
-        pdfUrl = file_url;
-        applyUpdate(v.id, { report_pdf_url: file_url, report_status: "Ready to Send" });
-      }
-      setModel(buildOwnerReportModel({ ...v, report_pdf_url: pdfUrl }, ctx));
-    } catch (e) { setError(t("Could not generate report: {error}", { error: e?.message || e })); }
+      setModel(buildOwnerReportModel(v, ctxFor(v)));
+    } catch (e) { setError(reportGenerationError(e, t)); }
     setGenerating(false);
+  };
+
+  const approveReview = async () => {
+    const v = reviewVisit;
+    if (!v) return;
+    setApproving(true);
+    try {
+      const { updated, model: m, photoFailures } = await approveReport(v, ctxFor(v), userName);
+      applyUpdate(v.id, updated);
+      setReviewVisit(updated);
+      setModel(m);
+      setPhotoWarn(photoFailures || 0);
+    } catch (e) { setError(reportGenerationError(e, t)); }
+    setApproving(false);
   };
 
   // Deep-link from Dashboard "Reports to Send": /reports?open=<visitId>
@@ -146,24 +158,21 @@ export default function ReportDeliveryQueue() {
     setError("");
     const client = clientFor(v.property_id);
     if (!client?.email) { setError(t("No email on the client record. Use Mark Sent Externally or Download PDF.")); return; }
+    // Delivery requires an APPROVED report whose fingerprint still matches the
+    // current data — stale approvals force re-approval first.
+    const st = reviewStateFor(v, ctxFor(v));
+    if (!st.approved || !st.hashMatches) { openReview(v); return; }
     if (isResend && !window.confirm(t("Resend this report to the owner?"))) return;
     setSendingId(v.id);
     try {
-      let pdfUrl = v.report_pdf_url;
-      if (!pdfUrl) {
-        const { file_url } = await generateAndStoreReportPdf(v, ctxFor(v));
-        await base44.entities.PropertyVisit.update(v.id, { report_pdf_url: file_url, report_status: "Ready to Send" });
-        pdfUrl = file_url;
-        applyUpdate(v.id, { report_pdf_url: file_url, report_status: "Ready to Send" });
-      }
-      const res = await sendOwnerReportEmail({
+      const res = await dispatchReportEmail({
         visit: v, property: propFor(v.property_id), client, business,
-        pdfUrl, result: (reviewVisit?.id === v.id ? model?.result : "") || "", sentBy: userName,
+        result: (reviewVisit?.id === v.id ? model?.result : "") || "", sentBy: userName,
       });
       if (res.ok) {
         const patch = {
           report_status: "Sent", report_sent: true, report_sent_at: new Date().toISOString(),
-          report_sent_to: res.to, report_sent_by: userName, report_delivery_method: "Email", report_pdf_url: pdfUrl,
+          report_sent_to: res.to, report_sent_by: userName, report_delivery_method: "Email",
         };
         await base44.entities.PropertyVisit.update(v.id, patch);
         applyUpdate(v.id, patch);
@@ -184,7 +193,7 @@ export default function ReportDeliveryQueue() {
   const download = async (v) => {
     setDownloadingId(v.id);
     try { await generateVisitReportPdf(v, ctxFor(v)); }
-    catch (e) { setError(t("Could not generate PDF: {error}", { error: e?.message || e })); }
+    catch (e) { setError(reportGenerationError(e, t)); }
     setDownloadingId(null);
   };
 
@@ -327,9 +336,13 @@ export default function ReportDeliveryQueue() {
         model={model}
         generating={generating}
         sending={!!sendingId && sendingId === reviewVisit?.id}
-        canSend={canDispatch && !!reviewVisit && (!!reviewVisit.report_pdf_url || statusOf(reviewVisit) === "Ready to Send")}
+        approving={approving}
+        photoWarn={photoWarn}
+        error={error}
+        reviewState={reviewVisit ? reviewStateFor(reviewVisit, ctxFor(reviewVisit)) : null}
         onClose={() => setReviewVisit(null)}
         onSend={() => reviewVisit && doSend(reviewVisit, false)}
+        onApprove={approveReview}
         onBackToEdit={() => setReviewVisit(null)}
       />
 

@@ -374,6 +374,18 @@ export const VISITS_EL = {
   "Property Assistance": "Υποστήριξη Ακινήτου",
   "On-Demand Property Assistance": "Υποστήριξη Ακινήτου κατ' Απαίτηση",
 
+  // Visit report delivery (staff UI): review / approve / send lifecycle.
+  "Approved for sending": "Εγκρίθηκε για αποστολή",
+  "Data changed since approval — approve again before sending.": "Τα δεδομένα άλλαξαν μετά την έγκριση — εγκρίνετε ξανά πριν από την αποστολή.",
+  "Not yet approved — approve to generate the PDF and enable sending.": "Δεν έχει εγκριθεί ακόμη — εγκρίνετε για δημιουργία του PDF και δυνατότητα αποστολής.",
+  "Approve & Save PDF": "Έγκριση & Αποθήκευση PDF",
+  "Approving…": "Έγκριση…",
+  "Quick Check visits do not include routine photos or a customer-facing visit report.": "Οι επισκέψεις Quick Check δεν περιλαμβάνουν τακτικές φωτογραφίες ή αναφορά προς τον ιδιοκτήτη.",
+  "Quick Check visits do not include a customer-facing visit report.": "Οι επισκέψεις Quick Check δεν περιλαμβάνουν αναφορά προς τον ιδιοκτήτη.",
+  "The report fonts could not be loaded — the report was not generated. Check the connection and try again.": "Δεν ήταν δυνατή η φόρτωση των γραμματοσειρών — η αναφορά δεν δημιουργήθηκε. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+  "Some recorded notes are written in the other language. They appear exactly as recorded — consider adding a translation before sending.": "Ορισμένες καταγεγραμμένες σημειώσεις είναι γραμμένες στην άλλη γλώσσα. Εμφανίζονται όπως ακριβώς καταγράφηκαν — σκεφτείτε να προσθέσετε μετάφραση πριν από την αποστολή.",
+  "{count} photo(s) could not be included in the PDF.": "{count} φωτογραφία(-ες) δεν συμπεριλήφθησαν στο PDF.",
+
   // ---- Wave 8: Checklist execution & status display ----
   // Checklist finding statuses (stored values stay English; "Important" is
   // already renamed to the display label "Attention" by visitTypeLabels.js,

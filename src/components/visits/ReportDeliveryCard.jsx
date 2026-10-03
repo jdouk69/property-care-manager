@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { FileText, Send, Download, Loader2, CheckCircle2, AlertTriangle, Save, RotateCw } from "lucide-react";
+import {
+  FileText, Send, Download, Loader2, CheckCircle2, AlertTriangle, Save, RotateCw, ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReportReviewModal from "@/components/visits/ReportReviewModal";
-import { buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPdf } from "@/lib/visitReport";
-import { sendOwnerReportEmail } from "@/lib/visitReportSend";
+import { buildOwnerReportModel, generateVisitReportPdf } from "@/lib/visitReport";
+import { approveReport, dispatchReportEmail, reviewStateFor, reportGenerationError } from "@/lib/reportDelivery";
+import { isQuickCheckVisit } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -16,9 +19,15 @@ const STATUS_TONE = {
 };
 
 /**
- * Reusable owner-report delivery workflow: Review → Send to Owner → Save.
- * Shared by the Visit Wizard completion screen (variant="done") and the
- * Visit Detail page (variant="detail") so there is one delivery path.
+ * Reusable owner-report delivery workflow: Review (read-only) → Approve & Save
+ * PDF → Send to Owner. Shared by the Visit Wizard completion screen
+ * (variant="done") and the Visit Detail page (variant="detail") so there is
+ * one delivery path. The approval gate lives in reportDelivery.js: sending
+ * requires an approved PDF whose content fingerprint still matches the current
+ * data — any change forces re-approval before delivery.
+ *
+ * Quick Check visits do not include routine photos or a customer-facing visit
+ * report — they show an explanatory note instead of delivery actions.
  *
  * props: { visit, property, client, issues, tasks, business, nextVisit?,
  *          onUpdate(updatedVisit), onBackToEdit, variant, onDone }
@@ -26,9 +35,11 @@ const STATUS_TONE = {
 export default function ReportDeliveryCard({ visit, property, client, issues, tasks, business, nextVisit, onUpdate, onBackToEdit, variant = "detail", onDone }) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [model, setModel] = useState(null);
+  const [photoWarn, setPhotoWarn] = useState(0);
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
   const { t } = useLanguage();
@@ -40,6 +51,9 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
   if (!visit) return null;
   const status = visit.report_status || (visit.report_sent ? "Sent" : "Draft");
   const ctx = { business, property, client, issues, tasks, nextVisit };
+  const quickCheck = isQuickCheckVisit(visit);
+  const reviewState = quickCheck ? null : reviewStateFor(visit, ctx);
+  const sent = status === "Sent";
 
   const patch = async (patchObj) => {
     try {
@@ -53,40 +67,48 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
     }
   };
 
+  // Opening the review modal is READ-ONLY: it builds the model from the
+  // current data and never writes or sends anything. Approval is explicit.
   const openReview = async () => {
     setError("");
     setReviewOpen(true);
-    if (!model) {
-      setGenerating(true);
-      try {
-        const m = buildOwnerReportModel(visit, ctx);
-        setModel(m);
-        // Persist a report artifact so the owner can be linked to it.
-        if (!visit.report_pdf_url || visit.report_status === "Draft") {
-          const { file_url } = await generateAndStoreReportPdf(visit, ctx);
-          await patch({ report_pdf_url: file_url, report_status: "Ready to Send" });
-          setModel(buildOwnerReportModel({ ...visit, report_pdf_url: file_url }, ctx));
-        }
-      } catch (e) {
-        setError(t("Could not generate report: {message}", { message: e?.message || e }));
-      }
-      setGenerating(false);
+    setGenerating(true);
+    try {
+      setModel(buildOwnerReportModel(visit, ctx));
+    } catch (e) {
+      setError(reportGenerationError(e, t));
+      setReviewOpen(false);
     }
+    setGenerating(false);
+  };
+
+  const approve = async () => {
+    setError("");
+    setPhotoWarn(0);
+    setApproving(true);
+    try {
+      const { updated, model: m, photoFailures } = await approveReport(visit, ctx, userName);
+      onUpdate && onUpdate(updated);
+      setModel(m);
+      setPhotoWarn(photoFailures);
+    } catch (e) {
+      setError(reportGenerationError(e, t));
+    }
+    setApproving(false);
   };
 
   const doSend = async (isResend) => {
     setError("");
-    if (status !== "Ready to Send" && !visit.report_pdf_url) {
-      // Require the report to be generated/reviewed first.
+    if (!reviewState.approved || !reviewState.hashMatches) {
+      // Require the report to be approved (and still current) first.
       openReview();
       return;
     }
     if (isResend && !window.confirm(t("Resend this report to the owner?"))) return;
     setSending(true);
     try {
-      const res = await sendOwnerReportEmail({
+      const res = await dispatchReportEmail({
         visit, property, client, business,
-        pdfUrl: visit.report_pdf_url || "",
         result: model?.result || "",
         sentBy: userName,
       });
@@ -113,11 +135,25 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
 
   const download = async () => {
     setDownloading(true);
-    try { await generateVisitReportPdf(visit, ctx); } catch (e) { setError(t("Could not generate PDF: {message}", { message: e?.message || e })); }
+    try { await generateVisitReportPdf(visit, ctx); } catch (e) { setError(reportGenerationError(e, t)); }
     setDownloading(false);
   };
 
-  const sent = status === "Sent";
+  if (quickCheck) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-start gap-2">
+          <ShieldCheck className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium">{t("Owner Report Delivery")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("Quick Check visits do not include routine photos or a customer-facing visit report.")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const sendable = reviewState.approved && reviewState.hashMatches;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -128,6 +164,18 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
         </div>
         <span className={`text-xs px-2.5 py-1 rounded-full border ${STATUS_TONE[status] || STATUS_TONE.Draft}`}>{t(status)}</span>
       </div>
+
+      {/* Approval state — always visible, derived from the stored fingerprint. */}
+      {sendable && (
+        <p className="text-xs text-emerald-600">
+          {t("Approved for sending")}
+          {reviewState.reviewedBy ? ` · ${t("by {name}", { name: reviewState.reviewedBy })}` : ""}
+          {reviewState.reviewedAt ? ` · ${athensMediumDateTime(reviewState.reviewedAt)}` : ""}
+        </p>
+      )}
+      {reviewState.approved && !reviewState.hashMatches && (
+        <p className="text-xs text-amber-600">{t("Data changed since approval — approve again before sending.")}</p>
+      )}
 
       {/* Delivery history shows ONLY for a report that has actually been sent
           (status "Sent") — legacy/stale fields from an earlier report cycle of
@@ -153,11 +201,11 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
           {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} {t("Review Report")}
         </Button>
         {sent ? (
-          <Button onClick={() => doSend(true)} disabled={sending} variant="outline" className="rounded-xl gap-1.5">
+          <Button onClick={() => doSend(true)} disabled={sending || !sendable} variant="outline" className="rounded-xl gap-1.5">
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />} {t("Resend Report")}
           </Button>
         ) : (
-          <Button onClick={() => doSend(false)} disabled={sending} className="rounded-xl gap-1.5">
+          <Button onClick={() => doSend(false)} disabled={sending || !sendable} className="rounded-xl gap-1.5">
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Send to Owner")}
           </Button>
         )}
@@ -176,9 +224,13 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
         model={model}
         generating={generating}
         sending={sending}
-        canSend={status === "Ready to Send" || !!visit.report_pdf_url}
+        approving={approving}
+        reviewState={reviewState}
+        error={error}
+        photoWarn={photoWarn}
         onClose={() => setReviewOpen(false)}
         onSend={() => doSend(false)}
+        onApprove={approve}
         onBackToEdit={() => { setReviewOpen(false); onBackToEdit && onBackToEdit(); }}
       />
     </div>

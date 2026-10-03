@@ -997,7 +997,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       status: "Completed", gps_location: gps, checklist,
       meter_readings: meters.filter((m) => m.label || m.value),
       summary, internal_notes: internalNotes, follow_up_task_ids: taskIds, maintenance_issue_ids: issueIds,
-      owner_report: "", report_sent: false, report_status: "Ready to Send",
+      // A freshly completed visit's report is ALWAYS "Draft" — staff must
+      // review, approve and send it explicitly (Quick Check visits excluded).
+      owner_report: "", report_sent: false, report_status: "Draft",
       // Fresh report lifecycle: a (re)completed visit's report starts unsent.
       // Clears delivery history + stored PDF from any PREVIOUS report cycle of
       // this same visit record (e.g. sent, then restarted and re-completed) so

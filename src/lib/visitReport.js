@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import { visitTypeLabel, QUICK_CHECK_TYPE } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
 import { CHECKLIST_ITEM_EL } from "@/lib/i18n/checklistItemDisplay";
@@ -118,8 +118,12 @@ async function loadReportFonts() {
       })
     );
   } catch (e) {
-    fontCache = false;
-    console.warn("Report PDF fonts unavailable — using standard fonts (Greek text unsupported).", e);
+    // Do NOT cache the failure — a transient network problem must not
+    // permanently downgrade later reports to ASCII-only text. The next call
+    // retries the fetch.
+    fontCache = null;
+    console.warn("Report PDF fonts unavailable.", e);
+    return null;
   }
   return fontCache;
 }
@@ -136,7 +140,10 @@ const DISPLAY_LABELS = {
   "Immediate follow-up items identified": "Immediate follow-up needs reviewed",
 };
 
-const isOwnerFinding = (it) => !!it && !!it.owner_visible && (it.notes && String(it.notes).trim());
+// Owner-facing findings are ONLY explicit concern statuses (Important /
+// Emergency). A Normal item with a note is a completed routine check with an
+// owner-visible observation — never a concern and never duplicated as one.
+const isOwnerFinding = (it) => !!it && (it.status === "Important" || it.status === "Emergency");
 
 const sevFromChecklistStatus = (st) => (st === "Emergency" ? "urgent" : st === "Important" ? "attention" : "monitor");
 
@@ -162,6 +169,24 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const L = reportLabelsFor(lang);
   const cl = visit?.checklist || [];
 
+  // Quick Check visits do not include routine photos or a customer-facing
+  // visit report (per the published service terms). No report model is built.
+  if (visit?.visit_type === QUICK_CHECK_TYPE) {
+    return { reportExcluded: true, language: lang, labels: L };
+  }
+
+  // Staff-authored text written in the other script (e.g. Greek notes on an
+  // English report, English notes on a Greek report). It is shown exactly as
+  // recorded — never auto-translated — but flagged so staff can add a
+  // translation before the report is sent.
+  const GREEK_RE = /[\u0370-\u03FF\u1F00-\u1FFF]/;
+  const langMismatch = (s) => {
+    const t = String(s || "");
+    if (!t.trim()) return false;
+    if (lang === "el") return /[A-Za-z]/.test(t) && !GREEK_RE.test(t);
+    return GREEK_RE.test(t);
+  };
+
   // Greek display names for KNOWN built-in checklist items (exact match only —
   // custom item names always fall back to the stored original text).
   const itemName = (name) => {
@@ -170,19 +195,27 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     return lang === "el" && CHECKLIST_ITEM_EL[base] ? CHECKLIST_ITEM_EL[base] : mapped;
   };
 
-  // Unable to Check / N/A are surfaced in their own report sections — never as
-  // concern findings and never as completed routine checks.
-  const checklistFindings = cl.filter((it) => it.status !== "Unable to Check" && it.status !== "N/A" && isOwnerFinding(it)).map((it) => {
+  // Findings: ONLY Important / Emergency items. The owner-visible flag gates
+  // the recorded detail (note, recommendation, action taken, photos) — the
+  // item and its priority always appear so a staff-recorded concern is never
+  // silently omitted. Normal items with notes are routine checks (below),
+  // never findings. Unable to Check / N/A are surfaced in their own report
+  // sections — never as concern findings and never as completed checks.
+  const checklistFindings = cl.filter((it) => isOwnerFinding(it)).map((it) => {
     const sk = sevFromChecklistStatus(it.status);
+    const visible = !!it.owner_visible;
     return {
       title: itemName(it.name),
       severityKey: sk,
       priorityLabel: L.priorityLabels[sk],
       area: "",
-      observed: (it.notes || "").trim(),
-      recommendation: (it.recommendation || "").trim(),
-      actionTaken: (it.action_taken || "").trim(),
-      photos: it.photos || [],
+      observed: visible ? (it.notes || "").trim() : "",
+      recommendation: visible ? (it.recommendation || "").trim() : "",
+      actionTaken: visible ? (it.action_taken || "").trim() : "",
+      photos: visible ? it.photos || [] : [],
+      langMismatch: visible
+        ? langMismatch(it.notes) || langMismatch(it.recommendation) || langMismatch(it.action_taken)
+        : false,
       source: "checklist",
     };
   });
@@ -192,13 +225,14 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     .map((i) => {
       const sk = i.priority === "Emergency" ? "urgent" : i.priority === "High" ? "attention" : "monitor";
       return {
-        title: i.title || "Maintenance item",
+        title: i.title || L.maintenanceItem,
         severityKey: sk,
         priorityLabel: L.priorityLabels[sk],
         area: i.category || "",
         observed: (i.description || "").trim(),
         recommendation: nextStepFromStatus(i.status),
         photos: i.before_photos || [],
+        langMismatch: langMismatch(i.description),
         source: "issue",
       };
     });
@@ -215,12 +249,19 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   // never exposed. Skipped / not-checked items are ALWAYS distinguished from
   // completed checks — never inferred as "normal".
   const routineChecks = cl
-    .filter((it) => it.status !== "Important" && it.status !== "Emergency")
+    .filter((it) => !isOwnerFinding(it))
     .map((it) => {
-      const st = it.status;
-      let note = "";
-      if (st === "Unable to Check" || st === "N/A") note = (it.notes || "").trim();
-      return { name: itemName(it.name), status: st, note };
+      // The recorded note is shown ONLY when the item is owner-visible —
+      // private notes never appear anywhere in the customer report. A Normal
+      // item with an owner-visible note is listed here ONCE, with its note —
+      // never reclassified as a concern finding.
+      const visible = !!it.owner_visible;
+      return {
+        name: itemName(it.name),
+        status: it.status || "Not Checked",
+        note: visible ? (it.notes || "").trim() : "",
+        langMismatch: visible ? langMismatch(it.notes) : false,
+      };
     });
   // Counts derive from the ACTUAL checklist statuses — abnormal, unable, N/A
   // and not-checked items are never counted as routine/no-concern.
@@ -229,7 +270,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const urgentCount = cl.filter((it) => it.status === "Emergency").length;
   const unableToCheck = cl
     .filter((it) => it.status === "Unable to Check")
-    .map((it) => ({ name: itemName(it.name), reason: (it.notes || "").trim() }));
+    .map((it) => ({ name: itemName(it.name), reason: it.owner_visible ? (it.notes || "").trim() : "" }));
   const naCount = cl.filter((it) => it.status === "N/A").length;
   const naLine = naCount ? L.naLine(naCount) : "";
 
@@ -240,7 +281,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
 
   const docPhotos = cl
     .filter((it) => !isOwnerFinding(it) && it.owner_visible && (it.photos && it.photos.length))
-    .flatMap((it) => (it.photos || []).map((url) => ({ caption: itemName(it.name), url })));
+    .flatMap((it) => (it.photos || []).map((url) => ({ caption: itemName(it.name), url, langMismatch: langMismatch(it.name) })));
 
   const counts = {
     urgent: findings.filter((f) => f.severityKey === "urgent").length,
@@ -249,13 +290,18 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   };
 
   const hasMonitor = counts.monitor > 0;
+  // Items left Not Checked (or Unable to Check) mean the visit was NOT a full
+  // sweep — the header must never present it as fully completed.
+  const incompleteCount = cl.filter((it) => !it.status || it.status === "Not Checked" || it.status === "Unable to Check").length;
   // Header status derives from the ACTUAL checklist statuses: any Emergency
   // item -> urgent, any Important item (no Emergency) -> attention. "No
-  // Concerns Noted" only when NO Important/Emergency checklist item exists.
+  // Concerns Noted" only when NO Important/Emergency checklist item exists AND
+  // every checkable item was actually checked.
   let overallStatus;
   if (urgentCount || counts.urgent) overallStatus = { key: "urgent", label: L.statusLabels.urgent };
   else if (attentionCount || counts.attention) overallStatus = { key: "attention", label: L.statusLabels.attention };
   else if (hasMonitor) overallStatus = { key: "monitor", label: L.statusLabels.monitor };
+  else if (incompleteCount > 0) overallStatus = { key: "incomplete", label: L.statusLabels.incomplete };
   else overallStatus = { key: "ok", label: L.statusLabels.ok };
 
   const segs = [];
@@ -284,7 +330,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   // and points to the documented observations.
   let summaryText;
   if (findings.length === 0 && !attentionCount && !urgentCount) {
-    summaryText = L.summaryAllClear;
+    summaryText = incompleteCount > 0 ? L.summaryIncomplete : L.summaryAllClear;
   } else {
     const parts = [L.summaryLead, L.summaryObservations];
     if (counts.urgent || counts.attention) parts.push(L.summaryReview);
@@ -320,12 +366,14 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   }));
 
   const result = (urgentCount || counts.urgent)
-    ? "Urgent attention required."
+    ? L.resultUrgent
     : (attentionCount || counts.attention)
-      ? "Attention required."
+      ? L.resultAttention
       : hasMonitor
-        ? "Observations noted."
-        : "No concerns noted.";
+        ? L.resultObservations
+        : incompleteCount > 0
+          ? L.resultIncomplete
+          : L.resultNoConcerns;
 
   return {
     business,
@@ -404,6 +452,11 @@ function drawImageFit(doc, entry, x, y, boxW, boxH) {
 }
 
 async function buildDoc(visit, ctx = {}) {
+  if (visit?.visit_type === QUICK_CHECK_TYPE) {
+    const err = new Error("Quick Check visits do not include a customer-facing visit report.");
+    err.code = "quick_check_excluded";
+    throw err;
+  }
   const model = buildOwnerReportModel(visit, ctx);
   const {
     business, property, client, visit: v, visitTypeLabel: vtl, labels: L,
@@ -415,11 +468,19 @@ async function buildDoc(visit, ctx = {}) {
   const si = ctx.sampleInfo || {};
 
   const fonts = await loadReportFonts();
+  // The Greek-capable fonts are REQUIRED: the standard PDF fonts cannot render
+  // Greek (or €, ·, smart quotes), so a font failure STOPS report generation
+  // with an actionable error instead of silently producing garbled text.
+  if (!fonts) {
+    const err = new Error("report fonts unavailable");
+    err.code = "font_load_failed";
+    throw err;
+  }
   const doc = new jsPDF();
-  if (fonts) installFonts(doc, fonts);
-  const SANS = fonts ? "PCCSans" : "helvetica";
-  const SERIF = fonts ? "PCCSerif" : "times";
-  const clean = fonts ? uniClean : asciiClean;
+  installFonts(doc, fonts);
+  const SANS = "PCCSans";
+  const SERIF = "PCCSerif";
+  const clean = uniClean;
 
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -450,7 +511,7 @@ async function buildDoc(visit, ctx = {}) {
   doc.setFillColor(...GOLD);
   doc.rect(0, BAND_H, pageW, 1.2, "F");
   doc.setFont(SERIF, "bold"); doc.setFontSize(14); doc.setTextColor(...CREAM);
-  text(business.business_name || "Property Care", margin, 11.5);
+  text(business.business_name || "Property Care Crete", margin, 11.5);
   doc.setFont(SANS, "normal"); doc.setFontSize(8); doc.setTextColor(222, 216, 204);
   const bandContact = [business.phone].filter(Boolean).join("   ·   ");
   if (bandContact) {
@@ -464,15 +525,16 @@ async function buildDoc(visit, ctx = {}) {
   if (business.logo) {
     try {
       const entry = await getImageForPdf(business.logo, 320, 0.85, "#ffffff");
-      const r = entry.w / entry.h;
-      let dh = 8, dw = dh * r;
-      if (dw > 20) { dw = 20; dh = dw / r; }
+      const r = entry.w / entry.h || 1;
+      // Large enough to be readable on the page, never taller than the title row.
+      let dh = 13, dw = dh * r;
+      if (dw > 34) { dw = 34; dh = dw / r; }
       doc.addImage(entry.dataUrl, "JPEG", margin, y - dh / 2, dw, dh, entry.alias);
-      titleX = margin + dw + 3.5;
+      titleX = margin + dw + 4;
     } catch (e) { /* no logo available — text-only title */ }
   }
   doc.setFont(SERIF, "bold"); doc.setFontSize(sample ? 13 : 12); doc.setTextColor(...NAVY);
-  text(sample ? "SAMPLE VISIT REPORT" : L.reportTitle, titleX, y);
+  text(sample ? L.sampleTitle : L.reportTitle, titleX, y);
   y += 5.5;
   doc.setFont(SANS, "normal"); doc.setFontSize(8.5);
   if (sample) { doc.setTextColor(...GOLD); text(si.subtitle || "", margin, y); }
@@ -647,6 +709,7 @@ async function buildDoc(visit, ctx = {}) {
   };
 
   // Captioned photo grid (2 columns, aspect-ratio preserved, captioned).
+  let photoFailures = 0;
   const photoGrid = async (photos) => {
     if (!photos || !photos.length) return;
     const gColW = (maxWidth - 8) / 2;
@@ -667,6 +730,7 @@ async function buildDoc(visit, ctx = {}) {
         col++;
         if (col >= 2) { col = 0; y += gBoxH + 6 + capH; }
       } catch (e) {
+        photoFailures++;
         ensure(6); doc.setTextColor(150); text(L.photoUnavailable, margin, y); doc.setTextColor(0); y += 6; col = 0;
       }
     }
@@ -790,8 +854,11 @@ async function buildDoc(visit, ctx = {}) {
     await photoGrid(docPhotos);
   }
 
-  // Scope statement (exact required wording) + gold rule.
-  ensure(18);
+  // Scope statement (exact required wording) + gold rule. The page break is
+  // measured from the actual wrapped line count — never a guessed block height.
+  doc.setFont(SANS, "normal"); doc.setFontSize(8);
+  const scopeLines = doc.splitTextToSize(clean(L.scopeStatement), maxWidth);
+  ensure(5 + scopeLines.length * 4);
   doc.setDrawColor(...GOLD); doc.setLineWidth(0.5);
   doc.line(margin, y, pageW - margin, y); y += 5;
   doc.setFont(SANS, "normal"); doc.setFontSize(8); doc.setTextColor(90);
@@ -823,7 +890,7 @@ async function buildDoc(visit, ctx = {}) {
     doc.setTextColor(0);
   }
 
-  return doc;
+  return { doc, photoFailures };
 }
 
 function fileSlug(property) {
@@ -831,19 +898,88 @@ function fileSlug(property) {
 }
 
 export async function generateVisitReportPdf(visit, ctx = {}) {
-  const doc = await buildDoc(visit, ctx);
+  const { doc } = await buildDoc(visit, ctx);
   doc.save(ctx.sample ? "sample-visit-report.pdf" : `visit-report-${fileSlug(ctx.property)}.pdf`);
 }
 
 export async function generateVisitReportPdfBlob(visit, ctx = {}) {
-  const doc = await buildDoc(visit, ctx);
+  const { doc } = await buildDoc(visit, ctx);
   return doc.output("blob");
 }
 
+// Generates the PDF and stores it in PRIVATE storage. Customer reports must
+// never live behind a permanent public URL: staff re-open the stored PDF via a
+// short-lived signed URL, and the emailed copy travels as an email attachment.
 export async function generateAndStoreReportPdf(visit, ctx = {}) {
   const { base44 } = await import("@/api/base44Client");
-  const blob = await generateVisitReportPdfBlob(visit, ctx);
+  const { doc, photoFailures } = await buildDoc(visit, ctx);
+  const blob = doc.output("blob");
   const file = new File([blob], `visit-report-${fileSlug(ctx.property)}.pdf`, { type: "application/pdf" });
-  const { file_url } = await base44.integrations.Core.UploadFile({ file });
-  return { file_url };
+  const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+  return { file_uri, blob, photoFailures: photoFailures || 0 };
+}
+
+// --- Report content fingerprint -------------------------------------------------
+// A stable fingerprint of EVERY input that shapes the rendered report. Captured
+// when staff approve the PDF; re-computed before sending. Any difference means
+// the data changed since approval and the stored PDF is invalid — re-approval
+// is required before delivery. Bump REPORT_TEMPLATE_VERSION whenever the
+// report layout/wording changes so older approvals are invalidated too.
+export const REPORT_TEMPLATE_VERSION = 2;
+
+function stableStringify(value) {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join("|")}]`;
+  if (typeof value === "object") {
+    const keys = Object.keys(value)
+      .filter((k) => k !== "created_date" && k !== "updated_date" && k !== "created_by_id")
+      .sort();
+    return `{${keys.map((k) => `${k}:${stableStringify(value[k])}`).join(",")}}`;
+  }
+  return String(value);
+}
+
+export function reportContentFingerprint(visit, ctx = {}) {
+  const { business = {}, property = {}, client = {}, issues = [], tasks = [] } = ctx;
+  const payload = {
+    template: REPORT_TEMPLATE_VERSION,
+    visit: {
+      visit_type: visit?.visit_type || "",
+      start_time: visit?.start_time || "",
+      end_time: visit?.end_time || "",
+      summary: visit?.summary || "",
+      checklist: (visit?.checklist || []).map((it) => ({
+        name: it?.name || "",
+        status: it?.status || "",
+        notes: it?.notes || "",
+        recommendation: it?.recommendation || "",
+        action_taken: it?.action_taken || "",
+        owner_visible: !!it?.owner_visible,
+        photos: it?.photos || [],
+      })),
+    },
+    property: {
+      name: property?.name || "",
+      monitoring_priorities: (property?.monitoring_priorities || [])
+        .filter((p) => p && p.active !== false)
+        .map((p) => String(p?.area || "").trim()),
+    },
+    client: { name: client?.name || "", preferred_language: client?.preferred_language || "" },
+    business: {
+      business_name: business?.business_name || "",
+      phone: business?.phone || "",
+      website: business?.website || "",
+      logo: business?.logo || "",
+    },
+    issues: (issues || []).map((i) => ({
+      id: i?.id || "", title: i?.title || "", priority: i?.priority || "",
+      status: i?.status || "", category: i?.category || "",
+      description: i?.description || "", before_photos: i?.before_photos || [],
+    })),
+    tasks: (tasks || []).map((tk) => ({ id: tk?.id || "", title: tk?.title || "" })),
+  };
+  const s = stableStringify(payload);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return `${h.toString(36)}-${s.length.toString(36)}`;
 }

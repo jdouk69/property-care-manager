@@ -15,6 +15,8 @@ export default function SampleReportDocument() {
   const si = ctx.sampleInfo;
   const m = buildOwnerReportModel(visit, ctx);
   const L = m.labels;
+  // Mirror the real report: finding photos plus owner-visible routine photos.
+  const allPhotos = [...(m.findingPhotos || []), ...(m.docPhotos || [])];
 
   return (
     <div className="bg-report-cream text-report-navy shadow-lg rounded-lg overflow-hidden border border-report-gold/40">
@@ -27,7 +29,7 @@ export default function SampleReportDocument() {
 
       <div className="px-5 sm:px-8 py-6 space-y-5">
         <div>
-          <h2 className="font-serif text-lg sm:text-xl font-bold tracking-wide text-report-navy">SAMPLE VISIT REPORT</h2>
+          <h2 className="font-serif text-lg sm:text-xl font-bold tracking-wide text-report-navy">{L.sampleTitle}</h2>
           <p className="text-xs sm:text-sm text-report-gold font-medium mt-1">{si.subtitle}</p>
         </div>
 
@@ -78,7 +80,7 @@ export default function SampleReportDocument() {
         {/* Captioned photo grid — AI-generated demonstration images */}
         <div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {m.findingPhotos.map((dp, i) => (
+            {allPhotos.map((dp, i) => (
               <figure key={i}>
                 <UIImage
                   src={dp.url}
@@ -100,6 +102,36 @@ export default function SampleReportDocument() {
           <h3 className="font-serif text-sm sm:text-base font-bold tracking-wide text-report-navy">{si.summaryHeading}</h3>
           <p className="text-xs sm:text-sm text-report-navy/90 mt-1 leading-relaxed">{visit.summary}</p>
         </div>
+
+        {/* Routine checks — mirrors the real report's Routine Checks section:
+            gold check = checked, no concern (owner-visible notes shown as
+            recorded); gray rows = Unable to Check / N/A / Not Checked. */}
+        {m.routineChecks.length > 0 && (
+          <div>
+            <h3 className="font-serif text-sm sm:text-base font-bold tracking-wide text-report-navy">{L.routineChecksHeading}</h3>
+            <div className="mt-1.5 space-y-1">
+              {m.routineChecks.map((rc, i) =>
+                rc.status === "Normal" ? (
+                  <p key={i} className="text-xs sm:text-sm text-report-navy/90 flex items-start gap-2">
+                    <span className="text-report-gold font-bold shrink-0">✓</span>
+                    <span>{rc.name}{rc.note ? <span className="text-report-navy/70"> — {rc.note}</span> : null}</span>
+                  </p>
+                ) : (
+                  <p key={i} className="text-xs sm:text-sm text-report-navy/60 flex items-start gap-2">
+                    <span className="shrink-0">–</span>
+                    <span>
+                      {rc.name}{" "}
+                      <span className="uppercase tracking-wide text-[10px] font-semibold">
+                        {rc.status === "Unable to Check" ? L.unableDisplay : rc.status === "N/A" ? L.naDisplay : L.notCheckedDisplay}
+                      </span>
+                      {rc.note ? <span> — {rc.note}</span> : null}
+                    </span>
+                  </p>
+                )
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Photos & reports */}
         <div>

@@ -1,7 +1,7 @@
 import React from "react";
 import {
   X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, AlertOctagon,
-  ListChecks, MapPin, Camera, Eye, Minus,
+  ListChecks, MapPin, Camera, Eye, Minus, Languages, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
@@ -55,7 +55,7 @@ function SectionHeading({ children }) {
   );
 }
 
-export default function ReportReviewModal({ open, model, generating, sending, canSend, onClose, onSend, onBackToEdit }) {
+export default function ReportReviewModal({ open, model, generating, sending, approving, reviewState, error, photoWarn, onClose, onSend, onApprove, onBackToEdit }) {
   const { t } = useLanguage();
   if (!open) return null;
   if (generating || !model) {
@@ -85,6 +85,16 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
   if (tasks.length) nextSteps.push(L.followUps(tasks.length));
   if (nextVisit && nextVisit.start_time) nextSteps.push(L.nextScheduled(athensMediumDateTime(nextVisit.start_time)));
 
+  // Sending requires an approved PDF whose fingerprint still matches the
+  // current data (reportDelivery.js reviewStateFor).
+  const canSend = !!reviewState?.approved && !!reviewState?.hashMatches;
+  // Staff-authored notes written in the other script are shown exactly as
+  // recorded — flagged here so a translation can be added before sending.
+  const languageMismatchList = [
+    ...(findings || []).filter((f) => f.langMismatch),
+    ...(routineChecks || []).filter((r) => r.langMismatch),
+  ];
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4">
       <div className="bg-card rounded-2xl border border-border max-w-2xl w-full shadow-xl max-h-[94vh] flex flex-col">
@@ -98,6 +108,35 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
         </div>
 
         <div className="overflow-y-auto px-3 py-3 space-y-3">
+          {/* Approval state — sending is gated on an approved, still-current PDF */}
+          {reviewState && (
+            reviewState.approved && reviewState.hashMatches ? (
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <p className="text-xs text-emerald-700 dark:text-emerald-500">
+                  {t("Approved for sending")}
+                  {reviewState.reviewedBy ? ` · ${t("by {name}", { name: reviewState.reviewedBy })}` : ""}
+                  {reviewState.reviewedAt ? ` · ${athensMediumDateTime(reviewState.reviewedAt)}` : ""}
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-500">
+                  {reviewState.approved
+                    ? t("Data changed since approval — approve again before sending.")
+                    : t("Not yet approved — approve to generate the PDF and enable sending.")}
+                </p>
+              </div>
+            )
+          )}
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 dark:text-amber-500">{error}</p>
+            </div>
+          )}
+
           {/* Masthead — navy band like the PDF */}
           <div className="rounded-xl bg-report-navy text-report-cream px-4 py-3">
             <div className="flex items-center justify-between gap-3">
@@ -210,22 +249,21 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             )}
           </div>
 
-          {(issues.length > 0 || tasks.length > 0) && (
+          {/* Staff warnings — language mismatches / photos missing from the PDF.
+              Mirrors the PDF: the document itself carries the counts and the
+              localized follow-up wording, never internal title lists. */}
+          {(languageMismatchList.length > 0 || (photoWarn || 0) > 0) && (
             <div className="space-y-2">
-              {issues.length > 0 && (
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Maintenance Coordination ({issues.length})</p>
-                  <div className="text-sm space-y-0.5">
-                    {issues.map((iss, i) => <p key={i}>• {iss.title}{iss.priority ? ` [${iss.priority}]` : ""}{iss.status ? ` — ${iss.status}` : ""}</p>)}
-                  </div>
+              {languageMismatchList.length > 0 && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+                  <Languages className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-500">{t("Some recorded notes are written in the other language. They appear exactly as recorded — consider adding a translation before sending.")}</p>
                 </div>
               )}
-              {tasks.length > 0 && (
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Follow-up Tasks ({tasks.length})</p>
-                  <div className="text-sm space-y-0.5">
-                    {tasks.map((t, i) => <p key={i}>• {t.title}</p>)}
-                  </div>
+              {(photoWarn || 0) > 0 && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+                  <Camera className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-500">{t("{count} photo(s) could not be included in the PDF.", { count: photoWarn })}</p>
                 </div>
               )}
             </div>
@@ -290,8 +328,14 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
         </div>
 
         {/* Compact action footer (single row, safe-area aware) */}
-        <div className="px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-border flex flex-row gap-2">
+        <div className="px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-border flex flex-row flex-wrap gap-2">
           <Button variant="outline" onClick={onBackToEdit} className="rounded-xl flex-1 sm:flex-none h-9">{t("Back to Edit")}</Button>
+          {(!reviewState || !reviewState.approved || !reviewState.hashMatches) && (
+            <Button onClick={onApprove} disabled={approving} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
+              {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+              {approving ? t("Approving…") : t("Approve & Save PDF")}
+            </Button>
+          )}
           <Button onClick={onSend} disabled={!canSend || sending} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
             {sending ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {sending ? t("Sending…") : t("Send to Owner")}

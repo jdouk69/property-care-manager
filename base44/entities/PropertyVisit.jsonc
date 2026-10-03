@@ -144,7 +144,20 @@
       "default": "Draft"
     },
     "report_pdf_url": {
-      "type": "string"
+      "type": "string",
+      "description": "The approved report PDF. Private storage URI for reports approved after the secure-access change (accessed via short-lived signed URLs / email attachments); legacy records may still hold an old public URL."
+    },
+    "report_content_hash": {
+      "type": "string",
+      "description": "Fingerprint of the report data captured when the PDF was approved. A changed fingerprint invalidates the stored PDF \u2014 re-approval is required before sending."
+    },
+    "report_reviewed_at": {
+      "type": "string",
+      "description": "When the report was last approved (reviewed) by staff."
+    },
+    "report_reviewed_by": {
+      "type": "string",
+      "description": "Who approved the report for sending."
     },
     "report_sent_at": {
       "type": "string"
