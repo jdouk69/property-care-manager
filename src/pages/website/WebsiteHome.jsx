@@ -7,6 +7,7 @@ import WhoWeHelp from "@/components/website/WhoWeHelp";
 import TrustSection from "@/components/website/TrustSection";
 import PricingSection from "@/components/website/PricingSection";
 import HowItWorks from "@/components/website/HowItWorks";
+import SampleReportSection from "@/components/website/SampleReportSection";
 import RoleAndLimits from "@/components/website/RoleAndLimits";
 import ServiceArea from "@/components/website/ServiceArea";
 import FaqSection from "@/components/website/FaqSection";
@@ -60,6 +61,7 @@ export default function WebsiteHome() {
         <TrustSection />
         <PricingSection />
         <HowItWorks />
+        <SampleReportSection />
         <RoleAndLimits />
         <ServiceArea />
         <FaqSection />

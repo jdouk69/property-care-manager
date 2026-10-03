@@ -111,7 +111,10 @@ async function loadReportFonts() {
       FONT_FILES.map(async ([, , file, url]) => {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`font fetch ${res.status}`);
-        return await blobToDataUrl(await res.blob());
+        const dataUrl = await blobToDataUrl(await res.blob());
+        // jsPDF's VFS expects raw base64 — strip the data-URL prefix.
+        const idx = dataUrl.indexOf(";base64,");
+        return idx >= 0 ? dataUrl.slice(idx + 8) : dataUrl;
       })
     );
   } catch (e) {

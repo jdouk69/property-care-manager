@@ -31,6 +31,13 @@ export default function ServiceArea() {
             </span>
           ))}
         </div>
+        {travelNotes.length > 0 && (
+          <div className="mt-6 max-w-2xl space-y-2 rounded-xl border border-border bg-card p-4">
+            {travelNotes.map((p, i) => (
+              <p key={i} className="text-sm text-muted-foreground leading-relaxed">{p}</p>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

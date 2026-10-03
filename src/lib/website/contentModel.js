@@ -252,6 +252,11 @@ export const DEFAULT_CONTENT = {
       intro:
         "We cover the town of Chania and the surrounding areas of western Crete. If your property lies further afield, just ask — we review it during the assessment.",
       areas: ["Chania (town)", "Akrotiri", "Platanias", "Kolymvari", "Apokoronas", "Kissamos"],
+      travel_notes: [
+        "We serve Chania and surrounding areas of Western Crete. Travel within our core service area is included. Properties outside that area may have an additional travel charge, confirmed during the assessment and agreed in writing before service begins.",
+        "For recurring plans, your quote will show the total monthly cost, including any agreed travel charges.",
+        "Emergency attendance is subject to availability and prior agreement. We do not guarantee round-the-clock availability or a specific response time.",
+      ],
     },
     el: {
       kicker: "Περιοχή εξυπηρέτησης",
@@ -259,6 +264,11 @@ export const DEFAULT_CONTENT = {
       intro:
         "Καλύπτουμε την πόλη των Χανίων και τις γύρω περιοχές της Δυτικής Κρήτης. Αν το ακίνητό σας βρίσκεται πιο μακριά, ρωτήστε μας — το εξετάζουμε κατά την αξιολόγηση.",
       areas: ["Χανιά (πόλη)", "Ακρωτήρι", "Πλατανιάς", "Κολυμβάρι", "Αποκόρωνας", "Κίσσαμος"],
+      travel_notes: [
+        "Εξυπηρετούμε τα Χανιά και τις γύρω περιοχές της Δυτικής Κρήτης. Η μετακίνηση εντός του βασικού μας χώρου εξυπηρέτησης περιλαμβάνεται. Για ακίνητα εκτός της περιοχής μπορεί να ισχύει επιπλέον χρέωση μετακίνησης, που επιβεβαιώνεται κατά την αξιολόγηση και συμφωνείται γραπτώς πριν ξεκινήσει η υπηρεσία.",
+        "Για τα μηνιαία πακέτα, η προσφορά σας θα δείχνει το συνολικό μηνιαίο κόστος, συμπεριλαμβανομένων τυχόν συμφωνημένων χρεώσεων μετακίνησης.",
+        "Η επείγουσα προσέλευση εξαρτάται από διαθεσιμότητα και προηγούμενη συμφωνία. Δεν εγγυόμαστε συνεχή διαθεσιμότητα ή συγκεκριμένο χρόνο ανταπόκρισης.",
+      ],
     },
   },
   faqs: {
@@ -422,6 +432,12 @@ export const EDITOR_SCHEMA = {
       { key: "heading", label: "Heading", type: "text" },
       { key: "intro", label: "Intro paragraph", type: "textarea", rows: 3 },
       { key: "areas", label: "Area chips", type: "stringList" },
+      {
+        key: "travel_notes",
+        label: "Travel & emergency notes",
+        type: "stringList",
+        info: "Travel wording and emergency-availability limits shown beneath the area chips. No amounts or fees may be entered here — charges are only agreed per property, in writing.",
+      },
     ],
   },
   faqs: {
