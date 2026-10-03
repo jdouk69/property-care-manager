@@ -84,13 +84,13 @@ export const DEFAULT_CONTENT = {
         },
         seasonal_opening: {
           name: "Seasonal Opening",
-          desc: "Get your home ready after a period away. We air it, look for obvious visible problems, and carry out the simple opening steps you've agreed to in writing.",
+          desc: "Get your home ready after a period away. We air it, look for obvious visible problems, and carry out the simple opening steps you've agreed with us in advance.",
           included: "Includes up to 60 minutes on site.",
           extras: "Agreed extra time: €{hourly}/hour.",
         },
         seasonal_closing: {
           name: "Seasonal Closing",
-          desc: "Prepare your home for a period away. We carry out your agreed closing steps, check doors and shutters, and secure the property as instructed.",
+          desc: "Prepare your home for a period away. We carry out the closing steps you've agreed with us in advance, check doors and shutters, and secure the property as instructed.",
           included: "Includes up to 60 minutes on site.",
           extras: "Agreed extra time: €{hourly}/hour.",
         },
@@ -148,13 +148,13 @@ export const DEFAULT_CONTENT = {
         },
         seasonal_opening: {
           name: "Εποχιακό Άνοιγμα",
-          desc: "Ετοιμάζουμε το σπίτι σας μετά από περίοδο απουσίας. Το αερίζουμε, ελέγχουμε για εμφανή προβλήματα και εκτελούμε τα απλά βήματα ανοίγματος που έχετε συμφωνήσει μαζί μας γραπτώς.",
+          desc: "Ετοιμάζουμε το σπίτι σας μετά από περίοδο απουσίας. Το αερίζουμε, ελέγχουμε για εμφανή προβλήματα και εκτελούμε τα απλά βήματα ανοίγματος που έχετε συμφωνήσει μαζί μας εκ των προτέρων.",
           included: "Περιλαμβάνει έως 60 λεπτά επιτόπου.",
           extras: "Συμφωνημένος επιπλέον χρόνος: €{hourly}/ώρα.",
         },
         seasonal_closing: {
           name: "Εποχιακό Κλείσιμο",
-          desc: "Ετοιμάζουμε το σπίτι σας για περίοδο απουσίας. Εκτελούμε τα συμφωνημένα βήματα κλεισίματος, ελέγχουμε πόρτες και παντζούρια και ασφαλίζουμε το ακίνητο σύμφωνα με τις οδηγίες σας.",
+          desc: "Ετοιμάζουμε το σπίτι σας για περίοδο απουσίας. Εκτελούμε τα βήματα κλεισίματος που έχετε συμφωνήσει μαζί μας εκ των προτέρων, ελέγχουμε πόρτες και παντζούρια και ασφαλίζουμε το ακίνητο σύμφωνα με τις οδηγίες σας.",
           included: "Περιλαμβάνει έως 60 λεπτά επιτόπου.",
           extras: "Συμφωνημένος επιπλέον χρόνος: €{hourly}/ώρα.",
         },
