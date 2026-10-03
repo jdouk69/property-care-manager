@@ -1,11 +1,18 @@
 import React from "react";
 import { useSectionContent } from "@/components/website/WebsiteContentContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { Image } from "@/components/ui/image";
+
+// Illustrative image (not staff, not a customer property) fills the empty
+// third-column slot of the second card row — never rendered as a sixth step.
+const HOW_IT_WORKS_IMAGE = "https://media.base44.com/images/public/6a6261eafdd1874f2f1eb998/f86670cb6_7371FE6B-50D9-4633-BCAC-EBC6C123211E.png";
 
 // Copy comes from the website content model (published via the admin
 // editor), falling back to the built-in defaults when nothing is published.
 export default function HowItWorks() {
   const c = useSectionContent("how_it_works");
   const steps = Array.isArray(c.steps) ? c.steps : [];
+  const { lang } = useLanguage();
 
   return (
     <section id="how-it-works" className="scroll-mt-20 border-y border-border bg-secondary/40 py-10 sm:py-20">
@@ -27,6 +34,20 @@ export default function HowItWorks() {
               <p className="mt-3 text-sm leading-relaxed text-foreground/90">{s}</p>
             </li>
           ))}
+          {/* Decorative grid slot — not a step: no number, heading, caption or
+              button. Fills the row height without stretching the text cards;
+              ratio reserved on mobile to prevent layout shift. */}
+          <li aria-hidden="true" className="overflow-hidden rounded-2xl border border-border aspect-[4/3] sm:aspect-auto sm:h-full">
+            <Image
+              src={HOW_IT_WORKS_IMAGE}
+              alt={lang === "el"
+                ? "Εικονογράφηση φωτογράφισης εξωτερικών ρولών κατά τη διάρκεια επίσκεψης φροντίδας ακινήτου"
+                : "Illustration of someone photographing exterior shutters during a property-care visit"}
+              className="h-full w-full"
+              fittingType="fill"
+              loading="lazy"
+            />
+          </li>
         </ol>
       </div>
     </section>
