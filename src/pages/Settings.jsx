@@ -13,6 +13,7 @@ import { base44 } from "@/api/base44Client";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import NotificationsRemindersCard from "@/components/settings/NotificationsRemindersCard";
 import OwnerProfileCard from "@/components/settings/OwnerProfileCard";
+import PaymentDetailsCard from "@/components/settings/PaymentDetailsCard";
 
 const FUTURE_FEATURES = [
   "Client Portal", "Client Mobile App", "Online Payments", "Invoicing", "AI Inspection Assistant",
@@ -132,6 +133,9 @@ export default function Settings() {
             ))}
           </div>
         </div>
+
+        {/* Payment details — bank-issued IRIS QR + IBAN shown on customer invoices */}
+        <PaymentDetailsCard settings={settings} applyFields={applyFields} />
 
         {/* Owner profile — public landing page 'Meet your local contact' section */}
         <OwnerProfileCard settings={settings} applyFields={applyFields} />

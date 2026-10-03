@@ -100,6 +100,11 @@
       "items": {
         "type": "string"
       }
+    },
+    "payment_details_snapshot": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Payment details (bank-issued IRIS QR + bank transfer settings) frozen when the invoice was finalized, so already-issued documents keep the payment details they were issued with. Legacy issued invoices may have no snapshot \u2014 they keep their pre-IRIS look."
     }
   },
   "required": [

@@ -415,6 +415,24 @@ export const EL = {
   ...VISITS_EL,
   // Waves 10–12 (Maintenance Issue Detail, Property Detail, Client Hub,
   // Property Assistance, Search, Calendar, Reports queue, Billing, Invoices)
+  // ---- Wave: payment details (Settings) ----
+  "Payment Details": "Στοιχεία Πληρωμής",
+  "Bank payment details shown on customer payment documents. Applies to documents issued after you save — issued documents keep the details they were issued with.": "Τραπεζικά στοιχεία πληρωμής στα έγγραφα πληρωμής πελατών. Ισχύουν για έγγραφα που εκδίδονται μετά την αποθήκευση — τα ήδη εκδομένα έγγραφα κρατούν τα στοιχεία με τα οποία εκδόθηκαν.",
+  "IRIS QR Code (from your bank)": "Κωδικός QR IRIS (από την τράπεζά σας)",
+  "Upload the official IRIS QR image supplied by your bank — never a self-generated QR code.": "Ανεβάστε την επίσημη εικόνα QR IRIS που σας έδωσε η τράπεζά σας — ποτέ QR που δημιουργείτε μόνοι σας.",
+  "Upload QR image": "Μεταφόρτωση εικόνας QR",
+  "Replace image": "Αντικατάσταση εικόνας",
+  "Remove image": "Αφαίρεση εικόνας",
+  "Bank Name": "Τράπεζα",
+  "Beneficiary / Account Holder": "Δικαιούχος λογαριασμού",
+  "BIC / SWIFT (optional)": "BIC / SWIFT (προαιρετικό)",
+  "Show IRIS QR on unpaid documents": "Εμφάνιση QR IRIS σε απλήρωτα έγγραφα",
+  "The main payment option — with the amount due and payment reference.": "Η κύρια επιλογή πληρωμής — με το ποσό προς πληρωμή και την αναφορά πληρωμής.",
+  "Show IBAN transfer details": "Εμφάνιση στοιχείων IBAN",
+  "Alternative for customers who cannot use IRIS.": "Εναλλακτική για πελάτες που δεν μπορούν να χρησιμοποιήσουν το IRIS.",
+  "Upload failed — please try again.": "Η μεταφόρτωση απέτυχε — δοκιμάστε ξανά.",
+  "The PDF fonts could not be downloaded. Please try again.": "Δεν ήταν δυνατή η λήψη των γραμματοσειρών του PDF. Δοκιμάστε ξανά.",
+
   // — see dictionaryOperations.js
   ...OPS_EL,
 

@@ -11,6 +11,19 @@ import { generateInvoicePdf } from "@/lib/invoicePdf";
 import { presentInvoiceLineItems } from "@/lib/invoicePresentation";
 import { athensLongDate } from "@/lib/timezone";
 import { eur } from "@/lib/billing";
+import { PAYMENT_SNAPSHOT_FIELDS, isUnpaidInvoice, paymentDetailsFor, resolveQrSrc } from "@/lib/paymentQr";
+
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result);
+      const idx = s.indexOf(";base64,");
+      resolve(idx >= 0 ? s.slice(idx + 8) : s);
+    };
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
 
 // Locked once finalized (or no longer a Draft) — the UI edit-lock predicate.
 export const invoiceIsLocked = (inv) =>
@@ -38,6 +51,20 @@ export async function finalizeInvoice(invoice) {
   if (!invoice || invoice.status !== "Draft" || invoice.finalized_at) return invoice;
   const { base44 } = await import("@/api/base44Client");
   const patch = { finalized_at: new Date().toISOString() };
+  // Freeze the payment details (bank-issued IRIS QR + bank transfer settings)
+  // so the issued document keeps exactly what it was issued with, even if
+  // Settings change later. Best-effort: finalization must not fail if the
+  // settings record cannot be read — the document then falls back to current
+  // settings at render time.
+  try {
+    const bs = await base44.entities.BusinessSettings.list("-created_date", 10);
+    const b = (bs || [])[0] || {};
+    const snap = {};
+    PAYMENT_SNAPSHOT_FIELDS.forEach((f) => {
+      if (b[f] !== undefined && b[f] !== null) snap[f] = b[f];
+    });
+    patch.payment_details_snapshot = snap;
+  } catch (e) { /* snapshot unavailable — see note above */ }
   if (Array.isArray(invoice.charge_ids) && invoice.charge_ids.length) {
     const ctx = await loadPresentationContext();
     patch.line_items = presentInvoiceLineItems(invoice, ctx);
@@ -58,6 +85,20 @@ export function buildInvoiceEmail({ invoice, client = {}, business = {}, pdfUrl 
   lines.push(`Total due: ${eur(invoice.total ?? 0)}`);
   if (invoice.due_date) lines.push(`Due date: ${athensLongDate(invoice.due_date)}`);
   lines.push("");
+  // Unpaid documents carry the payment options (issued-and-paid never do, and
+  // a legacy issued document keeps its pre-IRIS look via paymentDetailsFor).
+  if (isUnpaidInvoice(invoice)) {
+    const pay = paymentDetailsFor(invoice, business);
+    if (pay.show_iris_qr && pay.iris_qr_image) {
+      lines.push("Pay by IRIS — scan the QR code on the invoice with your banking app.");
+      lines.push("Σκανάρετε τον κωδικό QR στο τιμολόγιο με την τραπεζική σας εφαρμογή.");
+    }
+    if (pay.show_iban_details !== false && pay.bank_iban) {
+      lines.push(`Or by bank transfer — IBAN: ${pay.bank_iban}` + (pay.bank_beneficiary ? ` (${pay.bank_beneficiary})` : ""));
+    }
+    lines.push(`Payment reference: ${number}`);
+    lines.push("");
+  }
   if (pdfUrl) {
     lines.push("Your invoice (PDF):");
     lines.push(pdfUrl);
@@ -91,11 +132,31 @@ export async function sendInvoiceEmail({ invoice, client = {}, business = {}, pr
     return { ok: false, error: `Could not generate the invoice PDF: ${e?.message || e}` };
   }
   const { subject, body } = buildInvoiceEmail({ invoice, client, business, pdfUrl });
+  // Attach the bank-issued IRIS QR image (when enabled) so the email itself
+  // carries the main payment option, not only the linked PDF. Best-effort: a
+  // failed QR fetch sends the email without the image rather than failing the
+  // whole send.
+  let attachments;
+  try {
+    const pay = paymentDetailsFor(invoice, business);
+    if (isUnpaidInvoice(invoice) && pay.show_iris_qr && pay.iris_qr_image) {
+      const res = await fetch(await resolveQrSrc(pay.iris_qr_image), { mode: "cors" });
+      if (res.ok) {
+        const blob = await res.blob();
+        const b64 = await blobToBase64(blob);
+        if (blob.type && b64) {
+          const ext = blob.type.includes("jpeg") ? "jpg" : blob.type.includes("webp") ? "webp" : "png";
+          attachments = [{ filename: `IRIS-QR-${invoice.invoice_number || "payment"}.${ext}`, content: b64 }];
+        }
+      }
+    }
+  } catch (e) { attachments = undefined; }
   try {
     await base44.integrations.Core.SendEmail({
       to,
       subject,
       body,
+      attachments,
       from_name: String(business.business_name || "Property Care").trim(),
     });
     return { ok: true, to, pdfUrl };

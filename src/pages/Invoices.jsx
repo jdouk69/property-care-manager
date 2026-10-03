@@ -66,7 +66,13 @@ export default function Invoices() {
         client: clients.find((c) => c.id === item.client_id) || { name: lookups?.Client?.[item.client_id] || "" },
         property: { name: lookups?.Property?.[item.property_id] || "" },
       });
-    } catch (e) {}
+    } catch (e) {
+      // Actionable retry (app font rule): only surface the actionable font
+      // failure — other PDF errors keep the existing silent behavior.
+      if (String(e?.message || e).includes("font_load_failed")) {
+        alert(t("The PDF fonts could not be downloaded. Please try again."));
+      }
+    }
     setDownloadingId(null);
   };
 

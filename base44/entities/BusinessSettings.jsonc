@@ -60,6 +60,20 @@
       "type": "string",
       "description": "BIC / SWIFT code (optional). Customer-facing payment instruction."
     },
+    "iris_qr_image": {
+      "type": "string",
+      "description": "Official professional IRIS payment QR image supplied by the business's bank (private storage URI \u2014 no public URL). Shown on unpaid customer payment documents when display is enabled. Never a self-generated QR from AFM/phone/IBAN."
+    },
+    "show_iris_qr": {
+      "type": "boolean",
+      "default": false,
+      "description": "Display the bank-issued IRIS QR code as the main payment option on unpaid customer payment documents."
+    },
+    "show_iban_details": {
+      "type": "boolean",
+      "default": true,
+      "description": "Display the IBAN / bank transfer details on customer payment documents as an alternative payment method."
+    },
     "payment_instructions": {
       "type": "string",
       "description": "Optional payment-instructions note shown beneath the invoice payment information (e.g. include the invoice number with your payment)."
