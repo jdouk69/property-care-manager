@@ -59,6 +59,7 @@ export async function sendOwnerReportEmail(opts) {
         : `Please find the visit report for ${prop} (${dateStr}) below.`
   );
   lines.push("");
+  lines.push(`${el ? "Ημερομηνία επίσκεψης" : "Visit date"}: ${dateStr}`);
   lines.push(`${el ? "Τύπος επίσκεψης" : "Visit type"}: ${visitTypeLabelFor(visit?.visit_type, el ? "el" : "en") || "—"}`);
   if (result) lines.push(`${el ? "Συνολικό αποτέλεσμα" : "Overall result"}: ${result}`);
   if (visit?.summary) {
@@ -76,7 +77,7 @@ export async function sendOwnerReportEmail(opts) {
     await base44.integrations.Core.SendEmail({
       to,
       subject,
-      body,
+      text: body,
       from_name: business.business_name || "Property Care Crete",
       attachments: pdfAttachment ? [pdfAttachment] : undefined,
     });
