@@ -10,6 +10,8 @@
 //   the same way (unpaid Drafts — nothing is ever lost).
 // - Invoice numbers reuse the existing shared numbering (INV-<year>-NNN) with
 //   the same post-write collision verification as createInvoice.
+// - repairMissingDraftInvoices: the daily job's repair pass — anniversary
+//   charges whose linked Draft invoice is missing get one created (idempotent).
 //
 // Draft invoices are NEVER emailed and never finalize themselves — Finalize
 // and Send remain staff actions in the Invoices page.
@@ -134,4 +136,62 @@ export async function ensureDraftInvoiceForCharge(base44, charge, agreement) {
     return { invoice: keep, created: keep.id === (created && created.id) };
   }
   return { invoice: created, created: true };
+}
+
+// A source key created by the anniversary workflow: agreement:<id>:<YYYY-MM-DD
+// period start>. Legacy calendar charges use agreement:<id>:<YYYY-MM> (no day),
+// and visit/expense charges use other prefixes — the full-date suffix is what
+// keeps them permanently excluded from automatic (re-)invoicing.
+const ANNIVERSARY_SOURCE_KEY_RE = /^agreement:[^:]+:\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Repair pass for the daily recurring job: create the missing linked Draft
+ * invoice for anniversary-workflow charges that have none (e.g. invoice
+ * creation failed in a previous run). Idempotent + safe:
+ * - Only charges whose source_key matches the anniversary format are repaired.
+ *   Legacy calendar charges (agreement:<id>:<YYYY-MM>), visit and expense
+ *   charges are NEVER auto-invoiced.
+ * - Immediately before creating, invoice links are re-checked: ANY invoice
+ *   (any status, Cancelled/finalized included) already containing the charge
+ *   blocks creation — never a second invoice for the same charge, and an
+ *   existing invoice is never replaced or altered.
+ * @param {Array} charges  ALL BillingCharge records (any status)
+ * @param {{agreementIds?: Array<string>|null}} opts  when agreementIds is set
+ *   (scoped verification runs), only charges of those agreements are repaired.
+ * @returns {{ repaired: Array<{charge_id, property_id, invoice_number}>, failed: Array<{charge_id, property_id, error}> }}
+ */
+export async function repairMissingDraftInvoices(base44, charges, { agreementIds = null } = {}) {
+  const repaired = [];
+  const failed = [];
+  let invoices = null;
+  for (const charge of charges || []) {
+    const sourceKey = String((charge && charge.source_key) || '');
+    if (!ANNIVERSARY_SOURCE_KEY_RE.test(sourceKey)) continue; // legacy / non-recurring charges excluded
+    if (agreementIds) {
+      const keyAgreementId = sourceKey.split(':')[1];
+      if (!agreementIds.includes(keyAgreementId)) continue;
+    }
+    try {
+      if (!invoices) invoices = await listInvoices(base44);
+      const linked = (invoices || []).filter(
+        (i) => Array.isArray(i.charge_ids) && i.charge_ids.includes(charge.id),
+      );
+      if (linked.length) continue; // already invoiced — leave it untouched
+      const r = await ensureDraftInvoiceForCharge(base44, charge, null);
+      if (r.created) {
+        repaired.push({
+          charge_id: charge.id,
+          property_id: charge.property_id || '',
+          invoice_number: (r.invoice && r.invoice.invoice_number) || '',
+        });
+      }
+    } catch (e) {
+      failed.push({
+        charge_id: charge.id,
+        property_id: (charge && charge.property_id) || '',
+        error: String((e && e.message) || e),
+      });
+    }
+  }
+  return { repaired, failed };
 }

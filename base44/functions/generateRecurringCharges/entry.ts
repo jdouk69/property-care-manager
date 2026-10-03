@@ -1,7 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { buildAnniversaryCharges } from '../../shared/recurringCharges.js';
 import { athensToday } from '../../shared/timezone.js';
-import { ensureChargeForPeriod, ensureDraftInvoiceForCharge } from '../../shared/anniversaryBilling.js';
+import {
+  ensureChargeForPeriod,
+  ensureDraftInvoiceForCharge,
+  repairMissingDraftInvoices,
+} from '../../shared/anniversaryBilling.js';
 
 // Anniversary recurring billing (approved 2026-10, replacing the calendar-month
 // model). Each Active + Signed MONTHLY agreement bills on its SERVICE-START
@@ -95,6 +99,7 @@ export default async function(req) {
     let createdCharges = 0;
     let createdInvoices = 0;
     const createdSummary = [];
+    const invoiceRetries = []; // charges from this run whose invoice creation failed
     for (const d of desired) {
       try {
         const { charge, created } = await ensureChargeForPeriod(base44, d.charge);
@@ -106,10 +111,9 @@ export default async function(req) {
           if (r.created) createdInvoices++;
           invoiceNumber = (r.invoice && r.invoice.invoice_number) || '';
         } catch (e) {
-          // Charge stands; the draft invoice is missing — visible in the ledger
-          // and recoverable by re-running (the charge exists → invoice is
-          // retried only if absent... the ensure helpers are per-charge, so a
-          // re-run skips the charge. Staff can create the invoice manually.)
+          // Charge stands; its draft invoice is missing — retried by the
+          // repair pass below in this same run, and by every future daily run.
+          invoiceRetries.push(charge);
         }
         createdSummary.push({
           charge_id: charge.id,
@@ -121,6 +125,47 @@ export default async function(req) {
       } catch (e) {
         // continue creating the rest; log the failure below
       }
+    }
+
+    // Repair pass: retry missing Draft invoices for anniversary-workflow
+    // charges that have none — including charges whose invoice creation failed
+    // above (same-run retry) and in previous runs. Idempotent: a charge that
+    // already has ANY invoice (finalized or not) is never touched, a second
+    // invoice is never created for the same charge, and legacy calendar
+    // charges (agreement:<id>:<YYYY-MM>) are never auto-invoiced.
+    let repairedInvoices = 0;
+    let repairFailures = [];
+    try {
+      const repair = await repairMissingDraftInvoices(
+        base44,
+        (existingCharges || []).concat(invoiceRetries),
+        { agreementIds: scopeIds },
+      );
+      repairedInvoices = repair.repaired.length;
+      repairFailures = repair.failed;
+    } catch (e) {}
+
+    // Repair failures: logged so staff can see and resolve them. Deduplicated
+    // by the exact log record, so a charge that keeps failing logs once per
+    // distinct error instead of spamming the log daily.
+    for (const f of repairFailures) {
+      try {
+        const record = `Charge ${f.charge_id}: linked Draft invoice still missing — ${f.error}`;
+        const prior = await base44.asServiceRole.entities.AutomationLog.filter(
+          { automation_type: 'Anniversary billing — invoice repair failed', record_created: record },
+          '-created_date', 1,
+        );
+        if ((prior || []).length === 0) {
+          await base44.asServiceRole.entities.AutomationLog.create({
+            date_time: new Date().toISOString(),
+            automation_type: 'Anniversary billing — invoice repair failed',
+            record_created: record,
+            related_property_id: f.property_id || '',
+            status: 'failure',
+            error_details: f.error,
+          });
+        }
+      } catch (e) {}
     }
 
     // Staff-review flags: recorded ONCE per agreement (deduplicated by an
@@ -147,12 +192,15 @@ export default async function(req) {
     }
 
     if (createdCharges > 0) await log(base44, 'Anniversary recurring charges: generated', `${createdCharges} billing charge(s) + ${createdInvoices} draft invoice(s)`, 'success');
+    if (repairedInvoices > 0) await log(base44, 'Anniversary billing — missing draft invoices repaired', `${repairedInvoices} draft invoice(s) created for existing anniversary charge(s)`, 'success');
     return Response.json({
       ok: true,
       asOf: todayStr,
       scanned: scanned.length,
       created: createdCharges,
       invoices: createdInvoices,
+      invoices_repaired: repairedInvoices,
+      invoice_repair_failures: repairFailures.length,
       charges: createdSummary,
       flagged,
     });
