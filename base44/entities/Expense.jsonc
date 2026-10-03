@@ -8,6 +8,10 @@
     "vendor": {
       "type": "string"
     },
+    "category": {
+      "type": "string",
+      "description": "Optional expense category (e.g. Materials, Contractor, Utilities). Shown in the property activity report; empty = not recorded."
+    },
     "date": {
       "type": "string",
       "format": "date"

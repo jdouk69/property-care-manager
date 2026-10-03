@@ -85,7 +85,7 @@ const asciiClean = (s) => {
 };
 // Unicode sanitizer for the embedded Greek-capable fonts: only control
 // characters are removed — Greek text, €, ·, em dashes etc. all render.
-const uniClean = (s) => {
+export const uniClean = (s) => {
   if (s == null) return "";
   return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
 };
@@ -105,7 +105,7 @@ const FONT_FILES = [
   ["PCCSerif", "bold", "DejaVuSerif-Bold.ttf", "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSerif-Bold.ttf"],
 ];
 let fontCache = null; // array of base64 strings, or false after a failed load
-async function loadReportFonts() {
+export async function loadReportFonts() {
   if (fontCache !== null) return fontCache;
   try {
     fontCache = await Promise.all(
@@ -128,7 +128,7 @@ async function loadReportFonts() {
   }
   return fontCache;
 }
-function installFonts(doc, fonts) {
+export function installFonts(doc, fonts) {
   FONT_FILES.forEach(([family, style, file], i) => {
     doc.addFileToVFS(file, fonts[i]);
     doc.addFont(file, family, style);
@@ -441,9 +441,9 @@ export function buildOwnerReportModel(visit, ctx = {}) {
 // and cream; serif display headings; simple observation table; captioned photo
 // grid; navy header band and footer band. Multiple pages — content flows, it
 // is never shrunk to fit one page.
-const NAVY = [26, 38, 46];      // #1A262E
-const GOLD = [166, 137, 83];    // #A68953
-const CREAM = [246, 241, 231];  // #F6F1E7
+export const NAVY = [26, 38, 46];      // #1A262E
+export const GOLD = [166, 137, 83];    // #A68953
+export const CREAM = [246, 241, 231];  // #F6F1E7
 const CREAM_SOFT = [236, 229, 213];
 const TONE = {
   urgent: [239, 68, 68],
