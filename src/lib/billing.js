@@ -5,28 +5,44 @@
 import { athensToday } from "@/lib/timezone";
 
 export const CHARGE_TYPES = ["Service", "Visit", "Reimbursement", "Other"];
-export const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Wise", "Revolut", "Other"];
+export const PAYMENT_METHODS = ["Bank Transfer", "IRIS", "Cash", "Wise", "Revolut", "Other"];
 export const BILLING_STATUSES = ["Due", "Paid", "Waived"];
 
-// Deriving "Overdue" never changes the stored status.
+// Display status: "Overdue" and "Partially Paid" are NEVER stored — derived at
+// display time. Partial payments (payments audit-trail entries) drive
+// "Partially Paid"; the stored status only flips to Paid when fully paid.
 export function displayStatus(charge, todayStr = athensToday()) {
-  if (charge?.status === "Due" && charge.due_date && String(charge.due_date).slice(0, 10) < todayStr) {
+  const st = charge?.status;
+  if (st === "Waived") return "Waived";
+  const entries = (Array.isArray(charge?.payments) ? charge.payments : []).filter((e) => !e?.voided);
+  if (entries.length > 0) {
+    const base = Number(charge.amount || 0);
+    const paid = entries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    if (base - paid <= 0.005) return "Paid";
+    return "Partially Paid";
+  }
+  if (st === "Due" && charge.due_date && String(charge.due_date).slice(0, 10) < todayStr) {
     return "Overdue";
   }
-  return charge?.status || "Due";
+  return st || "Due";
 }
 
 export const isOverdue = (charge, todayStr = athensToday()) =>
-  charge?.status === "Due" && !!charge.due_date && String(charge.due_date).slice(0, 10) < todayStr;
+  displayStatus(charge, todayStr) === "Overdue";
 
 export function eur(n) {
   return `€${Number(n || 0).toFixed(2)}`;
 }
 
-// Outstanding = all stored "Due" charges (includes those displayed as Overdue).
+// Outstanding = the open BALANCE of all stored "Due" charges (includes those
+// displayed as Overdue or Partially Paid) — partial payments reduce it.
 export function outstandingTotal(charges) {
   return (charges || []).filter((c) => c.status === "Due" && !c.archived)
-    .reduce((s, c) => s + (c.amount || 0), 0);
+    .reduce((s, c) => {
+      const entries = (Array.isArray(c.payments) ? c.payments : []).filter((e) => !e?.voided);
+      const paid = entries.reduce((x, e) => x + (Number(e.amount) || 0), 0);
+      return s + Math.max(0, (c.amount || 0) - paid);
+    }, 0);
 }
 
 export function overdueTotal(charges, todayStr = athensToday()) {
@@ -44,6 +60,7 @@ export function paidThisMonthTotal(charges, todayStr = athensToday()) {
 const STATUS_BADGE_TONES = {
   Due: "bg-sky-500/10 text-sky-600 border-sky-500/20",
   Overdue: "bg-rose-500/10 text-rose-600 border-rose-500/20",
+  "Partially Paid": "bg-amber-500/10 text-amber-600 border-amber-500/20",
   Paid: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   Waived: "bg-muted text-muted-foreground border-border",
 };

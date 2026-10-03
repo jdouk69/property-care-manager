@@ -58,6 +58,7 @@
       "type": "string",
       "enum": [
         "Bank Transfer",
+        "IRIS",
         "Cash",
         "Wise",
         "Revolut",
@@ -66,6 +67,60 @@
     },
     "payment_reference": {
       "type": "string"
+    },
+    "payments": {
+      "type": "array",
+      "description": "Audit-trail of manually confirmed payments (NEVER inferred from a QR scan, screenshot or invoice send). Each entry: amount, date, method, optional bank reference, recorded_by/recorded_at. Corrections VOID an entry (voided + voided_at/voided_by/void_reason kept visible) \u2014 entries are never deleted. Legacy records with status Paid and no entries are adopted as a legacy entry on first correction. Partially paid = balance outstanding; stored status only becomes Paid when fully paid.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "Bank Transfer",
+              "IRIS",
+              "Cash",
+              "Wise",
+              "Revolut",
+              "Other"
+            ]
+          },
+          "reference": {
+            "type": "string"
+          },
+          "recorded_by": {
+            "type": "string"
+          },
+          "recorded_at": {
+            "type": "string"
+          },
+          "voided": {
+            "type": "boolean",
+            "default": false
+          },
+          "voided_at": {
+            "type": "string"
+          },
+          "voided_by": {
+            "type": "string"
+          },
+          "void_reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "date",
+          "method"
+        ]
+      }
     },
     "notes": {
       "type": "string"

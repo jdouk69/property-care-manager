@@ -3,7 +3,7 @@ import { Receipt, FileDown, Loader2, CheckCircle2, Lock, Send } from "lucide-rea
 import { base44 } from "@/api/base44Client";
 import AppLayout from "@/components/layout/AppLayout";
 import ResourceListPage from "@/components/resource/ResourceListPage";
-import MarkInvoicePaidDialog from "@/components/invoices/MarkInvoicePaidDialog";
+import RecordPaymentDialog from "@/components/billing/RecordPaymentDialog";
 import FinalizeInvoiceDialog from "@/components/invoices/FinalizeInvoiceDialog";
 import SendInvoiceDialog from "@/components/invoices/SendInvoiceDialog";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
@@ -152,10 +152,13 @@ export default function Invoices() {
           );
         }}
       />
-      <MarkInvoicePaidDialog
-        invoice={paidDialog}
-        onClose={() => setPaidDialog(null)}
-        onPaid={() => setReloadTick((x) => x + 1)}
+      <RecordPaymentDialog
+        itemType="Invoice"
+        item={paidDialog}
+        clientName={paidDialog ? (clients.find((c) => c.id === paidDialog.client_id)?.name || "") : ""}
+        open={!!paidDialog}
+        onOpenChange={(o) => { if (!o) setPaidDialog(null); }}
+        onSaved={() => { setPaidDialog(null); setReloadTick((x) => x + 1); }}
       />
       <FinalizeInvoiceDialog
         invoice={finalizeDialog}

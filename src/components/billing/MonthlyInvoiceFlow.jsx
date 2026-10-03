@@ -9,6 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { chargeMonthKey, eur } from "@/lib/billing";
+import { paidTotalOf, PAYMENT_EPS } from "@/lib/payments";
 import {
   buildInvoiceDraft, computeVatTotals, resolveVatRate, round2,
   findInvoiceContainingCharge, findInvoiceForPeriod,
@@ -95,6 +96,9 @@ export default function MonthlyInvoiceFlow({ open, onOpenChange }) {
     for (const ch of charges) {
       if (!ch || ch.archived) continue;
       if (ch.status !== "Due") continue;
+      // Partially paid charges are never invoiced — the invoice would
+      // double-charge the part the customer already paid.
+      if (paidTotalOf(ch) > PAYMENT_EPS) continue;
       if (ch.client_id !== clientId) continue;
       if (propertySel !== "all" && ch.property_id !== propertySel) continue;
       if (chargeMonthKey(ch) !== month) continue;
@@ -259,7 +263,7 @@ export default function MonthlyInvoiceFlow({ open, onOpenChange }) {
               )}
 
               {!clientId && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> {t("Paid, Waived and already-invoiced charges are never included.")}</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> {t("Paid, partially paid, waived and already-invoiced charges are never included.")}</p>
               )}
             </div>
           )}

@@ -1,25 +1,37 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Euro, FilePlus2, AlertTriangle } from "lucide-react";
+import AppLayout from "@/components/layout/AppLayout";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 import ResourceListPage from "@/components/resource/ResourceListPage";
 import BillingChargeCard from "@/components/billing/BillingChargeCard";
 import BillingFilterBar from "@/components/billing/BillingFilterBar";
-import MarkPaidDialog from "@/components/billing/MarkPaidDialog";
+import InvoiceLedgerSection from "@/components/billing/InvoiceLedgerSection";
+import RecordPaymentDialog from "@/components/billing/RecordPaymentDialog";
 import MonthlyInvoiceFlow from "@/components/billing/MonthlyInvoiceFlow";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensToday, athensMediumDate } from "@/lib/timezone";
-import { CHARGE_TYPES, displayStatus } from "@/lib/billing";
+import { CHARGE_TYPES, displayStatus, eur } from "@/lib/billing";
+import { paidTotalOf, balanceOf, PAYMENT_EPS } from "@/lib/payments";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
+// Admin Billing page: customer charges AND invoices in one view —
+// customer, payment reference (the invoice number), date, amount, balance and
+// status per item. Opening an item records or corrects payments through the
+// confirmed payment dialog (partial payments supported). The Payment Details
+// settings, invoice snapshots, PDF/email behavior and the distinction from
+// official Greek tax documents are untouched.
 export default function Billing() {
   const { t, lang } = useLanguage();
+  const { toast } = useToast();
   const [properties, setProperties] = useState([]);
   const [clients, setClients] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [statusFilter, setStatusFilter] = useState("All");
   const [clientFilter, setClientFilter] = useState("all");
   const [propertyFilter, setPropertyFilter] = useState("all");
-  const [markPaidCharge, setMarkPaidCharge] = useState(null);
+  const [payItem, setPayItem] = useState(null); // { itemType: "BillingCharge"|"Invoice", item }
   const [reloadSignal, setReloadSignal] = useState(0);
   const [invoiceFlowOpen, setInvoiceFlowOpen] = useState(false);
   // Lookup data for the Add Charge form's linked-visit duplicate warning
@@ -27,14 +39,29 @@ export default function Billing() {
   const [charges, setCharges] = useState([]);
   const [visits, setVisits] = useState([]);
 
+  const refreshInvoices = () => {
+    base44.entities.Invoice.list("-created_date", 500).then((l) => setInvoices(l || [])).catch(() => {});
+  };
+
   useEffect(() => {
     base44.entities.Property.list("-created_date", 500).then((l) => setProperties(l || [])).catch(() => {});
     base44.entities.Client.list("-created_date", 500).then((l) => setClients(l || [])).catch(() => {});
     base44.entities.BillingCharge.list("-created_date", 500).then((l) => setCharges((l || []).filter((c) => !c.archived))).catch(() => {});
     base44.entities.PropertyVisit.list("-start_time", 500).then((l) => setVisits(l || [])).catch(() => {});
+    refreshInvoices();
   }, []);
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || "Property";
+
+  // Charge → invoice number: the invoice number IS the customer's unique
+  // payment reference for anything on an invoice.
+  const chargeInvoiceRef = useMemo(() => {
+    const m = new Map();
+    for (const inv of invoices) {
+      for (const cid of inv.charge_ids || []) m.set(cid, inv.invoice_number);
+    }
+    return m;
+  }, [invoices]);
 
   const filterFn = (it) =>
     (statusFilter === "All" || displayStatus(it) === statusFilter) &&
@@ -42,11 +69,23 @@ export default function Billing() {
     (propertyFilter === "all" || it.property_id === propertyFilter);
 
   const waive = async (charge) => {
+    if (paidTotalOf(charge) > PAYMENT_EPS) {
+      toast({
+        title: t("Void the recorded payments before waiving this charge."),
+        variant: "destructive",
+      });
+      return;
+    }
     if (!confirm(t("Mark this charge as Waived? It stays in history and no payment is expected."))) return;
     try {
       await base44.entities.BillingCharge.update(charge.id, { status: "Waived" });
       setReloadSignal((x) => x + 1);
     } catch (e) {}
+  };
+
+  const onPaymentSaved = () => {
+    refreshInvoices();
+    setReloadSignal((x) => x + 1);
   };
 
   const fields = useMemo(() => [
@@ -136,6 +175,8 @@ export default function Billing() {
     { key: "property_id" },
     { key: "charge_type", render: (it) => (it.charge_type ? t(it.charge_type) : "—"), exportValue: (it) => it.charge_type || "—" },
     { key: "amount" },
+    { key: "balance", label: "Balance (€)", render: (it) => eur(Math.max(0, balanceOf(it))), exportValue: (it) => Math.max(0, balanceOf(it)).toFixed(2) },
+    { key: "reference", label: "Payment reference", render: (it) => chargeInvoiceRef.get(it.id) || it.payment_reference || "—", exportValue: (it) => chargeInvoiceRef.get(it.id) || it.payment_reference || "—" },
     { key: "billing_date", render: (it) => (it.billing_date ? athensMediumDate(it.billing_date, lang) : "—"), exportValue: (it) => it.billing_date || "—" },
     { key: "due_date", render: (it) => (it.due_date ? athensMediumDate(it.due_date, lang) : "—"), exportValue: (it) => it.due_date || "—" },
     { key: "status", badge: true, enumContext: "charge" },
@@ -144,11 +185,11 @@ export default function Billing() {
   ];
 
   return (
-    <>
+    <AppLayout>
       <ResourceListPage
         entityName="BillingCharge"
         title="Billing"
-        subtitle="Track what clients owe — charges, dues, and payments"
+        subtitle="Customer charges, invoices, payments and balances"
         icon={Euro}
         addItemLabel="Add Charge"
         fields={fields}
@@ -173,6 +214,11 @@ export default function Billing() {
             >
               <FilePlus2 className="w-4 h-4" /> {t("Create Monthly Invoice")}
             </button>
+            <InvoiceLedgerSection
+              invoices={invoices}
+              clients={clients}
+              onOpen={(inv) => setPayItem({ itemType: "Invoice", item: inv })}
+            />
             <BillingFilterBar
               items={items}
               statusFilter={statusFilter} onStatusFilter={setStatusFilter}
@@ -186,25 +232,25 @@ export default function Billing() {
             charge={charge}
             clientName={lookups.Client?.[charge.client_id]}
             propertyName={propName(charge.property_id)}
+            invoiceNumber={chargeInvoiceRef.get(charge.id)}
             onOpen={open}
-            onMarkPaid={() => setMarkPaidCharge(charge)}
+            onMarkPaid={() => setPayItem({ itemType: "BillingCharge", item: charge })}
             onWaive={() => waive(charge)}
           />
         )}
       />
-      <MarkPaidDialog
-        charge={markPaidCharge}
-        open={!!markPaidCharge}
-        onOpenChange={(o) => { if (!o) setMarkPaidCharge(null); }}
-        onSaved={() => {
-          setMarkPaidCharge(null);
-          setReloadSignal((x) => x + 1);
-        }}
+      <RecordPaymentDialog
+        itemType={payItem?.itemType || "BillingCharge"}
+        item={payItem?.item || null}
+        clientName={payItem ? (clients.find((c) => c.id === payItem.item.client_id)?.name || "") : ""}
+        open={!!payItem}
+        onOpenChange={(o) => { if (!o) setPayItem(null); }}
+        onSaved={onPaymentSaved}
       />
       <MonthlyInvoiceFlow
         open={invoiceFlowOpen}
         onOpenChange={setInvoiceFlowOpen}
       />
-    </>
+    </AppLayout>
   );
 }

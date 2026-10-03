@@ -73,7 +73,17 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
         status: "Draft",
         notes: notes || "",
       };
-      const created = await base44.entities.Invoice.create(record);
+      // Concurrency-safe creation: the invoice number is the customer's single
+      // permanent payment reference — the server verifies it is unique after
+      // the write and auto-adjusts on a collision.
+      const res = await base44.functions.invoke("createInvoice", { record });
+      const created = res.data?.record;
+      if (res.data?.adjusted && created?.invoice_number) {
+        toast({
+          title: t("Invoice number adjusted to {number}", { number: created.invoice_number }),
+          description: t("Another invoice already used the requested number."),
+        });
+      }
       setSaved(created);
       onSaved?.(created);
       toast({ title: t("Invoice {number} created", { number: created.invoice_number }), description: t("Saved as Draft — nothing was sent.") });

@@ -11,6 +11,7 @@ import {
 import {
   buildInvoiceDraft, findInvoiceForPeriod, findInvoiceContainingCharge,
 } from "@/lib/invoiceGeneration";
+import { paidTotalOf, PAYMENT_EPS } from "@/lib/payments";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { localizedMonthLabel, localizedShortDate } from "@/lib/i18n/billingDisplay";
 
@@ -54,7 +55,13 @@ export default function ClientBillingCard({ charges, invoices = [], client = nul
   const hiddenGroups = groups.length - shownGroups.length;
 
   const onGenerate = (group) => {
-    const propertyId = group.items[0]?.property_id;
+    // Partially paid charges are never invoiced (would double-charge the paid part).
+    const billable = group.items.filter((c) => paidTotalOf(c) <= PAYMENT_EPS);
+    if (billable.length === 0) {
+      toast({ title: t("No uninvoiced charges are due for this period.") });
+      return;
+    }
+    const propertyId = billable[0]?.property_id;
     const existing = findInvoiceForPeriod(invoices, propertyId, group.key);
     if (existing) {
       toast({
@@ -63,7 +70,7 @@ export default function ClientBillingCard({ charges, invoices = [], client = nul
       });
       return;
     }
-    const conflict = group.items.map((c) => findInvoiceContainingCharge(invoices, c.id)).find(Boolean);
+    const conflict = billable.map((c) => findInvoiceContainingCharge(invoices, c.id)).find(Boolean);
     if (conflict) {
       toast({
         title: t("These charges are already invoiced"),
@@ -71,7 +78,7 @@ export default function ClientBillingCard({ charges, invoices = [], client = nul
       });
       return;
     }
-    setReview({ draft: buildInvoiceDraft({ charges: group.items, propertyId, client, invoices }) });
+    setReview({ draft: buildInvoiceDraft({ charges: billable, propertyId, client, invoices }) });
   };
 
   const rowSecondary = (ch) => {
