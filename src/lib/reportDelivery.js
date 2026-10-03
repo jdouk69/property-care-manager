@@ -67,9 +67,12 @@ export async function approveReport(visit, ctx, userName) {
 
 /**
  * Email the approved report to the owner, attaching the stored PDF. Never
- * exposes a permanent public URL.
+ * exposes a permanent public URL. The "Overall result" line is always derived
+ * from the SAME report model as the preview and the PDF (never from UI state).
  */
-export async function dispatchReportEmail({ visit, property, client, business, result, sentBy }) {
+export async function dispatchReportEmail({ visit, ctx = {}, sentBy }) {
+  const { property, client, business } = ctx;
+  const result = buildOwnerReportModel(visit, ctx).result || "";
   const slug = (property?.name || "property").replace(/\s+/g, "-").toLowerCase();
   const attachment = visit?.report_pdf_url
     ? { filename: `visit-report-${slug}.pdf`, file_url: visit.report_pdf_url }

@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { visitTypeLabel, QUICK_CHECK_TYPE } from "@/lib/visitTypeLabels";
+import { visitTypeLabelFor, QUICK_CHECK_TYPE } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
 import { CHECKLIST_ITEM_EL } from "@/lib/i18n/checklistItemDisplay";
@@ -94,9 +94,9 @@ const uniClean = (s) => {
 // names, observations, full EL label set) needs an embedded TrueType font.
 // DejaVu Sans/Serif ship as static TTFs with full Greek coverage and are
 // fetched once from jsDelivr (CORS *) and cached for the session. If the fetch
-// fails, the report falls back to the standard fonts + ASCII sanitizer (English
-// reports are unaffected; Greek text degrades to today's pre-fix behavior
-// rather than failing the whole report).
+// fails, report generation STOPS with a "font_load_failed" error (see
+// buildDoc) — it never falls back to ASCII-only text. Failures are not cached,
+// so the next attempt retries the download.
 const FONT_FILES = [
   ["PCCSans", "normal", "DejaVuSans.ttf", "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf"],
   ["PCCSans", "bold", "DejaVuSans-Bold.ttf", "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf"],
@@ -195,6 +195,16 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     return lang === "el" && CHECKLIST_ITEM_EL[base] ? CHECKLIST_ITEM_EL[base] : mapped;
   };
 
+  // OWNER-VISIBLE RULE (one rule for preview, PDF and email):
+  // owner_visible ("Show this observation to owner", default OFF for every
+  // item) controls an item's recorded OBSERVATION — notes, recommendation,
+  // action taken, photos and Unable-to-Check reason. When off, none of that
+  // detail reaches the owner. It is not a "hide this item" switch: checklist
+  // item names and check statuses are the checklist itself, and an
+  // Attention/Emergency item always appears with its priority (the visit
+  // wizard also blocks completion until every concern has an owner-visible
+  // observation). The email carries no item-level content at all.
+  //
   // Findings: ONLY Important / Emergency items. The owner-visible flag gates
   // the recorded detail (note, recommendation, action taken, photos) — the
   // item and its priority always appear so a staff-recorded concern is never
@@ -322,7 +332,8 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     routineLine = rbits.join(". ") + ".";
   }
 
-  const vtl = visitTypeLabel(visit?.visit_type) || "Property Visit";
+  // Visit type in the REPORT language (Greek reports never show English type names).
+  const vtl = visitTypeLabelFor(visit?.visit_type, lang) || "Property Visit";
 
   // Dynamic, grammar-correct owner summary. Monitor findings never imply action
   // is required, and the wording NEVER infers that the property is secure,
@@ -631,7 +642,7 @@ async function buildDoc(visit, ctx = {}) {
   if (routineLine) {
     ensure(5);
     doc.setFontSize(9); doc.setFont(SANS, "normal"); doc.setTextColor(90);
-    text(routineLine, margin, y); y += 6;
+    wrap(routineLine, maxWidth, margin, 4.5); y += 1.5;
   }
   y += 1;
 
@@ -792,12 +803,22 @@ async function buildDoc(visit, ctx = {}) {
       doc.setFont(SANS, "bold"); doc.setFontSize(9.5);
       const nameLines = doc.splitTextToSize(clean(rc.name), maxWidth - 6);
       if (rc.status === "Normal") {
-        ensure(6 + (nameLines.length - 1) * 4.8);
+        // Owner-visible observation on a routine check is printed beneath the
+        // item (same as the review preview); private notes are already blank.
+        doc.setFont(SANS, "normal"); doc.setFontSize(9);
+        const noteLines = rc.note ? doc.splitTextToSize(clean(rc.note), maxWidth - 12) : [];
+        const nameH = 6 + (nameLines.length - 1) * 4.8;
+        ensure(nameH + noteLines.length * 4.5); // keep name + note together
         drawCheck(doc, margin, y, GOLD);
         doc.setFont(SANS, "normal"); doc.setFontSize(9.5); doc.setTextColor(40);
         nameLines.forEach((l, li) => text(l, margin + 6, y + li * 4.8));
+        y += nameH;
+        if (noteLines.length) {
+          doc.setFontSize(9); doc.setTextColor(60);
+          noteLines.forEach((l) => { text(l, margin + 10, y - 1); y += 4.5; });
+          y += 1;
+        }
         doc.setTextColor(0);
-        y += 6 + (nameLines.length - 1) * 4.8;
         continue;
       }
       const cfg = rc.status === "Unable to Check"
@@ -925,7 +946,7 @@ export async function generateAndStoreReportPdf(visit, ctx = {}) {
 // the data changed since approval and the stored PDF is invalid — re-approval
 // is required before delivery. Bump REPORT_TEMPLATE_VERSION whenever the
 // report layout/wording changes so older approvals are invalidated too.
-export const REPORT_TEMPLATE_VERSION = 2;
+export const REPORT_TEMPLATE_VERSION = 3;
 
 function stableStringify(value) {
   if (value === null || value === undefined) return "";

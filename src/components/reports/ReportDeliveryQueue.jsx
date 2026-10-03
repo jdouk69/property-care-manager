@@ -91,7 +91,7 @@ export default function ReportDeliveryQueue() {
       // QA test property's synthetic visits stay out of the real delivery queue.
       const qaIds = qaPropertyIds(props || []);
       // Quick Check visits have no customer-facing report at all — never queued.
-      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id) && !isQuickCheckVisit(v.visit_type)));
+      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id) && !isQuickCheckVisit(v)));
       setProperties(props || []);
       setClients(cls || []);
       setBusiness((bss && bss[0]) || {});
@@ -165,10 +165,7 @@ export default function ReportDeliveryQueue() {
     if (isResend && !window.confirm(t("Resend this report to the owner?"))) return;
     setSendingId(v.id);
     try {
-      const res = await dispatchReportEmail({
-        visit: v, property: propFor(v.property_id), client, business,
-        result: (reviewVisit?.id === v.id ? model?.result : "") || "", sentBy: userName,
-      });
+      const res = await dispatchReportEmail({ visit: v, ctx: ctxFor(v), sentBy: userName });
       if (res.ok) {
         const patch = {
           report_status: "Sent", report_sent: true, report_sent_at: new Date().toISOString(),

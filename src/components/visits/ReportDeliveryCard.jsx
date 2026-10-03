@@ -107,11 +107,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
     if (isResend && !window.confirm(t("Resend this report to the owner?"))) return;
     setSending(true);
     try {
-      const res = await dispatchReportEmail({
-        visit, property, client, business,
-        result: model?.result || "",
-        sentBy: userName,
-      });
+      const res = await dispatchReportEmail({ visit, ctx, sentBy: userName });
       if (res.ok) {
         await patch({
           report_status: "Sent",

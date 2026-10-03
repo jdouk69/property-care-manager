@@ -376,6 +376,7 @@ export const VISITS_EL = {
 
   // Visit report delivery (staff UI): review / approve / send lifecycle.
   "Approved for sending": "Εγκρίθηκε για αποστολή",
+  "Internal notes are never included. “Show this observation to owner” controls each item's notes, recommendation, action taken, photos and Unable-to-Check reason — when it is off, none of that detail is included. Item names, check statuses and the priority of Attention/Emergency items always appear.": "Οι εσωτερικές σημειώσεις δεν περιλαμβάνονται ποτέ. Η επιλογή «Εμφάνιση αυτής της παρατήρησης στον ιδιοκτήτη» ελέγχει τις σημειώσεις, τη σύσταση, την ενέργεια, τις φωτογραφίες και τον λόγο «Δεν ήταν δυνατός ο έλεγχος» κάθε στοιχείου — όταν είναι ανενεργή, καμία από αυτές τις λεπτομέρειες δεν περιλαμβάνεται. Τα ονόματα των στοιχείων, η κατάσταση ελέγχου και η προτεραιότητα των στοιχείων «Απαιτεί Προσοχή»/«Επείγον» εμφανίζονται πάντα.",
   "Data changed since approval — approve again before sending.": "Τα δεδομένα άλλαξαν μετά την έγκριση — εγκρίνετε ξανά πριν από την αποστολή.",
   "Not yet approved — approve to generate the PDF and enable sending.": "Δεν έχει εγκριθεί ακόμη — εγκρίνετε για δημιουργία του PDF και δυνατότητα αποστολής.",
   "Approve & Save PDF": "Έγκριση & Αποθήκευση PDF",

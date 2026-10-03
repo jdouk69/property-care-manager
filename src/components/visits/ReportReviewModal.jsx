@@ -323,7 +323,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
 
           <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-            <p className="text-xs text-emerald-700 dark:text-emerald-500">Internal notes and private findings are excluded from this report. Only owner-visible findings and notes appear above.</p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-500">{t("Internal notes are never included. “Show this observation to owner” controls each item's notes, recommendation, action taken, photos and Unable-to-Check reason — when it is off, none of that detail is included. Item names, check statuses and the priority of Attention/Emergency items always appear.")}</p>
           </div>
         </div>
 

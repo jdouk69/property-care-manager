@@ -20,6 +20,14 @@ function fmtDay(iso, lang) {
  * { ok: false, error } so the caller marks the report "Delivery Failed" and
  * offers a manual download/share instead.
  *
+ * Content rule: the email body never lists checklist items, notes or photos —
+ * only the visit type, the overall result (from the same report model as the
+ * preview/PDF) and the owner-facing visit summary. Item-level detail travels
+ * only inside the attached PDF, under the owner-visible rule in visitReport.js.
+ * Recipient: the client record's email. Sender: the platform's mail service,
+ * with the business name as the display name (no reply-to / from address is
+ * set here; BusinessSettings.email is not used by report delivery).
+ *
  * opts: { visit, property, client, business, result, sentBy, pdfAttachment }
  *   pdfAttachment: { filename, file_url } | null — file_url is this app's own
  *   privately stored report PDF (storage URI or URL).
