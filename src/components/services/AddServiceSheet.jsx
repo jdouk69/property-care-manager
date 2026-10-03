@@ -13,6 +13,7 @@ import { createNotification } from "@/lib/notifications";
 import { athensLocalToIso, athensVisitWhen } from "@/lib/timezone";
 import { SPECIAL_VISIT_TYPES, specialServicePrice } from "@/lib/specialServices";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
+import SeasonalApprovalFields from "@/components/visits/SeasonalApprovalFields";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 /**
@@ -112,7 +113,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
       // Interpret the entered date/time as Athens wall-clock → tz-correct instant.
       const iso = athensLocalToIso(date, time);
       const { pkg, price } = chosen || {};
-      const created = await base44.entities.PropertyVisit.create({
+      const created = (await base44.functions.invoke("createVisit", {
         property_id: pid,
         visit_type: serviceType,
         status: "Scheduled",
@@ -131,7 +132,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
           },
         } : {}),
         ...(isSeasonal ? { owner_approval: buildOwnerApproval() } : {}),
-      });
+      })).data.visit;
       // Same on-schedule confirmation notification as the wizard's flow
       // (respects the Visits category setting).
       try {
@@ -177,7 +178,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
     try {
       const { pkg, price } = chosen || {};
       const nowIso = new Date().toISOString();
-      const created = await base44.entities.PropertyVisit.create({
+      const created = (await base44.functions.invoke("createVisit", {
         property_id: pid,
         visit_type: serviceType,
         status: "In Progress",
@@ -195,7 +196,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
           },
         } : {}),
         ...(isSeasonal ? { owner_approval: buildOwnerApproval() } : {}),
-      });
+      })).data.visit;
       onOpenChange(false);
       navigate(`/visits?resume=${created.id}`);
     } catch (e) {
@@ -268,45 +269,13 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
 
               {/* Owner approval — per-visit record, required for seasonal services */}
               {serviceType && isSeasonal && (
-                <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-3.5 space-y-3">
-                  <p className="text-[11px] uppercase tracking-wide text-amber-600">{t("Owner approval — required before the visit")}</p>
-                  <p className="text-xs text-muted-foreground">{t("Record how the owner approved this specific visit: the steps, the price, and access/key instructions.")}</p>
-                  <div>
-                    <Label className="text-xs mb-1.5 block">{t("Approved via")}</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {["Email", "WhatsApp", "Phone", "In-person", "Signed document"].map((v) => (
-                        <button key={v} onClick={() => setApproval((a) => ({ ...a, via: v }))}
-                          className={`px-3 py-2 rounded-xl border text-xs transition ${approval.via === v ? "border-primary bg-primary/10 text-primary font-medium" : "border-border bg-card"}`}>
-                          {t(v)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1.5 block">{t("Approval reference (e.g. email subject / message date)")}</Label>
-                    <Input value={approval.reference} onChange={(e) => setApproval((a) => ({ ...a, reference: e.target.value }))} className="rounded-xl" />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1.5 block">{t("Approved steps for this visit")}</Label>
-                    <Textarea value={approval.tasks} onChange={(e) => setApproval((a) => ({ ...a, tasks: e.target.value }))} className="rounded-xl min-h-20" />
-                  </div>
-                  <div>
-                    <Label className="text-xs mb-1.5 block">{t("Access / key instructions (optional)")}</Label>
-                    <Textarea value={approval.keys} onChange={(e) => setApproval((a) => ({ ...a, keys: e.target.value }))} className="rounded-xl min-h-16" />
-                  </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={approval.extraTime} onCheckedChange={(c) => setApproval((a) => ({ ...a, extraTime: !!c }))} />
-                    {t(hourly != null ? "Owner pre-approved extra time at €{hourly}/hour" : "Owner pre-approved extra time", { hourly: hourly != null ? hourly.toFixed(0) : "" })}
-                  </label>
-                  {chosen?.price != null && (
-                    <p className="text-xs text-muted-foreground">
-                      {t("Price to approve")}: <span className="font-semibold text-foreground">€{chosen.price.toFixed(0)}</span>
-                    </p>
-                  )}
-                  {!approvalValid && (
-                    <p className="text-xs text-amber-600">{t("Select how the owner approved and enter the approved steps to continue.")}</p>
-                  )}
-                </div>
+                <SeasonalApprovalFields
+                  approval={approval}
+                  onChange={setApproval}
+                  price={chosen?.price != null ? chosen.price : null}
+                  hourly={hourly}
+                  invalid={!approvalValid}
+                />
               )}
 
               {/* Start Now / Schedule for Later — the two ways to proceed */}

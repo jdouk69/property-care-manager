@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import EmptyState from "@/components/ui/EmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import AssessmentForm from "@/components/assessment/AssessmentForm";
+import SeasonalApprovalFields from "@/components/visits/SeasonalApprovalFields";
 import PricingRecommendationCard from "@/components/assessment/PricingRecommendationCard";
 import {
   buildRecommendation, formatPricePlusVat, PRICING_NOTE, CHARACTERISTICS,
@@ -66,6 +67,7 @@ export default function ServiceSetup() {
   const [adjustReason, setAdjustReason] = useState("");
 
   const [visitDate, setVisitDate] = useState("");
+  const [approval, setApproval] = useState({ via: "", reference: "", tasks: "", keys: "", extraTime: false });
 
   useEffect(() => {
     (async () => {
@@ -115,6 +117,11 @@ export default function ServiceSetup() {
   };
 
   const pkg = tier ? packages.find((p) => p.service_tier === tier) : null;
+  // Seasonal Opening / Closing (if ever offered through this flow) require
+  // the same per-visit owner approval as Add Service — createVisit also
+  // rejects any seasonal visit created without one.
+  const seasonalPkg = purchaseType === "One-time" && !!pkg && ["Seasonal Opening", "Seasonal Closing"].includes(pkg.default_visit_type);
+  const approvalValid = !seasonalPkg || (!!approval.via && !!approval.tasks.trim());
   const rec = useMemo(() => {
     if (!pkg || !tier) return null;
     return buildRecommendation({
@@ -164,6 +171,7 @@ export default function ServiceSetup() {
   const createService = async (finalPrice, reason, reviewStatus) => {
     if (!pkg || !rec) return;
     if (purchaseType === "One-time" && !visitDate) { setError(t("Select the date for the one-time visit.")); return; }
+    if (seasonalPkg && !approvalValid) { setError(t("Record the owner approval for this seasonal visit before scheduling.")); return; }
     setSaving(true); setError("");
     let meName = "";
     try { const me = await base44.auth.me(); meName = me?.full_name || me?.email || ""; } catch (e) {}
@@ -196,11 +204,19 @@ export default function ServiceSetup() {
             ["assessment_service_area", assessment.assessment_service_area],
           ]),
         };
-        const visit = await base44.entities.PropertyVisit.create({
+        const visit = (await base44.functions.invoke("createVisit", {
           property_id: prop.id, visit_type: pkg.default_visit_type || "Property Care Inspection",
           status: "Scheduled", scheduled_time: new Date(`${visitDate}T09:00:00`).toISOString(),
           agreed_price: finalPrice, pricing_snapshot: snapshot,
-        });
+          ...(seasonalPkg ? {
+            owner_approval: {
+              approved_via: approval.via, approved_reference: approval.reference.trim(),
+              approved_tasks: approval.tasks.trim(), key_instructions: approval.keys.trim(),
+              extra_time_approved: approval.extraTime, approved_price: finalPrice,
+              approved_at: now, recorded_by: meName,
+            },
+          } : {}),
+        })).data.visit;
         navigate(`/visits/${visit.id}`);
       }
     } catch (e) {
@@ -326,6 +342,16 @@ export default function ServiceSetup() {
                 <Label className="text-xs sm:text-sm text-muted-foreground mb-1.5 block">{t("Visit date *")}</Label>
                 <Input className="sm:h-12 max-w-xs" type="date" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} />
                 <p className="text-xs text-muted-foreground mt-1.5">{t("The one-time visit is scheduled on this date. No recurring agreement or schedule is created.")}</p>
+                {seasonalPkg && (
+                  <div className="mt-3">
+                    <SeasonalApprovalFields
+                      approval={approval}
+                      onChange={setApproval}
+                      hourly={pkg && pkg.hourly_charge != null ? Number(pkg.hourly_charge) : null}
+                      invalid={!approvalValid}
+                    />
+                  </div>
+                )}
               </div>
             )}
             <PricingRecommendationCard

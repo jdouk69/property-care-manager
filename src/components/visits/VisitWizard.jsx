@@ -33,9 +33,13 @@ import { createNotification } from "@/lib/notifications";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 
+// Seasonal Opening / Closing are NOT listed here: they are booked through
+// Add Service, which records the required per-visit owner approval. The
+// createVisit function rejects any seasonal visit created without one, so
+// the wizard can neither schedule nor fresh-start them.
 const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
-  "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
+  "Departure Inspection", "Owner Representative Construction Visit",
   "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Complete Care Follow-up Visit", "Emergency Visit", "Owner Representative Site Visit",
   "Initial Property Onboarding Inspection", "Grocery Stocking",
 ];
@@ -775,14 +779,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     try {
       // Interpret the entered date/time as Athens wall-clock → store a tz-correct UTC instant.
       const iso = athensLocalToIso(scheduleDate, scheduleTime);
-      const created = await base44.entities.PropertyVisit.create({
+      const created = (await base44.functions.invoke("createVisit", {
         property_id: propertyId,
         property_service_agreement_id: agreementId || "",
         visit_type: visitType,
         status: "Scheduled",
         start_time: iso,
         scheduled_time: iso,
-      });
+      })).data.visit;
       // On-schedule confirmation notification (respects the Visits category setting).
       try {
         const sList = await base44.entities.BusinessSettings.list("-created_date", 1);
@@ -1028,7 +1032,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       if (resumeVisitId) {
         visit = await base44.entities.PropertyVisit.update(resumeVisitId, shared);
       } else {
-        visit = await base44.entities.PropertyVisit.create(shared);
+        visit = (await base44.functions.invoke("createVisit", shared)).data.visit;
       }
       setCompleted(visit);
       // Link the issues created during this visit back to their source visit
