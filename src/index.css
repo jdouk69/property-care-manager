@@ -30,6 +30,9 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 60% 55%;
     --chart-5: 340 70% 50%;
+    --report-navy: 204 28% 14%;
+    --report-gold: 39 33% 49%;
+    --report-cream: 39 43% 95%;
     --radius: 0.75rem;
     --font-heading: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;

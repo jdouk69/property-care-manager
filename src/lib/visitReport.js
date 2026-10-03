@@ -1,6 +1,8 @@
 import jsPDF from "jspdf";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
+import { CHECKLIST_ITEM_EL } from "@/lib/i18n/checklistItemDisplay";
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -30,11 +32,6 @@ function blobToDataUrl(blob) {
 const imgCache = new Map();
 let imgAliasSeq = 0;
 
-// maxW in px at the photo's final displayed size (~150-180 DPI target).
-// Optional `bg`: flatten transparent pixels onto this solid color. JPEG (the
-// embedded format) has no alpha channel, and canvas.toDataURL renders
-// transparency as BLACK in JPEG — so transparent PNG logos must be flattened
-// onto white to blend into the white report page.
 async function getImageForPdf(url, maxW, quality, bg = null) {
   const key = `${url}|${maxW}|${quality}|${bg || ""}`;
   const cached = imgCache.get(key);
@@ -61,7 +58,6 @@ async function getImageForPdf(url, maxW, quality, bg = null) {
 }
 
 // Finding photos carry the important detail -> slightly higher resolution/quality.
-// Routine documentation photos can be a touch more aggressive.
 const FINDING_IMG_MAXW = 560;
 const FINDING_IMG_QUALITY = 0.78;
 const ROUTINE_IMG_MAXW = 640;
@@ -71,20 +67,65 @@ function fmtDate(iso) {
   return athensMediumDateTime(iso);
 }
 
-// --- Customer-facing text safety ------------------------------------------------
+// --- Text safety ------------------------------------------------------------------
+// Legacy ASCII-only sanitizer (standard PDF fonts cannot render non-ASCII).
 const SAFE_MAP = {
   "\u20AC": "EUR", "\u00A3": "GBP", "\u00B7": "-", "\u2022": "-",
   "\u2013": "-", "\u2014": "-", "\u2018": "'", "\u2019": "'", "\u201C": '"', "\u201D": '"',
   "\u2026": "...", "\u00B2": " sq", "\u00B3": " cb", "\u00B0": " deg", "\u00B1": "+/-",
   "\u00D7": "x", "\u00F7": "/", "\u00A9": "(c)", "\u00AE": "(R)", "\u2122": "(TM)",
 };
-const clean = (s) => {
+const asciiClean = (s) => {
   if (s == null) return "";
   let out = String(s);
   out = out.replace(/[\u20AC\u00A3\u00B7\u2022\u2013\u2014\u2018\u2019\u201C\u201D\u2026\u00B2\u00B3\u00B0\u00B1\u00D7\u00F7\u00A9\u00AE\u2122]/g, (m) => SAFE_MAP[m] ?? "");
   out = out.replace(/[^\x20-\x7E\n\r]/g, "");
   return out;
 };
+// Unicode sanitizer for the embedded Greek-capable fonts: only control
+// characters are removed — Greek text, €, ·, em dashes etc. all render.
+const uniClean = (s) => {
+  if (s == null) return "";
+  return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+};
+
+// --- Greek-capable PDF fonts --------------------------------------------------------
+// jsPDF's built-in fonts are WinAnsi-only. Greek text in reports (checklist
+// names, observations, full EL label set) needs an embedded TrueType font.
+// DejaVu Sans/Serif ship as static TTFs with full Greek coverage and are
+// fetched once from jsDelivr (CORS *) and cached for the session. If the fetch
+// fails, the report falls back to the standard fonts + ASCII sanitizer (English
+// reports are unaffected; Greek text degrades to today's pre-fix behavior
+// rather than failing the whole report).
+const FONT_FILES = [
+  ["PCCSans", "normal", "DejaVuSans.ttf", "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf"],
+  ["PCCSans", "bold", "DejaVuSans-Bold.ttf", "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf"],
+  ["PCCSerif", "normal", "DejaVuSerif.ttf", "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSerif.ttf"],
+  ["PCCSerif", "bold", "DejaVuSerif-Bold.ttf", "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSerif-Bold.ttf"],
+];
+let fontCache = null; // array of base64 strings, or false after a failed load
+async function loadReportFonts() {
+  if (fontCache !== null) return fontCache;
+  try {
+    fontCache = await Promise.all(
+      FONT_FILES.map(async ([, , file, url]) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`font fetch ${res.status}`);
+        return await blobToDataUrl(await res.blob());
+      })
+    );
+  } catch (e) {
+    fontCache = false;
+    console.warn("Report PDF fonts unavailable — using standard fonts (Greek text unsupported).", e);
+  }
+  return fontCache;
+}
+function installFonts(doc, fonts) {
+  FONT_FILES.forEach(([family, style, file], i) => {
+    doc.addFileToVFS(file, fonts[i]);
+    doc.addFont(file, family, style);
+  });
+}
 
 // Owner-facing display rewording only. Underlying checklist item names and
 // stored data are untouched; this is a presentation-level clarification.
@@ -92,17 +133,9 @@ const DISPLAY_LABELS = {
   "Immediate follow-up items identified": "Immediate follow-up needs reviewed",
 };
 
-const cleanLabel = (name) => {
-  let s = String(name || "").trim();
-  s = s.replace(/^\s*[A-Z]{2,}\s*[\u00B7·]\s*/, "");
-  s = s.trim();
-  return DISPLAY_LABELS[s] || s;
-};
-
 const isOwnerFinding = (it) => !!it && !!it.owner_visible && (it.notes && String(it.notes).trim());
 
 const sevFromChecklistStatus = (st) => (st === "Emergency" ? "urgent" : st === "Important" ? "attention" : "monitor");
-const priorityLabelFor = (k) => (k === "urgent" ? "Urgent" : k === "attention" ? "Attention Recommended" : "Monitor");
 
 const nextStepFromStatus = (st) => ({
   "Awaiting Owner Approval": "Awaiting your approval to proceed.",
@@ -114,49 +147,34 @@ const nextStepFromStatus = (st) => ({
   "Completed": "This has been resolved.",
 }[st] || "");
 
-// Dynamic, grammar-correct owner summary. Monitor findings never imply action is
-// required; an all-clear visit gets a single positive sentence. Attention/urgent
-// counts come from the ACTUAL checklist statuses, so abnormal items are never
-// described as "no concerns".
-function buildSummaryText({ findings, counts, routineCount, attentionCount, urgentCount }) {
-  const n = findings.length;
-  if (n === 0 && !attentionCount && !urgentCount) {
-    return "All routine checks were completed with no concerns noted during this visit.";
-  }
-  // The header area directly above this summary already shows the exact
-  // urgent / attention / monitor and routine counts, so the summary never
-  // repeats those numbers — it gives overall property context and points to
-  // the documented observations. Counts are still used as a guard so the
-  // wording can never read as "no concerns" while abnormal findings exist.
-  const parts = ["Overall, the property appeared secure and generally well maintained."];
-  if (n > 0) {
-    parts.push("Observations from this visit are documented in the sections below.");
-    if (counts.urgent || counts.attention) {
-      parts.push("Please review the urgent and attention observations and let us know how you would like to proceed.");
-    }
-  } else {
-    parts.push("The visit was completed and checks were carried out as scheduled.");
-  }
-  return parts.join(" ");
-}
-
 /**
  * Build a structured, customer-facing report model from the raw visit + context.
  * Internal notes and non-owner-visible item notes/photos are excluded here so the
  * Review screen and the PDF render exactly what the owner receives.
+ * Report language follows the client's preferred language (EN/EL).
  */
 export function buildOwnerReportModel(visit, ctx = {}) {
   const { business = {}, property = {}, client = {}, issues = [], tasks = [], nextVisit = null } = ctx;
+  const lang = reportLangFromClient(client);
+  const L = reportLabelsFor(lang);
   const cl = visit?.checklist || [];
+
+  // Greek display names for KNOWN built-in checklist items (exact match only —
+  // custom item names always fall back to the stored original text).
+  const itemName = (name) => {
+    const base = String(name || "").trim().replace(/^\s*[A-Z]{2,}\s*[\u00B7·]\s*/, "").trim();
+    const mapped = DISPLAY_LABELS[base] || base;
+    return lang === "el" && CHECKLIST_ITEM_EL[base] ? CHECKLIST_ITEM_EL[base] : mapped;
+  };
 
   // Unable to Check / N/A are surfaced in their own report sections — never as
   // concern findings and never as completed routine checks.
   const checklistFindings = cl.filter((it) => it.status !== "Unable to Check" && it.status !== "N/A" && isOwnerFinding(it)).map((it) => {
     const sk = sevFromChecklistStatus(it.status);
     return {
-      title: cleanLabel(it.name),
+      title: itemName(it.name),
       severityKey: sk,
-      priorityLabel: priorityLabelFor(sk),
+      priorityLabel: L.priorityLabels[sk],
       area: "",
       observed: (it.notes || "").trim(),
       recommendation: (it.recommendation || "").trim(),
@@ -173,7 +191,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
       return {
         title: i.title || "Maintenance item",
         severityKey: sk,
-        priorityLabel: priorityLabelFor(sk),
+        priorityLabel: L.priorityLabels[sk],
         area: i.category || "",
         observed: (i.description || "").trim(),
         recommendation: nextStepFromStatus(i.status),
@@ -191,14 +209,15 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   // Checked rows rendered gray. Attention/Emergency items are NEVER listed
   // here: they are owner-visible findings and are documented exactly once, in
   // the Visit Observations section. Private (owner_visible=false) notes are
-  // never exposed.
+  // never exposed. Skipped / not-checked items are ALWAYS distinguished from
+  // completed checks — never inferred as "normal".
   const routineChecks = cl
     .filter((it) => it.status !== "Important" && it.status !== "Emergency")
     .map((it) => {
       const st = it.status;
       let note = "";
       if (st === "Unable to Check" || st === "N/A") note = (it.notes || "").trim();
-      return { name: cleanLabel(it.name), status: st, note };
+      return { name: itemName(it.name), status: st, note };
     });
   // Counts derive from the ACTUAL checklist statuses — abnormal, unable, N/A
   // and not-checked items are never counted as routine/no-concern.
@@ -207,13 +226,18 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const urgentCount = cl.filter((it) => it.status === "Emergency").length;
   const unableToCheck = cl
     .filter((it) => it.status === "Unable to Check")
-    .map((it) => ({ name: cleanLabel(it.name), reason: (it.notes || "").trim() }));
+    .map((it) => ({ name: itemName(it.name), reason: (it.notes || "").trim() }));
   const naCount = cl.filter((it) => it.status === "N/A").length;
-  const naLine = naCount ? `${naCount} checklist item${naCount === 1 ? "" : "s"} not applicable to this property` : "";
+  const naLine = naCount ? L.naLine(naCount) : "";
+
+  // Captioned photo grid data: documentation photos attached to findings.
+  const findingPhotos = findings
+    .filter((f) => f.photos && f.photos.length)
+    .flatMap((f) => (f.photos || []).map((url) => ({ caption: f.title, url })));
 
   const docPhotos = cl
     .filter((it) => !isOwnerFinding(it) && it.owner_visible && (it.photos && it.photos.length))
-    .flatMap((it) => (it.photos || []).map((url) => ({ caption: cleanLabel(it.name), url })));
+    .flatMap((it) => (it.photos || []).map((url) => ({ caption: itemName(it.name), url })));
 
   const counts = {
     urgent: findings.filter((f) => f.severityKey === "urgent").length,
@@ -222,61 +246,71 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   };
 
   const hasMonitor = counts.monitor > 0;
-  // Header status derives from the ACTUAL checklist statuses, not only from
-  // owner-visible findings: any Emergency item -> URGENT ATTENTION REQUIRED,
-  // any Important item (no Emergency) -> ATTENTION REQUIRED. "No Concerns
-  // Noted" only when NO Important/Emergency checklist item exists.
+  // Header status derives from the ACTUAL checklist statuses: any Emergency
+  // item -> urgent, any Important item (no Emergency) -> attention. "No
+  // Concerns Noted" only when NO Important/Emergency checklist item exists.
   let overallStatus;
-  if (urgentCount || counts.urgent) overallStatus = { key: "urgent", label: "Urgent Attention Required" };
-  else if (attentionCount || counts.attention) overallStatus = { key: "attention", label: "Attention Required" };
-  else if (hasMonitor) overallStatus = { key: "monitor", label: "Observations Noted" };
-  else overallStatus = { key: "ok", label: "No Concerns Noted" };
+  if (urgentCount || counts.urgent) overallStatus = { key: "urgent", label: L.statusLabels.urgent };
+  else if (attentionCount || counts.attention) overallStatus = { key: "attention", label: L.statusLabels.attention };
+  else if (hasMonitor) overallStatus = { key: "monitor", label: L.statusLabels.monitor };
+  else overallStatus = { key: "ok", label: L.statusLabels.ok };
 
   const segs = [];
-  if (counts.urgent) segs.push(`${counts.urgent} Urgent`);
-  if (counts.attention) segs.push(`${counts.attention} Attention Recommended`);
-  if (counts.monitor) segs.push(`${counts.monitor} Monitor`);
-  const priorityBreakdown = segs.join(" \u00B7 ");
+  if (counts.urgent) segs.push(`${counts.urgent} ${L.priorityLabels.urgent}`);
+  if (counts.attention) segs.push(`${counts.attention} ${L.priorityLabels.attention}`);
+  if (counts.monitor) segs.push(`${counts.monitor} ${L.priorityLabels.monitor}`);
+  const priorityBreakdown = segs.join(" · ");
+
   // "no concerns noted" only when every applicable completed check is Normal.
   let routineLine = "";
   if (routineCount && !attentionCount && !urgentCount) {
-    routineLine = `${routineCount} routine check${routineCount === 1 ? "" : "s"} completed - no concerns noted`;
+    routineLine = L.routineNoConcernLine(routineCount);
   } else if (routineCount || attentionCount || urgentCount) {
     const rbits = [];
-    if (routineCount) rbits.push(`${routineCount} routine check${routineCount === 1 ? "" : "s"} completed with no concerns noted`);
-    if (attentionCount) rbits.push(`${attentionCount} item${attentionCount === 1 ? "" : "s"} require${attentionCount === 1 ? "s" : ""} attention`);
-    if (urgentCount) rbits.push(`${urgentCount} urgent condition${urgentCount === 1 ? " was" : "s were"} documented`);
+    if (routineCount) rbits.push(L.routineDone(routineCount));
+    if (attentionCount) rbits.push(L.attentionBits(attentionCount));
+    if (urgentCount) rbits.push(L.urgentBits(urgentCount));
     routineLine = rbits.join(". ") + ".";
   }
 
   const vtl = visitTypeLabel(visit?.visit_type) || "Property Visit";
-  const summaryText = buildSummaryText({ findings, counts, routineCount, attentionCount, urgentCount });
 
-  // Shared "Summary & Next Steps" body used IDENTICALLY by Report Review and the
-  // PDF. Whenever any Important/Emergency checklist status exists, this states
-  // the factual counts so "no concerns were noted" wording is IMPOSSIBLE while
-  // abnormal items exist. It never invents observations or recommendations —
-  // it only points to the observations documented above.
-  let concernSummary = "";
-  if (attentionCount || urgentCount) {
-    const bits = [];
-    if (attentionCount) bits.push(`${attentionCount} item${attentionCount === 1 ? "" : "s"} requiring attention`);
-    if (urgentCount) bits.push(`${urgentCount} urgent condition${urgentCount === 1 ? "" : "s"}`);
-    const listed = bits.length === 1 ? bits[0] : `${bits[0]} and ${bits[1]}`;
-    const verb = attentionCount + urgentCount === 1 ? "was" : "were";
-    concernSummary = `${listed} ${verb} documented during this visit. Please review the observations above for details.`;
+  // Dynamic, grammar-correct owner summary. Monitor findings never imply action
+  // is required, and the wording NEVER infers that the property is secure,
+  // safe or problem-free from completed checks — it only states what was done
+  // and points to the documented observations.
+  let summaryText;
+  if (findings.length === 0 && !attentionCount && !urgentCount) {
+    summaryText = L.summaryAllClear;
+  } else {
+    const parts = [L.summaryLead, L.summaryObservations];
+    if (counts.urgent || counts.attention) parts.push(L.summaryReview);
+    summaryText = parts.join(" ");
   }
 
-  // Compact appendix: routine (Normal, no-concern) check names + observations
-  // (priority - title). No descriptions/photos repeated here.
-  const visitChecklist = {
-    routineChecks: cl.filter((it) => it.status === "Normal").map((it) => cleanLabel(it.name)),
-    observations: findings.map((f) => ({ priorityLabel: f.priorityLabel, severityKey: f.severityKey, title: f.title })),
-  };
+  // Whenever any Important/Emergency checklist status exists, this states the
+  // factual counts so "no concerns were noted" wording is IMPOSSIBLE while
+  // abnormal items exist.
+  let concernSummary = "";
+  if (attentionCount || urgentCount) concernSummary = L.concernIntro(attentionCount, urgentCount);
+
+  // Owner-selected monitoring priorities (active only).
+  const monitoringPriorities = (property.monitoring_priorities || [])
+    .filter((p) => p && p.active !== false && String(p.area || "").trim())
+    .map((p) => String(p.area).trim());
+
+  // Recorded visit duration — only when both timestamps exist.
+  const durationMinutes = (() => {
+    const s = visit?.start_time ? Date.parse(visit.start_time) : null;
+    const e = visit?.end_time ? Date.parse(visit.end_time) : null;
+    if (s == null || e == null || isNaN(s) || isNaN(e)) return null;
+    const m = Math.round((e - s) / 60000);
+    return m > 0 ? m : null;
+  })();
 
   // Kept for backward compatibility (e.g. the delivery email).
   const detailedRecord = cl.map((it) => ({
-    name: cleanLabel(it.name),
+    name: itemName(it.name),
     label: isOwnerFinding(it)
       ? (it.status === "Emergency" ? "Urgent attention" : it.status === "Important" ? "Needs attention" : "Monitor")
       : (it.status === "N/A" ? "Not applicable" : it.status === "Unable to Check" ? "Unable to check" : ((it.status === "Not Checked" || !it.status) ? "Not checked" : "Checked")),
@@ -301,6 +335,8 @@ export function buildOwnerReportModel(visit, ctx = {}) {
       gps_location: visit?.gps_location,
       summary: visit?.summary || "",
     },
+    language: lang,
+    labels: L,
     visitTypeLabel: vtl,
     overallStatus,
     counts,
@@ -309,13 +345,15 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     summaryText,
     concernSummary,
     findings,
+    findingPhotos,
     routineChecks,
     routineCount,
     unableToCheck,
     naCount,
     naLine,
     docPhotos,
-    visitChecklist,
+    monitoringPriorities,
+    durationMinutes,
     detailedRecord,
     issues: (issues || []).filter((i) => i && i.status !== "Cancelled").map((i) => ({
       title: i.title, priority: i.priority, status: i.status, category: i.category,
@@ -328,6 +366,14 @@ export function buildOwnerReportModel(visit, ctx = {}) {
 }
 
 // --- PDF rendering ---------------------------------------------------------------
+// Visual direction (from the approved sample report design): navy, muted gold
+// and cream; serif display headings; simple observation table; captioned photo
+// grid; navy header band and footer band. Multiple pages — content flows, it
+// is never shrunk to fit one page.
+const NAVY = [26, 38, 46];      // #1A262E
+const GOLD = [166, 137, 83];    // #A68953
+const CREAM = [246, 241, 231];  // #F6F1E7
+const CREAM_SOFT = [236, 229, 213];
 const TONE = {
   urgent: [239, 68, 68],
   attention: [245, 158, 11],
@@ -356,98 +402,160 @@ function drawImageFit(doc, entry, x, y, boxW, boxH) {
 
 async function buildDoc(visit, ctx = {}) {
   const model = buildOwnerReportModel(visit, ctx);
-  const { business, property, client, visit: v, visitTypeLabel: vtl, overallStatus, counts, priorityBreakdown, routineLine, summaryText, concernSummary, findings, routineChecks, routineCount, unableToCheck, naLine, docPhotos, issues, tasks, nextVisit } = model;
+  const {
+    business, property, client, visit: v, visitTypeLabel: vtl, labels: L,
+    overallStatus, counts, priorityBreakdown, routineLine, summaryText, concernSummary,
+    findings, findingPhotos, routineChecks, unableToCheck, naLine, docPhotos,
+    monitoringPriorities, durationMinutes, issues, tasks, nextVisit,
+  } = model;
+  const sample = !!ctx.sample;
+  const si = ctx.sampleInfo || {};
 
+  const fonts = await loadReportFonts();
   const doc = new jsPDF();
+  if (fonts) installFonts(doc, fonts);
+  const SANS = fonts ? "PCCSans" : "helvetica";
+  const SERIF = fonts ? "PCCSerif" : "times";
+  const clean = fonts ? uniClean : asciiClean;
+
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 14;
   const maxWidth = pageW - margin * 2;
-  let y = 16;
-  const ensure = (need) => { if (y + need > pageH - 16) { doc.addPage(); y = 16; } };
+  const BAND_H = 18;
+  let y = BAND_H + 8;
+  const ensure = (need) => { if (y + need > pageH - 18) { doc.addPage(); y = 16; } };
   const text = (s, x, yy) => doc.text(clean(s), x, yy);
   const wrapLines = (s, w) => doc.splitTextToSize(clean(s), w);
   const wrap = (s, w, x, lh = 5) => {
     wrapLines(s, w).forEach((l) => { ensure(lh); text(l, x, y); y += lh; });
   };
+  const sectionHeading = (s) => {
+    ensure(12);
+    doc.setFont(SERIF, "bold"); doc.setFontSize(11); doc.setTextColor(...NAVY);
+    text(s, margin, y);
+    const w = doc.getTextWidth(clean(s));
+    doc.setDrawColor(...GOLD); doc.setLineWidth(0.5);
+    doc.line(margin + w + 3, y - 1.5, pageW - margin, y - 1.5);
+    doc.setTextColor(0);
+    y += 8;
+  };
 
-  // --- Header (compact) ---
-  // Company logo from BusinessSettings (optional). Drawn small, aspect-ratio
-  // preserved, next to the business name; a failed/missing logo falls back to
-  // the existing text-only header.
-  let nameX = margin;
+  // --- Header: navy band with business name (cream) + contact -----------------
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, pageW, BAND_H, "F");
+  doc.setFillColor(...GOLD);
+  doc.rect(0, BAND_H, pageW, 1.2, "F");
+  doc.setFont(SERIF, "bold"); doc.setFontSize(14); doc.setTextColor(...CREAM);
+  text(business.business_name || "Property Care", margin, 11.5);
+  doc.setFont(SANS, "normal"); doc.setFontSize(8); doc.setTextColor(222, 216, 204);
+  const bandContact = [business.phone].filter(Boolean).join("   ·   ");
+  if (bandContact) {
+    const bw = doc.getTextWidth(clean(bandContact));
+    text(bandContact, pageW - margin - bw, 11.5);
+  }
+  doc.setTextColor(0);
+
+  // Title row (logo optional, then report title)
+  let titleX = margin;
   if (business.logo) {
     try {
       const entry = await getImageForPdf(business.logo, 320, 0.85, "#ffffff");
       const r = entry.w / entry.h;
-      let dh = 9, dw = dh * r;
-      if (dw > 22) { dw = 22; dh = dw / r; }
-      doc.addImage(entry.dataUrl, "JPEG", margin, y - 2 - dh / 2, dw, dh, entry.alias);
-      nameX = margin + dw + 3.5;
-    } catch (e) { /* no logo available — text-only header */ }
+      let dh = 8, dw = dh * r;
+      if (dw > 20) { dw = 20; dh = dw / r; }
+      doc.addImage(entry.dataUrl, "JPEG", margin, y - dh / 2, dw, dh, entry.alias);
+      titleX = margin + dw + 3.5;
+    } catch (e) { /* no logo available — text-only title */ }
   }
-  doc.setFontSize(14); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text(business.business_name || "Property Care", nameX, y); y += 5;
-  doc.setFontSize(8); doc.setFont(undefined, "normal"); doc.setTextColor(110);
-  const contact = [business.phone, business.email].filter(Boolean).join("   -   ");
-  if (contact) { text(contact, margin, y); y += 4; }
-  doc.setDrawColor(210); doc.line(margin, y, pageW - margin, y); y += 5;
+  doc.setFont(SERIF, "bold"); doc.setFontSize(sample ? 13 : 12); doc.setTextColor(...NAVY);
+  text(sample ? "SAMPLE VISIT REPORT" : L.reportTitle, titleX, y);
+  y += 5.5;
+  doc.setFont(SANS, "normal"); doc.setFontSize(8.5);
+  if (sample) { doc.setTextColor(...GOLD); text(si.subtitle || "", margin, y); }
+  else { doc.setTextColor(110); text(vtl || "Property Visit", margin, y); }
   doc.setTextColor(0);
+  y += 6;
 
-  // Title
-  doc.setFontSize(12); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text("PROPERTY CARE VISIT REPORT", margin, y); y += 5;
-  doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(110);
-  text(vtl || "Property Visit", margin, y); y += 5;
-  doc.setTextColor(0);
-
-  // Compact property info (2 columns)
-  doc.setFontSize(9);
+  // --- Info panel (cream) -------------------------------------------------------
   const colW = maxWidth / 2;
-  // Long values wrap naturally — every wrapped line renders (never clipped to
-  // the first line), and each row advances by its tallest column.
-  const drawKVRow = (pairs) => {
-    ensure(12);
-    const used = pairs.map(([k, val, x]) => {
-      doc.setFont(undefined, "bold"); doc.setTextColor(90);
-      text(k + ":", x, y);
-      const lblW = doc.getTextWidth(k + ": ");
-      doc.setFont(undefined, "normal"); doc.setTextColor(30);
-      const lines = doc.splitTextToSize(clean(String(val)), colW - lblW - 2);
-      lines.forEach((l, li) => text(l, x + lblW, y + li * 4.5));
-      return Math.max(1, lines.length);
+  const measureCell = (lbl, val) => {
+    doc.setFont(SANS, "bold"); doc.setFontSize(9);
+    const lblW = doc.getTextWidth(clean(lbl) + ": ");
+    doc.setFont(SANS, "normal");
+    return Math.max(1, doc.splitTextToSize(clean(String(val)), colW - lblW - 6).length);
+  };
+  const drawInfoPanel = (rows) => {
+    const used = rows.map((r) => Math.max(1, ...r.filter(Boolean).map((c) => measureCell(c[0], c[1]))));
+    const totalH = used.reduce((a, b) => a + b * 5, 0) + 4;
+    ensure(Math.min(totalH + 4, 60));
+    doc.setFillColor(...CREAM);
+    doc.roundedRect(margin, y, maxWidth, totalH, 2.5, 2.5, "F");
+    doc.setTextColor(...NAVY);
+    let ry = y + 6;
+    rows.forEach((r, ri) => {
+      r.forEach((cell, ci) => {
+        if (!cell) return;
+        const [lbl, val] = cell;
+        const x = margin + 4 + ci * colW;
+        doc.setFont(SANS, "bold"); doc.setFontSize(9);
+        text(lbl + ":", x, ry);
+        const lblW = doc.getTextWidth(clean(lbl) + ": ");
+        doc.setFont(SANS, "normal");
+        doc.splitTextToSize(clean(String(val)), colW - lblW - 6).forEach((ln, li) => text(ln, x + lblW, ry + li * 5));
+      });
+      ry += used[ri] * 5;
     });
     doc.setTextColor(0);
-    y += 5 * Math.max(...used);
+    y += totalH + 5;
   };
-  drawKVRow([["Property", property.name || "-", margin], ["Owner", client.name || "-", margin + colW]]);
-  drawKVRow([["Visit date", fmtDate(v.start_time), margin], ["Service type", vtl || "-", margin + colW]]);
-  y += 1;
+  if (sample) {
+    drawInfoPanel([
+      [[L.plan, si.plan], [L.area, si.area]],
+      [[L.visitShort, si.visitLabel], [L.duration, si.duration]],
+    ]);
+  } else {
+    drawInfoPanel([
+      [[L.property, property.name || "-"], [L.owner, client.name || "-"]],
+      [[L.visitDate, fmtDate(v.start_time)], [L.serviceType, vtl || "-"]],
+      durationMinutes != null ? [[L.duration, L.minutes(durationMinutes)], null] : null,
+    ].filter(Boolean));
+  }
 
-  // Overall status banner
+  // Owner-selected monitoring priorities (real stored data).
+  if (monitoringPriorities.length) {
+    doc.setFont(SANS, "bold"); doc.setFontSize(8.5); doc.setTextColor(...NAVY);
+    text(L.prioritiesHeading + ":", margin, y);
+    const lblW = doc.getTextWidth(clean(L.prioritiesHeading) + ": ");
+    doc.setFont(SANS, "normal"); doc.setTextColor(90);
+    wrap(monitoringPriorities.join(" · "), maxWidth - lblW - 2, margin + lblW + 2, 4.5);
+    y += 1;
+  }
+
+  // Overall status banner (severity colors stay semantic).
   const tone = TONE[overallStatus.key] || TONE.ok;
   ensure(12);
-  doc.setFillColor(tone[0], tone[1], tone[2]); doc.roundedRect(margin, y, maxWidth, 11, 2, 2, "F");
-  doc.setTextColor(255); doc.setFontSize(11); doc.setFont(undefined, "bold");
-  text(overallStatus.label.toUpperCase(), margin + 5, y + 7.5);
+  doc.setFillColor(tone[0], tone[1], tone[2]);
+  doc.roundedRect(margin, y, maxWidth, 11, 2, 2, "F");
+  doc.setTextColor(255); doc.setFont(SANS, "bold"); doc.setFontSize(11);
+  text(clean(overallStatus.label).toUpperCase(), margin + 5, y + 7.5);
   doc.setTextColor(0); y += 14;
 
   // Priority breakdown (each segment colored)
   if (priorityBreakdown) {
     ensure(6);
-    doc.setFontSize(9.5); doc.setFont(undefined, "bold");
+    doc.setFontSize(9.5); doc.setFont(SANS, "bold");
     const segList = [];
-    if (counts.urgent) segList.push({ t: `${counts.urgent} Urgent`, c: TONE.urgent });
-    if (counts.attention) segList.push({ t: `${counts.attention} Attention Recommended`, c: TONE.attention });
-    if (counts.monitor) segList.push({ t: `${counts.monitor} Monitor`, c: TONE.monitor });
+    if (counts.urgent) segList.push({ t: `${counts.urgent} ${L.priorityLabels.urgent}`, c: TONE.urgent });
+    if (counts.attention) segList.push({ t: `${counts.attention} ${L.priorityLabels.attention}`, c: TONE.attention });
+    if (counts.monitor) segList.push({ t: `${counts.monitor} ${L.priorityLabels.monitor}`, c: TONE.monitor });
     let xx = margin;
-    for (let si = 0; si < segList.length; si++) {
-      const seg = segList[si];
-      const sepW = si > 0 ? doc.getTextWidth(" - ") : 0;
-      const segW = doc.getTextWidth(seg.t);
-      // Segments wrap to a new line instead of running past the right margin.
+    for (let si2 = 0; si2 < segList.length; si2++) {
+      const seg = segList[si2];
+      const sepW = si2 > 0 ? doc.getTextWidth(" · ") : 0;
+      const segW = doc.getTextWidth(clean(seg.t));
       if (xx + sepW + segW > pageW - margin) { y += 5; xx = margin; }
-      else if (si > 0) { doc.setTextColor(170); text(" - ", xx, y); xx += sepW; }
+      else if (si2 > 0) { doc.setTextColor(170); text(" · ", xx, y); xx += sepW; }
       doc.setTextColor(seg.c[0], seg.c[1], seg.c[2]);
       text(seg.t, xx, y);
       xx += segW;
@@ -457,190 +565,211 @@ async function buildDoc(visit, ctx = {}) {
   }
   if (routineLine) {
     ensure(5);
-    doc.setFontSize(9); doc.setFont(undefined, "normal"); doc.setTextColor(90);
+    doc.setFontSize(9); doc.setFont(SANS, "normal"); doc.setTextColor(90);
     text(routineLine, margin, y); y += 6;
   }
   y += 1;
 
   // Visit summary
   ensure(18);
-  doc.setFontSize(10.5); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text("Visit Summary", margin, y); y += 5.5;
-  doc.setFontSize(10); doc.setFont(undefined, "normal"); doc.setTextColor(45);
+  sectionHeading(L.visitSummary);
+  doc.setFontSize(10); doc.setFont(SANS, "normal"); doc.setTextColor(45);
   wrap(summaryText, maxWidth, margin);
   doc.setTextColor(0); y += 4;
 
-  // Visit Observations (findings) — keep each finding together on one page.
-  const fColW = (maxWidth - 6) / 2;
-  const fBoxH = fColW * 0.72;
-  const measure = (s, w, size = 10, style = "normal") => {
-    doc.setFontSize(size); doc.setFont(undefined, style);
-    return s ? doc.splitTextToSize(clean(s), w).length : 0;
-  };
-  const estFinding = (f) => {
-    // 12 = badge bar (7mm) + clear gap so the "What we observed:" label
-    // never collides with the colored badge above it (matches the y advance
-    // in the render loop below). Long titles wrap beside the badge — their
-    // extra lines count toward the keep-together estimate.
-    let h = 12 + Math.max(0, (f.title ? measure(f.title, maxWidth - 70, 10, "bold") : 1) - 1) * 4.5;
-    if (f.area) h += 5 + measure("Area: " + f.area, maxWidth - 2, 8.5) * 5;
-    if (f.observed) h += 5 + measure(f.observed, maxWidth - 4) * 5 + 2;
-    if (f.actionTaken) h += 5 + measure(f.actionTaken, maxWidth - 4) * 5 + 2;
-    if (f.recommendation) h += 5 + measure(f.recommendation, maxWidth - 4) * 5 + 2;
-    if (f.photos && f.photos.length) {
-      const rows = Math.ceil(f.photos.length / 2);
-      h += rows * (fBoxH + 4) + 2;
-    }
-    return h + 4;
-  };
-  if (findings.length) {
-    // Keep the section heading on the same page as the start of the first
-    // finding (capped so an oversized first finding doesn't force a break too
-    // eagerly — its own keep-together check below handles the rest).
-    ensure(Math.min(60, 18 + (findings[0] ? estFinding(findings[0]) : 0)));
-    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Visit Observations", margin, y); y += 8;
+  // --- Visit Observations: simple table -----------------------------------------
+  // Columns: Priority | Observation (item + recorded note) | Follow-up.
+  // Follow-up comes ONLY from recorded recommendation / action taken — missing
+  // data renders "No action noted", never an invented conclusion.
+  const grid = async (headingOverride) => {
+    if (findings.length) {
+      sectionHeading(headingOverride || L.observationsHeading);
+      const c1 = 32, c3 = 52, c2 = maxWidth - c1 - c3;
+      const cellLines = (s, w, size = 8.5, style = "normal") => {
+        doc.setFont(SANS, style); doc.setFontSize(size);
+        return s ? doc.splitTextToSize(clean(s), w) : [];
+      };
+      // Table header (navy band, cream text)
+      ensure(14);
+      doc.setFillColor(...NAVY); doc.rect(margin, y, maxWidth, 8, "F");
+      doc.setTextColor(...CREAM); doc.setFont(SANS, "bold"); doc.setFontSize(8.5);
+      text(L.colPriority, margin + 3, y + 5.5);
+      text(L.colObservation, margin + c1 + 3, y + 5.5);
+      text(L.colFollowUp, margin + c1 + c2 + 3, y + 5.5);
+      doc.setTextColor(0);
+      y += 9;
 
-    for (let idx = 0; idx < findings.length; idx++) {
-      const f = findings[idx];
-      // Move the whole finding to the next page if it won't fit (keeps badge,
-      // title, observed, action, recommendation and first photo together).
-      if (y + estFinding(f) > pageH - 18) { doc.addPage(); y = 16; }
-
-      const ft = TONE[f.severityKey] || TONE.monitor;
-      doc.setFillColor(ft[0], ft[1], ft[2]); doc.roundedRect(margin, y, 64, 7, 1.5, 1.5, "F");
-      doc.setTextColor(255); doc.setFontSize(7.5); doc.setFont(undefined, "bold");
-      text(f.priorityLabel.toUpperCase(), margin + 3, y + 5);
-      // Long finding titles wrap naturally beside the badge — never clipped
-      // at the right edge.
-      doc.setTextColor(15, 23, 42); doc.setFontSize(10); doc.setFont(undefined, "bold");
-      const tLines = doc.splitTextToSize(clean(f.title || ""), maxWidth - 70);
-      tLines.forEach((l, li) => text(l, margin + 70, y + 5 + li * 4.5));
-      // Reserve badge height (7) + clear vertical space: the next label's
-      // ascenders must never reach the badge bar drawn above (y .. y+7).
-      y += 12 + Math.max(0, tLines.length - 1) * 4.5;
-      if (f.area) {
-        doc.setFont(undefined, "normal"); doc.setFontSize(8.5); doc.setTextColor(110);
-        wrap("Area: " + f.area, maxWidth - 2, margin + 2);
-      }
-      if (f.observed) {
-        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); text("What we observed:", margin + 2, y); y += 5;
-        doc.setFont(undefined, "normal"); doc.setTextColor(40);
-        wrap(f.observed, maxWidth - 4, margin + 4);
-      }
-      if (f.actionTaken) {
-        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); text("Action taken:", margin + 2, y); y += 5;
-        doc.setFont(undefined, "normal"); doc.setTextColor(40);
-        wrap(f.actionTaken, maxWidth - 4, margin + 4);
-      }
-      if (f.recommendation) {
-        doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.setTextColor(70); text("Recommended next step:", margin + 2, y); y += 5;
-        doc.setFont(undefined, "normal"); doc.setTextColor(40);
-        wrap(f.recommendation, maxWidth - 4, margin + 4);
-      }
-      if (f.photos && f.photos.length) {
-        let col = 0;
-        for (const url of f.photos) {
-          try {
-            const entry = await getImageForPdf(url, FINDING_IMG_MAXW, FINDING_IMG_QUALITY);
-            if (col === 0) ensure(fBoxH + 6);
-            const x = margin + 2 + col * (fColW + 6);
-            drawImageFit(doc, entry, x, y, fColW, fBoxH);
-            col++;
-            if (col >= 2) { col = 0; y += fBoxH + 4; }
-          } catch (e) {
-            ensure(5); doc.setTextColor(150); text("[photo unavailable]", margin + 2, y); doc.setTextColor(0); y += 5;
+      for (let idx = 0; idx < findings.length; idx++) {
+        const f = findings[idx];
+        const followUp = (f.recommendation || "").trim() || (f.actionTaken || "").trim() || L.noActionNoted;
+        const pLines = cellLines(f.priorityLabel || "", c1 - 5, 7.5, "bold");
+        const tLines = cellLines(f.title || "", c2 - 6, 8.5, "bold");
+        const oLines = cellLines(f.observed || "", c2 - 6, 8.5, "normal");
+        const fuLines = cellLines(followUp, c3 - 6, 8.5, "normal");
+        const rowLines = Math.max(pLines.length, tLines.length + oLines.length, fuLines.length, 1);
+        const rowH = rowLines * 4.3 + 4.5;
+        if (rowH > pageH - 34) {
+          // Extremely long observation: render as flowing text (still paged).
+          ensure(12);
+          doc.setFont(SANS, "bold"); doc.setFontSize(8); doc.setTextColor(...GOLD);
+          text(f.priorityLabel || "", margin, y); y += 5;
+          doc.setTextColor(30);
+          if (f.title) { doc.setFont(SANS, "bold"); doc.setFontSize(9); wrap(f.title, maxWidth, margin); }
+          if (f.observed) { doc.setFont(SANS, "normal"); wrap(f.observed, maxWidth - 4, margin + 3, 4.5); }
+          if (followUp) wrap(followUp, maxWidth - 4, margin + 3, 4.5);
+          y += 2;
+        } else {
+          ensure(rowH + 1);
+          if (idx % 2 === 1) {
+            doc.setFillColor(...CREAM);
+            doc.rect(margin, y, maxWidth, rowH, "F");
           }
+          doc.setFont(SANS, "bold"); doc.setFontSize(7.5); doc.setTextColor(...GOLD);
+          pLines.forEach((l, li) => text(l, margin + 3, y + 5 + li * 4.3));
+          let ty = y + 5;
+          doc.setFont(SANS, "bold"); doc.setFontSize(8.5); doc.setTextColor(30);
+          tLines.forEach((l) => { text(l, margin + c1 + 3, ty); ty += 4.3; });
+          doc.setFont(SANS, "normal"); doc.setTextColor(60);
+          oLines.forEach((l) => { text(l, margin + c1 + 3, ty); ty += 4.3; });
+          doc.setTextColor(60);
+          fuLines.forEach((l, li) => text(l, margin + c1 + c2 + 3, y + 5 + li * 4.3));
+          doc.setTextColor(0);
+          y += rowH;
+          doc.setDrawColor(222, 216, 200); doc.setLineWidth(0.3);
+          doc.line(margin, y, pageW - margin, y);
         }
-        if (col > 0) y += fBoxH + 4;
       }
-      y += 3;
-      if (idx < findings.length - 1) { ensure(6); doc.setDrawColor(225); doc.line(margin, y, pageW - margin, y); y += 5; }
+      y += 4;
     }
-    y += 2;
-  }
+  };
 
-  // Summary & Next Steps
+  // Captioned photo grid (2 columns, aspect-ratio preserved, captioned).
+  const photoGrid = async (photos) => {
+    if (!photos || !photos.length) return;
+    const gColW = (maxWidth - 8) / 2;
+    const gBoxH = gColW * 0.72;
+    let col = 0;
+    for (const dp of photos) {
+      try {
+        const entry = await getImageForPdf(dp.url, ROUTINE_IMG_MAXW, ROUTINE_IMG_QUALITY);
+        doc.setFont(SANS, "normal"); doc.setFontSize(7.5);
+        const cap = wrapLines(dp.caption || "", gColW);
+        const capH = cap.length * 3.5;
+        if (col === 0) ensure(gBoxH + 8 + capH);
+        const x = margin + col * (gColW + 8);
+        drawImageFit(doc, entry, x, y, gColW, gBoxH);
+        doc.setTextColor(110);
+        cap.forEach((cl, ci) => text(cl, x, y + gBoxH + 4 + ci * 3.5));
+        doc.setTextColor(0);
+        col++;
+        if (col >= 2) { col = 0; y += gBoxH + 6 + capH; }
+      } catch (e) {
+        ensure(6); doc.setTextColor(150); text(L.photoUnavailable, margin, y); doc.setTextColor(0); y += 6; col = 0;
+      }
+    }
+    if (col > 0) y += gBoxH + 12;
+    y += 2;
+  };
+
+  await grid(sample ? si.observationsHeading : null);
+  await photoGrid(findingPhotos);
+
+  // Summary & Next Steps (sample mode re-labels this "Owner Update — Example").
   ensure(18);
-  doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-  text("Summary & Next Steps", margin, y); y += 6;
-  doc.setFontSize(10); doc.setFont(undefined, "normal"); doc.setTextColor(40);
+  sectionHeading(sample ? si.summaryHeading : L.summaryNextSteps);
+  doc.setFontSize(10); doc.setFont(SANS, "normal"); doc.setTextColor(40);
   if (v.summary) { wrap(v.summary, maxWidth, margin); y += 2; }
   if (concernSummary) { wrap(concernSummary, maxWidth, margin); y += 2; }
   const nextSteps = [];
-  if (issues.length) nextSteps.push(`${issues.length} maintenance item${issues.length === 1 ? "" : "s"} recorded - we will coordinate as agreed.`);
-  if (tasks.length) nextSteps.push(`${tasks.length} follow-up task${tasks.length === 1 ? "" : "s"} scheduled.`);
-  if (nextVisit && nextVisit.start_time) nextSteps.push(`Next scheduled visit: ${fmtDate(nextVisit.start_time)}.`);
-  if (!v.summary && !concernSummary && !nextSteps.length) { doc.setTextColor(120); text("No additional next steps recorded.", margin, y); y += 5; doc.setTextColor(0); }
+  if (issues.length) nextSteps.push(L.maintenance(issues.length));
+  if (tasks.length) nextSteps.push(L.followUps(tasks.length));
+  if (nextVisit && nextVisit.start_time) nextSteps.push(L.nextScheduled(fmtDate(nextVisit.start_time)));
+  if (!v.summary && !concernSummary && !nextSteps.length) { doc.setTextColor(120); text(L.noNextSteps, margin, y); y += 5; doc.setTextColor(0); }
   nextSteps.forEach((s) => { wrap(s, maxWidth, margin); });
   y += 4;
 
-  // --- Routine Checks (only items completed WITHOUT a concern) ---
-  // Attention/Emergency findings are documented once — above, in Visit
-  // Observations — and are never repeated here. Green check = checked, no
-  // concern observed. Unable to Check / N/A / Not Checked render gray and are
-  // never counted as passed.
+  // --- Sample-only explanatory blocks -------------------------------------------
+  if (sample) {
+    ensure(16);
+    sectionHeading(si.canIncludeHeading);
+    doc.setFontSize(9.5); doc.setTextColor(60);
+    wrap(si.canIncludeText, maxWidth, margin);
+    y += 2;
+    if (findingPhotos.length) {
+      ensure(6);
+      doc.setFont(SANS, "normal"); doc.setFontSize(8); doc.setTextColor(...GOLD);
+      wrap(si.photoNote, maxWidth, margin);
+      doc.setTextColor(0); y += 2;
+    }
+    ensure(16);
+    sectionHeading(si.photosReportsHeading);
+    doc.setFontSize(9.5); doc.setTextColor(60);
+    wrap(si.photosReportsText, maxWidth, margin);
+    y += 2;
+    ensure(16);
+    sectionHeading(si.ourRoleHeading);
+    doc.setFontSize(9.5); doc.setTextColor(60);
+    wrap(si.ourRoleText, maxWidth, margin);
+    y += 2;
+  }
+
+  // --- Routine Checks (only items completed WITHOUT a concern) -------------------
+  // Attention/Emergency findings are documented once — above — and are never
+  // repeated here. Gold check = checked, no concern observed. Unable to Check /
+  // N/A / Not Checked render gray and are NEVER counted as passed.
   if (routineChecks.length) {
     ensure(30); // keep the heading with at least the first few checks
-    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Routine Checks", margin, y); y += 6.5;
+    sectionHeading(L.routineChecksHeading);
     const GRAY = [148, 163, 184];
-    const drawMark = (glyph, rgb) => {
-      doc.setFontSize(10); doc.setFont(undefined, "bold");
-      doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-      text(glyph, margin, y);
-      doc.setTextColor(0); doc.setFont(undefined, "normal");
-    };
     for (const rc of routineChecks) {
-      // Long item names wrap naturally — never clipped at the right edge.
-      doc.setFontSize(9.5); doc.setFont(undefined, "bold");
+      doc.setFont(SANS, "bold"); doc.setFontSize(9.5);
       const nameLines = doc.splitTextToSize(clean(rc.name), maxWidth - 6);
       if (rc.status === "Normal") {
         ensure(6 + (nameLines.length - 1) * 4.8);
-        drawCheck(doc, margin, y, TONE.ok);
-        doc.setTextColor(40); doc.setFontSize(9.5); doc.setFont(undefined, "normal");
+        drawCheck(doc, margin, y, GOLD);
+        doc.setFont(SANS, "normal"); doc.setFontSize(9.5); doc.setTextColor(40);
         nameLines.forEach((l, li) => text(l, margin + 6, y + li * 4.8));
+        doc.setTextColor(0);
         y += 6 + (nameLines.length - 1) * 4.8;
         continue;
       }
       const cfg = rc.status === "Unable to Check"
-        ? { glyph: "-", rgb: GRAY, label: "UNABLE TO CHECK", lead: "Reason:" }
+        ? { label: L.unableShort, lead: L.reason }
         : rc.status === "N/A"
-          ? { glyph: "-", rgb: GRAY, label: "N/A", lead: "" }
-          : { glyph: "-", rgb: GRAY, label: "NOT CHECKED", lead: "" };
+          ? { label: L.naShort, lead: "" }
+          : { label: L.notCheckedShort, lead: "" };
       // The status label follows the last name line inline when it fits;
       // otherwise it wraps to its own line — it can never overlap the name or
       // run past the right margin.
-      const GAP = 2.5; // safe gap between the rendered name and the status label
+      const GAP = 2.5;
+      doc.setFont(SANS, "normal"); doc.setFontSize(9.5);
       const lastLineW = doc.getTextWidth(nameLines[nameLines.length - 1] || "");
       doc.setFontSize(7.5);
       const lbl = " - " + cfg.label;
-      const lblW = doc.getTextWidth(lbl);
+      const lblW = doc.getTextWidth(clean(lbl));
       const lblInline = lastLineW + GAP + lblW <= maxWidth - 6;
       const noteLines = rc.note ? doc.splitTextToSize(clean(rc.note), maxWidth - 12).length : 0;
       const leadH = rc.note && cfg.lead ? 4.5 : 0;
       // Keep the whole row (name, status label, note) together on one page.
       ensure(5 + (nameLines.length - 1) * 4.8 + (lblInline ? 0 : 4.8) + leadH + noteLines * 4.5 + 3);
-      drawMark(cfg.glyph, cfg.rgb);
-      doc.setFontSize(9.5); doc.setFont(undefined, "bold"); doc.setTextColor(40);
+      doc.setFont(SANS, "bold"); doc.setFontSize(10); doc.setTextColor(...GRAY);
+      text("-", margin, y);
+      doc.setFont(SANS, "bold"); doc.setFontSize(9.5); doc.setTextColor(40);
       nameLines.forEach((l, li) => text(l, margin + 6, y + li * 4.8));
-      doc.setFontSize(7.5); doc.setFont(undefined, "bold");
-      doc.setTextColor(cfg.rgb[0], cfg.rgb[1], cfg.rgb[2]);
-      if (lblInline) {
-        text(lbl, margin + 6 + lastLineW + GAP, y + (nameLines.length - 1) * 4.8);
-      } else {
-        text(lbl, margin + 6, y + nameLines.length * 4.8);
-      }
-      doc.setTextColor(0); doc.setFont(undefined, "normal");
+      doc.setFont(SANS, "bold"); doc.setFontSize(7.5);
+      doc.setTextColor(...GRAY);
+      if (lblInline) text(lbl, margin + 6 + lastLineW + GAP, y + (nameLines.length - 1) * 4.8);
+      else text(lbl, margin + 6, y + nameLines.length * 4.8);
+      doc.setTextColor(0); doc.setFont(SANS, "normal");
       y += 5 + (nameLines.length - 1) * 4.8 + (lblInline ? 0 : 4.8);
       // Explanation comes ONLY from this exact item's note (already blank for
       // private items in the model). Never invented, never borrowed.
       if (rc.note) {
         if (cfg.lead) {
-          doc.setFontSize(8.5); doc.setFont(undefined, "bold"); doc.setTextColor(70);
+          doc.setFont(SANS, "bold"); doc.setFontSize(8.5); doc.setTextColor(70);
           text(cfg.lead, margin + 8, y); y += 4.5;
         }
-        doc.setFont(undefined, "normal"); doc.setTextColor(60); doc.setFontSize(9);
+        doc.setFont(SANS, "normal"); doc.setTextColor(60); doc.setFontSize(9);
         wrap(rc.note, maxWidth - 12, margin + 10, 4.5);
       }
       y += 2.5;
@@ -648,56 +777,46 @@ async function buildDoc(visit, ctx = {}) {
     y += 3;
   }
 
-  // --- Routine Visit Photos (routine documentation; not findings) ---
+  // --- Routine Visit Photos (routine documentation; not findings) ---------------
   if (docPhotos && docPhotos.length) {
     ensure(20);
-    doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-    text("Routine Visit Photos", margin, y); y += 5;
-    doc.setFontSize(8.5); doc.setFont(undefined, "normal"); doc.setTextColor(110);
-    text("Documentation photos showing general property conditions during this visit.", margin, y); y += 7;
-    const gColW = (maxWidth - 8) / 2;
-    const gBoxH = gColW * 0.72;
-    let col = 0;
-    let rowAdv = gBoxH + 12;
-    for (const dp of docPhotos) {
-      try {
-        const entry = await getImageForPdf(dp.url, ROUTINE_IMG_MAXW, ROUTINE_IMG_QUALITY);
-        // Every wrapped caption line renders — captions are never clipped.
-        const cap = wrapLines(dp.caption, gColW);
-        const capH = cap.length * 3.5;
-        if (col === 0) ensure(gBoxH + 8 + capH);
-        const x = margin + col * (gColW + 8);
-        drawImageFit(doc, entry, x, y, gColW, gBoxH);
-        doc.setFontSize(7.5); doc.setTextColor(110);
-        cap.forEach((cl, ci) => text(cl, x, y + gBoxH + 4 + ci * 3.5));
-        doc.setTextColor(0);
-        rowAdv = gBoxH + 6 + capH;
-        col++;
-        if (col >= 2) { col = 0; y += rowAdv; }
-      } catch (e) {
-        ensure(6); doc.setTextColor(150); text("[photo unavailable]", margin, y); doc.setTextColor(0); y += 6; rowAdv = gBoxH + 12; col = 0;
-      }
-    }
-    if (col > 0) y += rowAdv;
-    y += 3;
+    sectionHeading(L.routinePhotos);
+    doc.setFont(SANS, "normal"); doc.setFontSize(8.5); doc.setTextColor(110);
+    text(L.routinePhotosSub, margin, y); y += 7;
+    doc.setTextColor(0);
+    await photoGrid(docPhotos);
   }
 
-  // Scope footer
+  // Scope statement (exact required wording) + gold rule.
   ensure(18);
-  doc.setDrawColor(210); doc.line(margin, y, pageW - margin, y); y += 5;
-  doc.setFontSize(8); doc.setTextColor(120);
-  const pdfVisitType = visitTypeLabel(visit?.visit_type);
-  wrap(`This Property Care Visit Report documents visual observations made during ${pdfVisitType ? `this ${pdfVisitType}` : "a property-care visit"}. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.`, maxWidth, margin, 4);
+  doc.setDrawColor(...GOLD); doc.setLineWidth(0.5);
+  doc.line(margin, y, pageW - margin, y); y += 5;
+  doc.setFont(SANS, "normal"); doc.setFontSize(8); doc.setTextColor(90);
+  wrap(L.scopeStatement, maxWidth, margin, 4);
   doc.setTextColor(0);
 
-  // Footer (page numbers)
+  // --- Footer: navy band + page numbers on every page ----------------------------
   const pages = doc.internal.getNumberOfPages();
   const genDate = athensMediumDateTime(new Date().toISOString());
+  const FOOT_H = 9;
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p);
-    doc.setFontSize(8); doc.setTextColor(150);
-    text(`Generated ${genDate}`, margin, pageH - 8);
-    text(`Page ${p} of ${pages}`, pageW - margin - 26, pageH - 8);
+    doc.setFillColor(...NAVY);
+    doc.rect(0, pageH - FOOT_H, pageW, FOOT_H, "F");
+    doc.setFillColor(...GOLD);
+    doc.rect(0, pageH - FOOT_H - 1, pageW, 0.8, "F");
+    doc.setFont(SANS, "normal"); doc.setFontSize(8); doc.setTextColor(...CREAM);
+    const site = clean(business.website || "propertycarecrete.com");
+    text(site, margin, pageH - 3.5);
+    const right = [business.phone].filter(Boolean).join("  |  ");
+    if (right) {
+      const rw = doc.getTextWidth(clean(right));
+      text(right, pageW - margin - rw, pageH - 3.5);
+    }
+    doc.setFontSize(7.5); doc.setTextColor(140);
+    text(L.generated(genDate), margin, pageH - FOOT_H - 2.5);
+    const pg = L.pageOf(p, pages);
+    text(pg, pageW - margin - doc.getTextWidth(clean(pg)), pageH - FOOT_H - 2.5);
     doc.setTextColor(0);
   }
 
@@ -710,7 +829,7 @@ function fileSlug(property) {
 
 export async function generateVisitReportPdf(visit, ctx = {}) {
   const doc = await buildDoc(visit, ctx);
-  doc.save(`visit-report-${fileSlug(ctx.property)}.pdf`);
+  doc.save(ctx.sample ? "sample-visit-report.pdf" : `visit-report-${fileSlug(ctx.property)}.pdf`);
 }
 
 export async function generateVisitReportPdfBlob(visit, ctx = {}) {

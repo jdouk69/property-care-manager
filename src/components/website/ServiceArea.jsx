@@ -7,6 +7,7 @@ import { useSectionContent } from "@/components/website/WebsiteContentContext";
 export default function ServiceArea() {
   const c = useSectionContent("service_area");
   const areas = Array.isArray(c.areas) ? c.areas : [];
+  const travelNotes = Array.isArray(c.travel_notes) ? c.travel_notes : [];
 
   return (
     <section id="area" className="scroll-mt-20 border-y border-border bg-secondary/40 py-10 sm:py-20">

@@ -1,22 +1,26 @@
 import React from "react";
 import {
   X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, AlertOctagon,
-  ListChecks, MapPin, Camera, Eye, EyeOff, Minus,
+  ListChecks, MapPin, Camera, Eye, Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Image as UIImage } from "@/components/ui/image";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { reportLabelsFor } from "@/lib/reportLabels";
 
 /**
  * Renders the customer-facing report EXACTLY as the owner will receive it (and
  * exactly as the PDF renders). Consumes buildOwnerReportModel. Internal notes and
  * non-owner-visible item notes/photos are never present in the model.
+ *
+ * Visual direction matches the PDF: navy, muted gold and cream; serif display
+ * headings; observation table; captioned photo grid.
  */
 const SEV = {
-  urgent: { tone: "bg-rose-500/10 text-rose-600 border-rose-500/20", dot: "bg-rose-500", Icon: AlertTriangle, label: "Urgent" },
-  attention: { tone: "bg-amber-500/10 text-amber-600 border-amber-500/20", dot: "bg-amber-500", Icon: AlertCircle, label: "Attention Recommended" },
-  monitor: { tone: "bg-slate-500/10 text-slate-600 border-slate-500/20", dot: "bg-slate-400", Icon: AlertCircle, label: "Monitor" },
+  urgent: { tone: "bg-rose-500/10 text-rose-600 border-rose-500/20", Icon: AlertTriangle, label: "Urgent" },
+  attention: { tone: "bg-amber-500/10 text-amber-600 border-amber-500/20", Icon: AlertCircle, label: "Attention Recommended" },
+  monitor: { tone: "bg-slate-500/10 text-slate-600 border-slate-500/20", Icon: AlertCircle, label: "Monitor" },
 };
 const OVERALL = {
   ok: { tone: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", Icon: CheckCircle2 },
@@ -25,11 +29,11 @@ const OVERALL = {
   monitor: { tone: "bg-slate-500/10 text-slate-600 border-slate-500/30", Icon: Eye },
 };
 
-function PriorityBreakdown({ counts }) {
+function PriorityBreakdown({ counts, L }) {
   const segs = [];
-  if (counts.urgent) segs.push({ n: counts.urgent, label: "Urgent", cls: "text-rose-600" });
-  if (counts.attention) segs.push({ n: counts.attention, label: "Attention Recommended", cls: "text-amber-600" });
-  if (counts.monitor) segs.push({ n: counts.monitor, label: "Monitor", cls: "text-slate-500" });
+  if (counts.urgent) segs.push({ n: counts.urgent, label: L.priorityLabels.urgent, cls: "text-rose-600" });
+  if (counts.attention) segs.push({ n: counts.attention, label: L.priorityLabels.attention, cls: "text-amber-600" });
+  if (counts.monitor) segs.push({ n: counts.monitor, label: L.priorityLabels.monitor, cls: "text-slate-500" });
   return (
     <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs">
       {segs.map((s, i) => (
@@ -38,6 +42,15 @@ function PriorityBreakdown({ counts }) {
           <span className={`font-semibold ${s.cls}`}>{s.n} {s.label}</span>
         </React.Fragment>
       ))}
+    </div>
+  );
+}
+
+function SectionHeading({ children }) {
+  return (
+    <div className="flex items-center gap-2">
+      <p className="font-serif text-sm font-bold tracking-wide text-report-navy">{children}</p>
+      <span className="h-px flex-1 bg-report-gold/60" />
     </div>
   );
 }
@@ -58,18 +71,19 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
   }
 
   const {
-    business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl,
-    overallStatus = { key: "ok", label: "No Concerns Noted" }, counts = { urgent: 0, attention: 0, monitor: 0 },
+    business = {}, property = {}, client = {}, visit = {}, visitTypeLabel: vtl, labels: L = reportLabelsFor("en"),
+    overallStatus = { key: "ok", label: L.statusLabels.ok }, counts = { urgent: 0, attention: 0, monitor: 0 },
     priorityBreakdown = "", routineLine = "", summaryText = "", concernSummary = "",
-    findings = [], routineChecks = [], docPhotos = [],
+    findings = [], findingPhotos = [], routineChecks = [], docPhotos = [],
+    monitoringPriorities = [], durationMinutes = null,
     issues = [], tasks = [], nextVisit,
   } = model;
 
   const ov = OVERALL[overallStatus.key] || OVERALL.ok;
   const nextSteps = [];
-  if (issues.length) nextSteps.push(`${issues.length} maintenance item${issues.length === 1 ? "" : "s"} recorded — we will coordinate as agreed.`);
-  if (tasks.length) nextSteps.push(`${tasks.length} follow-up task${tasks.length === 1 ? "" : "s"} scheduled.`);
-  if (nextVisit && nextVisit.start_time) nextSteps.push(`Next scheduled visit: ${athensMediumDateTime(nextVisit.start_time)}.`);
+  if (issues.length) nextSteps.push(L.maintenance(issues.length));
+  if (tasks.length) nextSteps.push(L.followUps(tasks.length));
+  if (nextVisit && nextVisit.start_time) nextSteps.push(L.nextScheduled(athensMediumDateTime(nextVisit.start_time)));
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-2 sm:p-4">
@@ -84,22 +98,34 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
         </div>
 
         <div className="overflow-y-auto px-3 py-3 space-y-3">
-          {/* Business + compact property info (one small line) */}
-          <div>
-            <div className="flex items-center gap-2.5">
-              {business.logo && (
-                <UIImage src={business.logo} className="w-9 h-9 rounded-md shrink-0" fittingType="fit" />
-              )}
-              <div className="min-w-0">
-                <p className="text-sm font-semibold leading-tight">{business.business_name || "Property Care"}</p>
-                <p className="text-[11px] text-muted-foreground leading-tight">{[business.phone, business.email].filter(Boolean).join(" · ")}</p>
-              </div>
+          {/* Masthead — navy band like the PDF */}
+          <div className="rounded-xl bg-report-navy text-report-cream px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-serif text-base font-bold">{business.business_name || "Property Care"}</p>
+              {business.logo && <UIImage src={business.logo} className="w-8 h-8 rounded bg-white/90 shrink-0" fittingType="fit" />}
             </div>
-            <p className="text-[11px] text-muted-foreground leading-snug mt-1">
-              {[property.name, client.name, athensMediumDateTime(visit.start_time), vtl].filter(Boolean).map((s, i) => (
-                <React.Fragment key={i}>{i > 0 && <span className="text-muted-foreground/50"> · </span>}{s}</React.Fragment>
-              ))}
-            </p>
+            {business.phone && <p className="mt-0.5 text-[11px] text-report-cream/80">{business.phone}</p>}
+            <div className="mt-2 border-t border-report-gold/70 pt-1.5">
+              <p className="font-serif text-xs font-bold tracking-widest">{L.reportTitle}</p>
+            </div>
+          </div>
+
+          {/* Info panel — cream, matches the PDF */}
+          <div className="rounded-xl bg-report-cream px-3 py-2.5 text-xs text-report-navy space-y-1">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+              <p><span className="font-semibold">{L.property}:</span> {property.name || "—"}</p>
+              <p><span className="font-semibold">{L.owner}:</span> {client.name || "—"}</p>
+              <p><span className="font-semibold">{L.visitDate}:</span> {athensMediumDateTime(visit.start_time) || "—"}</p>
+              <p><span className="font-semibold">{L.serviceType}:</span> {vtl || "—"}</p>
+              {durationMinutes != null && (
+                <p><span className="font-semibold">{L.duration}:</span> {L.minutes(durationMinutes)}</p>
+              )}
+            </div>
+            {monitoringPriorities.length > 0 && (
+              <p className="border-t border-report-gold/40 pt-1.5">
+                <span className="font-semibold">{L.prioritiesHeading}:</span> {monitoringPriorities.join(" · ")}
+              </p>
+            )}
           </div>
 
           {/* Overall status (prominent, near top) */}
@@ -109,56 +135,39 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
           </div>
 
           {/* Priority breakdown + routine line */}
-          {priorityBreakdown && <PriorityBreakdown counts={counts} />}
+          {priorityBreakdown && <PriorityBreakdown counts={counts} L={L} />}
           {routineLine && <p className="text-xs text-muted-foreground">{routineLine}</p>}
 
           {/* Visit summary */}
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Visit Summary</p>
-            <p className="text-sm text-foreground/90 leading-relaxed">{summaryText}</p>
+            <SectionHeading>{L.visitSummary}</SectionHeading>
+            <p className="text-sm text-foreground/90 leading-relaxed mt-1.5">{summaryText}</p>
           </div>
 
-          {/* Visit Observations (findings) */}
+          {/* Visit Observations — simple table */}
           {findings.length > 0 && (
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Visit Observations ({findings.length})</p>
-              <div className="space-y-3">
+              <SectionHeading>{L.observationsHeading}</SectionHeading>
+              <div className="mt-2 overflow-hidden rounded-xl border border-report-gold/50">
+                <div className="hidden sm:grid grid-cols-[110px_1fr_160px] bg-report-navy text-report-cream text-[11px] font-semibold">
+                  <div className="px-3 py-2">{L.colPriority}</div>
+                  <div className="px-3 py-2">{L.colObservation}</div>
+                  <div className="px-3 py-2">{L.colFollowUp}</div>
+                </div>
                 {findings.map((f, i) => {
                   const s = SEV[f.severityKey] || SEV.monitor;
+                  const followUp = (f.recommendation || "").trim() || (f.actionTaken || "").trim() || L.noActionNoted;
                   return (
-                    <div key={i} className="rounded-xl border border-border p-3">
-                      <div className="flex items-start gap-2 mb-1.5">
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${s.tone}`}>{f.priorityLabel}</span>
-                        <p className="text-sm font-semibold leading-snug">{f.title}</p>
+                    <div key={i} className={`sm:grid sm:grid-cols-[110px_1fr_160px] border-t border-report-gold/30 ${i % 2 === 1 ? "bg-report-cream/50" : ""}`}>
+                      <div className="px-3 pt-2 sm:py-2.5">
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full border ${s.tone}`}>{f.priorityLabel}</span>
                       </div>
-                      {f.area && <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" /> {f.area}</p>}
-                      {f.observed && (
-                        <div className="mt-1.5">
-                          <p className="text-xs font-medium text-muted-foreground">What we observed</p>
-                          <p className="text-sm text-foreground/90 whitespace-pre-wrap mt-0.5">{f.observed}</p>
-                        </div>
-                      )}
-                      {f.actionTaken && (
-                        <div className="mt-1.5">
-                          <p className="text-xs font-medium text-muted-foreground">Action taken</p>
-                          <p className="text-sm text-foreground/90 mt-0.5">{f.actionTaken}</p>
-                        </div>
-                      )}
-                      {f.recommendation && (
-                        <div className="mt-1.5">
-                          <p className="text-xs font-medium text-muted-foreground">Recommended next step</p>
-                          <p className="text-sm text-foreground/90 mt-0.5">{f.recommendation}</p>
-                        </div>
-                      )}
-                      {f.photos?.length > 0 && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-                          {f.photos.map((url, pi) => (
-                            <a key={pi} href={url} target="_blank" rel="noreferrer" className="aspect-square rounded-lg overflow-hidden">
-                              <UIImage src={url} className="w-full h-full" fittingType="fill" />
-                            </a>
-                          ))}
-                        </div>
-                      )}
+                      <div className="px-3 py-1 sm:py-2.5">
+                        <p className="text-sm font-semibold leading-snug">{f.title}</p>
+                        {f.area && <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" /> {f.area}</p>}
+                        {f.observed && <p className="text-sm text-foreground/90 whitespace-pre-wrap mt-0.5">{f.observed}</p>}
+                      </div>
+                      <div className="px-3 pb-2 sm:py-2.5 text-xs text-muted-foreground">{followUp}</div>
                     </div>
                   );
                 })}
@@ -166,70 +175,33 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             </div>
           )}
 
-          {/* Routine Checks — ONLY items completed without a concern (plus
-              informational Unable/N-A/Not-checked rows in gray). Attention/
-              Emergency findings are documented once, in Visit Observations
-              above — never repeated here. */}
-          {routineChecks.length > 0 && (
-            <div className="rounded-xl border border-border p-3">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
-                <ListChecks className="w-3.5 h-3.5" /> Routine Checks
-              </p>
-              <div className="space-y-1.5">
-                {routineChecks.map((rc, i) => {
-                  if (rc.status === "Normal") {
-                    return (
-                      <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" /> {rc.name}
-                      </p>
-                    );
-                  }
-                  const label = rc.status === "Unable to Check" ? "Unable to check" : rc.status === "N/A" ? "N/A" : "Not checked";
-                  return (
-                    <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                      <Minus className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                      <span>
-                        {rc.name} <span className="uppercase tracking-wide text-[10px] font-semibold">{label}</span>
-                        {rc.note && <span className="text-foreground/70"> — {rc.note}</span>}
-                      </span>
-                    </p>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Routine Visit Photos */}
-          {docPhotos.length > 0 && (
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> Routine Visit Photos</p>
-              <p className="text-[11px] text-muted-foreground mb-2">Documentation photos showing general property conditions during this visit.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {docPhotos.map((dp, i) => (
-                  <div key={i}>
-                    <a href={dp.url} target="_blank" rel="noreferrer" className="block aspect-square rounded-lg overflow-hidden">
-                      <UIImage src={dp.url} className="w-full h-full" fittingType="fill" />
-                    </a>
-                    <p className="text-[11px] text-muted-foreground mt-1">{dp.caption}</p>
-                  </div>
-                ))}
-              </div>
+          {/* Captioned photo grid for observations */}
+          {findingPhotos.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {findingPhotos.map((dp, i) => (
+                <div key={i}>
+                  <a href={dp.url} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-lg overflow-hidden">
+                    <UIImage src={dp.url} className="w-full h-full" fittingType="fill" />
+                  </a>
+                  <p className="text-[11px] text-muted-foreground mt-1">{dp.caption}</p>
+                </div>
+              ))}
             </div>
           )}
 
           {/* Summary & next steps */}
-          <div className="border-t border-border pt-3">
-            <p className="text-sm font-semibold mb-1">Summary & Next Steps</p>
+          <div className="border-t border-report-gold/40 pt-3">
+            <SectionHeading>{L.summaryNextSteps}</SectionHeading>
             {visit.summary && (
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{visit.summary}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1.5">{visit.summary}</p>
             )}
             {concernSummary && (
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{concernSummary}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-1">{concernSummary}</p>
             )}
             {/* "No concerns" wording is impossible while any Important/Emergency
                 item exists — concernSummary always renders in that case. */}
             {!visit.summary && !concernSummary && findings.length === 0 && (
-              <p className="text-sm text-muted-foreground">No concerns were noted during this visit.</p>
+              <p className="text-sm text-muted-foreground mt-1.5">{L.noNextSteps}</p>
             )}
             {nextSteps.length > 0 && (
               <ul className="text-sm text-muted-foreground mt-2 space-y-0.5">
@@ -259,9 +231,57 @@ export default function ReportReviewModal({ open, model, generating, sending, ca
             </div>
           )}
 
-          <p className="text-[11px] text-muted-foreground italic leading-relaxed">
-            This Property Care Visit Report documents visual observations made during {model?.visitTypeLabel ? `this ${model.visitTypeLabel}` : "a property-care visit"}. It is not a professional home/building inspection, engineering evaluation, trade inspection, or certification.
-          </p>
+          {/* Routine Checks — ONLY items completed without a concern (plus
+              informational Unable/N-A/Not-checked rows in gray). Attention/
+              Emergency findings are documented once, in the table above. */}
+          {routineChecks.length > 0 && (
+            <div className="rounded-xl border border-border p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1">
+                <ListChecks className="w-3.5 h-3.5" /> {L.routineChecksHeading}
+              </p>
+              <div className="space-y-1.5">
+                {routineChecks.map((rc, i) => {
+                  if (rc.status === "Normal") {
+                    return (
+                      <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-report-gold shrink-0 mt-0.5" /> {rc.name}
+                      </p>
+                    );
+                  }
+                  const label = rc.status === "Unable to Check" ? L.unableDisplay : rc.status === "N/A" ? L.naDisplay : L.notCheckedDisplay;
+                  return (
+                    <p key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <Minus className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      <span>
+                        {rc.name} <span className="uppercase tracking-wide text-[10px] font-semibold">{label}</span>
+                        {rc.note && <span className="text-foreground/70"> — {rc.note}</span>}
+                      </span>
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Routine Visit Photos */}
+          {docPhotos.length > 0 && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1 flex items-center gap-1"><Camera className="w-3.5 h-3.5" /> {L.routinePhotos}</p>
+              <p className="text-[11px] text-muted-foreground mb-2">{L.routinePhotosSub}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {docPhotos.map((dp, i) => (
+                  <div key={i}>
+                    <a href={dp.url} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-lg overflow-hidden">
+                      <UIImage src={dp.url} className="w-full h-full" fittingType="fill" />
+                    </a>
+                    <p className="text-[11px] text-muted-foreground mt-1">{dp.caption}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-[11px] text-muted-foreground italic leading-relaxed">{L.scopeStatement}</p>
 
           <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
