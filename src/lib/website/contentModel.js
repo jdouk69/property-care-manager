@@ -52,7 +52,7 @@ export const DEFAULT_CONTENT = {
       intro:
         "These are our current service prices. After a property assessment, we agree any proposed work and its price with you before we proceed.",
       groupHeading: "Recurring Care Plans — scheduled visits every month",
-      note: "The exact work and final price for your property are always agreed with you in writing before we start.",
+      note: "The exact work and final price for your property are always agreed with you in advance, before we start.",
       // Public wording for the seven service cards. The seed values mirror
       // exactly what the cards showed when this content became editable.
       // {price} / {hourly} placeholders are filled LIVE from the pricing
@@ -120,7 +120,7 @@ export const DEFAULT_CONTENT = {
       intro:
         "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Μετά την αξιολόγηση του ακινήτου, συμφωνούμε μαζί σας κάθε προτεινόμενη εργασία και την τιμή της πριν προχωρήσουμε.",
       groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
-      note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα γραπτώς μαζί σας πριν ξεκινήσουμε.",
+      note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα μαζί σας εκ των προτέρων, πριν ξεκινήσουμε.",
       cards: {
         quick_check: {
           name: "Γρήγορος Έλεγχος",
@@ -222,7 +222,7 @@ export const DEFAULT_CONTENT = {
         },
         {
           title: "Clear prices, agreed work",
-          text: "You see our current prices up front, and we agree the work and the price with you in writing before we start.",
+          text: "You see our current prices up front, and we agree the work and the price with you in advance, before we start.",
         },
         {
           title: "One local point of contact",
@@ -252,7 +252,7 @@ export const DEFAULT_CONTENT = {
         },
         {
           title: "Ξεκάθαρες τιμές, συμφωνημένη εργασία",
-          text: "Βλέπετε τις τρέχουσες τιμές μας εκ των προτέρων και συμφωνούμε την εργασία και την τιμή γραπτώς πριν ξεκινήσουμε.",
+          text: "Βλέπετε τις τρέχουσες τιμές μας εκ των προτέρων και συμφωνούμε την εργασία και την τιμή εκ των προτέρων, πριν ξεκινήσουμε.",
         },
         {
           title: "Ένας τοπικός επαφής",
