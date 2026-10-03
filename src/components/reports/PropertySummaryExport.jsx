@@ -14,6 +14,8 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { buildActivityReportModel, saveActivityReportPdf } from "@/lib/propertyActivityReport";
 import { reportGenerationError } from "@/lib/reportDelivery";
 
+const isTestPropertyName = (name) => /^(QA )?TEST\b/i.test(String(name || ""));
+
 /**
  * Secondary tool on the Reports page: a one-off staff PROPERTY ACTIVITY report
  * (visits / maintenance / expenses) for one property or across all properties.
@@ -56,7 +58,7 @@ export default function PropertySummaryExport() {
   }, [business, input]);
 
   const selectedProp = properties.find((p) => p.id === (propId === "all" ? "" : propId));
-  const isQaSelection = !!selectedProp && /^QA TEST/i.test(selectedProp.name || "");
+  const isTestSelection = !!selectedProp && isTestPropertyName(selectedProp.name);
 
   const generatePDF = async () => {
     setGenerating(true);
@@ -115,7 +117,7 @@ export default function PropertySummaryExport() {
         </div>
       </div>
 
-      {isQaSelection && !includeTest && (
+      {isTestSelection && !includeTest && (
         <div className="flex items-start gap-2 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700 dark:text-amber-500">

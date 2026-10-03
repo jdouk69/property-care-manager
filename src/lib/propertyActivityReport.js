@@ -15,6 +15,12 @@ import { isQaProperty } from "@/lib/qaGuard";
 import { visitTypeLabelFor, isQuickCheckVisit } from "@/lib/visitTypeLabels";
 import { athensDate, athensMediumDateTime } from "@/lib/timezone";
 
+// Test properties are excluded from this report by default. The app-wide QA
+// guard matches the "QA TEST" prefix; activity reports additionally treat any
+// property whose name starts with "TEST" as a test record. Shared qaGuard
+// semantics used by operational queues are NOT changed.
+const isTestProperty = (p) => !!p && (isQaProperty(p) || /^TEST\b/i.test(String(p.name || "")));
+
 // --- Labels (en / el) -----------------------------------------------------------
 export function activityLabels(lang) {
   if (lang === "el") {
@@ -122,16 +128,16 @@ export function buildActivityReportModel(input = {}) {
   const propMap = new Map(properties.map((p) => [p.id, p]));
   const propName = (id) => (propMap.get(id)?.name || "").trim() || L.unassignedProperty;
 
-  const isQaRec = (rec) => {
+  const isTestRec = (rec) => {
     const p = propMap.get(rec?.property_id);
-    return !!p && isQaProperty(p);
+    return !!p && isTestProperty(p);
   };
   const inScope = (rec) => {
     if (!rec || rec.archived) return false;
     const pid = rec.property_id || "";
     if (propertyId && pid !== propertyId) return false;
     // QA/test properties are excluded by default in All Properties scope.
-    if (!propertyId && !includeTest && isQaRec(rec)) return false;
+    if (!propertyId && !includeTest && isTestRec(rec)) return false;
     return true;
   };
   const hasRange = !!(startDate || endDate);
@@ -251,7 +257,7 @@ export function buildActivityReportModel(input = {}) {
     endDate,
     includeTest,
     scopeName: propertyId ? propName(propertyId) : L.allProperties,
-    isQaSelection: !!selectedProp && isQaProperty(selectedProp),
+    isTestSelection: !!selectedProp && isTestProperty(selectedProp),
     overview: { visitsByStatus, visitTotal: vis.length, outstanding, maintenanceTotal: mnt.length, expensesCount: exp.length, expensesTotal },
     visitRows,
     maintRows,
@@ -339,7 +345,7 @@ export async function generateActivityReportPdf(input) {
 
   // Scope notes (test-record handling) — shown honestly, never silently.
   const notes = [];
-  if (model.isQaSelection && !model.includeTest) notes.push(L.qaHint);
+  if (model.isTestSelection && !model.includeTest) notes.push(L.qaHint);
   else if (model.includeTest) notes.push(L.includeTest);
   else if (!model.propertyId) notes.push(L.testExcludedNote);
   const periodText = model.hasRange
@@ -433,7 +439,9 @@ export async function generateActivityReportPdf(input) {
       if (ri % 2 === 1) { doc.setFillColor(...CREAM); doc.rect(margin, y, maxWidth, rowH, "F"); }
       cellLineArrs.forEach((lines, ci) => {
         doc.setFont(SANS, row.bold ? "bold" : "normal"); doc.setFontSize(8.5);
-        doc.setTextColor(row.colors?.[ci] || (row.bold ? 30 : 60));
+        const cellColor = row.colors?.[ci];
+        if (cellColor) doc.setTextColor(cellColor[0], cellColor[1], cellColor[2]);
+        else doc.setTextColor(row.bold ? 30 : 60);
         lines.forEach((l, li) => {
           const lw = doc.getTextWidth(l);
           const x = cols[ci].align === "right" ? xs[ci] + cols[ci].w - 3 - lw : xs[ci] + 3;
@@ -451,6 +459,18 @@ export async function generateActivityReportPdf(input) {
       doc.line(margin, y, pageW - margin, y);
     });
     y += 4;
+  };
+
+  // Property-level heading: serif navy title with a gold rule to the margin.
+  const sectionHeading = (s) => {
+    ensure(14);
+    doc.setFont(SERIF, "bold"); doc.setFontSize(12); doc.setTextColor(...NAVY);
+    text(s, margin, y);
+    const w = doc.getTextWidth(clean(s));
+    doc.setDrawColor(...GOLD); doc.setLineWidth(0.5);
+    doc.line(margin + w + 3, y - 1.5, pageW - margin, y - 1.5);
+    doc.setTextColor(0);
+    y += 9;
   };
 
   const subHeading = (s) => {
