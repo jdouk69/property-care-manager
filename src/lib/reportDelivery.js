@@ -17,6 +17,7 @@
 import { base44 } from "@/api/base44Client";
 import { buildOwnerReportModel, generateAndStoreReportPdf, reportContentFingerprint } from "@/lib/visitReport";
 import { sendOwnerReportEmail } from "@/lib/visitReportSend";
+import { durationReviewInfo } from "@/lib/durationReview";
 
 /**
  * Approval state of a visit's report against the current data.
@@ -45,7 +46,18 @@ export function reviewStateFor(visit, ctx = {}) {
  * freshly built model (what the owner will receive) and the count of photos
  * that could not be included (if any).
  */
-export async function approveReport(visit, ctx, userName) {
+export async function approveReport(visit, ctx, userName, durationDecision = null) {
+  // Duration safeguard: a multi-day visit cannot be approved without a staff
+  // decision (confirm / corrected minutes + reason / omit). The decision is
+  // stored with the approval; changing it later changes the fingerprint and
+  // forces re-approval. The original timestamps are never modified.
+  const dur = durationReviewInfo(visit);
+  if (dur.multiDay && !(durationDecision && ["confirmed", "omitted"].includes(durationDecision.state) ||
+      (durationDecision?.state === "corrected" && Number(durationDecision.verified_minutes) > 0 && String(durationDecision.reason || "").trim().length > 0))) {
+    const err = new Error("This visit spans multiple days — confirm, correct or omit the duration in the review screen before approving.");
+    err.code = "duration_review_required";
+    throw err;
+  }
   const { file_uri, blob, photoFailures } = await generateAndStoreReportPdf(visit, ctx);
   const reviewedAt = new Date().toISOString();
   const patch = {
@@ -55,6 +67,17 @@ export async function approveReport(visit, ctx, userName) {
     report_reviewed_at: reviewedAt,
     report_reviewed_by: userName || "",
   };
+  if (dur.multiDay) {
+    patch.duration_review = {
+      state: durationDecision.state,
+      verified_minutes: durationDecision.state === "corrected"
+        ? Math.round(Number(durationDecision.verified_minutes))
+        : null,
+      reason: String(durationDecision.reason || "").trim(),
+      reviewed_at: reviewedAt,
+      reviewed_by: userName || "",
+    };
+  }
   await base44.entities.PropertyVisit.update(visit.id, patch);
   const updated = { ...visit, ...patch };
   return {
@@ -87,6 +110,9 @@ export function reportGenerationError(e, t) {
   }
   if (e?.code === "quick_check_excluded") {
     return t("Quick Check visits do not include a customer-facing visit report.");
+  }
+  if (e?.code === "duration_review_required") {
+    return t("This visit spans multiple days — review its duration in the report preview before approving.");
   }
   return t("Could not generate report: {message}", { message: e?.message || e });
 }

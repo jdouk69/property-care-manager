@@ -8,6 +8,7 @@ import ReportReviewModal from "@/components/visits/ReportReviewModal";
 import { buildOwnerReportModel, generateVisitReportPdf } from "@/lib/visitReport";
 import { approveReport, dispatchReportEmail, reviewStateFor, reportGenerationError } from "@/lib/reportDelivery";
 import { isQuickCheckVisit } from "@/lib/visitTypeLabels";
+import { durationReviewInfo } from "@/lib/durationReview";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -82,12 +83,12 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
     setGenerating(false);
   };
 
-  const approve = async () => {
+  const approve = async (durationDecision) => {
     setError("");
     setPhotoWarn(0);
     setApproving(true);
     try {
-      const { updated, model: m, photoFailures } = await approveReport(visit, ctx, userName);
+      const { updated, model: m, photoFailures } = await approveReport(visit, ctx, userName, durationDecision);
       onUpdate && onUpdate(updated);
       setModel(m);
       setPhotoWarn(photoFailures);
@@ -172,6 +173,13 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
       {reviewState.approved && !reviewState.hashMatches && (
         <p className="text-xs text-amber-600">{t("Data changed since approval — approve again before sending.")}</p>
       )}
+
+      {/* Duration safeguard — flag visits left open across multiple days. */}
+      {(() => { const d = durationReviewInfo(visit); return d.multiDay && !d.reviewed ? (
+        <p className="text-xs text-amber-600">{t("This visit spans multiple calendar days — review its duration before approving the report.")}</p>
+      ) : d.multiDay ? (
+        <p className="text-xs text-muted-foreground">{t("Multi-day duration reviewed ({state}).", { state: d.review?.state || "" })}</p>
+      ) : null; })()}
 
       {/* Delivery history shows ONLY for a report that has actually been sent
           (status "Sent") — legacy/stale fields from an earlier report cycle of

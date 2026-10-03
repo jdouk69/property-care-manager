@@ -171,6 +171,36 @@
     "report_delivery_method": {
       "type": "string"
     },
+    "duration_review": {
+      "type": "object",
+      "description": "Staff decision about a flagged multi-day visit duration (visits left open across days). The original start/end timestamps are NEVER modified. state 'confirmed' = the recorded gap is accurate; 'corrected' = use verified_minutes in the customer report (reason required); 'omitted' = show no duration in the report.",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "confirmed",
+            "corrected",
+            "omitted"
+          ]
+        },
+        "verified_minutes": {
+          "type": "number",
+          "description": "Staff-verified actual visit duration in minutes (only for state 'corrected')."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why the recorded duration was corrected or omitted (required for 'corrected')."
+        },
+        "reviewed_at": {
+          "type": "string",
+          "description": "When the duration decision was made (at report approval)."
+        },
+        "reviewed_by": {
+          "type": "string",
+          "description": "Who made the duration decision."
+        }
+      }
+    },
     "property_service_agreement_id": {
       "type": "string"
     },

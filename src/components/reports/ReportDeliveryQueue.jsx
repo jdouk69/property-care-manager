@@ -132,12 +132,12 @@ export default function ReportDeliveryQueue() {
     setGenerating(false);
   };
 
-  const approveReview = async () => {
+  const approveReview = async (durationDecision) => {
     const v = reviewVisit;
     if (!v) return;
     setApproving(true);
     try {
-      const { updated, model: m, photoFailures } = await approveReport(v, ctxFor(v), userName);
+      const { updated, model: m, photoFailures } = await approveReport(v, ctxFor(v), userName, durationDecision);
       applyUpdate(v.id, updated);
       setReviewVisit(updated);
       setModel(m);

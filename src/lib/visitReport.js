@@ -3,6 +3,7 @@ import { visitTypeLabelFor, QUICK_CHECK_TYPE } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
 import { CHECKLIST_ITEM_EL } from "@/lib/i18n/checklistItemDisplay";
+import { durationReviewInfo } from "@/lib/durationReview";
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -359,14 +360,21 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     .filter((p) => p && p.active !== false && String(p.area || "").trim())
     .map((p) => String(p.area).trim());
 
-  // Recorded visit duration — only when both timestamps exist.
-  const durationMinutes = (() => {
-    const s = visit?.start_time ? Date.parse(visit.start_time) : null;
-    const e = visit?.end_time ? Date.parse(visit.end_time) : null;
-    if (s == null || e == null || isNaN(s) || isNaN(e)) return null;
-    const m = Math.round((e - s) / 60000);
-    return m > 0 ? m : null;
-  })();
+  // Recorded visit duration — only when both timestamps exist. Visits that
+  // span multiple calendar days (e.g. left open across days) are flagged for
+  // staff review: the customer report shows a duration only after a staff
+  // decision (durationReview.js). The raw timestamps are never altered here.
+  const durInfo = durationReviewInfo(visit);
+  const durationMinutes = durInfo.effectiveMinutes;
+  const durationFlag = durInfo.multiDay
+    ? {
+        rawMinutes: durInfo.rawMinutes,
+        startTime: visit.start_time,
+        endTime: visit.end_time,
+        review: durInfo.review,
+        reviewed: durInfo.reviewed,
+      }
+    : null;
 
   // Kept for backward compatibility (e.g. the delivery email).
   const detailedRecord = cl.map((it) => ({
@@ -416,6 +424,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     docPhotos,
     monitoringPriorities,
     durationMinutes,
+    durationFlag,
     detailedRecord,
     issues: (issues || []).filter((i) => i && i.status !== "Cancelled").map((i) => ({
       title: i.title, priority: i.priority, status: i.status, category: i.category,
@@ -999,6 +1008,17 @@ export function reportContentFingerprint(visit, ctx = {}) {
     })),
     tasks: (tasks || []).map((tk) => ({ id: tk?.id || "", title: tk?.title || "" })),
   };
+  // The staff duration decision shapes the rendered report, so it is part of
+  // the fingerprint for multi-day visits: changing it invalidates approval.
+  // Key added ONLY for multi-day visits so single-day approvals stay valid.
+  const dur = durationReviewInfo(visit);
+  if (dur.multiDay) {
+    payload.visit.duration_review = {
+      state: dur.review?.state || "",
+      verified_minutes: dur.review?.state === "corrected" ? (dur.review?.verified_minutes ?? "") : "",
+      reason: dur.review?.reason || "",
+    };
+  }
   const s = stableStringify(payload);
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;

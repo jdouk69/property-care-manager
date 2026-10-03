@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, AlertOctagon,
   ListChecks, MapPin, Camera, Eye, Minus, Languages, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import DurationReviewCard from "@/components/visits/DurationReviewCard";
 import { Image as UIImage } from "@/components/ui/image";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -57,6 +58,24 @@ function SectionHeading({ children }) {
 
 export default function ReportReviewModal({ open, model, generating, sending, approving, reviewState, error, photoWarn, onClose, onSend, onApprove, onBackToEdit }) {
   const { t } = useLanguage();
+
+  // Duration-review decision (multi-day visits). Pre-filled from any stored
+  // decision; required before the report can be approved.
+  const flag = open ? model?.durationFlag || null : null;
+  const [durDecision, setDurDecision] = useState(null);
+  useEffect(() => {
+    if (!open) return;
+    setDurDecision(model?.durationFlag?.review ? { ...model.durationFlag.review } : null);
+  }, [open, model]);
+  const durValid = !flag || !!(
+    durDecision &&
+    (durDecision.state === "confirmed" ||
+      durDecision.state === "omitted" ||
+      (durDecision.state === "corrected" &&
+        Number(durDecision.verified_minutes) > 0 &&
+        String(durDecision.reason || "").trim().length > 0))
+  );
+
   if (!open) return null;
   if (generating || !model) {
     return (
@@ -136,6 +155,10 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
               <p className="text-xs text-amber-700 dark:text-amber-500">{error}</p>
             </div>
           )}
+
+          {/* Duration safeguard — decision required before approval. Not part
+              of the customer-facing report content itself. */}
+          {flag && <DurationReviewCard flag={flag} decision={durDecision} onChange={setDurDecision} />}
 
           {/* Masthead — navy band like the PDF */}
           <div className="rounded-xl bg-report-navy text-report-cream px-4 py-3">
@@ -331,7 +354,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
         <div className="px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-border flex flex-row flex-wrap gap-2">
           <Button variant="outline" onClick={onBackToEdit} className="rounded-xl flex-1 sm:flex-none h-9">{t("Back to Edit")}</Button>
           {(!reviewState || !reviewState.approved || !reviewState.hashMatches) && (
-            <Button onClick={onApprove} disabled={approving} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
+            <Button onClick={() => onApprove(durDecision)} disabled={approving || !durValid} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
               {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
               {approving ? t("Approving…") : t("Approve & Save PDF")}
             </Button>
