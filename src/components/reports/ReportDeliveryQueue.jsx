@@ -45,8 +45,8 @@ const bucketOf = (v) => {
 
 /**
  * Centralized customer-report delivery queue. Reuses the SAME delivery
- * functions as the Visit Detail ReportDeliveryCard (sendOwnerReportEmail,
- * buildOwnerReportModel, generateAndStoreReportPdf, generateVisitReportPdf)
+ * pipeline as the Visit Detail ReportDeliveryCard (buildOwnerReportModel,
+ * reviewStateFor, approveReport, dispatchReportEmail via reportDelivery.js)
  * and updates the SAME PropertyVisit.report_* fields, so there is one report
  * record and one delivery path. Completing a visit never emails the customer;
  * the employee decides when to send.
