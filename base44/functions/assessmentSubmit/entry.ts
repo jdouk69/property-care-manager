@@ -54,40 +54,69 @@ export default async function (req) {
         const subject = el
           ? 'Νέο αίτημα αξιολόγησης ακινήτου — ' + name
           : 'New property assessment request — ' + name;
-        const body = (el
-          ? [
-              'Υπάρχει νέο αίτημα αξιολόγησης από την ιστοσελίδα.',
-              '',
-              'Ονοματεπώνυμο: ' + name,
-              'Email: ' + email,
-              'Τηλέφωνο: ' + (phone || '—'),
-              'Τοποθεσία ακινήτου: ' + property_location,
-              'Τύπος ακινήτου: ' + (property_type || '—'),
-              '',
-              'Μήνυμα:',
-              notes,
-              '',
-              'Δείτε το στο app: https://propertycarecrete.com/assessment-requests',
-            ]
-          : [
-              'A new assessment request was submitted from the website.',
-              '',
-              'Name: ' + name,
-              'Email: ' + email,
-              'Phone: ' + (phone || '—'),
-              'Property location: ' + property_location,
-              'Property type: ' + (property_type || '—'),
-              '',
-              'Message:',
-              notes,
-              '',
-              'View it in the app: https://propertycarecrete.com/assessment-requests',
-            ]).join('\n');
+
+        const appUrl = 'https://propertycarecrete.com/assessment-requests';
+        // Escape customer-entered text before it touches the HTML email.
+        const esc = (v) => String(v ?? '')
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        const rows = el ? [
+          ['Ονοματεπώνυμο', name],
+          ['Email', email],
+          ['Τηλέφωνο', phone || '—'],
+          ['Τοποθεσία ακινήτου', property_location],
+          ['Τύπος ακινήτου', property_type || '—'],
+        ] : [
+          ['Name', name],
+          ['Email', email],
+          ['Phone', phone || '—'],
+          ['Property location', property_location],
+          ['Property type', property_type || '—'],
+        ];
+
+        // Plain-text version: labeled lines, line breaks preserved.
+        const text = [
+          el ? 'Υπάρχει νέο αίτημα αξιολόγησης από την ιστοσελίδα.' : 'A new assessment request was submitted from the website.',
+          '',
+          ...rows.map(([label, value]) => `${label}: ${value}`),
+          '',
+          el ? 'Μήνυμα:' : 'Message:',
+          notes,
+          '',
+          el ? `Δείτε το στο app: ${appUrl}` : `View it in the app: ${appUrl}`,
+        ].join('\n');
+
+        // Mobile-friendly HTML version: labeled rows, escaped values, app button.
+        const labelStyle = 'padding:6px 12px 6px 0;color:#6b7280;font-size:14px;white-space:nowrap;vertical-align:top;';
+        const valueStyle = 'padding:6px 0;color:#111827;font-size:14px;vertical-align:top;word-break:break-word;';
+        const rowsHtml = rows.map(([label, value]) =>
+          `<tr><td style="${labelStyle}"><strong style="font-weight:600;">${esc(label)}</strong></td><td style="${valueStyle}">${esc(value)}</td></tr>`
+        ).join('');
+        const heading = el ? 'Υπάρχει νέο αίτημα αξιολόγησης από την ιστοσελίδα.' : 'A new assessment request was submitted from the website.';
+        const messageLabel = el ? 'Μήνυμα' : 'Message';
+        const buttonLabel = el ? 'Δείτε το στο app' : 'View request in app';
+        const html = `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f4f5f7;">
+<div style="max-width:600px;margin:0 auto;padding:24px 16px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;">
+    <tr><td style="padding:20px 24px 8px;font-size:15px;color:#374151;">${esc(heading)}</td></tr>
+    <tr><td style="padding:8px 24px 0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rowsHtml}</table>
+    </td></tr>
+    <tr><td style="padding:16px 24px 4px;font-size:14px;font-weight:600;color:#111827;">${esc(messageLabel)}</td></tr>
+    <tr><td style="padding:0 24px;font-size:14px;line-height:1.6;color:#111827;word-break:break-word;">${esc(notes).replace(/\n/g, '<br>')}</td></tr>
+    <tr><td style="padding:24px;">
+      <a href="${appUrl}" style="display:inline-block;background:#1a262e;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;">${esc(buttonLabel)}</a>
+    </td></tr>
+  </table>
+</div></body></html>`;
+
         for (const admin of admins) {
           await base44.asServiceRole.integrations.Core.SendEmail({
             to: admin.email,
             subject,
-            body,
+            html,
+            text,
           });
         }
       } catch (error) {
