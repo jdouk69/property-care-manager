@@ -131,6 +131,16 @@
     "billing_period": {
       "type": "string"
     },
+    "period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Anniversary billing (2026-10): first day of the service period this charge bills, on the Athens calendar (the agreement's service-start anniversary). Legacy calendar-month charges have no period dates."
+    },
+    "period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Anniversary billing (2026-10): last day (inclusive) of the service period this charge bills \u2014 the day before the next clamped anniversary. Legacy calendar-month charges have no period dates."
+    },
     "archived": {
       "type": "boolean",
       "default": false

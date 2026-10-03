@@ -1,134 +1,169 @@
-// Pure recurring-charge builder. No platform deps — consumed by the
-// generateRecurringCharges backend function (scheduled workflow).
+// Anniversary recurring-charge builder — pure, no platform deps. Consumed by
+// the generateRecurringCharges backend function (scheduled workflow) and by
+// agreementActivate (first-period billing at activation).
 //
-// Policies (approved 2026-09):
-// - Net 14: due_date = billing_date + 14 calendar days (matches the signed
-//   agreement terms: "Payment is due within 14 days of the invoice date").
-// - Duplicate protection: at most ONE charge per agreement per billing month,
-//   regardless of how the existing charge was created (manual or automatic) or
-//   its state (Due / Paid / Waived / archived). Callers pass ALL existing
-//   BillingCharge records; the builder skips any agreement+month that already
-//   has one, so repeated/daily runs are idempotent.
-// - Mid-month starts: a start date after the 1st is never auto-billed for its
-//   start month. The first automatic charge is the next cadence month
-//   (Monthly: next month; Quarterly: start month + 3; Annual: start month + 12).
-//   No prorating.
+// Policies (approved 2026-10, replacing the calendar-month model):
+// - Monthly agreements bill on their SERVICE-START ANNIVERSARY: the anchor is
+//   the recorded agreed start_date (fallback: the Athens date of activation).
+//   Periods are contiguous [anchor, next anniversary - 1 day], stored
+//   explicitly as period_start / period_end (Athens calendar). No proration.
+// - The first full monthly charge (and linked Draft invoice) is created when
+//   service starts; one new charge on each monthly anniversary thereafter,
+//   at the agreement's locked agreed_price (never the package's current price).
+// - Unsigned or inactive agreements are never billed.
+// - Catch-up without duplicates: any recurring service charge already covering
+//   the agreement's property blocks re-billing of the period it covers.
+//   Legacy calendar charges cover through the END of their billing month, so
+//   existing agreements transition without an overlapping first anniversary
+//   bill and without retroactive re-billing. At most ONE new charge per
+//   agreement per run (the latest started, uncovered period) — repeated or
+//   retried daily runs catch up without duplicates.
+// - Agreements without a reliable service-start date are FLAGGED for staff
+//   review, never guessed.
+// - Quarterly/Annual billing is not part of the anniversary model yet — such
+//   agreements are flagged for staff review rather than silently skipped.
+// - Test agreements (is_test_agreement) never produce real ledger entries,
+//   unless explicitly scoped by id (verification runs only).
 
-const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+import { athensDate } from './timezone.js';
+import {
+  anniversaryDate,
+  servicePeriod,
+  periodIndexContaining,
+  addDays,
+  monthLabel,
+  daysInMonth,
+} from './servicePeriods.js';
 
-function monthsBetween(startPeriod, period) {
-  const [sy, sm] = startPeriod.split("-").map(Number);
-  const [y, m] = period.split("-").map(Number);
-  return (y - sy) * 12 + (m - sm);
+// Unique per agreement + service period — the server-side duplicate key.
+export function recurringSourceKey(agreementId, periodStart) {
+  return `agreement:${agreementId}:${periodStart}`;
 }
 
-export function recurringSourceKey(agreementId, period) {
-  return `agreement:${agreementId}:${period}`;
+// Reliable service-start billing anchor (Athens calendar YYYY-MM-DD), or "".
+export function serviceAnchor(agreement) {
+  const sd = String((agreement && agreement.start_date) || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(sd)) return sd;
+  const act = String((agreement && agreement.activated_at) || '');
+  if (act) {
+    const d = athensDate(act);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  }
+  return '';
 }
 
-// A charge's billing month: billing_period when present, else derived from
-// billing_date. Manual charges usually have no billing_period — their
-// billing_date (required on the Add Charge form, defaulted to today) provides
-// the month for duplicate detection.
-export function chargeBillingMonth(charge) {
-  const bp = String((charge && charge.billing_period) || "").slice(0, 7);
-  if (/^\d{4}-\d{2}$/.test(bp)) return bp;
-  const bd = String((charge && charge.billing_date) || "").slice(0, 7);
-  if (/^\d{4}-\d{2}$/.test(bd)) return bd;
-  return "";
-}
-
-// Calendar-day arithmetic on a plain YYYY-MM-DD string (pure date, no timezone).
-export function addDays(dateStr, days) {
-  const [y, m, d] = String(dateStr).split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + days));
-  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
-}
-
-// Net 14 due date — matches the signed agreement terms:
-// "Payment is due within 14 days of the invoice date."
-export const NET_14_DAYS = 14;
-
-// Is `period` (YYYY-MM) a billing month for this agreement?
-// - Monthly: every month since start
-// - Quarterly / Annual: every 3rd / 12th month since the agreement's start month
-// - Mid-month start (start day > 1): the start month is NEVER auto-billed
-//   (partial first month is not prorated). The first automatic charge is the
-//   next cadence month — Monthly: start + 1, Quarterly: start + 3, Annual: start + 12.
-//   Staff can create a manual charge for an initial partial period if desired.
-// - One-time or unknown billing type: never
-export function isChargeMonth(agreement, period) {
-  const start = String(agreement.start_date || "").slice(0, 7);
-  if (!/^\d{4}-\d{2}$/.test(start)) return true; // no start date recorded — treat as billable now
-  const n = monthsBetween(start, period);
-  if (n < 0) return false; // agreement starts in a future month
-  const startDay = parseInt(String(agreement.start_date || "").slice(8, 10), 10) || 1;
-  if (startDay > 1 && n === 0) return false; // partial first month — never auto-billed
-  if (agreement.billing_type === "Monthly") return true;
-  if (agreement.billing_type === "Quarterly") return n % 3 === 0;
-  if (agreement.billing_type === "Annual") return n % 12 === 0;
-  return false;
+// Coverage end (YYYY-MM-DD, inclusive) contributed by existing charges for a
+// property: anniversary charges by their explicit period_end; legacy calendar
+// charges through the LAST DAY of their billing month (billing_period, else
+// billing_date). Only recurring service charges count — additional visits,
+// reimbursements and one-off charges never extend coverage. Any status counts
+// (Due / Paid / Waived, archived included): a waived period was still billed.
+export function coveredThrough(propertyId, charges) {
+  let max = '';
+  for (const c of charges || []) {
+    if (!c || c.property_id !== propertyId) continue;
+    if (c.charge_type && c.charge_type !== 'Service') continue;
+    const pe = String(c.period_end || '').slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(pe)) {
+      if (pe > max) max = pe;
+      continue;
+    }
+    const m = String(c.billing_period || c.billing_date || '').slice(0, 7);
+    if (/^\d{4}-\d{2}$/.test(m)) {
+      const [y, mo] = m.split('-').map(Number);
+      const last = `${m}-${String(daysInMonth(y, mo)).padStart(2, '0')}`;
+      if (last > max) max = last;
+    }
+  }
+  return max;
 }
 
 /**
- * Build the recurring charges for the current billing period.
+ * Build the anniversary billing work for one run.
  *
  * @param {Object} opts
- * @param {Array} opts.agreements  raw PropertyServiceAgreement records
- * @param {Object} opts.packages    map of servicePackageId -> raw ServicePackage record
- * @param {Array} opts.existingCharges  ALL existing BillingCharge records — any status,
- *   archived included. Duplicate protection matches agreement + billing month
- *   (billing_period, else billing_date) regardless of how the charge was created.
- * @param {string} opts.todayStr   Athens today (YYYY-MM-DD); the period is its YYYY-MM
- * @returns {Array} desired BillingCharge field objects (caller creates them)
+ * @param {Array} opts.agreements  PropertyServiceAgreement records (raw)
+ * @param {Object} opts.packages   map of servicePackageId -> raw ServicePackage record
+ * @param {Array} opts.existingCharges  ALL existing BillingCharge records — any
+ *   status, archived included (they define coverage / duplicate protection)
+ * @param {string} opts.todayStr   Athens today (YYYY-MM-DD)
+ * @param {boolean} opts.allowTest  true only for explicitly-scoped verification runs
+ * @returns {{ charges: Array<{agreement, pkg, period, charge}>, flags: Array }}
  */
-export function buildRecurringCharges({ agreements, packages, existingCharges, todayStr }) {
-  const period = String(todayStr).slice(0, 7);
-  const monthLabel = `${MONTH_NAMES[parseInt(period.slice(5, 7), 10) - 1]} ${period.slice(0, 4)}`;
-  const firstOfMonth = `${period}-01`;
-  const dueDate = addDays(firstOfMonth, NET_14_DAYS);
-  // agreementId:month keys that already have ANY charge (manual or automatic,
-  // any status, archived included) — every one of them blocks regeneration.
-  const billedMonths = new Set();
-  for (const c of existingCharges || []) {
-    if (!c.property_service_agreement_id) continue;
-    const m = chargeBillingMonth(c);
-    if (m) billedMonths.add(`${c.property_service_agreement_id}:${m}`);
-  }
+export function buildAnniversaryCharges({ agreements, packages, existingCharges, todayStr, allowTest = false }) {
+  const today = String(todayStr || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(today)) return { charges: [], flags: [] };
   const out = [];
+  const flags = [];
 
   for (const a of agreements || []) {
-    // Operational agreement — same rule as the rest of the app.
-    if (a.status !== "Active" || a.signing_status !== "Signed" || a.archived) continue;
-    if (a.is_test_agreement) continue; // test agreements never produce real ledger entries
-    if (!isChargeMonth(a, period)) continue;
+    if (!a || a.archived) continue;
+    if (a.status !== 'Active' || a.signing_status !== 'Signed') continue; // never bill unsigned/inactive
+    if (a.is_test_agreement && !allowTest) continue; // test agreements never produce real ledger entries
 
-    if (billedMonths.has(`${a.id}:${period}`)) continue; // already billed this month — manual or automatic
+    const billingType = a.billing_type || 'Monthly';
+    if (billingType !== 'Monthly') {
+      flags.push({
+        agreement_id: a.id,
+        property_id: a.property_id || '',
+        reason: `${billingType} billing is not supported by anniversary billing yet — needs staff review`,
+      });
+      continue;
+    }
+    if (a.agreed_price == null) continue; // nothing locked to bill (price-lock policy)
 
-    // PRICE LOCK (post-audit cleanup): recurring agreements are billed ONLY at
-    // their LOCKED agreed_price. The old fallback to the package's CURRENT
-    // standard_price was removed — it could silently reprice an existing
-    // customer when a master package price changed. An agreement without an
-    // agreed_price is skipped instead (verified 2026-09: zero agreements lack
-    // an agreed_price, so nothing legitimate is affected).
-    if (a.agreed_price == null) continue; // nothing locked to bill
-    const amount = a.agreed_price;
-    const pkg = packages[a.service_package_id] || {};
+    const anchor = serviceAnchor(a);
+    if (!anchor) {
+      flags.push({
+        agreement_id: a.id,
+        property_id: a.property_id || '',
+        reason: 'No reliable service-start date (no start_date and no activated_at) — needs staff review',
+      });
+      continue;
+    }
+
+    // First period that starts strictly after everything already covered.
+    const covered = coveredThrough(a.property_id, existingCharges);
+    let k = covered ? (periodIndexContaining(anchor, covered) + 1) : 0;
+    if (covered && /^\d{4}-\d{2}-\d{2}$/.test(anchor) && anchor > covered) k = 0;
+
+    // Catch-up: advance to the LATEST period that has already started and is
+    // still uncovered — one new charge per agreement per run, so repeated or
+    // retried daily runs catch up without duplicates and never over-bill.
+    let target = -1;
+    for (;;) {
+      const start = anniversaryDate(anchor, k);
+      if (!start || start > today) break;
+      target = k;
+      k++;
+    }
+    if (target < 0) continue; // next anniversary is in the future
+
+    const period = servicePeriod(anchor, target);
+    const pkg = (packages || {})[a.service_package_id] || {};
+    const periodStartMonth = period.start.slice(0, 7);
 
     out.push({
-      client_id: a.client_id || "",
-      property_id: a.property_id || "",
-      property_service_agreement_id: a.id,
-      description: `${pkg.name || "Service"} — ${monthLabel}`,
-      amount,
-      charge_type: "Service",
-      billing_date: firstOfMonth,
-      due_date: dueDate,
-      status: "Due",
-      source_key: recurringSourceKey(a.id, period),
-      billing_period: period,
+      agreement: a,
+      pkg,
+      period,
+      charge: {
+        client_id: a.client_id || '',
+        property_id: a.property_id || '',
+        property_service_agreement_id: a.id,
+        description: `${pkg.name || 'Service'} — ${monthLabel(periodStartMonth)}`,
+        amount: a.agreed_price,
+        charge_type: 'Service',
+        billing_date: period.start,
+        due_date: addDays(period.start, 14), // Net 14 — matches the agreement terms
+        status: 'Due',
+        source_key: recurringSourceKey(a.id, period.start),
+        billing_period: periodStartMonth,
+        period_start: period.start,
+        period_end: period.end,
+      },
     });
   }
 
-  return out;
+  return { charges: out, flags };
 }

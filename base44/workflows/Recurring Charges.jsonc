@@ -16,12 +16,12 @@
       "ends_after_count": null
     }
   },
-  "description": "Generates the current month's recurring billing charges from Active + Signed service agreements. Runs daily at 03:00 (Europe/Athens); duplicate protection (agreement ID + billing period) makes it idempotent, so each agreement gets exactly one charge per month.",
+  "description": "Anniversary recurring billing: one charge + linked Draft invoice per service period for Active + Signed monthly agreements, billed on each agreement's service-start anniversary (no proration). Runs daily at 03:00 (Europe/Athens); per-period source keys + post-write uniqueness make retries/concurrent runs duplicate-free.",
   "definition": {
     "document": {
       "dsl": "1.0.0",
       "name": "recurring_charges",
-      "version": "1.0",
+      "version": "1.1",
       "namespace": "base44"
     },
     "do": [
@@ -33,8 +33,8 @@
           },
           "then": "end",
           "x-base44": {
-            "title": "Generate recurring charges",
-            "description": "Monthly charges from Active + Signed agreements"
+            "title": "Generate anniversary charges",
+            "description": "Anniversary charge + draft invoice per service period"
           }
         }
       }

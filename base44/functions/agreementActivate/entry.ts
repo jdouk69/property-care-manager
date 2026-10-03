@@ -4,6 +4,9 @@ import {
   staffUserRef,
   auditAgreementEvent,
 } from '../../shared/agreementActivation.js';
+import { athensToday } from '../../shared/timezone.js';
+import { buildAnniversaryCharges } from '../../shared/recurringCharges.js';
+import { ensureChargeForPeriod, ensureDraftInvoiceForCharge } from '../../shared/anniversaryBilling.js';
 
 // Authenticated STAFF-ONLY endpoint for activating signed service agreements.
 // Two actions:
@@ -87,6 +90,12 @@ export default async function(req) {
         property_id: agreement.property_id || '',
         status: 'success',
       });
+
+      // Anniversary billing: first full monthly charge + linked Draft invoice
+      // at service start. Best-effort — never fails the activation itself.
+      const fresh = await base44.asServiceRole.entities.PropertyServiceAgreement.get(agreement_id).catch(() => null);
+      if (fresh) await createFirstPeriodBilling(base44, fresh);
+
       return Response.json({ ok: true, status: 'Active', activated_at: now, activated_by });
     }
 
@@ -201,6 +210,12 @@ export default async function(req) {
         property_id: agreement.property_id || '',
         status: 'success',
       });
+
+      // Anniversary billing: first-period charge + linked Draft invoice for
+      // the replacement. Best-effort — never fails the activation itself.
+      const fresh = await base44.asServiceRole.entities.PropertyServiceAgreement.get(agreement_id).catch(() => null);
+      if (fresh) await createFirstPeriodBilling(base44, fresh);
+
       return Response.json({
         ok: true,
         status: 'Active',
@@ -271,5 +286,41 @@ export default async function(req) {
     }, { status: 500 });
   } catch (error) {
     return Response.json({ error: error && error.message ? error.message : String(error) }, { status: 500 });
+  }
+}
+
+// Anniversary billing: the FIRST full monthly charge + linked Draft invoice at
+// service start (no proration). Finalize and Send remain staff actions — the
+// draft is never emailed. Best-effort: any billing failure is logged and never
+// fails the activation itself. The daily anniversary job would catch up the
+// charge if this failed, so at most one charge is ever created.
+async function createFirstPeriodBilling(base44, agreement) {
+  try {
+    if (!agreement || agreement.archived) return;
+    if (agreement.is_test_agreement === true) return; // test agreements never produce real ledger entries
+    if ((agreement.billing_type || 'Monthly') !== 'Monthly') return;
+    if (agreement.agreed_price == null) return; // nothing locked to bill
+    const [pkgs, existingCharges] = await Promise.all([
+      base44.asServiceRole.entities.ServicePackage.list('-created_date', 500),
+      base44.asServiceRole.entities.BillingCharge.list('-created_date', 500),
+    ]);
+    const { charges } = buildAnniversaryCharges({
+      agreements: [agreement],
+      packages: Object.fromEntries((pkgs || []).map((p) => [p.id, p])),
+      existingCharges: existingCharges || [],
+      todayStr: athensToday(),
+      allowTest: false,
+    });
+    for (const d of charges) {
+      const { charge, created } = await ensureChargeForPeriod(base44, d.charge);
+      if (created) await ensureDraftInvoiceForCharge(base44, charge, agreement);
+    }
+  } catch (e) {
+    await auditAgreementEvent(base44, {
+      automation_type: 'First-period billing failed',
+      record_created: `Agreement ${agreement.id}: ${String(e && e.message ? e.message : e).slice(0, 200)}`,
+      property_id: agreement.property_id || '',
+      status: 'failure',
+    });
   }
 }
