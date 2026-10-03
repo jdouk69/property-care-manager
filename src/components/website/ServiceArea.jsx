@@ -7,6 +7,26 @@ import { Image } from "@/components/ui/image";
 // Illustrative harbour scene beside the intro + location pills (approved mockup).
 const HARBOUR_IMAGE = "https://media.base44.com/images/public/6a6261eafdd1874f2f1eb998/31baddd84_47888091-B0B3-4DB4-886F-DA489ACA9AAD.png";
 
+// Prominent travel-charge notice wording (no amounts, thresholds or
+// calculation method are stated). The emergency-availability statement stays
+// content-driven from the website editor (see the travel notice below).
+const TRAVEL_NOTICE = {
+  en: {
+    heading: "Additional travel charges may apply",
+    body:
+      "Travel within our core service area is included. Properties outside this area may incur an additional travel charge. We confirm the charge during your property assessment and agree it with you in writing before service begins.",
+    monthly:
+      "For monthly plans, your quote will show the total monthly cost, including any agreed travel charges.",
+  },
+  el: {
+    heading: "Ενδέχεται να ισχύει επιπλέον χρέωση μετακίνησης",
+    body:
+      "Η μετακίνηση εντός του βασικού μας χώρου εξυπηρέτησης περιλαμβάνεται. Για ακίνητα εκτός αυτής της περιοχής μπορεί να ισχύει επιπλέον χρέωση μετακίνησης. Επιβεβαιώνουμε τη χρέωση κατά την αξιολόγηση του ακινήτου σας και τη συμφωνούμε γραπτώς μαζί σας πριν ξεκινήσει η υπηρεσία.",
+    monthly:
+      "Για τα μηνιαία πακέτα, η προσφορά σας θα δείχνει το συνολικό μηνιαίο κόστος, συμπεριλαμβανομένων τυχόν συμφωνημένων χρεώσεων μετακίνησης.",
+  },
+};
+
 // Copy comes from the website content model (published via the admin
 // editor), falling back to the built-in defaults when nothing is published.
 export default function ServiceArea() {
@@ -55,13 +75,29 @@ export default function ServiceArea() {
             />
           </div>
         </div>
-        {travelNotes.length > 0 && (
-          <div className="mt-6 space-y-2 rounded-xl border border-border bg-card p-4">
-            {travelNotes.map((p, i) => (
-              <p key={i} className="text-sm text-muted-foreground leading-relaxed">{p}</p>
-            ))}
+        {/* Prominent travel-charge notice: brass icon + bold heading, brass
+            left border and subtle brass tint; always visible (no accordion /
+            tooltip / small print). The emergency-availability statement
+            follows as its own paragraph. */}
+        <div className="mt-6 rounded-xl border border-border border-l-4 border-l-primary bg-accent/60 p-4 sm:p-5">
+          <div className="flex items-center gap-2.5">
+            <MapPin className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+            <h3 className="font-heading text-base sm:text-lg font-bold text-foreground">
+              {TRAVEL_NOTICE[lang].heading}
+            </h3>
           </div>
-        )}
+          <p className="mt-3 text-sm leading-relaxed text-foreground/85">
+            {TRAVEL_NOTICE[lang].body}
+          </p>
+          <p className="mt-3 text-sm font-semibold leading-relaxed text-foreground">
+            {TRAVEL_NOTICE[lang].monthly}
+          </p>
+          {travelNotes.length > 0 && (
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {travelNotes[travelNotes.length - 1]}
+            </p>
+          )}
+        </div>
       </div>
     </section>
   );
