@@ -5,7 +5,7 @@ const SECRET_NAME = 'WEBSITE_PRICE_FEED_KEY';
 const KEY_HEADER = 'x-website-price-feed-key';
 
 // Read-only price feed for the separate public website app.
-// Only the seven approved services are ever exposed, matched by stable record
+// Only the nine approved services are ever exposed, matched by stable record
 // ID. Prices, hourly rates, time allowances and availability are read LIVE
 // from the service records, so updating a price in this app updates the
 // website automatically. Services flagged live_description also return the
@@ -55,6 +55,20 @@ const APPROVED_SERVICES = [
     description: 'Pre-arrival visual check and airing of the property so everything is in order for your arrival — up to 60 minutes included.',
   },
   {
+    record_id: '6aad8b50a7fd40c49fdc79ff',
+    service_key: 'seasonal_opening',
+    name: 'Seasonal Opening',
+    billing_unit: 'visit',
+    description: "Get your home ready after a period away. We air it, look for obvious visible problems, and carry out the simple opening steps you've agreed to in writing — up to 60 minutes included.",
+  },
+  {
+    record_id: '6aad8b703263310ebb1dc6e8',
+    service_key: 'seasonal_closing',
+    name: 'Seasonal Closing',
+    billing_unit: 'visit',
+    description: 'Prepare your home for a period away. We carry out your agreed closing steps, check doors and shutters, and secure the property as instructed — up to 60 minutes included.',
+  },
+  {
     record_id: '6a626bd947df156e4c466658',
     service_key: 'grocery_stocking',
     name: 'Grocery Stocking',
@@ -69,6 +83,8 @@ const APPROVED_SERVICES = [
     description: 'We attend your property or project on your behalf, document observable progress and concerns with photos, and report back — first 60 minutes included.',
   },
 ];
+
+console.log('FEED_PROBE approved_services=', APPROVED_SERVICES.length, APPROVED_SERVICES.map(s => s.service_key).join(','));
 
 function keysMatch(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
@@ -88,7 +104,7 @@ export default async function(req) {
       } catch (e) {}
     }
     if (!configured || !provided || !keysMatch(provided, configured)) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized', probe: APPROVED_SERVICES.map(s => s.service_key).join(',') }, { status: 401 });
     }
 
     const base44 = createClientFromRequest(req);

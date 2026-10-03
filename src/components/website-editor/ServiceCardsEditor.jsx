@@ -15,6 +15,8 @@ const SERVICE_CARDS = [
   { key: "property_care", label: "Property Care" },
   { key: "complete_care", label: "Complete Care" },
   { key: "owner_arrival_preparation", label: "Owner Arrival Preparation" },
+  { key: "seasonal_opening", label: "Seasonal Opening" },
+  { key: "seasonal_closing", label: "Seasonal Closing" },
   { key: "owner_representative_site_visit", label: "Owner Representative Site Visit" },
   { key: "grocery_stocking", label: "Grocery Stocking" },
   { key: "emergency_visit", label: "Emergency Visit" },

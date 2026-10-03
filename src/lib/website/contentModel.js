@@ -82,6 +82,18 @@ export const DEFAULT_CONTENT = {
           included: "Includes up to 60 minutes on site.",
           extras: "If a visit needs more time than its included allowance, agreed extra time is charged at €{hourly}/hour.",
         },
+        seasonal_opening: {
+          name: "Seasonal Opening",
+          desc: "Get your home ready after a period away. We air it, look for obvious visible problems, and carry out the simple opening steps you've agreed to in writing.",
+          included: "Includes up to 60 minutes on site.",
+          extras: "Agreed extra time: €{hourly}/hour.",
+        },
+        seasonal_closing: {
+          name: "Seasonal Closing",
+          desc: "Prepare your home for a period away. We carry out your agreed closing steps, check doors and shutters, and secure the property as instructed.",
+          included: "Includes up to 60 minutes on site.",
+          extras: "Agreed extra time: €{hourly}/hour.",
+        },
         owner_representative_site_visit: {
           name: "Owner Representative Site Visit",
           desc: "Can't be there when a contractor, delivery or service provider arrives? We can meet them at the property, provide access, document the visit and keep you informed.",
@@ -133,6 +145,18 @@ export const DEFAULT_CONTENT = {
           desc: "Οπτικός έλεγχος και αερισμός του ακινήτου πριν την άφιξή σας, ώστε όλα να είναι σε τάξη.",
           included: "Περιλαμβάνει έως 60 λεπτά επιτόπου.",
           extras: "Αν μια επίσκεψη χρειαστεί περισσότερο χρόνο από τον συμφωνημένο, ο επιπλέον χρόνος που συμφωνείται μαζί σας χρεώνεται με €{hourly}/ώρα.",
+        },
+        seasonal_opening: {
+          name: "Εποχιακό Άνοιγμα",
+          desc: "Ετοιμάζουμε το σπίτι σας μετά από περίοδο απουσίας. Το αερίζουμε, ελέγχουμε για εμφανή προβλήματα και εκτελούμε τα απλά βήματα ανοίγματος που έχετε συμφωνήσει μαζί μας γραπτώς.",
+          included: "Περιλαμβάνει έως 60 λεπτά επιτόπου.",
+          extras: "Συμφωνημένος επιπλέον χρόνος: €{hourly}/ώρα.",
+        },
+        seasonal_closing: {
+          name: "Εποχιακό Κλείσιμο",
+          desc: "Ετοιμάζουμε το σπίτι σας για περίοδο απουσίας. Εκτελούμε τα συμφωνημένα βήματα κλεισίματος, ελέγχουμε πόρτες και παντζούρια και ασφαλίζουμε το ακίνητο σύμφωνα με τις οδηγίες σας.",
+          included: "Περιλαμβάνει έως 60 λεπτά επιτόπου.",
+          extras: "Συμφωνημένος επιπλέον χρόνος: €{hourly}/ώρα.",
         },
         owner_representative_site_visit: {
           name: "Επίσκεψη Εκπροσώπου Ιδιοκτήτη",

@@ -53,6 +53,8 @@ export function billingUnitLabel(billingUnit, lang) {
 export const MONTHLY_KEYS = ["quick_check", "property_care", "complete_care"];
 export const ON_DEMAND_KEYS = [
   "owner_arrival_preparation",
+  "seasonal_opening",
+  "seasonal_closing",
   "owner_representative_site_visit",
   "grocery_stocking",
   "emergency_visit",
