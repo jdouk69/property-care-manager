@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Play, RotateCw, CheckCircle2, Info, Package } from "lucide-react";
+import { Play, RotateCw, CheckCircle2, Info, Package, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
@@ -24,13 +24,13 @@ import RestartVisitDialog from "@/components/visits/RestartVisitDialog";
  */
 export default function PackageServiceCard({
   agreement, pkg, recType, recPreview, activeServiceName, visits, propertyId, draft,
-  onStartIncluded, onStartAdditional, onResumeDraft, onRestartDraft, onRestartRecord,
+  onStartIncluded, onStartFollowUp, onStartAdditional, onResumeDraft, onRestartDraft, onRestartRecord,
 }) {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [restartFor, setRestartFor] = useState(null); // { mode: "draft" } | { mode: "record", record }
 
-  const ent = entitlementStatus({ visits: visits || [], agreement, pkg, recType, todayStr: athensToday() }) || { allowance: 1, used: 0, completed: 0, remaining: 1, unfinished: null };
+  const ent = entitlementStatus({ visits: visits || [], agreement, pkg, recType, todayStr: athensToday() }) || { allowance: 1, used: 0, completed: 0, remaining: 1, unfinished: null, followUp: null };
   // Frequency from the REAL recurring configuration — never the free-text
   // inspection_frequency fields (stale onboarding defaults live there).
   const freq = serviceFrequency(agreement, pkg);
@@ -132,6 +132,49 @@ export default function PackageServiceCard({
             <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground">{t("An additional visit is billed as a separate service — it does not use another included visit.")}</p>
           </div>
+        </div>
+      )}
+
+      {/* FOLLOW-UP companion slot (currently Complete Care): one brief check
+          per period with a dated photo update — its own included slot, judged
+          independently of the full visit's allowance. */}
+      {ent.followUp && (
+        <div className="mt-3 rounded-xl border border-border bg-card p-3">
+          <div className="flex items-center gap-2 mb-0.5">
+            <Camera className="w-3.5 h-3.5 text-primary shrink-0" />
+            <p className="text-xs font-medium text-foreground">{t("Monthly follow-up check")}</p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {ent.followUp.used > 0
+              ? ent.followUp.remaining > 0 || ent.followUp.unfinished
+                ? t("Follow-up scheduled or in progress")
+                : t("Follow-up completed")
+              : t("Follow-up not started")}
+          </p>
+          {ent.followUp.unfinished ? (
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Button onClick={() => navigate(`/visits?resume=${ent.followUp.unfinished.id}`)} className="rounded-2xl h-11 flex-1 min-w-[180px]">
+                <Play className="w-4 h-4" /> {t("Resume {package} Visit", { package: t("Complete Care Follow-up Visit") })}
+              </Button>
+              <Button variant="outline" onClick={() => setRestartFor({ mode: "record", record: ent.followUp.unfinished })} className="rounded-2xl h-11">
+                <RotateCw className="w-4 h-4" /> {t("Restart")}
+              </Button>
+            </div>
+          ) : ent.followUp.remaining > 0 ? (
+            <button type="button" onClick={onStartFollowUp}
+              className="w-full text-left rounded-2xl border border-primary/40 bg-primary/10 text-foreground px-3.5 py-3.5 hover:bg-primary/15 transition min-h-[56px] mt-2">
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0"><Camera className="w-4 h-4 text-primary" /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold truncate">{t("Start Follow-up Visit")}</p>
+                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 shrink-0">{t("Included in package")}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{t("Short follow-up checklist · up to 15 minutes")}</p>
+                </div>
+              </div>
+            </button>
+          ) : null}
         </div>
       )}
 

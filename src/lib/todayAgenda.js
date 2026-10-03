@@ -1,5 +1,5 @@
 import { athensToday, athensDate, athensTime } from "@/lib/timezone";
-import { visitTypeLabel, isQuickCheckVisit } from "@/lib/visitTypeLabels";
+import { visitTypeLabel, isReportExcludedVisit } from "@/lib/visitTypeLabels";
 
 /**
  * Build the TODAY agenda from existing dashboard data — no duplicate records.
@@ -119,7 +119,7 @@ export function buildTodayAgenda(data = {}) {
           ...base,
           actionLabel: isAssistance ? "View" : "View Report", actionKind: "view-report",
           completed: true, overdue: false,
-          reportUnsent: !isAssistance && !isQuickCheckVisit(v) && !v.report_sent && v.report_status !== "Sent",
+          reportUnsent: !isAssistance && !isReportExcludedVisit(v) && !v.report_sent && v.report_status !== "Sent",
         }, "completed");
       }
       return;
@@ -257,6 +257,6 @@ export function buildTodayAgenda(data = {}) {
 export function unsentReports(visits = []) {
   const statusOf = (v) => v.report_status || (v.report_sent ? "Sent" : "Draft");
   return visits
-    .filter((v) => v.status === "Completed" && !v.archived && !isQuickCheckVisit(v) && statusOf(v) !== "Sent")
+    .filter((v) => v.status === "Completed" && !v.archived && !isReportExcludedVisit(v) && statusOf(v) !== "Sent")
     .sort((a, b) => (b.start_time || "").localeCompare(a.start_time || ""));
 }

@@ -13,6 +13,7 @@ export const VISIT_TYPE_LABELS = {
   "Home Watch Inspection": "Quick Check Visit",
   "Property Care Inspection": "Property Care Visit",
   "Complete Care Property Visit": "Complete Care Visit",
+  "Complete Care Follow-up Visit": "Complete Care Follow-up Visit",
   "Departure Inspection": "Departure Visit",
 };
 
@@ -39,6 +40,24 @@ export function isQuickCheckVisit(v) {
   return !!v && v.visit_type === QUICK_CHECK_TYPE;
 }
 
+// Complete Care package visit types: one FULL monthly visit plus one brief
+// FOLLOW-UP check (up to 15 minutes) with a dated photo update — never a
+// second full visit. The stored enum value is never changed.
+export const COMPLETE_CARE_TYPE = "Complete Care Property Visit";
+export const COMPLETE_CARE_FOLLOWUP_TYPE = "Complete Care Follow-up Visit";
+
+export function isCompleteCareFollowUpVisit(v) {
+  return !!v && v.visit_type === COMPLETE_CARE_FOLLOWUP_TYPE;
+}
+
+// Visit types WITHOUT a customer-facing visit report: Quick Check (per the
+// published service terms) and the Complete Care follow-up (its owner
+// deliverable is the dated photo update instead). Excluded from the report
+// model, PDF, delivery queue and unsent-report reminders everywhere.
+export function isReportExcludedVisit(v) {
+  return isQuickCheckVisit(v) || isCompleteCareFollowUpVisit(v);
+}
+
 // Customer-report (EN/EL) visit type names. Staff UI keeps English via
 // visitTypeLabel(); the PDF and owner email localize via visitTypeLabelFor().
 const VISIT_TYPE_EL = {
@@ -52,6 +71,7 @@ const VISIT_TYPE_EL = {
   "Home Watch Inspection": "Επίσκεψη Quick Check",
   "Property Care Inspection": "Επίσκεψη Φροντίδας Ακινήτου",
   "Complete Care Property Visit": "Επίσκεψη Complete Care",
+  "Complete Care Follow-up Visit": "Σύντομη Συμπληρωματική Επίσκεψη Complete Care",
   "Emergency Visit": "Επείγουσα Επίσκεψη",
   "Owner Representative Site Visit": "Επίσκεψη Εκπροσώπου Ιδιοκτήτη σε Χώρο",
   "Initial Property Onboarding Inspection": "Αρχική Επίσκεψη Ένταξης Ακινήτου",

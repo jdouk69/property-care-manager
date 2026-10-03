@@ -11,7 +11,7 @@ import ReportReviewModal from "@/components/visits/ReportReviewModal";
 import MarkSentExternallyDialog from "@/components/reports/MarkSentExternallyDialog";
 import { buildOwnerReportModel, generateVisitReportPdf } from "@/lib/visitReport";
 import { approveReport, dispatchReportEmail, reviewStateFor, reportGenerationError } from "@/lib/reportDelivery";
-import { isQuickCheckVisit } from "@/lib/visitTypeLabels";
+import { isReportExcludedVisit } from "@/lib/visitTypeLabels";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime, athensMediumDate } from "@/lib/timezone";
 import { qaPropertyIds } from "@/lib/qaGuard";
@@ -91,7 +91,7 @@ export default function ReportDeliveryQueue() {
       // QA test property's synthetic visits stay out of the real delivery queue.
       const qaIds = qaPropertyIds(props || []);
       // Quick Check visits have no customer-facing report at all — never queued.
-      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id) && !isQuickCheckVisit(v)));
+      setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id) && !isReportExcludedVisit(v)));
       setProperties(props || []);
       setClients(cls || []);
       setBusiness((bss && bss[0]) || {});

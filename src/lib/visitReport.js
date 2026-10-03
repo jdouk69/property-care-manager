@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { visitTypeLabelFor, QUICK_CHECK_TYPE } from "@/lib/visitTypeLabels";
+import { visitTypeLabelFor, isReportExcludedVisit, isCompleteCareFollowUpVisit } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
 import { CHECKLIST_ITEM_EL } from "@/lib/i18n/checklistItemDisplay";
@@ -170,9 +170,10 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const L = reportLabelsFor(lang);
   const cl = visit?.checklist || [];
 
-  // Quick Check visits do not include routine photos or a customer-facing
-  // visit report (per the published service terms). No report model is built.
-  if (visit?.visit_type === QUICK_CHECK_TYPE) {
+  // Quick Check visits and the Complete Care follow-up do not include a
+  // customer-facing visit report (per the published service terms). No
+  // report model is built.
+  if (isReportExcludedVisit(visit)) {
     return { reportExcluded: true, language: lang, labels: L };
   }
 
@@ -472,9 +473,13 @@ function drawImageFit(doc, entry, x, y, boxW, boxH) {
 }
 
 async function buildDoc(visit, ctx = {}) {
-  if (visit?.visit_type === QUICK_CHECK_TYPE) {
-    const err = new Error("Quick Check visits do not include a customer-facing visit report.");
-    err.code = "quick_check_excluded";
+  if (isReportExcludedVisit(visit)) {
+    const err = new Error(
+      isCompleteCareFollowUpVisit(visit)
+        ? "Complete Care Follow-up visits include a dated photo update, not a customer-facing visit report."
+        : "Quick Check visits do not include a customer-facing visit report."
+    );
+    err.code = "report_excluded";
     throw err;
   }
   const model = buildOwnerReportModel(visit, ctx);

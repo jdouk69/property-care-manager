@@ -29,6 +29,7 @@ import {
   billingPeriodFor,
   includedVisitsPerPeriod,
   includedVisitsInPeriod,
+  followUpTypeFor,
 } from "./packageEntitlement.js";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
@@ -76,7 +77,11 @@ export function buildCoverageAlerts({ agreements, visits, packages, properties, 
     const client = (clients || []).find((c) => c && c.id === property.owner_id);
 
     const allowance = includedVisitsPerPeriod(pkg);
-    const coverage = includedVisitsInPeriod(visits, a, recType, today).length;
+    // Coverage spans BOTH package slots for packages with a follow-up
+    // companion (currently Complete Care: one full visit + one follow-up).
+    let coverage = includedVisitsInPeriod(visits, a, recType, today).length;
+    const fuType = followUpTypeFor(recType);
+    if (fuType) coverage += includedVisitsInPeriod(visits, a, fuType, today).length;
     const period = billingPeriodFor(a, today);
     const monthLabel = MONTH_NAMES[Number(period.startMonth.slice(5, 7)) - 1] || period.startMonth;
 

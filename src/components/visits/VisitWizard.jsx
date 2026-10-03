@@ -12,7 +12,7 @@ import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
 import { SEED } from "@/lib/checklistSeed";
 import { recommendedVisitType, isRecurringAgreement, serviceFrequency } from "@/lib/activeService";
-import { entitlementStatus } from "@/lib/packageEntitlement";
+import { entitlementStatus, followUpTypeFor } from "@/lib/packageEntitlement";
 import { visitTypeLabel, checklistStatusLabel } from "@/lib/visitTypeLabels";
 import { ensureOneTimeVisitCharge } from "@/lib/visitBilling";
 import CancelVisitMenu from "@/components/visits/CancelVisitMenu";
@@ -36,7 +36,7 @@ import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
-  "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Emergency Visit", "Owner Representative Site Visit",
+  "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Complete Care Follow-up Visit", "Emergency Visit", "Owner Representative Site Visit",
   "Initial Property Onboarding Inspection", "Grocery Stocking",
 ];
 
@@ -696,9 +696,17 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const vis = ctx.visits !== undefined ? ctx.visits : visits;
     if (!ag || !isRecurringAgreement(ag)) return false;
     const rec = recommendedVisitType(pk);
-    if (!rec || vt !== rec) return false;
+    if (!rec) return false;
+    const fu = followUpTypeFor(rec);
+    // Package slot of the requested type: the full visit OR (for packages
+    // with a companion, currently Complete Care) its brief follow-up. Each
+    // slot is judged independently — one full + one follow-up, never two of
+    // either kind.
+    const slot = vt === rec ? "full" : fu && vt === fu ? "followUp" : null;
+    if (!slot) return false;
     const ent = entitlementStatus({ visits: vis, agreement: ag, pkg: pk, recType: rec, todayStr: athensToday() });
-    return !ent || (ent.remaining === 0 && !ent.unfinished);
+    if (!ent || !ent[slot]) return false;
+    return ent[slot].remaining === 0 && !ent[slot].unfinished;
   };
 
   const handleStartNow = (overrideType, opts = {}) => {
@@ -1320,6 +1328,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             // Additional classification is unchanged — Start Visit Now derives
             // it from the same entitlement resolver (resolveAdditional).
             onStartIncluded={() => { setVisitType(recType); setStep("first-visit"); }}
+            onStartFollowUp={() => { setVisitType(followUpTypeFor(recType)); setStep("first-visit"); }}
             onStartAdditional={() => { setVisitType(recType); setStep("first-visit"); }}
             onResumeDraft={resume}
             onRestartDraft={restartDraftVisit}

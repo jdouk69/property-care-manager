@@ -11,6 +11,10 @@
 //   UI strings elsewhere; a dedicated map avoids cross-context collisions.
 
 export const CHECKLIST_ITEM_EL = {
+  // Complete Care Follow-up Visit
+  "Look for obvious visible water/leaks or moisture": "Αναζήτηση εμφανών διαρροών νερού ή υγρασίας",
+  "Capture the dated photo update for the owner (1–3 photos)": "Λήψη της φωτογραφικής ενημέρωσης με ημερομηνία για τον ιδιοκτήτη (1–3 φωτογραφίες)",
+
   // Monthly Property Watch
   "Gates": "Πύλες",
   "Fences": "Φράχτες",

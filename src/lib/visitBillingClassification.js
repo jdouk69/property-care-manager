@@ -9,6 +9,7 @@
 //   (full visit record kept, no customer charge).
 // Stored values are English enums; display strings are translated via t().
 import { isRecurringAgreement, recommendedVisitType } from "@/lib/activeService";
+import { followUpTypeFor } from "@/lib/packageEntitlement";
 
 export const BILLING_CLASSIFICATIONS = [
   "Included in Package",
@@ -21,7 +22,10 @@ export const BILLING_CLASSIFICATIONS = [
 // properties) — those keep their own existing billing flows unchanged.
 export function billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }) {
   if (additionalService) return billable === false ? "Courtesy - No Charge" : "Additional - Billable";
-  if (agreement && isRecurringAgreement(agreement) && visitType === recommendedVisitType(pkg)) {
+  const rec = agreement && isRecurringAgreement(agreement) ? recommendedVisitType(pkg) : null;
+  // Both package slots are included: the full visit AND (for packages with a
+  // companion, currently Complete Care) the brief follow-up visit.
+  if (rec && (visitType === rec || visitType === followUpTypeFor(rec))) {
     return "Included in Package";
   }
   return "";

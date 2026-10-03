@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import ReportReviewModal from "@/components/visits/ReportReviewModal";
 import { buildOwnerReportModel, generateVisitReportPdf } from "@/lib/visitReport";
 import { approveReport, dispatchReportEmail, reviewStateFor, reportGenerationError } from "@/lib/reportDelivery";
-import { isQuickCheckVisit } from "@/lib/visitTypeLabels";
+import { isReportExcludedVisit, isCompleteCareFollowUpVisit } from "@/lib/visitTypeLabels";
+import PhotoUpdateCard from "@/components/visits/PhotoUpdateCard";
 import { durationReviewInfo } from "@/lib/durationReview";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -52,8 +53,9 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
   if (!visit) return null;
   const status = visit.report_status || (visit.report_sent ? "Sent" : "Draft");
   const ctx = { business, property, client, issues, tasks, nextVisit };
-  const quickCheck = isQuickCheckVisit(visit);
-  const reviewState = quickCheck ? null : reviewStateFor(visit, ctx);
+  const excluded = isReportExcludedVisit(visit);
+  const followUp = isCompleteCareFollowUpVisit(visit);
+  const reviewState = excluded ? null : reviewStateFor(visit, ctx);
   const sent = status === "Sent";
 
   const patch = async (patchObj) => {
@@ -136,7 +138,12 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
     setDownloading(false);
   };
 
-  if (quickCheck) {
+  if (excluded) {
+    // Complete Care follow-up: the owner deliverable is the dated photo
+    // update — the lightweight delivery card replaces the report workflow.
+    if (followUp) {
+      return <PhotoUpdateCard visit={visit} property={property} client={client} business={business} onUpdate={onUpdate} />;
+    }
     return (
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-start gap-2">

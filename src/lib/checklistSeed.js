@@ -24,11 +24,14 @@ export const SEED = {
   // operational checks and ongoing concern tracking)
   "Complete Care Property Visit": ["More detailed exterior visual review","More detailed interior visual review","Doors/gates/windows visibly secure","Damage/vandalism observations","Visible water/leak observations","Pest concerns/signs","Electricity appears available where reasonably observable","Detailed grounds/balcony visual condition","Detailed pool visual condition where applicable","Visible moisture/mold observations","Visual checks under accessible sinks","Expanded owner-selected monitoring priorities","Routine property photos","More detailed photo documentation","Detailed written visit report","Documentation of concerns","Problem photographs when applicable","Owner notification when necessary","Run agreed/selected faucets","Flush agreed/selected toilets","Operate selected lights","Check whether agreed refrigerator/freezer or other agreed appliances appear to operate","Briefly operate agreed AC units","Visually observe pool equipment condition","Recheck previously identified concerns","Track unresolved concerns","Give priority attention/assistance to identified concerns","Confirm property is secured before leaving"],
   "Grocery Stocking": ["Confirm owner shopping list and budget","Purchase requested groceries","Deliver groceries to the property","Put away / stock basics","Record grocery cost and attach receipt photo","Send owner update with photos"],
+  // Complete Care follow-up scope: a SHORT companion check (up to 15 minutes)
+  // with a dated photo update for the owner — never a second full visit.
+  "Complete Care Follow-up Visit": ["Quick exterior walk-around","Quick interior walk-through","Doors/gates/windows visibly secure","Look for obvious visible water/leaks or moisture","Recheck previously identified concerns","Capture the dated photo update for the owner (1–3 photos)","Confirm property is secured before leaving"],
 };
 
 export const VISIT_TYPES = [
   "Monthly Property Watch", "Owner Arrival Preparation", "Guest Arrival Preparation",
   "Departure Inspection", "Seasonal Opening", "Seasonal Closing", "Owner Representative Construction Visit",
-  "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Emergency Visit", "Owner Representative Site Visit",
+  "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Complete Care Follow-up Visit", "Emergency Visit", "Owner Representative Site Visit",
   "Initial Property Onboarding Inspection", "Grocery Stocking",
 ];

@@ -74,24 +74,58 @@ export function includedVisitsInPeriod(visits, agreement, recType, todayStr) {
   );
 }
 
+// The follow-up companion visit type for packages whose monthly allowance is
+// ONE FULL visit plus ONE brief follow-up — currently Complete Care. Only the
+// exact mapping counts — never guessed from names.
+export const PACKAGE_FOLLOW_UP_TYPES = {
+  "Complete Care Property Visit": "Complete Care Follow-up Visit",
+};
+
+export function followUpTypeFor(recType) {
+  return (recType && PACKAGE_FOLLOW_UP_TYPES[recType]) || null;
+}
+
 // Full entitlement picture for the Package Service Card.
 // - used counts Completed, In Progress AND Scheduled included visits
 //   (a scheduled visit reserves its allowance slot).
-// - unfinished is the single In Progress / Scheduled included visit record
+// - unfinished is the first In Progress / Scheduled included visit record
 //   (resume/restart target), or null.
 // - remaining is capped at 0.
+// For packages with a follow-up companion (currently Complete Care) the
+// allowance splits: one FULL visit + one FOLLOW-UP — never two of either.
+// `full` and `followUp` carry the per-slot counts; the aggregate keys
+// (allowance/used/completed/remaining/unfinished) span BOTH slots.
+// MUST stay identical to the frontend twin (src/lib/packageEntitlement.js).
 export function entitlementStatus({ visits, agreement, pkg, recType, todayStr }) {
   if (!agreement) return null;
   const period = billingPeriodFor(agreement, todayStr);
-  const included = includedVisitsInPeriod(visits, agreement, recType, todayStr);
-  const allowance = includedVisitsPerPeriod(pkg);
-  const unfinished = included.find((v) => v.status === "In Progress" || v.status === "Scheduled") || null;
+  const fuType = followUpTypeFor(recType);
+  const totalAllowance = includedVisitsPerPeriod(pkg);
+  const fuAllowance = fuType ? Math.max(0, totalAllowance - 1) : 0;
+  const fullAllowance = Math.max(1, totalAllowance - fuAllowance);
+  const fullVisits = includedVisitsInPeriod(visits, agreement, recType, todayStr);
+  const fuVisits = fuType && fuAllowance > 0 ? includedVisitsInPeriod(visits, agreement, fuType, todayStr) : [];
+  const included = [...fullVisits, ...fuVisits];
+  const slot = (list, allow, type) => {
+    const unfinished = list.find((v) => v.status === "In Progress" || v.status === "Scheduled") || null;
+    return {
+      type,
+      used: list.length,
+      completed: list.filter((v) => v.status === "Completed").length,
+      remaining: Math.max(0, allow - list.length),
+      unfinished,
+    };
+  };
+  const full = slot(fullVisits, fullAllowance, recType);
+  const followUp = fuType && fuAllowance > 0 ? slot(fuVisits, fuAllowance, fuType) : null;
   return {
     period,
-    allowance,
+    allowance: fullAllowance + fuAllowance,
     used: included.length,
     completed: included.filter((v) => v.status === "Completed").length,
-    remaining: Math.max(0, allowance - included.length),
-    unfinished,
+    remaining: Math.max(0, fullAllowance + fuAllowance - included.length),
+    unfinished: full.unfinished || (followUp && followUp.unfinished) || null,
+    full,
+    followUp,
   };
 }

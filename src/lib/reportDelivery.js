@@ -111,6 +111,9 @@ export function reportGenerationError(e, t) {
   if (e?.code === "quick_check_excluded") {
     return t("Quick Check visits do not include a customer-facing visit report.");
   }
+  if (e?.code === "report_excluded") {
+    return t("This visit type does not include a customer-facing visit report.");
+  }
   if (e?.code === "duration_review_required") {
     return t("This visit spans multiple days — review its duration in the report preview before approving.");
   }

@@ -18,6 +18,7 @@
         "Home Watch Inspection",
         "Property Care Inspection",
         "Complete Care Property Visit",
+        "Complete Care Follow-up Visit",
         "Emergency Visit",
         "Owner Representative Site Visit",
         "Initial Property Onboarding Inspection",
@@ -170,6 +171,29 @@
     },
     "report_delivery_method": {
       "type": "string"
+    },
+    "photo_update_note": {
+      "type": "string",
+      "description": "Staff-authored short note sent with the Complete Care follow-up photo update. Empty = no note."
+    },
+    "photo_update_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The 1\u20133 visit photos (storage URIs / URLs) explicitly selected by staff for the dated photo update emailed to the owner."
+    },
+    "photo_update_sent_at": {
+      "type": "string",
+      "description": "When the follow-up photo update was emailed to the owner. Presence of this field is the duplicate-send guard \u2014 the send action requires explicit confirmation to run again."
+    },
+    "photo_update_sent_to": {
+      "type": "string",
+      "description": "Owner email address the photo update was sent to. Comes only from the linked client record \u2014 never guessed."
+    },
+    "photo_update_sent_by": {
+      "type": "string",
+      "description": "Which staff member sent the photo update."
     },
     "duration_review": {
       "type": "object",
