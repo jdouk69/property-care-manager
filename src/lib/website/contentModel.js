@@ -19,9 +19,9 @@ export const SECTION_META = [
   { key: "hero", label: "Hero" },
   { key: "services", label: "Services" },
   { key: "add_on_services", label: "Add-on Services" },
+  { key: "service_area", label: "Service Area" },
   { key: "how_it_works", label: "How It Works" },
   { key: "why_us", label: "Why Us" },
-  { key: "service_area", label: "Service Area" },
   { key: "faqs", label: "FAQs" },
   { key: "contact", label: "Contact" },
 ];
@@ -52,7 +52,7 @@ export const DEFAULT_CONTENT = {
       intro:
         "These are our current service prices. After a property assessment, we agree any proposed work and its price with you before we proceed.",
       groupHeading: "Recurring Care Plans — scheduled visits every month",
-      note: "The exact work and final price for your property are always agreed with you in writing before we start. Travel beyond our core service area may carry an additional travel charge, confirmed during the assessment and agreed in writing before we start.",
+      note: "The exact work and final price for your property are always agreed with you in writing before we start.",
       // Public wording for the seven service cards. The seed values mirror
       // exactly what the cards showed when this content became editable.
       // {price} / {hourly} placeholders are filled LIVE from the pricing
@@ -108,7 +108,7 @@ export const DEFAULT_CONTENT = {
       intro:
         "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Μετά την αξιολόγηση του ακινήτου, συμφωνούμε μαζί σας κάθε προτεινόμενη εργασία και την τιμή της πριν προχωρήσουμε.",
       groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
-      note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα γραπτώς μαζί σας πριν ξεκινήσουμε. Για ακίνητα εκτός της βασικής περιοχής εξυπηρέτησης μπορεί να ισχύει επιπλέον χρέωση μετακίνησης, που επιβεβαιώνεται κατά την αξιολόγηση και συμφωνείται γραπτώς πριν ξεκινήσουμε.",
+      note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα γραπτώς μαζί σας πριν ξεκινήσουμε.",
       cards: {
         quick_check: {
           name: "Γρήγορος Έλεγχος",
