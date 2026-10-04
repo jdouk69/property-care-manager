@@ -5,7 +5,7 @@ import { athensMediumDateTime } from "@/lib/timezone";
 import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
 import { CHECKLIST_ITEM_EL } from "@/lib/i18n/checklistItemDisplay";
 import { durationReviewInfo } from "@/lib/durationReview";
-import { visitWindowFor } from "@/lib/visitWindow";
+import { visitWindowFor, visitWindowLabel } from "@/lib/visitWindow";
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -620,8 +620,11 @@ async function buildDoc(visit, ctx = {}) {
     drawInfoPanel([
       [[L.property, property.name || "-"], [L.owner, client.name || "-"]],
       [[L.visitDate, fmtDate(v.start_time)], [L.serviceType, vtl || "-"]],
+      // The visit timing line sits immediately below the Visit date row.
+      // "Visit time" for a same-day visit, "Visit window" for a confirmed
+      // multi-day span (visitWindow.js decides; hidden otherwise).
+      visitWindow ? [[visitWindowLabel(visitWindow, L), visitWindow.text], null] : null,
       durationMinutes != null ? [[L.duration, L.minutes(durationMinutes)], null] : null,
-      visitWindow ? [[L.visitWindow, visitWindow], null] : null,
     ].filter(Boolean));
   }
 

@@ -179,11 +179,13 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
               <p><span className="font-semibold">{L.owner}:</span> {client.name || "—"}</p>
               <p><span className="font-semibold">{L.visitDate}:</span> {athensMediumDateTime(visit.start_time) || "—"}</p>
               <p><span className="font-semibold">{L.serviceType}:</span> {vtl || "—"}</p>
+              {/* Visit timing line immediately below the Visit date — same
+                  rule as the PDF (visitWindow.js). */}
+              {visitWindow && (
+                <p className="col-span-2"><span className="font-semibold">{visitWindow.kind === "window" ? L.visitWindow : L.visitTime}:</span> {visitWindow.text}</p>
+              )}
               {durationMinutes != null && (
                 <p><span className="font-semibold">{L.duration}:</span> {L.minutes(durationMinutes)}</p>
-              )}
-              {visitWindow && (
-                <p className="col-span-2"><span className="font-semibold">{L.visitWindow}:</span> {visitWindow}</p>
               )}
             </div>
             {monitoringPriorities.length > 0 && (
