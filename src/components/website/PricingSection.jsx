@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { Info, Loader2, TriangleAlert } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSectionContent } from "@/components/website/WebsiteContentContext";
 import ServiceTermCard from "@/components/website/ServiceTermCard";
@@ -128,7 +128,16 @@ export default function PricingSection() {
                 {ON_DEMAND_KEYS.map((k) => card(k, false))}
               </div>
             </div>
-            <p className="text-center text-xs text-muted-foreground">{sc.note}</p>
+            {/* VAT treatment note — required to be visible and close to the
+                prices, on desktop and mobile alike (decision 2026-10: all
+                advertised prices are VAT-exclusive). */}
+            <p className="mx-auto flex max-w-md items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-center text-sm font-medium text-accent-foreground">
+              <Info className="h-4 w-4 shrink-0 text-primary" />
+              {el
+                ? "Οι τιμές δεν περιλαμβάνουν ΦΠΑ. Ο ισχύων ΦΠΑ προστίθεται στο παραστατικό."
+                : "Prices exclude VAT. Applicable VAT is added to your invoice."}
+            </p>
+            {sc.note && <p className="text-center text-xs text-muted-foreground">{sc.note}</p>}
           </div>
         )}
       </div>
