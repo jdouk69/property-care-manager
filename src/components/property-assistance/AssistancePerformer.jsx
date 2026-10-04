@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { uploadPrivatePhoto } from "@/lib/photoStorage";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -88,8 +89,7 @@ export default function AssistancePerformer({ visit, property, client, business,
     const urls = [];
     for (const f of Array.from(files)) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: f });
-        urls.push(file_url);
+        urls.push(await uploadPrivatePhoto(f));
       } catch (e) {}
     }
     setUploading(false);
