@@ -183,6 +183,20 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [guidedStart, setGuidedStart] = useState(0);
   const itemRefs = useRef({});
   const guidedInitDone = useRef(false);
+  const stickyBarRef = useRef(null);
+
+  // Sticky-aware scroll for checklist items: on mobile the app header (56px,
+  // h-14) and this visit's sticky bar stack above the content, and the visit
+  // bar's height varies (classification badge, wrapped step chips) — so
+  // measure it instead of guessing, then leave ~16px breathing room so the
+  // item's full title lands below the sticky area.
+  const scrollToItem = (el) => {
+    if (!el) return;
+    const topBar = window.innerWidth < 1024 ? 56 : 0;
+    const barH = stickyBarRef.current ? stickyBarRef.current.getBoundingClientRect().height : 0;
+    const target = el.getBoundingClientRect().top + window.scrollY - topBar - barH - 16;
+    window.scrollTo({ top: Math.max(target, 0), behavior: "smooth" });
+  };
 
   // Collapse the just-answered routine item and auto-open the next unanswered
   // one, bringing it into a comfortable visible position (not under the sticky bars).
@@ -193,7 +207,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       if (next >= 0) nm[next] = true;
       return nm;
     });
-    if (next >= 0) setTimeout(() => itemRefs.current[next]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    if (next >= 0) setTimeout(() => scrollToItem(itemRefs.current[next]), 60);
   };
 
   // On entering/resuming an active visit: keep answered routine items collapsed
@@ -1452,7 +1466,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // Jump straight to a specific checklist item: expand it and bring it into view.
     const jumpToItem = (idx) => {
       setOpenItems((m) => ({ ...m, [idx]: true }));
-      setTimeout(() => itemRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+      setTimeout(() => scrollToItem(itemRefs.current[idx]), 60);
     };
     // The first item blocking completion, in the same priority order as the
     // completion gate's warnings (missing owner-visible concern note > missing
@@ -1471,7 +1485,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
     return (
       <div className="pb-40">
-        <div className="sticky top-14 lg:top-0 z-10 bg-background/90 backdrop-blur border-b border-border -mx-4 px-4 py-3 mb-3">
+        <div ref={stickyBarRef} className="sticky top-14 lg:top-0 z-10 bg-background/90 backdrop-blur border-b border-border -mx-4 px-4 py-3 mb-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{propertyName}</p>
