@@ -61,19 +61,38 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
     return () => { clearInterval(tm); elapsedBaseRef.current += secs(); };
   }, [recorder.phase]);
 
-  // Photo: pause first (releases the mic for the camera), then open the camera
-  // in the same tap so the browser allows it.
+  // Photo: pause first (releases the mic for the camera), then open the
+  // camera ONLY once the microphone stream has actually been released —
+  // opening the native camera while a live WebRTC audio session is still up
+  // is exactly the iOS interruption that loses MediaRecorder's `onstop` and
+  // wedges the controls. The picker opens when the phase flips to "paused"
+  // (or immediately if it already is).
+  const pendingPickerRef = useRef(false);
   const takePhoto = () => {
-    if (recorder.phase === "recording") recorder.pause();
-    photoInputRef.current?.click();
+    if (recorder.phase === "recording") { pendingPickerRef.current = true; recorder.pause(); return; }
+    if (recorder.phase === "paused") photoInputRef.current?.click();
   };
+  useEffect(() => {
+    if (recorder.phase === "recording") pendingPickerRef.current = false; // resumed before the picker opened
+    else if (pendingPickerRef.current && recorder.phase === "paused") {
+      pendingPickerRef.current = false;
+      photoInputRef.current?.click();
+    }
+  }, [recorder.phase]);
 
   const attachPhoto = async (idx) => {
-    const urls = await onUploadPhotos(idx, [pendingPhoto]);
-    if (urls && urls.length) {
-      setPhotoNotice({ ok: true, text: t("Photo added to: {item}", { item: checklistItemDisplay(checklist[idx]?.name, lang) }) });
-      setPendingPhoto(null);
-    } else {
+    // The upload runs INDEPENDENTLY of the recorder: Stop/Finish never wait
+    // on it. Every outcome (success, failure, thrown error) resolves the
+    // panel — no path can leave a busy state stuck.
+    try {
+      const urls = await onUploadPhotos(idx, [pendingPhoto]);
+      if (urls && urls.length) {
+        setPhotoNotice({ ok: true, text: t("Photo added to: {item}", { item: checklistItemDisplay(checklist[idx]?.name, lang) }) });
+        setPendingPhoto(null);
+      } else {
+        setPhotoNotice({ ok: false, text: t("Photo upload failed — please try again.") });
+      }
+    } catch (e) {
       setPhotoNotice({ ok: false, text: t("Photo upload failed — please try again.") });
     }
   };

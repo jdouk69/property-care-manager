@@ -74,7 +74,7 @@ export default function useDictationRecorder() {
       recRef.current = entry;
       rec.start();
       setPhase("recording");
-    } catch (e) {
+    } catch {
       // On a failed resume the phase stays "paused" so Stop still processes
       // what was already recorded.
       setError(t("Microphone unavailable — check permissions, or simply continue manually."));

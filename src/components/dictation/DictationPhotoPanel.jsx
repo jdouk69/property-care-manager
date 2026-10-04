@@ -21,8 +21,9 @@ export default function DictationPhotoPanel({ file, checklist, onAttach, onDisca
 
   const attach = async () => {
     setBusy(true);
-    await onAttach(Number(idx));
-    setBusy(false);
+    // finally: busy clears on EVERY outcome — success, failure or thrown
+    // upload error — so Attach/Discard can never wedge disabled.
+    try { await onAttach(Number(idx)); } finally { setBusy(false); }
   };
 
   return (
