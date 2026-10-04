@@ -11,6 +11,7 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { nextInvoiceNumber } from '../../shared/invoiceNumbering.js';
+import { validateInvoiceDraft } from '../../shared/invoiceValidation.js';
 
 async function listInvoices(base44) {
   return (await base44.asServiceRole.entities.Invoice.list("-created_date", 1000)) || [];
@@ -30,6 +31,12 @@ export default async function(req) {
     }
     if (!record.client_id) {
       return Response.json({ error: "A client is required" }, { status: 400 });
+    }
+    // Reject invalid billing dates and non-finite / invalid monetary amounts
+    // before any invoice record is written.
+    const validationError = validateInvoiceDraft(record);
+    if (validationError) {
+      return Response.json({ error: validationError }, { status: 400 });
     }
     // Lifecycle is fixed here: always created as an unpaid Draft.
     record.status = "Draft";

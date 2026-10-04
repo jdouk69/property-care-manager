@@ -18,6 +18,7 @@
 
 import { nextInvoiceNumber, isActiveInvoice } from './invoiceNumbering.js';
 import { addDays } from './servicePeriods.js';
+import { validateInvoiceDraft } from './invoiceValidation.js';
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -111,6 +112,12 @@ export async function ensureDraftInvoiceForCharge(base44, charge, agreement) {
     status: 'Draft', // stays a Draft — nothing is sent automatically
     notes: '',
   };
+
+  // Server-side guard: never write an invoice from an invalid billing date or
+  // non-finite / invalid monetary amounts (e.g. corrupted charge data).
+  // Throwing here routes the charge to the repair pass's failure log.
+  const validationError = validateInvoiceDraft(record);
+  if (validationError) throw new Error(validationError);
 
   let created = null;
   for (let attempt = 0; attempt < 5; attempt++) {
