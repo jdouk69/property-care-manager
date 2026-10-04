@@ -75,9 +75,19 @@ export default function PaymentDetailsCard({ settings, applyFields }) {
 
   const save = async () => {
     setSaving(true);
+    // Trim text fields on save — pasted values often carry stray spaces that
+    // would otherwise appear on customer documents.
+    const clean = {
+      ...draft,
+      bank_name: (draft.bank_name || "").trim(),
+      bank_beneficiary: (draft.bank_beneficiary || "").trim(),
+      bank_iban: (draft.bank_iban || "").trim(),
+      bank_bic: (draft.bank_bic || "").trim(),
+    };
     try {
-      await base44.entities.BusinessSettings.update(settings.id, draft);
-      applyFields(draft);
+      await base44.entities.BusinessSettings.update(settings.id, clean);
+      setDraft(clean);
+      applyFields(clean);
       setSaving(false);
       setSaved(true);
       setError(null);
