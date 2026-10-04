@@ -926,6 +926,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     }
     setUploading(false);
     setChecklist((arr) => arr.map((it, i) => (i === idx ? { ...it, photos: [...(it.photos || []), ...urls] } : it)));
+    return urls;
   };
   const removePhoto = (idx, photoIdx) => setChecklist((arr) => arr.map((it, i) => (i === idx ? { ...it, photos: it.photos.filter((_, p) => p !== photoIdx) } : it)));
 
@@ -1852,6 +1853,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             }}
             title="Dictate Visit"
             onApply={applyDictation}
+            onUploadPhotos={uploadPhotos}
           />
         )}
 

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Mic, Square, Loader2, AlertTriangle, MapPin } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Mic, Loader2, AlertTriangle, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +10,8 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 import InspectionReferenceGuide from "@/components/dictation/InspectionReferenceGuide";
 import { referenceItemsFromChecklist } from "@/lib/inspectionReference";
+import DictationRecordingBar from "@/components/dictation/DictationRecordingBar";
+import DictationPhotoPanel from "@/components/dictation/DictationPhotoPanel";
 
 const statusTone = {
   Normal: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -33,23 +35,48 @@ const UNANSWERED = "Not Checked";
 // applied — unmentioned items stay untouched, manual answers are never
 // silently overwritten, and dictation can never complete/submit/send/bill
 // the inspection.
-export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, context, title = "Dictate Inspection", onApply }) {
+// onUploadPhotos(idx, files) (optional) — the caller's existing checklist
+// photo upload; when provided, a Photo button lets staff take a picture
+// mid-dictation (recording auto-pauses) and attach it to a chosen item.
+export default function DictateInspectionDialog({ open, onOpenChange, checklist, statuses, context, title = "Dictate Inspection", onApply, onUploadPhotos }) {
   const { t, lang } = useLanguage();
   const recorder = useDictationRecorder();
   const [result, setResult] = useState(null); // { transcript, proposals }
   const [selected, setSelected] = useState({});
+  const [pendingPhoto, setPendingPhoto] = useState(null);
+  const [photoNotice, setPhotoNotice] = useState(null); // { ok, text }
+  const photoInputRef = useRef(null);
   // Elapsed recording timer — DISPLAY ONLY: it never drives the recorder,
-  // the microphone capture or the transcription; it just shows how long the
-  // current recording has been running (e.g. "Recording 03:42").
+  // the microphone capture or the transcription. It accumulates across
+  // Pause/Resume and freezes while paused (e.g. "Recording 03:42").
   const [elapsed, setElapsed] = useState(0);
+  const elapsedBaseRef = useRef(0);
 
   useEffect(() => {
+    if (recorder.phase === "idle") { elapsedBaseRef.current = 0; setElapsed(0); return; }
     if (recorder.phase !== "recording") return;
     const startedAt = Date.now();
-    setElapsed(0);
-    const tm = setInterval(() => setElapsed(Math.floor((Date.now() - startedAt) / 1000)), 500);
-    return () => clearInterval(tm);
+    const secs = () => Math.floor((Date.now() - startedAt) / 1000);
+    const tm = setInterval(() => setElapsed(elapsedBaseRef.current + secs()), 500);
+    return () => { clearInterval(tm); elapsedBaseRef.current += secs(); };
   }, [recorder.phase]);
+
+  // Photo: pause first (releases the mic for the camera), then open the camera
+  // in the same tap so the browser allows it.
+  const takePhoto = () => {
+    if (recorder.phase === "recording") recorder.pause();
+    photoInputRef.current?.click();
+  };
+
+  const attachPhoto = async (idx) => {
+    const urls = await onUploadPhotos(idx, [pendingPhoto]);
+    if (urls && urls.length) {
+      setPhotoNotice({ ok: true, text: t("Photo added to: {item}", { item: checklistItemDisplay(checklist[idx]?.name, lang) }) });
+      setPendingPhoto(null);
+    } else {
+      setPhotoNotice({ ok: false, text: t("Photo upload failed — please try again.") });
+    }
+  };
 
   // Context lock: dictation runs ONLY for the inspection the user already
   // opened in the app. The active inspection ID, property ID, property name,
@@ -67,6 +94,8 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
     recorder.reset();
     setResult(null);
     setSelected({});
+    setPendingPhoto(null);
+    setPhotoNotice(null);
   };
 
   const interpret = async (blob) => {
@@ -131,22 +160,45 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
           </div>
         )}
 
-        {recorder.phase === "recording" && (
+        {onUploadPhotos && (
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files && e.target.files[0];
+              e.target.value = "";
+              if (f) { setPendingPhoto(f); setPhotoNotice(null); }
+            }}
+          />
+        )}
+
+        {photoNotice && (
+          <p className={`text-xs ${photoNotice.ok ? "text-emerald-600" : "text-destructive"}`}>{photoNotice.text}</p>
+        )}
+        {pendingPhoto && (
+          <DictationPhotoPanel
+            file={pendingPhoto}
+            checklist={checklist}
+            onAttach={attachPhoto}
+            onDiscard={() => setPendingPhoto(null)}
+          />
+        )}
+
+        {(recorder.phase === "recording" || recorder.phase === "paused") && (
           <div className="space-y-3 py-1">
-            {/* Recording status + timer — sits ABOVE the scrolling reference
-                guide, so it stays visible while the list is scrolled. Same
-                recorder.stop handler as before; nothing about capture,
-                transcription or saving changed. */}
-            <div className="flex items-center justify-between gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 px-3 py-2.5">
-              <span className="flex items-center gap-2 text-sm font-semibold text-rose-600 min-w-0">
-                <span className="w-3 h-3 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                <Mic className="w-4 h-4 shrink-0" />
-                {t("Recording")} {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
-              </span>
-              <Button variant="destructive" size="sm" onClick={recorder.stop} className="rounded-xl h-11 px-4 gap-1.5 shrink-0">
-                <Square className="w-4 h-4" /> {t("Stop")}
-              </Button>
-            </div>
+            {/* Recording status, timer and controls — sits ABOVE the scrolling
+                reference guide, so it stays visible while the list is scrolled. */}
+            <DictationRecordingBar
+              paused={recorder.phase === "paused"}
+              elapsed={elapsed}
+              onPause={recorder.pause}
+              onResume={recorder.resume}
+              onPhoto={onUploadPhotos ? takePhoto : undefined}
+              onStop={recorder.stop}
+            />
             <p className="text-xs text-muted-foreground">{t("Use the reference below as a reminder while you dictate.")}</p>
             {/* Read-only Inspection Reference — built from the SAME checklist
                 this dialog already operates on (the visit's/inspection's own

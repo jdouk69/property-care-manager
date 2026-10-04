@@ -7,12 +7,20 @@ import { base44 } from "@/api/base44Client";
 // saved to any record. Note: Base44 currently provides no API to delete an
 // uploaded private file, so the raw audio remains in private storage
 // (authenticated/signed access only) after processing — see security audit.
-async function transcribeDictationAudio(audioBlob) {
-  const file = new File([audioBlob], `dictation-${Date.now()}.webm`, { type: audioBlob.type || "audio/webm" });
+async function transcribeSegment(audioBlob, i = 0) {
+  const file = new File([audioBlob], `dictation-${Date.now()}-${i}.webm`, { type: audioBlob.type || "audio/webm" });
   const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
   const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 600 });
   const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: signed_url });
   return typeof transcript === "string" ? transcript : transcript?.text || "";
+}
+
+// Accepts one Blob, or an array of Blobs (a paused/resumed dictation) which
+// are transcribed and joined in spoken order as ONE dictation.
+async function transcribeDictationAudio(audio) {
+  const blobs = Array.isArray(audio) ? audio : [audio];
+  const parts = await Promise.all(blobs.map((b, i) => transcribeSegment(b, i)));
+  return parts.map((p) => (p || "").trim()).filter(Boolean).join("\n");
 }
 
 // Shared Dictate Inspection service — reusable across every inspection /

@@ -576,6 +576,14 @@ export const VISITS_EL = {
   "Open or start an inspection for a property before using dictation.":
     "Ανοίξτε ή ξεκινήστε έναν έλεγχο ακινήτου πριν χρησιμοποιήσετε την υπαγόρευση.",
   "Recording": "Εγγραφή",
+  "Recording paused — tap Resume to continue speaking.": "Η εγγραφή είναι σε παύση — πατήστε Συνέχεια για να συνεχίσετε.",
+  "Photo": "Φωτογραφία",
+  "Attach photo to:": "Επισύναψη φωτογραφίας σε:",
+  "Choose checklist item": "Επιλέξτε σημείο checklist",
+  "Attach": "Επισύναψη",
+  "Attaching…": "Επισύναψη…",
+  "Photo added to: {item}": "Η φωτογραφία προστέθηκε σε: {item}",
+  "Photo upload failed — please try again.": "Η μεταφόρτωση της φωτογραφίας απέτυχε — δοκιμάστε ξανά.",
   "Use the reference below as a reminder while you dictate.":
     "Χρησιμοποιήστε τον παρακάτω οδηγό ως υπενθύμιση καθώς υπαγορεύετε.",
   "Inspection Reference": "Οδηγός Ελέγχου",
