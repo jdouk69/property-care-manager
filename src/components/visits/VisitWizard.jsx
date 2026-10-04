@@ -10,6 +10,7 @@ import VisitChecklistItem from "@/components/visits/VisitChecklistItem";
 import GuidedChecklistOverlay from "@/components/visits/guided/GuidedChecklistOverlay";
 import ReportDeliveryCard from "@/components/visits/ReportDeliveryCard";
 import { saveDraft, loadDraft, clearDraft } from "@/lib/visitDraft";
+import { uploadPrivatePhoto } from "@/lib/photoStorage";
 import { SEED } from "@/lib/checklistSeed";
 import { recommendedVisitType, isRecurringAgreement, serviceFrequency } from "@/lib/activeService";
 import { entitlementStatus, followUpTypeFor } from "@/lib/packageEntitlement";
@@ -918,11 +919,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     });
   };
 
+  // Photos upload to PRIVATE storage — only the private file reference is
+  // stored on the record; screens/PDF builds generate short-lived signed URLs
+  // on demand (see src/lib/photoStorage.js).
   const uploadPhotos = async (idx, files) => {
     setUploading(true);
     const urls = [];
     for (const f of files) {
-      try { const { file_url } = await base44.integrations.Core.UploadFile({ file: f }); urls.push(file_url); } catch (e) {}
+      try { urls.push(await uploadPrivatePhoto(f)); } catch (e) {}
     }
     setUploading(false);
     setChecklist((arr) => arr.map((it, i) => (i === idx ? { ...it, photos: [...(it.photos || []), ...urls] } : it)));
@@ -982,7 +986,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const uploadReceipt = async (file) => {
     if (!file) return;
     setUploading(true);
-    try { const { file_url } = await base44.integrations.Core.UploadFile({ file: file }); setExpReceipt(file_url); } catch (e) {}
+    try { setExpReceipt(await uploadPrivatePhoto(file)); } catch (e) {}
     setUploading(false);
   };
 

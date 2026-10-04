@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { resolvePhotoUrl } from "@/lib/photoStorage";
 import { visitTypeLabelFor, isReportExcludedVisit, isCompleteCareFollowUpVisit } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
@@ -37,7 +38,11 @@ async function getImageForPdf(url, maxW, quality, bg = null) {
   const key = `${url}|${maxW}|${quality}|${bg || ""}`;
   const cached = imgCache.get(key);
   if (cached) return cached;
-  const res = await fetch(url, { mode: "cors" });
+  // Stored photo refs may be private storage references — a fresh short-lived
+  // signed URL is generated here (in-memory only, never persisted). Public
+  // URLs pass through. Verified: signed URLs serve the image with
+  // Access-Control-Allow-Origin: *, so this browser fetch works unchanged.
+  const res = await fetch(await resolvePhotoUrl(url), { mode: "cors" });
   if (!res.ok) throw new Error("fetch failed");
   const blob = await res.blob();
   const dataUrl = await blobToDataUrl(blob);

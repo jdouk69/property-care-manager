@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useSize } from "@/hooks/use-size"
 import { cn } from "@/lib/utils"
+import { isPrivateFileRef, resolvePhotoUrl } from "@/lib/photoStorage"
 
 const FALLBACK_IMAGE_URL =
   "https://static.wixstatic.com/media/12d367_4f26ccd17f8f4e3a8958306ea08c2332~mv2.png"
@@ -187,9 +188,20 @@ const Image = React.forwardRef(
     ref
   ) => {
     const [imgSrc, setImgSrc] = React.useState(src)
+    // Private storage refs (property/visit photos) resolve to a fresh
+    // short-lived signed URL before display; public URLs stay untouched.
+    const [isPrivateResolved, setIsPrivateResolved] = React.useState(false)
 
     React.useEffect(() => {
+      let alive = true
       setImgSrc(src)
+      setIsPrivateResolved(false)
+      if (isPrivateFileRef(src)) {
+        resolvePhotoUrl(src)
+          .then((u) => { if (alive) { setImgSrc(u); setIsPrivateResolved(true) } })
+          .catch(() => { if (alive) setImgSrc(FALLBACK_IMAGE_URL) })
+      }
+      return () => { alive = false }
     }, [src])
 
     const imageProps = {
@@ -203,6 +215,13 @@ const Image = React.forwardRef(
       // tag being `img`, so a placeholder div would be unrecoverable in the
       // editor. FALLBACK_IMAGE_URL doubles as the "no image chosen" graphic.
       return <img ref={ref} src={FALLBACK_IMAGE_URL} {...imageProps} data-empty-image />
+    }
+
+    // A private ref still resolving holds its layout so the photo doesn't
+    // collapse and pop. Signed URLs must NOT go through the Wix /v1/
+    // transform builder — it would drop the `?token=` query and 401.
+    if (isPrivateFileRef(src) && !isPrivateResolved) {
+      return <span ref={ref} className={cn("inline-block", imageProps.className)} />
     }
 
     // The fallback renders as a plain <img> so a broken upload can't cascade

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Image as UIImage } from "@/components/ui/image";
+import { uploadPrivatePhoto } from "@/lib/photoStorage";
 import AppLayout from "@/components/layout/AppLayout";
 import PageHeader from "@/components/ui/PageHeader";
 import EmptyState from "@/components/ui/EmptyState";
@@ -147,7 +148,7 @@ export default function Inspections() {
   const uploadPhoto = async (file) => {
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const file_url = await uploadPrivatePhoto(file);
       return file_url;
     } finally { setUploading(false); }
   };

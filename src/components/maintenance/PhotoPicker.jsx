@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
 import { Camera, Loader2, X } from "lucide-react";
 import { Image as UIImage } from "@/components/ui/image";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { uploadPrivatePhoto } from "@/lib/photoStorage";
 
 // Touch-friendly photo picker: upload one or more photos, remove with an
 // always-visible button (no hover-dependent controls).
@@ -16,8 +16,7 @@ export default function PhotoPicker({ photos, onChange }) {
     const urls = [];
     for (const f of files) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: f });
-        urls.push(file_url);
+        urls.push(await uploadPrivatePhoto(f));
       } catch (e) {}
     }
     setUploading(false);

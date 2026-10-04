@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Image as UIImage } from "@/components/ui/image";
+import { uploadPrivatePhoto } from "@/lib/photoStorage";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // iPad touch-sizing helpers (md–xl enlarged; ≥2xl resets to original).
@@ -27,7 +28,7 @@ export default function PropertyInlineAdd({ entity, propertyId, fields, defaultV
   const upload = async (file) => {
     if (!file) return;
     setUploading(true);
-    try { const { file_url } = await base44.integrations.Core.UploadFile({ file }); return file_url; } catch (e) {}
+    try { return await uploadPrivatePhoto(file); } catch (e) {}
     setUploading(false);
   };
 

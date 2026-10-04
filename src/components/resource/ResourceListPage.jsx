@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { uploadPrivatePhoto } from "@/lib/photoStorage";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem
 } from "@/components/ui/select";
@@ -237,7 +238,7 @@ export default function ResourceListPage({
   const uploadImage = async (file) => {
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const file_url = await uploadPrivatePhoto(file);
       return file_url;
     } finally { setUploading(false); }
   };
