@@ -1,6 +1,8 @@
 import { visitTypeLabelFor } from "@/lib/visitTypeLabels";
 import { athensLongDate } from "@/lib/timezone";
 import { reportLangFromClient } from "@/lib/reportLabels";
+import { durationReviewInfo } from "@/lib/durationReview";
+import { visitWindowFor } from "@/lib/visitWindow";
 
 function fmtDay(iso, lang) {
   return athensLongDate(iso, lang);
@@ -60,6 +62,10 @@ export async function sendOwnerReportEmail(opts) {
   );
   lines.push("");
   lines.push(`${el ? "Ημερομηνία επίσκεψης" : "Visit date"}: ${dateStr}`);
+  // Same conditional visit window as the PDF (same-day times, or the
+  // start→finish span once the multi-day duration review is decided).
+  const windowStr = visitWindowFor(visit, el ? "el" : "en", durationReviewInfo(visit));
+  if (windowStr) lines.push(`${el ? "Ώρα επίσκεψης" : "Visit window"}: ${windowStr}`);
   lines.push(`${el ? "Τύπος επίσκεψης" : "Visit type"}: ${visitTypeLabelFor(visit?.visit_type, el ? "el" : "en") || "—"}`);
   if (result) lines.push(`${el ? "Συνολικό αποτέλεσμα" : "Overall result"}: ${result}`);
   if (visit?.summary) {

@@ -94,7 +94,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
     overallStatus = { key: "ok", label: L.statusLabels.ok }, counts = { urgent: 0, attention: 0, monitor: 0 },
     priorityBreakdown = "", routineLine = "", summaryText = "", concernSummary = "",
     findings = [], findingPhotos = [], routineChecks = [], docPhotos = [],
-    monitoringPriorities = [], durationMinutes = null,
+    monitoringPriorities = [], durationMinutes = null, visitWindow = "",
     issues = [], tasks = [], nextVisit,
   } = model;
 
@@ -181,6 +181,9 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
               <p><span className="font-semibold">{L.serviceType}:</span> {vtl || "—"}</p>
               {durationMinutes != null && (
                 <p><span className="font-semibold">{L.duration}:</span> {L.minutes(durationMinutes)}</p>
+              )}
+              {visitWindow && (
+                <p className="col-span-2"><span className="font-semibold">{L.visitWindow}:</span> {visitWindow}</p>
               )}
             </div>
             {monitoringPriorities.length > 0 && (

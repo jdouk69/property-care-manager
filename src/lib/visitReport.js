@@ -5,6 +5,7 @@ import { athensMediumDateTime } from "@/lib/timezone";
 import { reportLangFromClient, reportLabelsFor } from "@/lib/reportLabels";
 import { CHECKLIST_ITEM_EL } from "@/lib/i18n/checklistItemDisplay";
 import { durationReviewInfo } from "@/lib/durationReview";
+import { visitWindowFor } from "@/lib/visitWindow";
 
 function loadImage(src) {
   return new Promise((res, rej) => {
@@ -382,6 +383,11 @@ export function buildOwnerReportModel(visit, ctx = {}) {
       }
     : null;
 
+  // Supplementary visit window ("10:15 – 11:40", or "Oct 3, 18:00 → Oct 4,
+  // 09:30" for reviewed multi-day spans). Hidden unless both timestamps exist
+  // and the duration-review decision allows showing the span (visitWindow.js).
+  const visitWindow = visitWindowFor(visit, lang, durInfo);
+
   // Kept for backward compatibility (e.g. the delivery email).
   const detailedRecord = cl.map((it) => ({
     name: itemName(it.name),
@@ -431,6 +437,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
     monitoringPriorities,
     durationMinutes,
     durationFlag,
+    visitWindow,
     detailedRecord,
     issues: (issues || []).filter((i) => i && i.status !== "Cancelled").map((i) => ({
       title: i.title, priority: i.priority, status: i.status, category: i.category,
@@ -492,7 +499,7 @@ async function buildDoc(visit, ctx = {}) {
     business, property, client, visit: v, visitTypeLabel: vtl, labels: L,
     overallStatus, counts, priorityBreakdown, routineLine, summaryText, concernSummary,
     findings, findingPhotos, routineChecks, unableToCheck, naLine, docPhotos,
-    monitoringPriorities, durationMinutes, issues, tasks, nextVisit,
+    monitoringPriorities, durationMinutes, visitWindow, issues, tasks, nextVisit,
   } = model;
   const sample = !!ctx.sample;
   const si = ctx.sampleInfo || {};
@@ -614,6 +621,7 @@ async function buildDoc(visit, ctx = {}) {
       [[L.property, property.name || "-"], [L.owner, client.name || "-"]],
       [[L.visitDate, fmtDate(v.start_time)], [L.serviceType, vtl || "-"]],
       durationMinutes != null ? [[L.duration, L.minutes(durationMinutes)], null] : null,
+      visitWindow ? [[L.visitWindow, visitWindow], null] : null,
     ].filter(Boolean));
   }
 
@@ -965,7 +973,7 @@ export async function generateAndStoreReportPdf(visit, ctx = {}) {
 // the data changed since approval and the stored PDF is invalid — re-approval
 // is required before delivery. Bump REPORT_TEMPLATE_VERSION whenever the
 // report layout/wording changes so older approvals are invalidated too.
-export const REPORT_TEMPLATE_VERSION = 3;
+export const REPORT_TEMPLATE_VERSION = 4;
 
 function stableStringify(value) {
   if (value === null || value === undefined) return "";
