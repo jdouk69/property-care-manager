@@ -152,9 +152,14 @@ export function buildSentSnapshot(ctx) {
     property_type: property.property_type || "",
     service_package_name: servicePackage.name || "",
     service_description: servicePackage.description || "",
+    // Agreed customer-specific service changes take precedence over the
+    // package defaults in NEW agreement snapshots (listed first, with the
+    // precedence statement). Historical frozen snapshots are never rebuilt.
     included_services: [
+      agreement.included_services_override
+        ? "The following service changes were agreed with the customer and take precedence over the package's standard services:\n" + agreement.included_services_override
+        : "",
       servicePackage.description || "",
-      agreement.included_services_override || "",
     ]
       .filter(Boolean)
       .join("\n"),

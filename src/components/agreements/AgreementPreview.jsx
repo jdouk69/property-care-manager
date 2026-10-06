@@ -20,7 +20,7 @@ const SECRET_FIELDS = [
 // Obvious QA/test contamination markers for the business identity.
 const QA_MARKERS = ["ZZ_MUTATED_", "QA Biz", "QA Owner", "qaqbiz@"];
 
-export default function AgreementPreview({ snapshot, template, property, emergencyConfirmed }) {
+export default function AgreementPreview({ snapshot, template, property, emergencyConfirmed, frozen = false }) {
   const { t } = useLanguage();
   const sections = (snapshot && snapshot.sections) || [];
 
@@ -57,24 +57,33 @@ export default function AgreementPreview({ snapshot, template, property, emergen
           <p className="text-sm font-bold text-white tracking-wide">{t("TEST AGREEMENT — NOT FOR PRODUCTION USE — NOT LEGALLY APPROVED")}</p>
         </div>
       )}
-      {/* Draft banner */}
-      <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 flex-wrap">
-        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-        <p className="text-sm font-medium text-amber-700">{t("DRAFT PREVIEW — NOT SENT")}</p>
-      </div>
-
-      {templateIsDraft && (
-        <div className="px-4 py-2.5 bg-rose-500/5 border-b border-rose-500/15 flex items-center gap-2">
-          <FileWarning className="w-4 h-4 text-rose-600 shrink-0" />
-          <p className="text-xs font-medium text-rose-700">{t("DRAFT TERMS — LEGAL REVIEW REQUIRED. This template is not yet active and cannot be sent for signature.")}</p>
+      {/* Status banner: frozen sent version vs draft preview. */}
+      {frozen ? (
+        <div className="px-4 py-3 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center gap-2 flex-wrap">
+          <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
+          <p className="text-sm font-medium text-emerald-700">{t("Frozen sent version — the customer receives exactly this content.")}</p>
         </div>
-      )}
+      ) : (
+        <>
+          <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 flex-wrap">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-sm font-medium text-amber-700">{t("DRAFT PREVIEW — NOT SENT")}</p>
+          </div>
 
-      {emergencyConfirmed === false && (
-        <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
-          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-          <p className="text-xs font-medium text-amber-700">{t("Internal notice: Emergency authorization requires staff confirmation before this agreement can be sent.")}</p>
-        </div>
+          {templateIsDraft && (
+            <div className="px-4 py-2.5 bg-rose-500/5 border-b border-rose-500/15 flex items-center gap-2">
+              <FileWarning className="w-4 h-4 text-rose-600 shrink-0" />
+              <p className="text-xs font-medium text-rose-700">{t("DRAFT TERMS — LEGAL REVIEW REQUIRED. This template is not yet active and cannot be sent for signature.")}</p>
+            </div>
+          )}
+
+          {emergencyConfirmed === false && (
+            <div className="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+              <p className="text-xs font-medium text-amber-700">{t("Internal notice: Emergency authorization requires staff confirmation before this agreement can be sent.")}</p>
+            </div>
+          )}
+        </>
       )}
 
       {(leakedSecret || qaContaminated) ? (

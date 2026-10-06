@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import {
-  ArrowLeft, Package, Loader2, Save, User, Building2, FileText,
-  ChevronDown, ChevronRight, Eye, Lock, AlertTriangle, Send,
-  CheckCircle2, Copy, MessageCircle, Download,
+  ArrowLeft, ArrowRight, Loader2, Save, User, Building2, FileText,
+  Lock, Send, CheckCircle2, Copy, MessageCircle, Download, ListChecks,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -12,29 +11,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
-} from "@/components/ui/select";
 import EmptyState from "@/components/ui/EmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { buildSentSnapshot } from "@/lib/agreementTerms";
-import EmergencyAuthSection from "@/components/agreements/EmergencyAuthSection";
-import IntakeReferenceCard from "@/components/agreements/IntakeReferenceCard";
-import AgreementPreview from "@/components/agreements/AgreementPreview";
-import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
+import AgreementStepCustomerProperty from "@/components/agreements/wizard/AgreementStepCustomerProperty";
+import AgreementStepServicePrice from "@/components/agreements/wizard/AgreementStepServicePrice";
+import AgreementStepReviewSign from "@/components/agreements/wizard/AgreementStepReviewSign";
+import AgreementHistory from "@/components/agreements/AgreementHistory";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
 import CreateReplacementButton from "@/components/agreements/CreateReplacementButton";
-import TestAgreementControl from "@/components/agreements/TestAgreementControl";
-import AgreementHistory from "@/components/agreements/AgreementHistory";
+import { buildSentSnapshot } from "@/lib/agreementTerms";
+import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { PUBLIC_SITE_URL } from "@/lib/siteUrl";
 
-const BILLING_TYPES = ["One-time", "Monthly", "Quarterly", "Annual"];
-// Pending is the default for NEW agreements. Legacy agreements keep their stored status.
-const STATUSES = ["Pending", "Active", "Paused", "Ended", "Cancelled"];
 const FROZEN_STATUSES = ["Sent", "Viewed", "Signed"];
-const FREQUENCY_OPTS = ["Weekly", "Twice Weekly", "Monthly", "As Needed"];
 
 const fmt = (dt) =>
   `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
@@ -51,6 +42,8 @@ const addInterval = (dateStr, billingType) => {
   else return "";
   return fmt(dt);
 };
+
+const normFreq = (s) => (s || "").trim().toLowerCase();
 
 // Resolve the appropriate Applied Customer Intake to prefill emergency fields
 // from, for a NEW agreement draft. Never crosses clients or properties: if the
@@ -72,6 +65,8 @@ function resolveAppliedIntakeForPrefill(intakes, selectedPropertyId, clientPrope
   return null;
 }
 
+const STEP_TITLES = ["Customer & Property", "Service & Price", "Review & Sign"];
+
 export default function ServiceAgreement() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -79,10 +74,20 @@ export default function ServiceAgreement() {
   const { t, tEnum, lang } = useLanguage();
   const clientId = params.get("client");
   const propertyParam = params.get("property");
-  const isEdit = !!id;
+
+  const [step, setStep] = useState(1);
+  // A NEW draft created from this screen: the page stays mounted (review/sign
+  // flow continues) while the URL switches to /agreements/:id. justCreatedRef
+  // stops the load effect from refetching over in-flight state updates.
+  const [createdId, setCreatedId] = useState("");
+  const justCreatedRef = useRef(false);
+  const activeId = id || createdId;
+  const isEdit = !!activeId;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [draftSaved, setDraftSaved] = useState(false);
   const [client, setClient] = useState(null);
   const [properties, setProperties] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -92,7 +97,12 @@ export default function ServiceAgreement() {
   // Tracks which emergency fields were auto-populated from the customer's
   // Applied intake (for the "From customer intake — review required" indicator).
   const [intakePrefill, setIntakePrefill] = useState({ max_amount: false, unreachable: false });
+  // Collapsible secondary sections — all collapsed by default.
+  const [pkgRefOpen, setPkgRefOpen] = useState(false);
+  const [intakeRefOpen, setIntakeRefOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [additionalOpen, setAdditionalOpen] = useState(false);
+  const [testingOpen, setTestingOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState(null);
@@ -137,6 +147,7 @@ export default function ServiceAgreement() {
     activated_at: "",
     activated_by: "",
     is_test_agreement: false,
+    sent_snapshot: null,
   });
 
   const handleDownloadSigned = async () => {
@@ -155,17 +166,18 @@ export default function ServiceAgreement() {
   // affects production agreements (which stay false).
   const handleToggleTestMode = async (value) => {
     set("is_test_agreement", value);
-    if (isEdit && id) {
-      try { await base44.entities.PropertyServiceAgreement.update(id, { is_test_agreement: !!value }); } catch (e) {}
+    if (isEdit && activeId) {
+      try { await base44.entities.PropertyServiceAgreement.update(activeId, { is_test_agreement: !!value }); } catch (e) {}
     }
   };
 
   useEffect(() => {
+    if (justCreatedRef.current) { justCreatedRef.current = false; return; }
     (async () => {
       try {
         let cid = clientId;
         let loaded = null;
-        if (isEdit) {
+        if (id) {
           loaded = await base44.entities.PropertyServiceAgreement.get(id);
           cid = loaded.client_id || clientId;
         }
@@ -187,7 +199,7 @@ export default function ServiceAgreement() {
         const latest = clientIntakes.slice().sort((a, b) => (b.created_date || "").localeCompare(a.created_date || ""))[0] || null;
         setLatestIntake(latest);
 
-        if (isEdit && loaded) {
+        if (id && loaded) {
           setValues({
             client_id: loaded.client_id || "",
             property_id: loaded.property_id || "",
@@ -225,13 +237,10 @@ export default function ServiceAgreement() {
             activated_at: loaded.activated_at || "",
             activated_by: loaded.activated_by || "",
             is_test_agreement: loaded.is_test_agreement === true,
+            sent_snapshot: loaded.sent_snapshot || null,
           });
-          // Auto-open Additional Details if any of those fields already contain data.
-          const hasExtra = !!(
-            loaded.included_services_override || loaded.additional_terms ||
-            loaded.notes || loaded.next_invoice_date
-          );
-          setAdditionalOpen(hasExtra);
+          // Sent/signed agreements open directly on Review & Sign.
+          setStep(FROZEN_STATUSES.includes(loaded.signing_status) || loaded.status === "Active" ? 3 : 1);
           // Load version history for the agreement group (legacy w/o group id: just this version).
           if (loaded.agreement_group_id) {
             try {
@@ -246,11 +255,10 @@ export default function ServiceAgreement() {
         } else {
           // NEW draft — prefill emergency max amount + owner-unreachable
           // instructions from the appropriate Applied Customer Intake. This is a
-          // staff CONVENIENCE copy only — it is NOT confirmation. The €300
-          // company suggestion remains available but the customer's value takes
-          // precedence. Emergency Authorization is never invented from intake
-          // notes; it is left blank for staff to complete. Confirmation stays
-          // unchecked until staff explicitly review and confirm.
+          // staff CONVENIENCE copy only — it is NOT confirmation. The customer's
+          // value takes precedence. Emergency Authorization is never invented
+          // from intake notes; it is left blank for staff to complete.
+          // Confirmation stays unchecked until staff explicitly review and confirm.
           const draftPropertyId = propertyParam || (clientProps.length === 1 ? clientProps[0].id : "");
           const prefillIntake = resolveAppliedIntakeForPrefill(clientIntakes, draftPropertyId, clientProps.length);
           const pf = (prefillIntake && prefillIntake.payload) || {};
@@ -281,12 +289,12 @@ export default function ServiceAgreement() {
 
   const selectedPackage = packages.find((p) => p.id === values.service_package_id);
   const selectedProperty = properties.find((p) => p.id === values.property_id) || null;
-  // Use the most recent terms template for the preview (V1 currently DRAFT).
+  // Use the most recent terms template for the preview.
   const selectedTemplate = templates[0] || null;
   const isFrozen = FROZEN_STATUSES.includes(values.signing_status) || values.status === "Active";
   const canActivate = isEdit && values.status === "Pending" && values.signing_status === "Signed";
   const isActive = isEdit && values.status === "Active" && values.signing_status === "Signed";
-  const hasActiveSibling = (groupVersions || []).some((a) => a.id !== id && a.status === "Active");
+  const hasActiveSibling = (groupVersions || []).some((a) => a.id !== activeId && a.status === "Active");
   const canReplace = isEdit && (["Sent", "Viewed", "Signed", "Declined"].includes(values.signing_status) || values.status === "Active");
   const isDeclinedReplace = isEdit && values.signing_status === "Declined";
   // Emergency authorization is only "confirmed" when staff have actually filled
@@ -300,30 +308,40 @@ export default function ServiceAgreement() {
     !!(values.emergency_unreachable_instructions || "").trim();
   const emergencyConfirmedEffective = emergencyFieldsComplete && !!values.emergency_authorization_confirmed;
 
+  // Frequency mismatch (informational warning on step 2; enforced at send).
+  const freqMismatch = !!(
+    selectedPackage &&
+    selectedPackage.recurring !== "One-time" &&
+    (selectedPackage.inspection_frequency || "").trim() &&
+    (values.inspection_frequency || "").trim() &&
+    normFreq(values.inspection_frequency) !== normFreq(selectedPackage.inspection_frequency)
+  );
+
   // Production legal-approval gate: a non-test agreement still requires an
   // active + legally-approved terms template (UNCHANGED). A TEST agreement
   // bypasses ONLY the active/legal_approved checks — it still needs a template
-  // to build the snapshot, and the emergency-confirmation gate (#3) still applies.
-  const sendDisabledReason = !isEdit
-    ? null
-    : values.signing_status !== "Draft"
+  // to build the snapshot, and the emergency-confirmation gate still applies.
+  const sendDisabledReason =
+    values.signing_status !== "Draft"
       ? null
       : !emergencyConfirmedEffective
         ? t("Confirm the emergency authorization before sending.")
         : !selectedTemplate
           ? t("No agreement terms template is available.")
-          : !values.is_test_agreement && selectedTemplate.active !== true
-            ? t("No active legally-approved agreement terms template is available.")
-            : !values.is_test_agreement && selectedTemplate.legal_approved !== true
-              ? t("The selected agreement terms have not been legally approved for customer use.")
-              : null;
+          : freqMismatch && !(values.included_services_override || "").trim()
+            ? t("Visit frequency differs from the package frequency. Use the package frequency, or record the agreed customer-specific service changes first.")
+            : !values.is_test_agreement && selectedTemplate.active !== true
+              ? t("No active legally-approved agreement terms template is available.")
+              : !values.is_test_agreement && selectedTemplate.legal_approved !== true
+                ? t("The selected agreement terms have not been legally approved for customer use.")
+                : null;
   const hasExtra = !!(
     values.included_services_override || values.additional_terms ||
     values.notes || values.next_invoice_date
   );
 
-  // Live preview snapshot — never frozen, always recomputed from current draft.
-  const snapshot = useMemo(() => {
+  // Live preview snapshot — recomputed from the current draft.
+  const liveSnapshot = useMemo(() => {
     if (!selectedPackage || !selectedProperty || !selectedTemplate) return null;
     return buildSentSnapshot({
       business: business || {},
@@ -334,18 +352,101 @@ export default function ServiceAgreement() {
       template: selectedTemplate,
       vatRate: business?.vat_rate,
     });
-  }, [business, client, selectedProperty, selectedPackage, values, selectedTemplate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business, client, selectedProperty, selectedPackage, selectedTemplate, values.agreed_price, values.billing_type, values.inspection_frequency, values.start_date, values.renewal_date, values.included_services_override, values.additional_terms, values.next_invoice_date, values.emergency_authorization, values.emergency_max_amount, values.emergency_unreachable_instructions, values.is_test_agreement]);
+
+  // For sent/signed (frozen) agreements, display the stored frozen snapshot —
+  // never a rebuild from current settings.
+  const previewSnapshot = isFrozen && values.sent_snapshot ? values.sent_snapshot : liveSnapshot;
 
   const publicLink = values.public_token
     ? `${PUBLIC_SITE_URL}/agreement/${values.public_token}`
     : (sendResult && sendResult.public_link) || "";
 
-  const handleSend = async () => {
-    if (!isEdit || !id) return;
-    setSending(true);
-    setSendError("");
+  // ---- Save (draft) ----
+  // Persists the current edits and STAYS in the review/signing flow. Returns
+  // the agreement id (creating the record first for a brand-new draft) so the
+  // send flow can guarantee the reviewed values are saved before freezing.
+  const persist = async () => {
+    if (!values.property_id || !values.service_package_id) {
+      setSaveError(t("Select a property and a service package first."));
+      return null;
+    }
+    setSaving(true);
+    setSaveError("");
     try {
-      const res = await base44.functions.invoke("agreementSend", { action: "send", agreement_id: id });
+      const payload = {
+        client_id: values.client_id || client?.id || "",
+        property_id: values.property_id,
+        service_package_id: values.service_package_id,
+        agreed_price: Number(values.agreed_price) || 0,
+        billing_type: values.billing_type,
+        inspection_frequency: values.inspection_frequency,
+        start_date: values.start_date || null,
+        renewal_date: values.renewal_date || null,
+        status: values.status,
+        included_services_override: values.included_services_override,
+        additional_terms: values.additional_terms,
+        notes: values.notes,
+        next_invoice_date: values.next_invoice_date || null,
+        created_from_package_price: Number(values.created_from_package_price) || 0,
+        emergency_authorization: values.emergency_authorization || "",
+        emergency_max_amount: values.emergency_max_amount === "" ? null : Number(values.emergency_max_amount),
+        emergency_unreachable_instructions: values.emergency_unreachable_instructions || "",
+        emergency_authorization_confirmed: !!values.emergency_authorization_confirmed,
+        is_test_agreement: !!values.is_test_agreement,
+        terms_template_id: selectedTemplate?.id || "",
+        terms_version: selectedTemplate ? String(selectedTemplate.version) : "",
+      };
+      let savedId = activeId;
+      if (isEdit) {
+        if (values.signing_status) payload.signing_status = values.signing_status;
+        if (values.agreement_version) payload.agreement_version = values.agreement_version;
+        // Pricing-approval fields round-trip on edit; they only change when a
+        // deliberate price change was recorded via the Change Price dialog.
+        if (values.previous_agreed_price != null) payload.previous_agreed_price = Number(values.previous_agreed_price) || 0;
+        if (values.price_override_reason) payload.price_override_reason = values.price_override_reason;
+        if (values.price_approved_at) payload.price_approved_at = values.price_approved_at;
+        if (values.price_approved_by) payload.price_approved_by = values.price_approved_by;
+        if (values.pricing_review_status) payload.pricing_review_status = values.pricing_review_status;
+        await base44.entities.PropertyServiceAgreement.update(activeId, payload);
+      } else {
+        payload.signing_status = "Draft";
+        payload.agreement_version = 1;
+        const created = await base44.entities.PropertyServiceAgreement.create(payload);
+        savedId = created.id;
+        justCreatedRef.current = true;
+        setCreatedId(savedId);
+        setValues((s) => ({ ...s, client_id: payload.client_id }));
+        // Stay in the flow: switch the URL to the created draft without leaving.
+        navigate(`/agreements/${savedId}`, { replace: true });
+      }
+      setDraftSaved(true);
+      setTimeout(() => setDraftSaved(false), 3000);
+      setSaving(false);
+      return savedId;
+    } catch (e) {
+      setSaving(false);
+      setSaveError(e && e.message ? e.message : t("Saving the draft failed. Please try again."));
+      return null;
+    }
+  };
+
+  const handleSend = async () => {
+    setSendError("");
+    setSendResult(null);
+    setSending(true);
+    // Guarantee the customer receives exactly what staff reviewed: the latest
+    // edits are saved (server-side authoritative) BEFORE the signing link is
+    // created. A failed save aborts the send with a clear error.
+    const savedId = await persist();
+    if (!savedId) {
+      if (!saveError) setSaveError(t("Saving the draft failed — the signing link was not created. Please try again."));
+      setSending(false);
+      return;
+    }
+    try {
+      const res = await base44.functions.invoke("agreementSend", { action: "send", agreement_id: savedId });
       const data = res && res.data ? res.data : res;
       if (data && data.ok) {
         const token = data.public_link ? String(data.public_link).split("/agreement/")[1] || "" : "";
@@ -417,9 +518,6 @@ export default function ServiceAgreement() {
   };
 
   // ---- Deliberate price change (explicit staff action) ----
-  // The only way an existing agreement's locked price changes. Records the
-  // previous price, new price, reason, approver and date/time using the
-  // agreement's existing pricing-approval fields — no second approval system.
   const openPriceChange = () => {
     setNewPrice(values.agreed_price != null ? String(values.agreed_price) : "");
     setPriceChangeReason("");
@@ -465,57 +563,7 @@ export default function ServiceAgreement() {
     }));
   };
 
-  const save = async () => {
-    if (!values.property_id || !values.service_package_id) return;
-    setSaving(true);
-    try {
-      const payload = {
-        client_id: values.client_id || client?.id || "",
-        property_id: values.property_id,
-        service_package_id: values.service_package_id,
-        agreed_price: Number(values.agreed_price) || 0,
-        billing_type: values.billing_type,
-        inspection_frequency: values.inspection_frequency,
-        start_date: values.start_date || null,
-        renewal_date: values.renewal_date || null,
-        status: values.status,
-        included_services_override: values.included_services_override,
-        additional_terms: values.additional_terms,
-        notes: values.notes,
-        next_invoice_date: values.next_invoice_date || null,
-        created_from_package_price: Number(values.created_from_package_price) || 0,
-        emergency_authorization: values.emergency_authorization || "",
-        emergency_max_amount: values.emergency_max_amount === "" ? null : Number(values.emergency_max_amount),
-        emergency_unreachable_instructions: values.emergency_unreachable_instructions || "",
-        emergency_authorization_confirmed: !!values.emergency_authorization_confirmed,
-        is_test_agreement: !!values.is_test_agreement,
-        terms_template_id: selectedTemplate?.id || "",
-        terms_version: selectedTemplate ? String(selectedTemplate.version) : "",
-      };
-      // Preserve signing_status for edit; set Draft for new.
-      if (isEdit) {
-        if (values.signing_status) payload.signing_status = values.signing_status;
-        if (values.agreement_version) payload.agreement_version = values.agreement_version;
-        // Pricing-approval fields round-trip on edit; they only change when a
-        // deliberate price change was recorded via the Change Price dialog.
-        if (values.previous_agreed_price != null) payload.previous_agreed_price = Number(values.previous_agreed_price) || 0;
-        if (values.price_override_reason) payload.price_override_reason = values.price_override_reason;
-        if (values.price_approved_at) payload.price_approved_at = values.price_approved_at;
-        if (values.price_approved_by) payload.price_approved_by = values.price_approved_by;
-        if (values.pricing_review_status) payload.pricing_review_status = values.pricing_review_status;
-      } else {
-        payload.signing_status = "Draft";
-        payload.agreement_version = 1;
-      }
-      if (isEdit) {
-        await base44.entities.PropertyServiceAgreement.update(id, payload);
-      } else {
-        await base44.entities.PropertyServiceAgreement.create(payload);
-      }
-      const targetClient = payload.client_id || client?.id;
-      navigate(`/clients/${targetClient}`);
-    } catch (e) { setSaving(false); }
-  };
+  const canAdvance = step === 1 ? !!values.property_id : step === 2 ? !!values.service_package_id : false;
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
 
@@ -523,13 +571,13 @@ export default function ServiceAgreement() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-28 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-16 lg:pb-6">
         <PageBackButton fallback={backTo} className="mb-1" />
-        <h1 className="text-xl font-semibold mb-4">{isEdit ? t("Edit Service Agreement") : t("New Service Agreement")}</h1>
+        <h1 className="text-xl font-semibold">{isEdit ? t("Edit Service Agreement") : t("New Service Agreement")}</h1>
 
         {/* Frozen banner */}
         {isFrozen && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mb-4 flex items-start gap-3">
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 mt-3 mb-4 flex items-start gap-3">
             <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-amber-700">{t("This agreement version has been sent and is frozen.")}</p>
@@ -544,255 +592,123 @@ export default function ServiceAgreement() {
           <EmptyState icon={Building2} title={t("No properties for this client")} description={t("Add a property before creating a service agreement.")}
             action={<Link to={`/properties?add=1&owner=${client.id}`}><Button size="sm">{t("Add Property")}</Button></Link>} />
         ) : (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-xs text-muted-foreground mb-1">{t("Client")}</p>
-              <p className="font-medium">{client.name}</p>
+          <>
+            {/* Step indicator */}
+            <div className="flex items-center gap-2 mt-3 mb-4">
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => { if (n < step || (n === step)) setStep(n); }}
+                  className={`flex items-center gap-1.5 rounded-full px-3 h-8 text-xs font-medium border transition ${
+                    step === n
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : n < step
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                        : "bg-background text-muted-foreground border-border"
+                  }`}
+                >
+                  <span>{n}</span>
+                  <span className="hidden sm:inline">{t(STEP_TITLES[n - 1])}</span>
+                </button>
+              ))}
             </div>
+            <h2 className="text-sm font-medium text-muted-foreground mb-3">
+              {t("Step {n} of 3 — {title}", { n: step, title: t(STEP_TITLES[step - 1]) })}
+            </h2>
 
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Property")}</Label>
-              {properties.length === 1 ? (
-                <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">{properties[0].name}</div>
-              ) : (
-                <Select value={values.property_id} onValueChange={(v) => set("property_id", v)} disabled={isFrozen}>
-                  <SelectTrigger><SelectValue placeholder={t("Select property")} /></SelectTrigger>
-                  <SelectContent>
-                    {properties.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div>
-              <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Service Package")}</Label>
-              <Select value={values.service_package_id} onValueChange={onPackageChange} disabled={isFrozen}>
-                <SelectTrigger><SelectValue placeholder={t("Select a package")} /></SelectTrigger>
-                <SelectContent>
-                  {packages.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedPackage && (
-              <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Package defaults (reference)")}</p>
-                </div>
-                <p className="text-sm font-medium">{selectedPackage.name}</p>
-                {selectedPackage.description && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{selectedPackage.description}</p>}
-                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div>{t("Standard price:")} <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)} + VAT</span></div>
-                  <div>{t("Billing:")} <span className="text-foreground">{tEnum(selectedPackage.billing_type)}</span></div>
-                  <div>{t("Visit duration:")} <span className="text-foreground">{selectedPackage.visit_duration || "—"}</span></div>
-                  <div>{t("Frequency:")} <span className="text-foreground">{selectedPackage.inspection_frequency ? t(selectedPackage.inspection_frequency) : "—"}</span></div>
-                  <div className="col-span-2">{t("VAT:")} <span className="text-foreground">{tEnum(selectedPackage.vat_setting)}</span></div>
-                </div>
-              </div>
-            )}
-
-            <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Agreement terms (customer-specific)")}</p>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Agreed Price (€)")}</Label>
-                  {isEdit ? (
-                    <>
-                      <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm flex items-center justify-between gap-2 min-h-[44px]">
-                        <span className="font-medium truncate">€{(Number(values.agreed_price) || 0).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">+ VAT</span></span>
-                        {!isFrozen && (
-                          <Button type="button" variant="outline" size="sm" className="h-9 shrink-0" onClick={openPriceChange}>{t("Change Price")}</Button>
-                        )}
-                      </div>
-                      {values.previous_agreed_price != null && Number(values.previous_agreed_price) > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">{t("Previous agreed price: €{amount}", { amount: Number(values.previous_agreed_price).toFixed(2) })}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">{t("Locked at approval — changing the package never changes this price.")}</p>
-                        </>
-                        ) : (
-                        <>
-                        <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} disabled={isFrozen} />
-                        <p className="text-xs text-muted-foreground mt-1">{t("Base price before VAT. Prefer the Service & Pricing Assessment flow for governed pricing.")}</p>
-                    </>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Billing Type")}</Label>
-                  <Select value={values.billing_type} onValueChange={onBillingTypeChange} disabled={isFrozen}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{BILLING_TYPES.map((o) => <SelectItem key={o} value={o}>{tEnum(o)}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Visit Frequency")}</Label>
-                <Input value={values.inspection_frequency || ""} onChange={(e) => set("inspection_frequency", e.target.value)} placeholder={t("e.g. Weekly")} list="freq-opts" disabled={isFrozen} />
-                <datalist id="freq-opts">{FREQUENCY_OPTS.map((o) => <option key={o} value={o} />)}</datalist>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Start Date")}</Label>
-                  <Input type="date" className="min-w-0" value={values.start_date || ""} onChange={(e) => onStartDateChange(e.target.value)} disabled={isFrozen} />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Renewal Date")}</Label>
-                  <Input type="date" className="min-w-0" value={values.renewal_date || ""} onChange={(e) => set("renewal_date", e.target.value)} disabled={isFrozen} />
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Status")}</Label>
-                <Select value={values.status} onValueChange={(v) => set("status", v)} disabled={isFrozen}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUSES.filter((o) => o !== "Active" || values.status === "Active").map((o) => <SelectItem key={o} value={o}>{tEnum(o, "agreement")}</SelectItem>)}</SelectContent>
-                </Select>
-                {values.status === "Pending" && (
-                  <p className="text-xs text-muted-foreground mt-1.5">{t("Pending agreements are drafts awaiting activation. They do not count as active service.")}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Emergency Repair Authorization + intake reference */}
-            <IntakeReferenceCard intake={latestIntake} />
-            <EmergencyAuthSection
-              values={values}
-              set={setEmergency}
-              frozen={isFrozen}
-              confirmed={!!values.emergency_authorization_confirmed}
-              canConfirm={emergencyFieldsComplete}
-              prefilled={intakePrefill}
-              setConfirmed={(v) => set("emergency_authorization_confirmed", v)}
-            />
-
-            {/* Additional Details (optional, collapsible) */}
-            <button
-              type="button"
-              onClick={() => setAdditionalOpen((o) => !o)}
-              className="w-full flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left hover:bg-muted/40 transition min-h-[44px]"
-            >
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                {t("Additional Details (optional)")}
-                {hasExtra && !additionalOpen && (
-                  <span className="text-xs font-normal text-primary">· {t("has data")}</span>
-                )}
-              </span>
-              {additionalOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-            </button>
-
-            {additionalOpen && (
-              <div className="rounded-2xl border border-border bg-card p-4 space-y-4 -mt-1">
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Custom Services / Changes")}</Label>
-                  <Textarea value={values.included_services_override || ""} onChange={(e) => set("included_services_override", e.target.value)} rows={2} placeholder={t("Override or add to the package's included services")} disabled={isFrozen} />
-                  <p className="text-xs text-muted-foreground mt-1">{t("Only use this if this customer's services differ from the selected package.")}</p>
-                </div>
-
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Additional Terms")}</Label>
-                  <Textarea value={values.additional_terms || ""} onChange={(e) => set("additional_terms", e.target.value)} rows={2} disabled={isFrozen} />
-                </div>
-
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Notes")}</Label>
-                  <Textarea value={values.notes || ""} onChange={(e) => set("notes", e.target.value)} rows={2} />
-                </div>
-
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Next Invoice Date")}</Label>
-                  <Input type="date" className="min-w-0" value={values.next_invoice_date || ""} onChange={(e) => set("next_invoice_date", e.target.value)} />
-                  <p className="text-xs text-muted-foreground mt-1">{t("Auto-calculated from Start Date for recurring billing. You can adjust it manually.")}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Customer Agreement Preview */}
-            <button
-              type="button"
-              onClick={() => setShowPreview((o) => !o)}
-              className="w-full flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-left hover:bg-primary/10 transition min-h-[44px]"
-            >
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <Eye className="w-4 h-4 text-primary" />
-                {t("Preview Customer Agreement")}
-              </span>
-              {showPreview ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-primary" />}
-            </button>
-
-            {showPreview && (
-              <div className="-mt-1">
-                {!selectedPackage || !selectedProperty ? (
-                  <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                    {t("Select a property and service package to preview the agreement.")}
-                  </div>
-                ) : !selectedTemplate ? (
-                  <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                    {t("No terms template available to preview.")}
-                  </div>
-                ) : (
-                  <AgreementPreview
-                    snapshot={snapshot}
-                    template={selectedTemplate}
-                    property={selectedProperty}
-                    emergencyConfirmed={emergencyConfirmedEffective}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* TEST AGREEMENT control (staff-only QA toggle) — Draft only */}
-            {isEdit && values.signing_status === "Draft" && (
-              <TestAgreementControl
-                value={!!values.is_test_agreement}
-                onToggle={handleToggleTestMode}
+            {/* Step content — values live in page state, so they are retained
+                when moving between screens. */}
+            {step === 1 && (
+              <AgreementStepCustomerProperty
+                client={client}
+                properties={properties}
+                values={values}
+                set={set}
+                isFrozen={isFrozen}
               />
             )}
 
-            {/* Send for Signature (existing Draft agreements only) */}
-            {isEdit && values.signing_status === "Draft" && (
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4 text-primary" />
-                  <p className="text-sm font-medium">{t("Send for Signature")}</p>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("Freezes this agreement version, generates a secure customer signing link, and marks the agreement as Sent. After sending, customer-facing terms cannot be changed without a replacement version (available in a later phase).")}
-                </p>
-                {selectedTemplate && (
-                  <p className="text-xs text-muted-foreground">
-                    {t("Terms template: {name} · Version {version} · {state}", {
-                      name: selectedTemplate.name,
-                      version: selectedTemplate.version,
-                      state: selectedTemplate.active !== true
-                        ? t("Draft / inactive")
-                        : selectedTemplate.legal_approved !== true
-                          ? t("Active — legal approval pending")
-                          : t("Active + legally approved"),
-                    })}
-                  </p>
-                )}
-                {values.is_test_agreement && (
-                  <p className="text-xs text-amber-600 font-medium">{t("TEST mode active — legal-approval gate bypassed for this test draft only. Customer-facing surfaces and PDF are watermarked.")}</p>
-                )}
-                {sendDisabledReason && (
-                  <p className="text-xs text-amber-600">{sendDisabledReason}</p>
-                )}
-                {sendError && (
-                  <p className="text-xs text-destructive">{sendError}</p>
-                )}
-                <Button onClick={handleSend} disabled={sending || !!sendDisabledReason} className="gap-1.5">
-                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Send for Signature")}
-                </Button>
-              </div>
+            {step === 2 && (
+              <AgreementStepServicePrice
+                values={values}
+                set={set}
+                setEmergency={setEmergency}
+                packages={packages}
+                selectedPackage={selectedPackage}
+                onPackageChange={onPackageChange}
+                onBillingTypeChange={onBillingTypeChange}
+                onStartDateChange={onStartDateChange}
+                isFrozen={isFrozen}
+                isEdit={isEdit}
+                freqMismatch={freqMismatch}
+                latestIntake={latestIntake}
+                intakePrefill={intakePrefill}
+                emergencyFieldsComplete={emergencyFieldsComplete}
+                emergencyConfirmedEffective={emergencyConfirmedEffective}
+                pkgRefOpen={pkgRefOpen}
+                intakeRefOpen={intakeRefOpen}
+                advancedOpen={advancedOpen}
+                additionalOpen={additionalOpen}
+                hasExtra={hasExtra}
+                togglePkgRef={() => setPkgRefOpen((o) => !o)}
+                toggleIntakeRef={() => setIntakeRefOpen((o) => !o)}
+                toggleAdvanced={() => setAdvancedOpen((o) => !o)}
+                toggleAdditional={() => setAdditionalOpen((o) => !o)}
+                openPriceChange={openPriceChange}
+              />
             )}
+
+            {step === 3 && (
+              <AgreementStepReviewSign
+                values={values}
+                client={client}
+                selectedProperty={selectedProperty}
+                selectedPackage={selectedPackage}
+                business={business}
+                previewSnapshot={previewSnapshot}
+                selectedTemplate={selectedTemplate}
+                emergencyConfirmedEffective={emergencyConfirmedEffective}
+                showPreview={showPreview}
+                setShowPreview={setShowPreview}
+                saving={saving}
+                saveError={saveError}
+                draftSaved={draftSaved}
+                onSaveDraft={persist}
+                sending={sending}
+                sendError={sendError}
+                handleSend={handleSend}
+                sendDisabledReason={sendDisabledReason}
+                testingOpen={testingOpen}
+                setTestingOpen={setTestingOpen}
+                handleToggleTestMode={handleToggleTestMode}
+              />
+            )}
+
+            {/* Previous / Next navigation */}
+            <div className="flex items-center justify-between gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setStep((s) => Math.max(1, s - 1))}
+                disabled={step === 1}
+                className="gap-1.5 min-h-[44px]"
+              >
+                <ArrowLeft className="w-4 h-4" /> {t("Previous")}
+              </Button>
+              {step < 3 ? (
+                <Button
+                  onClick={() => setStep((s) => Math.min(3, s + 1))}
+                  disabled={!canAdvance}
+                  className="gap-1.5 min-h-[44px]"
+                >
+                  {t("Next")} <ArrowRight className="w-4 h-4" />
+                </Button>
+              ) : <span className="text-xs text-muted-foreground hidden sm:block">{t("Review & Sign")}</span>}
+            </div>
 
             {/* Sent / Viewed panel */}
             {isEdit && (values.signing_status === "Sent" || values.signing_status === "Viewed") && (
-              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3 mt-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <p className="text-sm font-medium text-emerald-700">{values.signing_status === "Viewed" ? t("Customer viewed the agreement") : t("Sent for signature")}</p>
@@ -817,7 +733,7 @@ export default function ServiceAgreement() {
 
             {/* Signed panel (Pending/Signed = activation pending; Active/Signed = active) */}
             {isEdit && values.signing_status === "Signed" && (
-              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-1.5">
+              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-1.5 mt-6">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   <p className="text-sm font-medium text-emerald-700">{isActive ? t("Active Service Agreement") : t("Agreement signed")}</p>
@@ -841,18 +757,18 @@ export default function ServiceAgreement() {
                 )}
                 {canActivate && (
                   <div className="pt-2">
-                    <ActivateServiceButton agreementId={id} isReplacement={hasActiveSibling} onActivated={() => navigate(0)} />
+                    <ActivateServiceButton agreementId={activeId} isReplacement={hasActiveSibling} onActivated={() => navigate(0)} />
                   </div>
                 )}
                 {canActivate && (
-                  <p className="text-xs text-muted-foreground pt-1">{t("Activation pending — review and activate the service when ready.")}</p>
+                  <p className="text-xs text-muted-foreground pt-1">{t("Activation pending — review and activate the service when ready. Signing does not activate service automatically.")}</p>
                 )}
                 {isActive && (
                   <p className="text-xs text-muted-foreground pt-1">{t("This is the current operational service agreement. To change terms, create a replacement version below.")}</p>
                 )}
                 {isActive && (
                   <div className="pt-2">
-                    <CreateReplacementButton agreementId={id} />
+                    <CreateReplacementButton agreementId={activeId} />
                   </div>
                 )}
               </div>
@@ -860,61 +776,56 @@ export default function ServiceAgreement() {
 
             {/* Replacement / revised action for frozen non-active versions (Sent/Viewed/Signed-pending/Declined) */}
             {canReplace && !isActive && (
-              <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-2 mt-6">
                 <p className="text-sm font-medium">{t("Change customer-facing terms")}</p>
                 <p className="text-xs text-muted-foreground">{t("This version is frozen. Create a new editable draft version to change terms; this version is preserved as permanent history.")}</p>
-                <CreateReplacementButton agreementId={id} label={isDeclinedReplace ? "Create Revised Agreement" : "Create Replacement Version"} />
+                <CreateReplacementButton agreementId={activeId} label={isDeclinedReplace ? "Create Revised Agreement" : "Create Replacement Version"} />
               </div>
             )}
 
             {/* Version history */}
             {isEdit && groupVersions.length > 0 && (
-              <AgreementHistory versions={groupVersions} currentId={id} />
+              <div className="mt-6">
+                <AgreementHistory versions={groupVersions} currentId={activeId} />
+              </div>
             )}
-
-            {/* Deliberate price-change capture (existing agreements only) */}
-            {isEdit && (
-              <Dialog open={priceChangeOpen} onOpenChange={setPriceChangeOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{t("Change Agreed Price")}</DialogTitle>
-                    <DialogDescription>
-                      {t("This is a deliberate, approved price change for this customer. The previous price, new price, reason, approver and date/time are recorded on the agreement.")}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-3 py-1">
-                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-                      {t("Current agreed price:")} <span className="font-medium">€{(Number(values.agreed_price) || 0).toFixed(2)} + VAT</span>
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block">{t("New agreed price (€, excl. VAT) *")}</Label>
-                      <Input className="h-11" type="number" min="0" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} />
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block">{t("Reason for the price change *")}</Label>
-                      <Textarea rows={2} value={priceChangeReason} onChange={(e) => setPriceChangeReason(e.target.value)} placeholder={t("e.g. Package change agreed with owner; annual price review…")} />
-                    </div>
-                    {priceChangeError && <p className="text-xs text-destructive">{priceChangeError}</p>}
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" className="h-11" onClick={() => setPriceChangeOpen(false)}>{t("Cancel")}</Button>
-                    <Button className="h-11" onClick={confirmPriceChange} disabled={approving}>
-                      {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Record Approved Change")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-
-            <div className="flex items-center justify-between gap-2 pt-1">
-              <Link to={backTo}><Button variant="outline">{t("Cancel")}</Button></Link>
-              <Button onClick={save} disabled={saving || !values.property_id || !values.service_package_id} className="gap-1.5">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Save Agreement")}
-              </Button>
-            </div>
-          </div>
+          </>
         )}
       </div>
+
+      {/* Deliberate price-change capture (existing agreements only) */}
+      {isEdit && (
+        <Dialog open={priceChangeOpen} onOpenChange={setPriceChangeOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t("Change Agreed Price")}</DialogTitle>
+              <DialogDescription>
+                {t("This is a deliberate, approved price change for this customer. The previous price, new price, reason, approver and date/time are recorded on the agreement.")}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-1">
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+                {t("Current agreed price:")} <span className="font-medium">€{(Number(values.agreed_price) || 0).toFixed(2)} + VAT</span>
+              </div>
+              <div>
+                <Label className="mb-1.5 block">{t("New agreed price (€, excl. VAT) *")}</Label>
+                <Input className="h-11" type="number" min="0" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} />
+              </div>
+              <div>
+                <Label className="mb-1.5 block">{t("Reason for the price change *")}</Label>
+                <Textarea rows={2} value={priceChangeReason} onChange={(e) => setPriceChangeReason(e.target.value)} placeholder={t("e.g. Package change agreed with owner; annual price review…")} />
+              </div>
+              {priceChangeError && <p className="text-xs text-destructive">{priceChangeError}</p>}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" className="h-11" onClick={() => setPriceChangeOpen(false)}>{t("Cancel")}</Button>
+              <Button className="h-11" onClick={confirmPriceChange} disabled={approving}>
+                {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Record Approved Change")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </AppLayout>
   );
 }

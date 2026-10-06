@@ -80,6 +80,23 @@ export default async function(req) {
       if (servicePackage.recurring !== 'One-time' && !agreement.inspection_frequency) {
         errs.push('Visit frequency is required for recurring service.');
       }
+      // Frequency-mismatch gate (server-authoritative): when the agreement's
+      // frequency differs from the package's frequency, staff must either use
+      // the package frequency or record the agreed customer-specific service
+      // changes (which take precedence over package defaults in the snapshot).
+      // The price is never changed automatically by this rule.
+      if (
+        servicePackage.recurring !== 'One-time' &&
+        agreement.inspection_frequency &&
+        servicePackage.inspection_frequency &&
+        String(agreement.inspection_frequency).trim().toLowerCase() !==
+          String(servicePackage.inspection_frequency).trim().toLowerCase()
+      ) {
+        const changes = String(agreement.included_services_override || '').trim();
+        if (!changes) {
+          errs.push('Visit frequency differs from the package frequency. Use the package frequency, or record the agreed customer-specific service changes first.');
+        }
+      }
     }
     if (!template) {
       // Production agreements: same message as before. A TEST agreement still

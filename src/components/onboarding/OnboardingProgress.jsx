@@ -11,7 +11,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 // `action.activate` signal renders the shared ActivateServiceButton (which
 // opens an explicit confirmation and calls the secure agreementActivate
 // backend) instead of routing to the Edit Agreement page.
-export default function OnboardingProgress({ properties, selectedPropertyId, onSelectProperty, onboarding, onActivated }) {
+export default function OnboardingProgress({ properties, selectedPropertyId, onSelectProperty, onboarding, onActivated, showPrimaryAction = true }) {
   const { t } = useLanguage();
   const { stages, primaryAction, ready, serviceConflict } = onboarding || {};
   if (!stages) return null;
@@ -94,7 +94,7 @@ export default function OnboardingProgress({ properties, selectedPropertyId, onS
         </div>
       )}
 
-      {primaryAction && !serviceConflict && (
+      {showPrimaryAction && primaryAction && !serviceConflict && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 mb-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-wide text-primary">{t("Next action")}</p>

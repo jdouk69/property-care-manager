@@ -16,7 +16,7 @@ import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { deriveOnboarding } from "@/lib/onboarding";
-import OnboardingProgress from "@/components/onboarding/OnboardingProgress";
+import OnboardingSummary from "@/components/onboarding/OnboardingSummary";
 import ScheduleFirstVisitCard from "@/components/onboarding/ScheduleFirstVisitCard";
 import OnboardingCompleteDialog from "@/components/onboarding/OnboardingCompleteDialog";
 import { getReadyHandoff, ensureOnboardingReadyNotification } from "@/lib/onboardingHandoff";
@@ -217,7 +217,7 @@ export default function ClientHub() {
         </div>
 
         {/* Onboarding progress */}
-        <OnboardingProgress
+        <OnboardingSummary
           properties={properties}
           selectedPropertyId={selectedProperty?.id || null}
           onSelectProperty={setSelectedPropertyId}

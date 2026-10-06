@@ -222,7 +222,12 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
 
   const stages = [s1, s2, sA, s3, s4, s5, s6, s7];
 
-  const primaryAction = conflict ? null : [s1, s2, sA, s3, s4, s5, s6].find((s) => !s.complete && s.action) || null;
+  // Interface update: the next action follows the recurring service pipeline
+  // (agreement → activation → onboarding visit → monitoring) and only falls
+  // back to the pricing assessment when the pipeline has no pending action, so
+  // staff can proceed straight to an agreement while the assessment stays
+  // available in the stage details. No stage or completion rule is changed.
+  const primaryAction = conflict ? null : [s1, s2, s3, s4, s5, s6, sA].find((s) => !s.complete && s.action) || null;
 
   return { stages, primaryAction, ready, serviceConflict: conflict };
 }
