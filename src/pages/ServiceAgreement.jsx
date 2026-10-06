@@ -109,6 +109,13 @@ export default function ServiceAgreement() {
   const [sendError, setSendError] = useState("");
   const [copied, setCopied] = useState("");
   const [downloadingSigned, setDownloadingSigned] = useState(false);
+  // Shared guard for Save Draft / Create Signing Link (see runExclusive):
+  // busyRef is the synchronous guard rapid taps cannot bypass; while either
+  // operation runs, BOTH buttons are disabled.
+  const busyRef = useRef(false);
+  const [busy, setBusy] = useState(false);
+  // Reload-in-progress flag for the frozen-snapshot reload action.
+  const [snapshotReloading, setSnapshotReloading] = useState(false);
   // Deliberate price-change capture (price lock, post-audit cleanup).
   const [priceChangeOpen, setPriceChangeOpen] = useState(false);
   const [newPrice, setNewPrice] = useState("");
@@ -289,8 +296,36 @@ export default function ServiceAgreement() {
 
   const selectedPackage = packages.find((p) => p.id === values.service_package_id);
   const selectedProperty = properties.find((p) => p.id === values.property_id) || null;
-  // Use the most recent terms template for the preview.
-  const selectedTemplate = templates[0] || null;
+  // Template resolution: an existing draft always keeps its LINKED template —
+  // never silently replaced by the newest one during preview or saving. A new
+  // draft without a linked template uses the configured eligible default: the
+  // newest active + legally-approved template (fallback: newest template).
+  const eligibleDefaultTemplate = useMemo(
+    () => templates.find((tp) => tp.active === true && tp.legal_approved === true) || templates[0] || null,
+    [templates],
+  );
+  const linkedTemplate = useMemo(
+    () => (values.terms_template_id ? templates.find((tp) => tp.id === values.terms_template_id) || null : null),
+    [templates, values.terms_template_id],
+  );
+  const selectedTemplate = isEdit ? linkedTemplate : eligibleDefaultTemplate;
+
+  // Problem states for a DRAFT's linked template (missing / archived /
+  // unsuitable): shown on Review & Sign together with an explicit staff choice
+  // to link a different template. Sent/signed versions are never affected.
+  const templateProblem =
+    isEdit && values.signing_status === "Draft"
+      ? !linkedTemplate
+        ? values.terms_template_id
+          ? templates.some((tp) => tp.id === values.terms_template_id)
+            ? t("The linked terms template is archived and cannot be used for sending. Choose a different template to continue.")
+            : t("The linked terms template could not be found. Choose a different template to continue.")
+          : t("No terms template is linked to this draft. Choose one to link it before sending.")
+        : linkedTemplate.archived === true ||
+            (!values.is_test_agreement && (linkedTemplate.active !== true || linkedTemplate.legal_approved !== true))
+          ? t("The linked terms template is not eligible for sending (archived, inactive, or not legally approved). Choose a different template to continue.")
+          : ""
+      : "";
   const isFrozen = FROZEN_STATUSES.includes(values.signing_status) || values.status === "Active";
   const canActivate = isEdit && values.status === "Pending" && values.signing_status === "Signed";
   const isActive = isEdit && values.status === "Active" && values.signing_status === "Signed";
@@ -356,8 +391,10 @@ export default function ServiceAgreement() {
   }, [business, client, selectedProperty, selectedPackage, selectedTemplate, values.agreed_price, values.billing_type, values.inspection_frequency, values.start_date, values.renewal_date, values.included_services_override, values.additional_terms, values.next_invoice_date, values.emergency_authorization, values.emergency_max_amount, values.emergency_unreachable_instructions, values.is_test_agreement]);
 
   // For sent/signed (frozen) agreements, display the stored frozen snapshot —
-  // never a rebuild from current settings.
-  const previewSnapshot = isFrozen && values.sent_snapshot ? values.sent_snapshot : liveSnapshot;
+  // never a rebuild from current business, package or template settings. If
+  // the frozen content cannot be loaded, the preview area shows a clear
+  // message with a reload action (no live fallback, no resend).
+  const previewSnapshot = isFrozen ? (values.sent_snapshot || null) : liveSnapshot;
 
   const publicLink = values.public_token
     ? `${PUBLIC_SITE_URL}/agreement/${values.public_token}`
@@ -395,8 +432,12 @@ export default function ServiceAgreement() {
         emergency_unreachable_instructions: values.emergency_unreachable_instructions || "",
         emergency_authorization_confirmed: !!values.emergency_authorization_confirmed,
         is_test_agreement: !!values.is_test_agreement,
-        terms_template_id: selectedTemplate?.id || "",
-        terms_version: selectedTemplate ? String(selectedTemplate.version) : "",
+        // Template linking: a NEW draft links the configured eligible default;
+        // an EXISTING draft keeps its linked template/version as-is (staff can
+        // only change it via the explicit chooser, which updates these state
+        // values). Sent/signed versions are never touched (save is draft-only).
+        terms_template_id: isEdit ? (values.terms_template_id || "") : (selectedTemplate?.id || ""),
+        terms_version: isEdit ? (values.terms_version || "") : (selectedTemplate ? String(selectedTemplate.version) : ""),
       };
       let savedId = activeId;
       if (isEdit) {
@@ -417,7 +458,14 @@ export default function ServiceAgreement() {
         savedId = created.id;
         justCreatedRef.current = true;
         setCreatedId(savedId);
-        setValues((s) => ({ ...s, client_id: payload.client_id }));
+        // Keep the linked template in page state too, so a later save of this
+        // now-existing draft re-writes the same link instead of clearing it.
+        setValues((s) => ({
+          ...s,
+          client_id: payload.client_id,
+          terms_template_id: payload.terms_template_id,
+          terms_version: payload.terms_version,
+        }));
         // Stay in the flow: switch the URL to the created draft without leaving.
         navigate(`/agreements/${savedId}`, { replace: true });
       }
