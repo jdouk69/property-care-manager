@@ -1,6 +1,8 @@
 import React from "react";
-import { Eye, ChevronDown, ChevronRight, Send, Loader2, Save, FlaskConical, CheckCircle2, FileSignature } from "lucide-react";
+import { Eye, ChevronDown, ChevronRight, Send, Loader2, Save, FlaskConical, CheckCircle2, FileSignature, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AgreementPreview from "@/components/agreements/AgreementPreview";
 import TestAgreementControl from "@/components/agreements/TestAgreementControl";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -19,6 +21,8 @@ export default function AgreementStepReviewSign({
   saving, saveError, draftSaved, onSaveDraft,
   sending, sendError, handleSend, sendDisabledReason,
   testingOpen, setTestingOpen, handleToggleTestMode,
+  isFrozen, busy, snapshotReloading, onReloadSnapshot,
+  templateProblem, templateChoices, onChooseTemplate,
 }) {
   const { t, tEnum } = useLanguage();
   const isDraft = (values.signing_status || "Draft") === "Draft";
@@ -71,11 +75,23 @@ export default function AgreementStepReviewSign({
 
       {showPreview && (
         <div className="-mt-1">
-          {!selectedPackage || !selectedProperty ? (
+          {isFrozen && !previewSnapshot ? (
+            /* Frozen agreement whose stored snapshot could not be loaded:
+               clear message + reload action. Never a live rebuild, never a
+               resend — link creation and preview loading are separate things. */
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-2">
+              <p className="text-sm font-medium text-amber-700">
+                {t("The frozen agreement content could not be loaded. The signing link was still created — nothing was sent again.")}
+              </p>
+              <Button size="sm" variant="outline" onClick={onReloadSnapshot} disabled={snapshotReloading} className="gap-1.5">
+                {snapshotReloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} {t("Reload")}
+              </Button>
+            </div>
+          ) : !isFrozen && (!selectedPackage || !selectedProperty) ? (
             <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
               {t("Select a property and service package to preview the agreement.")}
             </div>
-          ) : !selectedTemplate ? (
+          ) : !isFrozen && !selectedTemplate ? (
             <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
               {t("No terms template available to preview.")}
             </div>
@@ -85,9 +101,34 @@ export default function AgreementStepReviewSign({
               template={selectedTemplate}
               property={selectedProperty}
               emergencyConfirmed={emergencyConfirmedEffective}
-              frozen={!(values.signing_status === "Draft" || !values.signing_status)}
+              frozen={isFrozen}
             />
           )}
+        </div>
+      )}
+
+      {/* Linked-template problem: explicit staff choice required before a
+          different template can be linked. Draft-only; sent/signed versions
+          are never changed. */}
+      {isDraft && templateProblem && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-2">
+          <p className="text-xs font-medium text-amber-700">{templateProblem}</p>
+          <Label className="text-xs">{t("Link a different terms template")}</Label>
+          <Select value={values.terms_template_id || undefined} onValueChange={onChooseTemplate}>
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder={t("Choose a terms template")} />
+            </SelectTrigger>
+            <SelectContent>
+              {templateChoices.map((tp) => (
+                <SelectItem key={tp.id} value={tp.id}>
+                  {tp.name} · v{tp.version}{tp.active === true && tp.legal_approved === true ? "" : ` · ${t("Not eligible for production send")}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t("Choosing here links the selected template to this draft when you save. Already sent or signed versions are never changed.")}
+          </p>
         </div>
       )}
 
@@ -155,7 +196,7 @@ export default function AgreementStepReviewSign({
           {sendError && (
             <p className="text-xs text-destructive">{sendError}</p>
           )}
-          <Button onClick={handleSend} disabled={sending || !!sendDisabledReason} className="gap-1.5 w-full sm:w-auto">
+          <Button onClick={handleSend} disabled={busy || sending || !!sendDisabledReason} className="gap-1.5 w-full sm:w-auto">
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Create Signing Link")}
           </Button>
         </div>
@@ -165,7 +206,7 @@ export default function AgreementStepReviewSign({
       {isDraft && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <Button onClick={onSaveDraft} disabled={saving} variant="outline" className="gap-1.5 w-full sm:w-auto">
+            <Button onClick={onSaveDraft} disabled={busy || saving} variant="outline" className="gap-1.5 w-full sm:w-auto">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Save Draft")}
             </Button>
             {draftSaved && !saveError && (

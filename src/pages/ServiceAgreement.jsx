@@ -480,16 +480,34 @@ export default function ServiceAgreement() {
     }
   };
 
-  const handleSend = async () => {
+  // Shared synchronous guard: Save Draft and Create Signing Link can never
+  // overlap. busyRef is checked and set synchronously at handler entry, so
+  // rapid taps cannot start overlapping requests.
+  const runExclusive = (fn) => async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      await fn();
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
+  const handleSaveDraft = runExclusive(persist);
+
+  const handleSend = runExclusive(async () => {
     setSendError("");
     setSendResult(null);
     setSending(true);
     // Guarantee the customer receives exactly what staff reviewed: the latest
     // edits are saved (server-side authoritative) BEFORE the signing link is
-    // created. A failed save aborts the send with a clear error.
+    // created. A failed save aborts the send with a clear error —
+    // agreementSend is never called when saving fails.
     const savedId = await persist();
     if (!savedId) {
-      if (!saveError) setSaveError(t("Saving the draft failed — the signing link was not created. Please try again."));
+      setSendError(t("Saving the draft failed — the signing link was not created. Please try again."));
       setSending(false);
       return;
     }
@@ -498,11 +516,21 @@ export default function ServiceAgreement() {
       const data = res && res.data ? res.data : res;
       if (data && data.ok) {
         const token = data.public_link ? String(data.public_link).split("/agreement/")[1] || "" : "";
+        // Load the authoritative frozen snapshot IMMEDIATELY after the send
+        // succeeds, so the staff preview shows the exact stored content. A
+        // load failure here is a PREVIEW problem, reported separately from the
+        // successful link creation — nothing is resent.
+        let frozen = null;
+        try {
+          const fresh = await base44.entities.PropertyServiceAgreement.get(savedId);
+          frozen = fresh.sent_snapshot || null;
+        } catch (e) { frozen = null; }
         setValues((s) => ({
           ...s,
           signing_status: "Sent",
           public_token: token || s.public_token,
           sent_at: data.sent_at || "",
+          sent_snapshot: frozen,
         }));
         setSendResult({ public_link: data.public_link, sent_at: data.sent_at });
       } else {
@@ -517,6 +545,27 @@ export default function ServiceAgreement() {
       setSendError(msg + detail);
     }
     setSending(false);
+  });
+
+  // Staff reload of the stored frozen snapshot (sent/signed) when the initial
+  // load failed. Never resends and never rebuilds content from live settings.
+  const reloadFrozenSnapshot = async () => {
+    if (!activeId) return;
+    setSnapshotReloading(true);
+    try {
+      const fresh = await base44.entities.PropertyServiceAgreement.get(activeId);
+      setValues((s) => ({ ...s, sent_snapshot: fresh.sent_snapshot || null }));
+    } catch (e) {}
+    setSnapshotReloading(false);
+  };
+
+  // Explicit staff choice to link a different terms template (problem states
+  // only — see templateProblem). Saving then persists the chosen link; this
+  // only ever applies to unsent drafts.
+  const chooseTemplate = (tplId) => {
+    const tp = templates.find((x) => x.id === tplId);
+    if (!tp) return;
+    setValues((s) => ({ ...s, terms_template_id: tplId, terms_version: String(tp.version ?? "") }));
   };
 
   const copyToClipboard = async (text, label) => {
@@ -722,7 +771,7 @@ export default function ServiceAgreement() {
                 saving={saving}
                 saveError={saveError}
                 draftSaved={draftSaved}
-                onSaveDraft={persist}
+                onSaveDraft={handleSaveDraft}
                 sending={sending}
                 sendError={sendError}
                 handleSend={handleSend}
@@ -730,6 +779,13 @@ export default function ServiceAgreement() {
                 testingOpen={testingOpen}
                 setTestingOpen={setTestingOpen}
                 handleToggleTestMode={handleToggleTestMode}
+                isFrozen={isFrozen}
+                busy={busy}
+                snapshotReloading={snapshotReloading}
+                onReloadSnapshot={reloadFrozenSnapshot}
+                templateProblem={templateProblem}
+                templateChoices={templates.filter((tp) => !tp.archived)}
+                onChooseTemplate={chooseTemplate}
               />
             )}
 

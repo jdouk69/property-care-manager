@@ -509,6 +509,16 @@ export const EL = {
   "Add the client's first property": "Προσθέστε το πρώτο ακίνητο του πελάτη",
   "Resolve agreement conflict first": "Επιλύστε πρώτα τη διένεξη συμφωνίας",
   "View Scheduled Visit": "Προβολή προγραμματισμένης επίσκεψης",
+  "The frozen agreement content could not be loaded. The signing link was still created — nothing was sent again.": "Το παγωμένο περιεχόμενο της συμφωνίας δεν μπόρεσε να φορτωθεί. Ο σύνδεσμος υπογραφής δημιουργήθηκε κανονικά — δεν στάλθηκε τίποτα ξανά.",
+  "Reload": "Επαναφόρτωση",
+  "The linked terms template is archived and cannot be used for sending. Choose a different template to continue.": "Το συνδεδεμένο πρότυπο όρων είναι αρχειοθετημένο και δεν μπορεί να χρησιμοποιηθεί για αποστολή. Επιλέξτε διαφορετικό πρότυπο για να συνεχίσετε.",
+  "The linked terms template could not be found. Choose a different template to continue.": "Το συνδεδεμένο πρότυπο όρων δεν μπόρεσε να βρεθεί. Επιλέξτε διαφορετικό πρότυπο για να συνεχίσετε.",
+  "No terms template is linked to this draft. Choose one to link it before sending.": "Δεν υπάρχει συνδεδεμένο πρότυπο όρων σε αυτό το σχέδιο. Επιλέξτε ένα για να το συνδέσετε πριν την αποστολή.",
+  "The linked terms template is not eligible for sending (archived, inactive, or not legally approved). Choose a different template to continue.": "Το συνδεδεμένο πρότυπο όρων δεν είναι επιλέξιμο για αποστολή (αρχειοθετημένο, ανενεργό ή χωρίς νομική έγκριση). Επιλέξτε διαφορετικό πρότυπο για να συνεχίσετε.",
+  "Link a different terms template": "Σύνδεση διαφορετικού προτύπου όρων",
+  "Choose a terms template": "Επιλέξτε πρότυπο όρων",
+  "Not eligible for production send": "Δεν είναι επιλέξιμο για παραγωγική αποστολή",
+  "Choosing here links the selected template to this draft when you save. Already sent or signed versions are never changed.": "Η επιλογή εδώ συνδέει το επιλεγμένο πρότυπο με αυτό το σχέδιο κατά την αποθήκευση. Οι ήδη σταλμένες ή υπογεγραμμένες εκδόσεις δεν αλλάζουν ποτέ.",
 
   // — see dictionaryOperations.js
   ...OPS_EL,
