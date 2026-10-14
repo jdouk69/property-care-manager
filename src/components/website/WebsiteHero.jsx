@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import ArchMotif from "@/components/website/ArchMotif";
 import WebsiteHashLink from "@/components/website/WebsiteHashLink";
 import { useSectionContent } from "@/components/website/WebsiteContentContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // Copy comes from the website content model (published via the admin
 // editor), falling back to the built-in defaults when nothing is published.
 export default function WebsiteHero() {
   const c = useSectionContent("hero");
+  const { lang } = useLanguage();
 
   return (
     <section id="top" className="website-navy relative overflow-hidden">
@@ -23,6 +25,11 @@ export default function WebsiteHero() {
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg text-white/75 leading-relaxed">
           {c.subtitle}
+        </p>
+        <p className="mx-auto mt-4 max-w-2xl text-sm font-medium leading-relaxed text-white/85">
+          {lang === "el"
+            ? "Σχεδόν 40 χρόνια πρακτικής εμπειρίας στον κατασκευαστικό κλάδο."
+            : "Nearly 40 years of hands-on experience in the construction industry."}
         </p>
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button asChild size="lg" className="w-full sm:w-auto rounded-lg h-12 px-7">
