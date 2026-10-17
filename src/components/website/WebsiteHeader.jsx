@@ -57,8 +57,8 @@ export default function WebsiteHeader() {
             <LanguageToggle />
             <Button asChild size="sm" className="hidden md:inline-flex rounded-full">
               <WebsiteHashLink href="#assessment">
-                <span className="hidden lg:inline">{el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}</span>
-                <span className="lg:hidden">{el ? "Ζητήστε Αξιολόγηση" : "Request Assessment"}</span>
+                <span className="hidden lg:inline">{el ? "Μιλήστε με τον Δημήτριο" : "Talk to Demetrios"}</span>
+                <span className="lg:hidden">{el ? "Επικοινωνία" : "Talk to Demetrios"}</span>
               </WebsiteHashLink>
             </Button>
             <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex rounded-full">
@@ -106,7 +106,7 @@ export default function WebsiteHeader() {
               onNavigate={close}
               className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-primary hover:bg-accent"
             >
-              {el ? "Ζητήστε Αξιολόγηση Ακινήτου" : "Request a Property Assessment"}
+              {el ? "Μιλήστε με τον Δημήτριο" : "Talk to Demetrios"}
             </WebsiteHashLink>
             <a
               href={LOGIN_URL}
