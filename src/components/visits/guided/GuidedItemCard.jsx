@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import SuggestedAnswerPicker from "@/components/visits/SuggestedAnswerPicker";
+import React, { useState, useRef } from "react";
 import { Mic, Camera, Loader2, X, AlertTriangle, Eye, EyeOff, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,11 +18,13 @@ const DETAIL_STATUSES = ["Important", "Emergency", "Unable to Check"];
 // visual semantics as VisitChecklistItem (same STATUSES definitions). It
 // renders and mutates the SAME checklist item object the wizard owns, through
 // the wizard's existing update handlers — no parallel state or records.
-export default function GuidedItemCard({ item, index, uploading, onSetStatus, onDictate, onNotes, onToggleOwnerVisible, onUploadPhotos, onRemovePhoto }) {
+export default function GuidedItemCard({ visitType, item, index, uploading, onSetStatus, onDictate, onNotes, onSuggestedAnswer, onToggleOwnerVisible, onUploadPhotos, onRemovePhoto }) {
   const { t, lang } = useLanguage();
   // Optional note for routine answers: after ANY response the + Add Note /
   // + Add Photo row below stays visible until Next is tapped — staff can
   // document without slowing down if they don't need to.
+  const notesRef = useRef(null);
+  const openDescription = () => { setManualDetailOpen(true); requestAnimationFrame(() => notesRef.current?.focus()); };
   const [manualDetailOpen, setManualDetailOpen] = useState(false);
   const showDetails =
     DETAIL_STATUSES.includes(item.status) ||
@@ -72,6 +75,10 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
         ))}
       </div>
 
+      <SuggestedAnswerPicker visitType={visitType} item={item}
+        onChoose={(text) => { onSuggestedAnswer(text); openDescription(); }}
+        onCustom={openDescription} />
+
       {/* Optional documentation — available after ANY response, never required.
           In Guided mode notes/photos (or a manual open) keep the detail area
           visible; the two entry points only appear while it is closed. */}
@@ -116,6 +123,7 @@ export default function GuidedItemCard({ item, index, uploading, onSetStatus, on
             </p>
           )}
           <Textarea
+            ref={notesRef}
             value={item.notes || ""}
             onChange={(e) => onNotes(e.target.value)}
             placeholder={t(
