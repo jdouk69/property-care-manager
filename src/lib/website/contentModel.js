@@ -30,18 +30,18 @@ export const DEFAULT_CONTENT = {
   hero: {
     en: {
       badge: "Chania · Western Crete",
-      title: "Your home in Crete, cared for as if it were our own.",
+      title: "A local person to check your home while you’re away.",
       subtitle:
-        "Whether you're away for a few weeks or most of the year, Property Care Crete gives you a dependable local presence in Chania and Western Crete. We carry out scheduled property visits, document what we see, keep you informed, and help coordinate the right professionals when something needs attention.",
-      ctaPrimary: "Request a Property Assessment",
+        "Meet Demetrios, your local contact in Chania and Western Crete. We make scheduled visits to check accessible areas of your home, record what we observe, and keep you informed. Arrival preparation and access for approved professionals can be arranged around your needs.",
+      ctaPrimary: "Talk to Demetrios",
       ctaSecondary: "Services & Prices",
     },
     el: {
       badge: "Χανιά · Δυτική Κρήτη",
-      title: "Το σπίτι σας στην Κρήτη, με φροντίδα σαν να ήταν δικό μας.",
+      title: "Ένας άνθρωπος στα Χανιά για το σπίτι σας όσο λείπετε.",
       subtitle:
         "Είτε λείπετε για λίγες εβδομάδες είτε για το μεγαλύτερο μέρος του χρόνου, το Property Care Crete σας προσφέρει μια αξιόπιστη τοπική παρουσία στα Χανιά και τη Δυτική Κρήτη. Πραγματοποιούμε προγραμματισμένες επισκέψεις στο ακίνητό σας, καταγράφουμε όσα βλέπουμε, σας κρατάμε ενήμερους και σας βοηθάμε να συντονίσετε τους κατάλληλους επαγγελματίες όταν κάτι χρειάζεται προσοχή.",
-      ctaPrimary: "Ζητήστε Αξιολόγηση Ακινήτου",
+      ctaPrimary: "Μιλήστε με τον Δημήτριο",
       ctaSecondary: "Υπηρεσίες & Τιμές",
     },
   },
@@ -78,7 +78,7 @@ export const DEFAULT_CONTENT = {
         },
         owner_arrival_preparation: {
           name: "Owner Arrival Preparation",
-          desc: "A pre-arrival visual check and airing of the property so everything is in order when you arrive.",
+          desc: "A pre-arrival visual check, airing of the property, and agreed preparation tasks before you arrive.",
           included: "Includes up to 60 minutes on site.",
           extras: "If a visit needs more time than its included allowance, agreed extra time is charged at €{hourly}/hour.",
         },
@@ -191,7 +191,7 @@ export const DEFAULT_CONTENT = {
         "You request a property assessment and tell us a little about your home.",
         "We assess the property and agree the care plan and price with you.",
         "We carry out scheduled visits, using a detailed checklist for each visit type.",
-        "You receive photos and a detailed visit report after each full scheduled visit. On the Complete Care plan, the brief monthly follow-up visit includes a short dated photo update.",
+        "Property Care and Complete Care include routine photos and a visit report after the full scheduled visit. Quick Check does not include routine photos or a customer report. Complete Care also includes a brief monthly follow-up with a short dated photo update.",
         "If anything needs attention, we let you know and proceed only with your approval.",
       ],
     },
@@ -202,7 +202,7 @@ export const DEFAULT_CONTENT = {
         "Ζητάτε αξιολόγηση ακινήτου και μας λέτε λίγα λόγια για το σπίτι σας.",
         "Επιθεωρούμε το ακίνητο και συμφωνούμε το πλάνο φροντίδας και την τιμή μαζί σας.",
         "Εκτελούμε προγραμματισμένες επισκέψεις με λεπτομερή λίστα ελέγχου για κάθε τύπο επίσκεψης.",
-        "Μετά από κάθε πλήρη προγραμματισμένη επίσκεψη λαμβάνετε φωτογραφίες και αναλυτική αναφορά επίσκεψης. Στο πακέτο Πλήρης Φροντίδα, η σύντομη μηνιαία συμπληρωματική επίσκεψη περιλαμβάνει μια σύντομη φωτογραφική ενημέρωση με ημερομηνία.",
+        "Τα Property Care και Complete Care περιλαμβάνουν φωτογραφίες και αναφορά μετά την πλήρη προγραμματισμένη επίσκεψη. Το Quick Check δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά προς τον πελάτη. Το Complete Care περιλαμβάνει επίσης σύντομη μηνιαία συμπληρωματική επίσκεψη με φωτογραφική ενημέρωση και ημερομηνία.",
         "Εάν κάτι χρειάζεται προσοχή, σας ενημερώνουμε και προχωράμε μόνο με την έγκρισή σας.",
       ],
     },
@@ -210,7 +210,7 @@ export const DEFAULT_CONTENT = {
   why_us: {
     en: {
       kicker: "How we earn your trust",
-      heading: "Documentation, not promises.",
+      heading: "Clear records. Personal communication.",
       items: [
         {
           title: "Documented visits",
@@ -255,8 +255,8 @@ export const DEFAULT_CONTENT = {
           text: "Βλέπετε τις τρέχουσες τιμές μας εκ των προτέρων και συμφωνούμε την εργασία και την τιμή εκ των προτέρων, πριν ξεκινήσουμε.",
         },
         {
-          title: "Ένας τοπικός επαφής",
-          text: "Γνωρίζετε εξ ονόματος τον τοπικό σας επαφή — και κάθε επίσκεψη καταγράφει ποιος παρευρέθηκε στο ακίνητο.",
+          title: "Ένας άνθρωπος στην περιοχή σας",
+          text: "Γνωρίζετε τον άνθρωπο που φροντίζει το ακίνητό σας — και κάθε επίσκεψη καταγράφει ποιος παρευρέθηκε στο ακίνητο.",
         },
         {
           title: "Ασφαλής διαχείριση κλειδιών",
@@ -360,11 +360,11 @@ export const DEFAULT_CONTENT = {
   contact: {
     en: {
       kicker: "Meet your local contact",
-      heading: "One person you know by name.",
+      heading: "Demetrios — your local contact in Chania.",
     },
     el: {
-      kicker: "Ο τοπικός σας επαφή",
-      heading: "Ένα πρόσωπο που γνωρίζετε εξ ονόματός σας.",
+      kicker: "Γνωρίστε τον Δημήτριο",
+      heading: "Προσωπική επικοινωνία για το σπίτι σας.",
     },
   },
 };
