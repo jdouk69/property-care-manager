@@ -1,3 +1,4 @@
+import { applySuggestedAnswer } from "@/lib/checklistSuggestedAnswers";
 import React, { useEffect, useState } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ const ANSWERED = ["Normal", "Important", "Emergency", "Unable to Check", "N/A"];
 // duplicate records, no new statuses. Progress autosave/resume is inherited
 // from the wizard's draft / visit-record persistence; reopening starts at the
 // first unanswered item (initialIndex, computed by the wizard's focusIdx).
-export default function GuidedChecklistOverlay({ open, onClose, onContinue, checklist, initialIndex = 0, context, onChangeItem, onUploadPhotos, onRemovePhoto, uploading }) {
+export default function GuidedChecklistOverlay({ visitType, open, onClose, onContinue, checklist, initialIndex = 0, context, onChangeItem, onUploadPhotos, onRemovePhoto, uploading }) {
   const { t } = useLanguage();
   const [idx, setIdx] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
@@ -107,12 +108,14 @@ const concernVisibilityPatch = (item, status) =>
         <>
           <div className="flex-1 overflow-y-auto px-4 py-5">
             <GuidedItemCard
+              visitType={visitType}
               item={item}
               index={idx}
               uploading={uploading}
               onSetStatus={handleSetStatus}
               onDictate={() => setDictateOpen(true)}
               onNotes={(notes) => onChangeItem(idx, { ...item, notes })}
+              onSuggestedAnswer={(text) => onChangeItem(idx, applySuggestedAnswer(item, text), { preserveVisibility: true })}
               onToggleOwnerVisible={handleToggleOwnerVisible}
               onUploadPhotos={onUploadPhotos}
               onRemovePhoto={onRemovePhoto}
