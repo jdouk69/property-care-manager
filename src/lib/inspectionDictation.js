@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { audioFileExtension } from "@/lib/audio-format.mjs";
 
 // Dictation audio is sensitive on-site voice material. It is uploaded to
 // PRIVATE storage only — never public storage. Transcription receives a
@@ -8,7 +9,7 @@ import { base44 } from "@/api/base44Client";
 // uploaded private file, so the raw audio remains in private storage
 // (authenticated/signed access only) after processing — see security audit.
 async function transcribeSegment(audioBlob, i = 0) {
-  const file = new File([audioBlob], `dictation-${Date.now()}-${i}.webm`, { type: audioBlob.type || "audio/webm" });
+  const file = new File([audioBlob], `dictation-${Date.now()}-${i}.${audioFileExtension(audioBlob.type)}`, { type: audioBlob.type || "audio/webm" });
   const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
   const { signed_url } = await base44.integrations.Core.CreateFileSignedUrl({ file_uri, expires_in: 600 });
   const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: signed_url });
