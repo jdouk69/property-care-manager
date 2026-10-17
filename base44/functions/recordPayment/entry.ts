@@ -179,19 +179,39 @@ export default async function(req) {
       }, { status: 409 });
     }
 
-    // Invoice fully paid → one-way sync to its linked ledger charges
-    // (same behavior as the previous full-amount mark-paid flow).
-    if (!isCharge && recheckBalance <= PAYMENT_EPS && Array.isArray(recheck.charge_ids)) {
+    // Reconcile only payment state created by this invoice. Independent and
+    // historical charge payments are never reopened by an invoice correction.
+    const ledgerWarnings = [];
+    if (!isCharge && Array.isArray(recheck.charge_ids)) {
       for (const cid of recheck.charge_ids) {
         if (!cid) continue;
-        const ch = await base44.entities.BillingCharge.get(cid).catch(() => null);
-        if (ch && ch.status === "Due" && !ch.archived) {
-          const active = paymentEntries(recheck);
-          const latest = active.length ? active[active.length - 1] : null;
-          await base44.entities.BillingCharge.update(cid, {
-            status: "Paid",
-            paid_date: latest ? latest.date : undefined,
-          }).catch(() => {});
+        try {
+          const ch = await base44.entities.BillingCharge.get(cid);
+          if (!ch || ch.archived || ch.status === "Waived") continue;
+          if (recheckBalance <= PAYMENT_EPS && ch.status === "Due") {
+            if (paymentEntries(ch).length) {
+              ledgerWarnings.push({ charge_id: cid, reason: "Independent charge payments preserved; review the linked charge." });
+              continue;
+            }
+            const active = paymentEntries(recheck);
+            const latest = active.length ? active[active.length - 1] : null;
+            await base44.entities.BillingCharge.update(cid, {
+              status: "Paid", paid_invoice_id: id,
+              paid_date: latest ? latest.date : "",
+            });
+          } else if (recheckBalance > PAYMENT_EPS && ch.paid_invoice_id === id) {
+            if ((ch.payments || []).some(p => !p.voided)) {
+              ledgerWarnings.push({ charge_id: cid, reason: "Independent charge payments require review." });
+              continue;
+            }
+            await base44.entities.BillingCharge.update(cid, {
+              status: "Due", paid_invoice_id: "", paid_date: "",
+            });
+          } else if (action === "void" && recheckBalance > PAYMENT_EPS && ch.status === "Paid") {
+            ledgerWarnings.push({ charge_id: cid, reason: "Historical or independent paid charge preserved; review its payment evidence." });
+          }
+        } catch (error) {
+          ledgerWarnings.push({ charge_id: cid, reason: "Linked charge could not be reconciled. Refresh and review it." });
         }
       }
     }
@@ -204,7 +224,7 @@ export default async function(req) {
       status: "success",
     }).catch(() => {});
 
-    return Response.json({ ok: true, record: updated, paid, balance });
+    return Response.json({ ok: true, record: updated, paid, balance, ledger_warnings: ledgerWarnings });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
