@@ -72,7 +72,9 @@ export default function RecordPaymentDialog({ open, onOpenChange, itemType = "Bi
       });
       toast({
         title: t("Payment recorded"),
-        description: `${eur(res?.balance ?? balance)} ${t("remaining")}`,
+        description: res?.ledger_warnings?.length
+          ? `${eur(res?.balance ?? balance)} ${t("remaining")}. ${res.ledger_warnings.map(w => w.reason).join(" ")}`
+          : `${eur(res?.balance ?? balance)} ${t("remaining")}`,
       });
       onSaved?.(res?.record);
       onOpenChange(false);
@@ -87,11 +89,11 @@ export default function RecordPaymentDialog({ open, onOpenChange, itemType = "Bi
     if (!voidReason.trim()) { setError(t("A correction reason is required")); return; }
     setVoidSaving(true);
     try {
-      await submitPaymentAction({
+      const res = await submitPaymentAction({
         entity: itemType, id: item.id, action: "void",
         voidIndex, voidReason: voidReason.trim(),
       });
-      toast({ title: t("Payment corrected") });
+      toast({ title: t("Payment corrected"), description: res?.ledger_warnings?.map(w => w.reason).join(" ") });
       onSaved?.();
       onOpenChange(false);
     } catch (e) {
