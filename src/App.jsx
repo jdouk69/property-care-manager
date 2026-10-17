@@ -42,6 +42,7 @@ import PropertyDocuments from '@/pages/PropertyDocuments';
 import ChecklistTemplates from '@/pages/ChecklistTemplates';
 import ClientHub from '@/pages/ClientHub';
 import ServiceAgreement from '@/pages/ServiceAgreement';
+import AgreementTerms from '@/pages/AgreementTerms';
 import ServiceSetup from '@/pages/ServiceSetup';
 import IntakeForm from '@/pages/IntakeForm';
 import AgreementPublic from '@/pages/AgreementPublic';
@@ -128,6 +129,7 @@ const AuthenticatedApp = () => {
         <Route element={<AdminRoute />}>
           <Route path="/settings" element={<Settings />} />
           <Route path="/business-billing" element={<BusinessBilling />} />
+          <Route path="/agreement-terms" element={<AgreementTerms />} />
           <Route path="/automation" element={<AutomationLog />} />
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/billing" element={<Billing />} />
