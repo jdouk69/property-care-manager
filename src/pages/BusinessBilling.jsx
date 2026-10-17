@@ -83,7 +83,7 @@ export default function BusinessBilling() {
     } finally { setUploading(false); }
   };
 
-  if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
+  if (loading) return <AppLayout><div className="px-6 pt-4"><a href="/agreement-terms" className="text-primary underline">Manage existing agreement terms</a></div><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
   if (!settings) return <AppLayout><div className="p-6">{t("Failed to load settings.")}</div></AppLayout>;
 
   return (
@@ -91,6 +91,7 @@ export default function BusinessBilling() {
       <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
         <PageBackButton className="mb-3" />
         <PageHeader title={t("Business & Billing")} subtitle={t("Business, tax and payment settings")} icon={Briefcase} />
+        <a href="/agreement-terms" className="inline-block mb-4 text-sm text-primary underline">{t("Manage agreement terms")}</a>
 
         {/* Business profile */}
         <div className="rounded-2xl border border-border bg-card p-5 mb-4">
