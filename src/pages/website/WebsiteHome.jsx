@@ -59,11 +59,11 @@ export default function WebsiteHome() {
         <WebsiteHero />
         <WhoWeHelp />
         <TrustSection />
-        <PricingSection />
         <ServiceArea />
         <HowItWorks />
         <SampleReportSection />
         <RoleAndLimits />
+        <PricingSection />
         <FaqSection />
         <LocalContact />
         <section id="assessment" className="scroll-mt-20 py-10 sm:py-20">
