@@ -20,6 +20,7 @@ function reset(charge={id:'c',amount:100,status:'Due',payments:[]},inv={id:'i',t
  globalThis.__paymentTestClient={
   auth:{me:async()=>({role,email:'test@example.invalid'})},
   entities:{
+   AutomationLog:{create:async()=>({id:'mock-audit'})},
    Invoice:{get:async()=>structuredClone(invoice),update:async(id,p)=>{writes++;invoice={...invoice,...p};return structuredClone(invoice);}},
    BillingCharge:{get:async id=>structuredClone(charges[id]),update:async(id,p)=>{writes++;charges[id]={...charges[id],...p};return structuredClone(charges[id]);}}
   }
