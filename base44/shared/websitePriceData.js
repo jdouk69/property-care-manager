@@ -83,7 +83,8 @@ export async function buildWebsitePriceData(base44) {
 
   const services = [];
   for (const cfg of APPROVED_SERVICES) {
-    const rec = byId[cfg.record_id];
+    const matches=packages.filter(p=>!p.archived&&p.name===cfg.name);
+    const rec = byId[cfg.record_id] || (matches.length===1?matches[0]:null);
     if (!rec || rec.active === false) continue;
     services.push({
       service_key: cfg.service_key,
