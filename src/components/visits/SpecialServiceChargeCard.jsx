@@ -33,7 +33,7 @@ import { visitTypeLabel } from "@/lib/visitTypeLabels";
  * visit (visit_id guard); an existing charge switches the card to the
  * created state — repeated taps and reopens cannot charge twice.
  *
- * Grocery Stocking: the €45 service fee is SEPARATE from the grocery
+ * Grocery Stocking: the current service fee is SEPARATE from the grocery
  * purchase cost captured on the visit — the note below keeps the two
  * amounts visibly distinct and the fee never includes the groceries.
  */
