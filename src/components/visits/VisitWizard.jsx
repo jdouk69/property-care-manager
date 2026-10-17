@@ -1,3 +1,4 @@
+import { buildOwnerReportModel } from "@/lib/visitReport";
 import React, { useEffect, useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { MapPin, Clock, ChevronLeft, Plus, Check, Loader2, Gauge, CheckCircle2, Download, Navigation, Receipt, MessageSquare, Send, ClipboardCheck, Wrench, Wallet, ListChecks, AlertTriangle, Info, Package, User, Building2, CalendarClock, Search, Mic } from "lucide-react";
@@ -173,6 +174,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [answered, setAnswered] = useState({});
   const [skipped, setSkipped] = useState({});
   const [showIncomplete, setShowIncomplete] = useState(false);
+  const [visitPage, setVisitPage] = useState("inspection");
   const [checklistLoadError, setChecklistLoadError] = useState("");
   // Which checklist rows are expanded (compact step-by-step interaction).
   const [openItems, setOpenItems] = useState({});
@@ -889,7 +891,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     if (isConcern && noteChanged && !options.preserveVisibility && (updated.notes || "").trim()) applied = { ...applied, owner_visible: true };
     setChecklist((arr) => arr.map((it, i) => (i === idx ? applied : it)));
     setAnswered((a) => ({ ...a, [idx]: true }));
-    // Keep this question open for suggested descriptions or Custom after any status.
+    // Keep the current question open so staff can choose a description or
+    // Custom after any status, including owner-created checklist questions.
 
   };
 
@@ -1439,28 +1442,27 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // (and their step chips) don't apply to this visit type.
     const isGroceryStocking = visitType === "Grocery Stocking";
     const STEPS = [
-      { key: "inspection", label: "Checklist", icon: ClipboardCheck, target: "step-inspection", done: inspectionDone },
-      { key: "issues", label: "Issues", icon: Wrench, target: "step-issues", done: issuesDone },
-      ...(isGroceryStocking ? [] : [
-        { key: "tasks", label: "Tasks", icon: ListChecks, target: "step-tasks", done: tasksDone },
-        { key: "expenses", label: "Expenses", icon: Wallet, target: "step-expenses", done: expensesDone },
-      ]),
-      { key: "owner", label: "Owner", icon: MessageSquare, target: "step-owner", done: ownerDone },
-      { key: "finish", label: "Finish", icon: CheckCircle2, target: "step-finish", done: false },
+      { key: "inspection", label: "Property checks", icon: ClipboardCheck, target: "step-inspection", done: inspectionDone },
+      { key: "details", label: "Visit details", icon: ListChecks, target: "step-details", done: false },
+      { key: "finish", label: "Review & finish", icon: CheckCircle2, target: "step-review", done: false },
     ];
-    // Guidance reflects what the worker still needs to do — not a forced walk
-    // through every optional section: Checklist while items remain, Issues only
-    // when flagged items exist without a logged issue, then Finish. No
-    // scroll-position tracking; Go keeps using the existing section anchors.
-    const needsIssues = inspectionDone && flaggedCount > 0 && issueIds.length === 0;
-    const nextStep = checklist.length > 0 && !inspectionDone
-      ? { key: "inspection", label: "Checklist", icon: ClipboardCheck, target: "step-inspection", hint: t("{count} of {total} remaining", { count: checklist.filter((it, idx) => !isAnswered(it, idx)).length, total: checklist.length }) }
-      : needsIssues
-        ? STEPS.find((s) => s.key === "issues")
-        : STEPS.find((s) => s.key === "finish");
-    const goToStep = (target) => { const el = document.getElementById(target); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+    const goToStep = (target) => {
+      const page = target === "step-inspection" ? "inspection" : ["step-owner", "step-finish", "step-review"].includes(target) ? "finish" : "details";
+      setVisitPage(page);
+      setTimeout(() => {
+        const el = document.getElementById(target);
+        if (!el) return;
+        if (el.tagName === "DETAILS") el.open = true;
+        scrollToItem(el);
+      }, 60);
+    };
+    const reportPreview = buildOwnerReportModel({ visit_type: visitType, checklist, summary, start_time: startTime, meter_readings: meters }, {
+      property: properties.find((p) => p.id === propertyId) || {}, client: clientObj || reportClient,
+      issues: createdIssues, tasks: createdTasks,
+    });
     // Jump straight to a specific checklist item: expand it and bring it into view.
     const jumpToItem = (idx) => {
+      setVisitPage("inspection");
       setOpenItems((m) => ({ ...m, [idx]: true }));
       setTimeout(() => scrollToItem(itemRefs.current[idx]), 60);
     };
@@ -1508,7 +1510,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar">
             {STEPS.map((s) => (
               <button key={s.key} onClick={() => goToStep(s.target)}
-                className={`flex items-center gap-1.5 shrink-0 text-[11px] px-2.5 py-1.5 md:text-sm md:px-4 md:py-2 2xl:text-[11px] 2xl:px-2.5 2xl:py-1.5 rounded-full border transition ${s.done ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/60 text-muted-foreground border-border"}`}>
+                aria-current={visitPage === s.key ? "step" : undefined}
+                className={`flex items-center gap-2 shrink-0 text-sm md:text-base font-semibold px-4 py-3 rounded-xl border transition ${visitPage === s.key || s.done ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/60 text-muted-foreground border-border"}`}>
                 {s.done ? <Check className="w-3 h-3" /> : <s.icon className="w-3 h-3" />}
                 {t(s.label)}
               </button>
@@ -1517,7 +1520,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         </div>
 
         {/* Inspection */}
-        <div id="step-inspection" className="scroll-mt-28">
+        <div id="step-inspection" hidden={visitPage !== "inspection"} className="scroll-mt-28">
+          <h2 className="text-2xl font-bold text-foreground mb-4">{t("Property checks")}</h2>
           {/* Guided Checklist — full-screen, one item at a time (iPhone field mode) */}
           {checklist.length > 0 && propertyId && (
             <button type="button" onClick={() => { setGuidedStart(Math.max(0, focusIdx(checklist, answered))); setGuidedOpen(true); }} className="w-full flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-3.5 py-3.5 mb-2 hover:bg-primary/15 transition min-h-[56px] text-left">
@@ -1538,7 +1542,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               </span>
             </button>
           )}
-          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">{t("Checklist")}</p>
+          <p className="text-lg md:text-xl font-bold text-foreground px-1 mb-3">{t("Checklist")}</p>
           {templateSource === "Default" && (
             <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5 mb-2">
               <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -1575,13 +1579,17 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             )}
           </div>
 
+        </div>
+        <div id="step-details" hidden={visitPage !== "details"} className="scroll-mt-28">
+          <h2 className="text-2xl font-bold text-foreground mb-2">{t("Visit details")}</h2>
+          <p className="text-base text-muted-foreground mb-5">{t("Add any readings, follow-up tasks or expenses. Leave optional sections empty if they do not apply.")}</p>
           {/* Anchor for the first post-checklist operational area — the
               Checklist Review "Continue Visit" lands HERE (top of Meter
               Readings), not at Finish. Purely a scroll target: nothing about
               Meter Readings is required and section order is unchanged. */}
           {!isGroceryStocking && (
-          <div id="step-meters" className="scroll-mt-28 rounded-2xl border border-border bg-card p-4 mb-4">
-            <div className="flex items-center gap-2 mb-3"><Gauge className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Meter Readings")}</h3></div>
+          <details id="step-meters" className="scroll-mt-28 rounded-2xl border border-border bg-card p-4 mb-4" open={meters.some((m) => m.value)}>
+          <summary className="cursor-pointer text-lg md:text-xl font-bold text-foreground py-3">{t("Meter Readings")} <span className="text-sm font-normal text-muted-foreground">{t("(optional)")}</span></summary>
             <div className="space-y-2">
               {meters.map((m, i) => (
                 <div key={i} className="flex gap-2">
@@ -1591,13 +1599,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               ))}
               <Button variant="outline" size="sm" onClick={() => setMeters((arr) => [...arr, { label: "", value: "", photo: "" }])} className={`rounded-full ${BTN_SM}`}><Plus className="w-4 h-4" /> {t("Add reading")}</Button>
             </div>
-          </div>
+          </details>
           )}
-        </div>
 
         {/* Issues */}
         <div id="step-issues" className="scroll-mt-28">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><Wrench className="w-3 h-3" /> {t("Issues")}</p>
+          <p className="text-lg md:text-xl font-bold text-foreground px-1 mb-3 flex items-center gap-1.5"><Wrench className="w-3 h-3" /> {t("Issues")}</p>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
             {flaggedCount === 0 ? (
               <p className="text-sm text-muted-foreground">{t("No items flagged. Mark a checklist item as Important or Emergency to create an issue.")}</p>
@@ -1620,10 +1627,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
         {/* Tasks / Contractor — hidden for Grocery Stocking visits */}
         {!isGroceryStocking && (
-        <div id="step-tasks" className="scroll-mt-28">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">{t("Tasks / Contractor")}</p>
+        <details id="step-tasks" className="scroll-mt-28" open={taskIds.length > 0}>
+          <summary className="cursor-pointer text-lg md:text-xl font-bold text-foreground py-3">{t("Tasks / Contractor")} <span className="text-sm font-normal text-muted-foreground">{t("(optional)")}</span></summary>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-            <div className="flex items-center gap-2 mb-3"><Check className="w-4 h-4 text-muted-foreground" /><h3 className="font-medium text-sm">{t("Follow-up Task")}</h3></div>
+            <div className="flex items-center gap-2 mb-3"><Check className="w-4 h-4 text-muted-foreground" /><h3 className="font-semibold text-base">{t("Follow-up Task")}</h3></div>
             <div className="flex gap-2">
               <Input value={followUpText} onChange={(e) => setFollowUpText(e.target.value)} placeholder={t("e.g. Order replacement pool filter")} className={FIELD} />
               <Button variant="outline" onClick={addFollowUpTask} disabled={!followUpText.trim()} className={BTN}>{t("Add")}</Button>
@@ -1638,13 +1645,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               )}
             </div>
           </div>
-        </div>
+        </details>
         )}
 
         {/* Expenses / Receipts — hidden for Grocery Stocking visits */}
         {!isGroceryStocking && (
-        <div id="step-expenses" className="scroll-mt-28">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><Wallet className="w-3 h-3" /> {t("Expenses / Receipts")}</p>
+        <details id="step-expenses" className="scroll-mt-28" open={expensesCreated.length > 0}>
+          <summary className="cursor-pointer text-lg md:text-xl font-bold text-foreground py-3">{t("Expenses / Receipts")} <span className="text-sm font-normal text-muted-foreground">{t("(optional)")}</span></summary>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4 space-y-2.5">
             <Input value={expVendor} onChange={(e) => setExpVendor(e.target.value)} placeholder={t("Vendor / description")} className={FIELD} />
             <div className="flex gap-2">
@@ -1692,12 +1699,15 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               )}
             </div>
           </div>
-        </div>
+        </details>
         )}
 
+        </div>
+        <div id="step-review" hidden={visitPage !== "finish"} className="scroll-mt-28">
+        <h2 className="text-2xl font-bold text-foreground mb-4">{t("Review & finish")}</h2>
         {/* Owner Update */}
-        <div id="step-owner" className="scroll-mt-28">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2 flex items-center gap-1.5"><MessageSquare className="w-3 h-3" /> {t("Owner Update")}</p>
+        <details id="step-owner" className="scroll-mt-28" open={commSent.length > 0}>
+          <summary className="cursor-pointer text-lg md:text-xl font-bold text-foreground py-3">{t("Owner Update")} <span className="text-sm font-normal text-muted-foreground">{t("(optional)")}</span></summary>
           <div className="rounded-2xl border border-border bg-card p-4 mb-4 space-y-2.5">
             <Input value={commSubject} onChange={(e) => setCommSubject(e.target.value)} placeholder={t("Subject e.g. Monthly visit summary")} className={FIELD} />
             <Textarea value={commMessage} onChange={(e) => setCommMessage(e.target.value)} rows={2} placeholder={t("Message to the owner…")} className={AREA} />
@@ -1720,31 +1730,31 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               )}
             </div>
           </div>
-        </div>
+        </details>
 
         {/* Finish */}
         <div id="step-finish" className="scroll-mt-28">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground px-1 mb-2">{t("Finish")}</p>
+
           {visitType === "Grocery Stocking" && (
             <div className="mb-4 rounded-2xl border border-border bg-card p-4 space-y-3">
               <p className="text-sm font-medium">{t("Grocery details")}</p>
               <div>
-                <Label className="text-xs mb-1.5 block">{t("Owner shopping list / request")}</Label>
+                <Label className="text-base font-semibold mb-2 block">{t("Owner shopping list / request")}</Label>
                 <Textarea value={groceryList} onChange={(e) => setGroceryList(e.target.value)} rows={2} placeholder={t("Items requested by the owner…")} className={AREA} />
               </div>
               <div>
-                <Label className="text-xs mb-1.5 block">{t("Grocery / receipt cost (€)")}</Label>
-                <Input type="number" step="0.01" min="0" value={groceryCost} onChange={(e) => setGroceryCost(e.target.value)} placeholder={t("Actual cost of groceries — separate from the €45 service fee")} className={FIELD} />
+                <Label className="text-base font-semibold mb-2 block">{t("Grocery / receipt cost (€)")}</Label>
+                <Input type="number" step="0.01" min="0" value={groceryCost} onChange={(e) => setGroceryCost(e.target.value)} placeholder={t("Actual cost of groceries — separate from the service fee")} className={FIELD} />
               </div>
-              <p className="text-xs text-muted-foreground">{t("Groceries are paid separately by the owner — keep this cost separate from the €45 + VAT service fee. Attach the receipt photo on the checklist item below.")}</p>
+              <p className="text-xs text-muted-foreground">{t("Groceries are paid separately by the owner — keep this cost separate from the service fee. Attach the receipt photo on the checklist item below.")}</p>
             </div>
           )}
           <div className="mb-4">
-            <Label className="text-xs mb-1.5 block">{t("Visit Summary & Recommendations")} <span className="text-emerald-600 font-normal">{t("(shown to owner)")}</span></Label>
+            <Label className="text-base font-semibold mb-2 block">{t("Visit Summary & Recommendations")} <span className="text-emerald-600 font-normal">{t("(shown to owner)")}</span></Label>
             <Textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} placeholder={t("Overall findings and recommended next steps for the owner…")} className={AREA} />
           </div>
           <div className="mb-4">
-            <Label className="text-xs mb-1.5 block">{t("Internal Notes")} <span className="text-rose-600 font-normal">{t("(staff only — never shown to owner)")}</span></Label>
+            <Label className="text-base font-semibold mb-2 block">{t("Internal Notes")} <span className="text-rose-600 font-normal">{t("(staff only — never shown to owner)")}</span></Label>
             <Textarea value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} rows={2} placeholder={t("Private staff notes. These are NOT included in the owner report.")} className={AREA} />
           </div>
 
@@ -1786,29 +1796,33 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           ) : null)}
         </div>
 
-        {/* Next action card + bottom bar */}
+        <div className="rounded-2xl border border-border bg-card p-5 mb-5">
+          <h3 className="text-xl font-bold mb-3">{t("Owner report preview")}</h3>
+          {reportPreview.reportExcluded ? <p className="text-base">{t("This visit type uses a visit record or photo update rather than a full owner report.")}</p> : <>
+            <p className="text-base mb-3">{reportPreview.summaryText}</p>
+            <div className="space-y-3">
+              {(reportPreview.findings || []).map((f, i) => <div key={`finding-${i}`} className="rounded-xl bg-amber-500/10 p-3"><p className="font-semibold">{f.title} — {f.priorityLabel}</p><p className="text-base">{f.observed || t("An observation is needed before this visit can be completed.")}</p>{f.actionTaken && <p className="text-base mt-1">{f.actionTaken}</p>}{f.recommendation && <p className="text-base mt-1">{f.recommendation}</p>}</div>)}
+              {(reportPreview.routineChecks || []).map((rc, i) => <div key={i} className="border-b border-border pb-3"><p className="text-base">{rc.result || `${rc.name} — ${rc.status === "Unable to Check" ? reportPreview.labels.unableDisplay : rc.status === "N/A" ? reportPreview.labels.naDisplay : reportPreview.labels.notCheckedDisplay}`}</p>{rc.note && <p className="text-base text-muted-foreground mt-1">{rc.note}</p>}</div>)}
+            </div>
+            {summary.trim() && <p className="mt-4 text-base whitespace-pre-wrap">{summary}</p>}
+            <p className="mt-4 text-sm text-muted-foreground">{reportPreview.labels.scopeStatement}</p>
+          </>}
+        </div>
+        </div>
+        {/* Page navigation keeps all visit state in this same wizard. */}
         <div className={`fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 ${sidebarCollapsed ? "lg:left-0" : "lg:left-64"}`}>
           <div className={`space-y-2 ${sidebarCollapsed || activeWide ? "w-full 2xl:mx-auto 2xl:max-w-5xl" : "max-w-2xl mx-auto"}`}>
-            <button onClick={() => goToStep(nextStep.target)} className="w-full flex items-center justify-between gap-2 rounded-2xl bg-primary/10 border border-primary/20 px-3 py-2.5 text-left hover:bg-primary/15 transition">
-              <div className="flex items-center gap-2 min-w-0">
-                <nextStep.icon className="w-4 h-4 text-primary shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-wide text-primary/80">{t("Next step")}</p>
-                  <p className="text-sm font-medium text-foreground truncate">{t(nextStep.label)}{nextStep.key === "finish" ? t(" — complete the visit") : ""}</p>
-                  {nextStep.hint && <p className="text-[11px] text-muted-foreground">{nextStep.hint}</p>}
-                </div>
-              </div>
-              <span className="text-xs text-primary shrink-0">{t("Go →")}</span>
-            </button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={backFromActive} className={`rounded-2xl ${BTN}`}>{t("Back")}</Button>
-              <Button
+              <Button variant="outline" onClick={() => visitPage === "inspection" ? backFromActive() : goToStep(visitPage === "details" ? "step-inspection" : "step-details")} className={`rounded-2xl ${BTN}`}>{t("Back")}</Button>
+              {visitPage !== "finish" ? (
+                <Button onClick={() => goToStep(visitPage === "inspection" ? "step-details" : "step-review")} className="flex-1 h-14 rounded-2xl text-base md:text-lg font-semibold">{t(visitPage === "inspection" ? "Continue to visit details" : "Continue to review & finish")}</Button>
+              ) : <Button
                 variant={canComplete ? "default" : "outline"}
                 onClick={() => ((canComplete && missingReasons.length === 0 && missingConcernNotes.length === 0) ? completeVisit() : setShowIncomplete(true))}
                 disabled={saving}
                 className="flex-1 h-12 rounded-2xl text-base">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><CheckCircle2 className="w-5 h-5 mr-2" /> {t("Complete Visit")}</>}
-              </Button>
+              </Button>}
             </div>
           </div>
         </div>
