@@ -1,3 +1,5 @@
+import SuggestedAnswerPicker from "@/components/visits/SuggestedAnswerPicker";
+import { applySuggestedAnswer } from "@/lib/checklistSuggestedAnswers";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
@@ -50,6 +52,12 @@ export default function Inspections() {
   const [dirty, setDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
   const debounceRef = useRef(null);
+  const [descriptionOpen, setDescriptionOpen] = useState({});
+  const notesRefs = useRef({});
+  const openDescription = (idx) => {
+    setDescriptionOpen(s => ({ ...s, [idx]: true }));
+    requestAnimationFrame(() => notesRefs.current[idx]?.focus());
+  };
   const [searchParams] = useSearchParams();
   const openId = searchParams.get("open");
   const autoOpenDone = useRef(false);
@@ -81,6 +89,7 @@ export default function Inspections() {
   // Phase 3: creating NEW standalone inspections is retired. This page is a
   // read-only historical view; field work happens through Property Visits.
   const openEdit = (it) => {
+    setDescriptionOpen({});
     setEditing(it);
     setValues({ ...it, checklist: it.checklist?.length ? it.checklist : blankChecklist() });
     setDirty(false); setSaved(false); setOpen(true);
@@ -280,9 +289,14 @@ export default function Inspections() {
                         </button>
                       ))}
                     </div>
-                    {c.status !== "Pass" && c.status !== "Not Checked" && (
+                    <div className="mt-2">
+                      <SuggestedAnswerPicker visitType="Inspection" item={c} ownerVisibilityManaged={false}
+                        onChoose={(text) => { setItem(idx, { notes: applySuggestedAnswer(c, text).notes }); openDescription(idx); }}
+                        onCustom={() => openDescription(idx)} />
+                    </div>
+                    {(descriptionOpen[idx] || c.notes || (c.status !== "Pass" && c.status !== "Not Checked")) && (
                       <>
-                        <Textarea className="mt-2 text-sm" rows={2} placeholder={t("Notes…")} value={c.notes || ""} onChange={(e) => setItem(idx, { notes: e.target.value })} />
+                        <Textarea ref={el => { notesRefs.current[idx] = el; }} className="mt-2 text-sm" rows={2} placeholder={t("Notes…")} value={c.notes || ""} onChange={(e) => setItem(idx, { notes: e.target.value })} />
                         <div className="mt-2 flex items-center gap-2">
                           {c.photo && <UIImage src={c.photo} className="w-16 h-16 rounded-lg" fittingType="fill" />}
                           <label className="inline-flex items-center gap-1.5 text-xs text-primary cursor-pointer">
