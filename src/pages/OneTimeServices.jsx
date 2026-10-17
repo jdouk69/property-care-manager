@@ -23,7 +23,7 @@ const TIERS = [
 const SERVICES = [
   {
     label: "Grocery Stocking",
-    desc: "From €45 + VAT — shopping, delivery, basic putting-away. Groceries paid separately by the owner.",
+    desc: "Shopping, delivery, basic putting-away. The current service fee is set in Services; groceries are paid separately by the owner.",
     to: "/visits?schedule=1&visit_type=Grocery%20Stocking",
     icon: ShoppingBasket,
     color: "bg-emerald-500",
