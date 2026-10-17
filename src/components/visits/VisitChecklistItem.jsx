@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import SuggestedAnswerPicker from "@/components/visits/SuggestedAnswerPicker";
+import { applySuggestedAnswer } from "@/lib/checklistSuggestedAnswers";
+import React, { useEffect, useState, useRef } from "react";
 import { X, Loader2, AlertTriangle, Wrench, Camera, Eye, EyeOff, ChevronDown, Check, CircleSlash, Minus, Circle, Plus, StickyNote } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Image as UIImage } from "@/components/ui/image";
@@ -23,8 +25,10 @@ const AUTO_OPEN = ["Important", "Emergency", "Unable to Check"];
 // the number, description, an answer indicator and a chevron. Expanding reveals
 // the existing status buttons and detail controls — no status values or save
 // behavior changed.
-export default function VisitChecklistItem({ item, index, onChange, onUploadPhoto, onRemovePhoto, uploading, onFlagIssue, flagged, expanded = false, onToggle }) {
+export default function VisitChecklistItem({ visitType, item, index, onChange, onUploadPhoto, onRemovePhoto, uploading, onFlagIssue, flagged, expanded = false, onToggle }) {
   const { t, lang } = useLanguage();
+  const notesRef = useRef(null);
+  const openDescription = () => { setDetailOpen(true); requestAnimationFrame(() => notesRef.current?.focus()); };
   const [detailOpen, setDetailOpen] = useState(AUTO_OPEN.includes(item.status));
   // When the row is expanded from outside (completion dialog's "Go to item",
   // guided auto-focus), re-open the notes area on items that need their
@@ -92,6 +96,10 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
               </button>
             ))}
           </div>
+
+          <SuggestedAnswerPicker visitType={visitType} item={item}
+            onChoose={(text) => { onChange(applySuggestedAnswer(item, text), { preserveVisibility: true }); openDescription(); }}
+            onCustom={openDescription} />
 
           {/* Optional documentation — available after ANY response, never required.
               detailOpen keeps the existing note textarea + photo grid + owner
@@ -171,7 +179,7 @@ export default function VisitChecklistItem({ item, index, onChange, onUploadPhot
                   {t("Required: describe what was observed. This explanation appears in the owner report.")}
                 </p>
               )}
-              <Textarea value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder={t(item.status === "Unable to Check" ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…" : (item.status === "Important" || item.status === "Emergency") ? "Describe what was observed (required)…" : "Notes…")} rows={item.status === "Unable to Check" ? 4 : 3} className="resize-none min-h-[96px] text-base leading-relaxed py-3 2xl:text-sm 2xl:min-h-60 2xl:py-2" />
+              <Textarea ref={notesRef} value={item.notes || ""} onChange={(e) => setNotes(e.target.value)} placeholder={t(item.status === "Unable to Check" ? "Reason unable to check (e.g. equipment room locked, area inaccessible, water off)…" : (item.status === "Important" || item.status === "Emergency") ? "Describe what was observed (required)…" : "Notes…")} rows={item.status === "Unable to Check" ? 4 : 3} className="resize-none min-h-[96px] text-base leading-relaxed py-3 2xl:text-sm 2xl:min-h-60 2xl:py-2" />
               <button
                 type="button"
                 onClick={toggleOwnerVisible}
