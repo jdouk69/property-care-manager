@@ -144,6 +144,10 @@
     "archived": {
       "type": "boolean",
       "default": false
+    },
+    "paid_invoice_id": {
+      "type": "string",
+      "description": "Invoice that marked this linked charge paid. Payment corrections only reconcile charges linked to that invoice; independent payments remain unchanged."
     }
   },
   "required": [
