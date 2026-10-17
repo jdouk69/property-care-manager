@@ -44,7 +44,7 @@ export default async function(req) {
     if (!agreement) return Response.json({ error: 'Agreement not found' }, { status: 404 });
 
     // --- Server-authoritative eligibility (shared, includes snapshot hash verify) ---
-    const errs = await activationEligibilityErrors(agreement);
+    const errs = await activationEligibilityErrors(action === 'activate' && agreement.status === 'Active' ? {...agreement, status: 'Pending'} : agreement);
     if (errs.length) {
       return Response.json({ error: 'Agreement cannot be activated.', details: errs }, { status: 400 });
     }
