@@ -869,7 +869,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     setStep("active");
   };
 
-  const updateItem = (idx, updated) => {
+  const updateItem = (idx, updated, options = {}) => {
     const prev = checklist[idx];
     // First-time Important/Emergency: surface the note to the owner
     // automatically (same rule the Guided Checklist applies, centralized here
@@ -886,15 +886,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // the completion validator can never disagree again. A DELIBERATE private
     // toggle (an update that does not change the note text) is preserved.
     const noteChanged = (updated.notes || "") !== (prev?.notes || "");
-    if (isConcern && noteChanged && (updated.notes || "").trim()) applied = { ...applied, owner_visible: true };
+    if (isConcern && noteChanged && !options.preserveVisibility && (updated.notes || "").trim()) applied = { ...applied, owner_visible: true };
     setChecklist((arr) => arr.map((it, i) => (i === idx ? applied : it)));
     setAnswered((a) => ({ ...a, [idx]: true }));
-    // Normal / N/A: collapse and auto-advance to the next unanswered item.
-    // Important / Emergency / Unable to Check stay open for their existing
-    // documentation workflows. Notes-only edits (status unchanged) never collapse.
-    if (updated.status !== prev.status && (updated.status === "Normal" || updated.status === "N/A")) {
-      advanceFrom(idx, checklist.map((it, i) => (i === idx ? updated : it)), answered);
-    }
+    // Keep this question open for suggested descriptions or Custom after any status.
+
   };
 
   // Apply APPROVED Dictate Visit proposals to the SAME checklist — voice is
@@ -1561,7 +1557,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <div className="space-y-2 mb-6">
             {checklist.map((it, i) => (
               <div key={i} ref={(el) => { itemRefs.current[i] = el; }} className="scroll-mt-28">
-                <VisitChecklistItem item={it} index={i} onChange={(u) => updateItem(i, u)}
+                <VisitChecklistItem visitType={visitType} item={it} index={i} onChange={(u, options) => updateItem(i, u, options)}
                   onUploadPhoto={uploadPhotos} onRemovePhoto={removePhoto} uploading={uploading}
                   onFlagIssue={flagIssue} flagged={!!flagged[i]}
                   expanded={!!openItems[i]} onToggle={() => setOpenItems((m) => ({ ...m, [i]: !m[i]}))} />
@@ -1879,6 +1875,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             state and update handlers; closing it returns to this active step,
             which keeps the existing review/completion/report flow. */}
         <GuidedChecklistOverlay
+          visitType={visitType}
           open={guidedOpen}
           onClose={() => setGuidedOpen(false)}
           // Checklist Review → Continue Visit: the Guided Checklist only
