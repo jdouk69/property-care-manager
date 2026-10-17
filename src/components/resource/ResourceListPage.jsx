@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { exportCsv } from "@/lib/exportCsv";
+import { resourcePatch } from "@/lib/resourcePatch.mjs";
 import {
   Plus, Search, Pencil, Trash2, Loader2, Check, X, ImagePlus, Download, Archive, FileText, Upload, ArrowLeft
 } from "lucide-react";
@@ -158,8 +159,8 @@ export default function ResourceListPage({
     );
   }, [items, query, filterFn]);
 
-  const openNew = () => { flushPendingEdit(); destructiveRef.current = false; setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setFormError(""); setDrawerOpen(true); };
-  const openEdit = (it) => { flushPendingEdit(); destructiveRef.current = false; setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setFormError(""); setDrawerOpen(true); };
+  const openNew = async () => { if (!(await flushPendingEdit())) return; destructiveRef.current = false; setEditing(null); setValues({ ...defaultValues }); setDirty(false); setSaved(false); setFormError(""); setDrawerOpen(true); };
+  const openEdit = async (it) => { if (!(await flushPendingEdit())) return; destructiveRef.current = false; setEditing(it); setValues({ ...it }); setDirty(false); setSaved(false); setFormError(""); setDrawerOpen(true); };
   const setField = (k, v) => { setValues((s) => ({ ...s, [k]: v })); setDirty(true); setSaved(false); };
 
   const autoOpenDone = useRef(false);
@@ -183,8 +184,8 @@ export default function ResourceListPage({
     debounceRef.current = setTimeout(async () => {
       try {
         await runUpdate(editing, values);
-        if (mountedRef.current) { setSaving(false); setSaved(true); setDirty(false); }
-      } catch (e) { if (mountedRef.current) setSaving(false); }
+        if (mountedRef.current) { setSaving(false); setFormError(""); if (editingRef.current?.id === editing.id && JSON.stringify(valuesRef.current) === JSON.stringify(values)) { setSaved(true); setDirty(false); } }
+      } catch (e) { if (mountedRef.current) { setSaving(false); setSaved(false); setFormError(e.message || t("Unable to save record.")); } }
     }, 1000);
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,7 +208,7 @@ export default function ResourceListPage({
       setItems((arr) => [next, ...arr]);
       setEditing(next);
       setSaving(false); setSaved(true); setDirty(false);
-    } catch (e) { setSaving(false); }
+    } catch (e) { setSaving(false); setFormError(e.message || "Unable to save record."); }
   };
 
   const remove = async (it) => {
@@ -220,7 +221,7 @@ export default function ResourceListPage({
       await base44.entities[entityName].delete(it.id);
       setItems((arr) => arr.filter((x) => x.id !== it.id));
       setDrawerOpen(false);
-    } catch (e) {}
+    } catch (e) { alert(e.message || "Unable to update record."); }
   };
 
   const archive = async (it) => {
@@ -232,7 +233,7 @@ export default function ResourceListPage({
       await base44.entities[entityName].update(it.id, { archived: true });
       setItems((arr) => arr.filter((x) => x.id !== it.id));
       setDrawerOpen(false);
-    } catch (e) {}
+    } catch (e) { alert(e.message || "Unable to update record."); }
   };
 
   const uploadImage = async (file) => {
@@ -292,7 +293,7 @@ export default function ResourceListPage({
             <label className="inline-flex items-center gap-2 text-sm text-primary cursor-pointer">
               <ImagePlus className="w-4 h-4" />
               <span>{uploading ? t("Uploading…") : val ? t("Replace photo") : t("Upload photo")}</span>
-              <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (file) setField(f.name, await uploadImage(file)); }} />
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { try { setField(f.name, await uploadImage(file)); } catch (err) { setFormError(err.message || t("Unable to upload photo. Please try again.")); } } }} />
             </label>
           </div>
         );
@@ -351,8 +352,10 @@ export default function ResourceListPage({
                 <input type="file" accept="image/*" multiple className="hidden" onChange={async (e) => {
                   const files = Array.from(e.target.files || []);
                   const urls = [];
-                  for (const file of files) urls.push(await uploadImage(file));
-                  setField(f.name, [...(val || []), ...urls]);
+                  try {
+                    for (const file of files) urls.push(await uploadImage(file));
+                    setField(f.name, [...(val || []), ...urls]);
+                  } catch (err) { setFormError(err.message || t("Unable to upload photo. Please try again.")); }
                 }} />
               </label>
             </div>
@@ -437,17 +440,21 @@ export default function ResourceListPage({
   // (setItems/onUpdated) is touched — true for live edits while mounted, false for
   // the unmount/route-leave flush so we never update state after the component is gone.
   const persistRecord = async (record, vals, { updateUI = true } = {}) => {
-    const p = base44.entities[entityName].update(record.id, vals);
+    const patch = resourcePatch(record, vals);
+    if (!Object.keys(patch).length) return record;
+    const previous = inFlightRef.current;
+    const p = Promise.resolve(previous).catch(() => {}).then(() => base44.entities[entityName].update(record.id, patch));
     inFlightRef.current = p;
     inFlightValuesRef.current = vals;
     try {
-      await p;
-      // The DB update always completes; UI callbacks run only while mounted so an
+      const stored = await p;
+      // Use the server-confirmed record; UI callbacks run only while mounted so an
       // in-flight save that resolves after unmount touches no React state.
       if (updateUI && mountedRef.current) {
-        setItems((arr) => arr.map((it) => (it.id === record.id ? { ...it, ...vals } : it)));
+        setItems((arr) => arr.map((it) => (it.id === record.id ? stored : it)));
         if (onUpdated) onUpdated(record, vals);
       }
+      return stored;
     } finally {
       if (inFlightRef.current === p) { inFlightRef.current = null; inFlightValuesRef.current = null; }
     }
@@ -498,20 +505,29 @@ export default function ResourceListPage({
   // Flush the CURRENT dirty edit (current editing.id + current values) before the
   // form is left, closed, or switched. No-op when not editing or not dirty.
   const flushPendingEdit = async () => {
-    if (!editing || !dirty) return;
+    if (!editing || !dirty) return true;
     clearTimeout(debounceRef.current);
     try {
       await runUpdate(editing, values);
-      if (mountedRef.current) setDirty(false);
-    } catch (e) { /* leave dirty; next change retriggers autosave */ }
+      if (mountedRef.current) { setDirty(false); setSaved(true); setFormError(""); }
+      return true;
+    } catch (e) {
+      if (mountedRef.current) { setSaved(false); setFormError(e.message || t("Unable to save record.")); }
+      return false;
+    }
   };
 
-  const closeForm = () => { flushPendingEdit(); setDrawerOpen(false); };
+  const closeForm = async () => {
+    if (await flushPendingEdit()) setDrawerOpen(false);
+  };
 
   const flushSave = async () => {
     setSaving(true);
-    try { await flushPendingEdit(); } finally { if (mountedRef.current) setSaving(false); }
-    if (mountedRef.current) setDrawerOpen(false);
+    try {
+      if (await flushPendingEdit()) {
+        if (mountedRef.current) setDrawerOpen(false);
+      }
+    } finally { if (mountedRef.current) setSaving(false); }
   };
 
   const renderFieldRow = (f) => {
@@ -567,9 +583,9 @@ export default function ResourceListPage({
       <div className="flex gap-2">
         <Button variant="outline" className="sm:h-11 sm:px-5" onClick={closeForm}>{t("Cancel")}</Button>
         {editing ? (
-          <Button className="sm:h-11 sm:px-5" onClick={flushSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Save Changes")}</Button>
+          <Button className="sm:h-11 sm:px-5" onClick={flushSave} disabled={saving || uploading}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Save Changes")}</Button>
         ) : (
-          <Button className="sm:h-11 sm:px-5" onClick={saveNew} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t(saveLabel)}</Button>
+          <Button className="sm:h-11 sm:px-5" onClick={saveNew} disabled={saving || uploading}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t(saveLabel)}</Button>
         )}
       </div>
     </>
