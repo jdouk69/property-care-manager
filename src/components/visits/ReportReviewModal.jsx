@@ -310,7 +310,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
                   if (rc.status === "Normal") {
                     return (
                       <p key={i} className="text-xs text-foreground/80 flex items-start gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-report-gold shrink-0 mt-0.5" /> {rc.name}
+                        <CheckCircle2 className="w-3.5 h-3.5 text-report-gold shrink-0 mt-0.5" /> <span>{rc.name}{rc.note && <span className="text-foreground/70"> — {rc.note}</span>}</span>
                       </p>
                     );
                   }
