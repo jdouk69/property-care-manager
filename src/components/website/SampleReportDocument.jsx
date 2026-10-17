@@ -114,7 +114,7 @@ export default function SampleReportDocument() {
                 rc.status === "Normal" ? (
                   <p key={i} className="text-xs sm:text-sm text-report-navy/90 flex items-start gap-2">
                     <span className="text-report-gold font-bold shrink-0">✓</span>
-                    <span>{rc.name}{rc.note ? <span className="text-report-navy/70"> — {rc.note}</span> : null}</span>
+                    <span>{rc.result || rc.name}{rc.note ? <span className="text-report-navy/70"> — {rc.note}</span> : null}</span>
                   </p>
                 ) : (
                   <p key={i} className="text-xs sm:text-sm text-report-navy/60 flex items-start gap-2">
