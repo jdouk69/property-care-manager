@@ -1,3 +1,4 @@
+import { checklistReportResult } from "@/lib/checklistReportResult";
 import jsPDF from "jspdf";
 import { resolvePhotoUrl } from "@/lib/photoStorage";
 import { visitTypeLabelFor, isReportExcludedVisit, isCompleteCareFollowUpVisit } from "@/lib/visitTypeLabels";
@@ -277,6 +278,7 @@ export function buildOwnerReportModel(visit, ctx = {}) {
       return {
         name: itemName(it.name),
         status: it.status || "Not Checked",
+        result: checklistReportResult(it.name, it.status, lang, itemName(it.name)),
         note: visible ? (it.notes || "").trim() : "",
         langMismatch: visible ? langMismatch(it.notes) : false,
       };
@@ -831,7 +833,7 @@ async function buildDoc(visit, ctx = {}) {
     const GRAY = [148, 163, 184];
     for (const rc of routineChecks) {
       doc.setFont(SANS, "bold"); doc.setFontSize(9.5);
-      const nameLines = doc.splitTextToSize(clean(rc.name), maxWidth - 6);
+      const nameLines = doc.splitTextToSize(clean(rc.status === "Normal" ? (rc.result || rc.name) : rc.name), maxWidth - 6);
       if (rc.status === "Normal") {
         // Owner-visible observation on a routine check is printed beneath the
         // item (same as the review preview); private notes are already blank.
