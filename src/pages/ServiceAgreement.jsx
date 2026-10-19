@@ -108,6 +108,9 @@ export default function ServiceAgreement() {
   const [sendResult, setSendResult] = useState(null);
   const [sendError, setSendError] = useState("");
   const [copied, setCopied] = useState("");
+  // A blank tab is opened synchronously from the staff tap so mobile browsers
+  // do not block it while the agreement is saved and frozen asynchronously.
+  const signOnTabletWindowRef = useRef(null);
   const [downloadingSigned, setDownloadingSigned] = useState(false);
   // Shared guard for Save Draft / Create Signing Link (see runExclusive):
   // busyRef is the synchronous guard rapid taps cannot bypass; while either
@@ -507,6 +510,8 @@ export default function ServiceAgreement() {
     // agreementSend is never called when saving fails.
     const savedId = await persist();
     if (!savedId) {
+      signOnTabletWindowRef.current?.close();
+      signOnTabletWindowRef.current = null;
       setSendError(t("Saving the draft failed — the signing link was not created. Please try again."));
       setSending(false);
       return;
@@ -515,6 +520,13 @@ export default function ServiceAgreement() {
       const res = await base44.functions.invoke("agreementSend", { action: "send", agreement_id: savedId });
       const data = res && res.data ? res.data : res;
       if (data && data.ok) {
+        const tabletWindow = signOnTabletWindowRef.current;
+        signOnTabletWindowRef.current = null;
+        if (tabletWindow && !tabletWindow.closed && data.public_link) {
+          tabletWindow.location.replace(data.public_link);
+        } else if (tabletWindow && !tabletWindow.closed) {
+          tabletWindow.close();
+        }
         const token = data.public_link ? String(data.public_link).split("/agreement/")[1] || "" : "";
         // Load the authoritative frozen snapshot IMMEDIATELY after the send
         // succeeds, so the staff preview shows the exact stored content. A
@@ -534,11 +546,15 @@ export default function ServiceAgreement() {
         }));
         setSendResult({ public_link: data.public_link, sent_at: data.sent_at });
       } else {
+        signOnTabletWindowRef.current?.close();
+        signOnTabletWindowRef.current = null;
         const msg = (data && data.error) || t("Send failed.");
         const detail = data && Array.isArray(data.details) ? " " + data.details.join(" ") : "";
         setSendError(msg + detail);
       }
     } catch (e) {
+      signOnTabletWindowRef.current?.close();
+      signOnTabletWindowRef.current = null;
       const data = e && e.response && e.response.data ? e.response.data : null;
       const msg = (data && data.error) || (e && e.message) || t("Send failed.");
       const detail = data && Array.isArray(data.details) ? " " + data.details.join(" ") : "";
@@ -546,6 +562,14 @@ export default function ServiceAgreement() {
     }
     setSending(false);
   });
+
+  // Open the tab directly from the user tap (before any awaited work) so
+  // tablet/mobile popup blockers allow the public signing page to load.
+  const handleOpenSignOnTablet = () => {
+    if (busyRef.current) return;
+    signOnTabletWindowRef.current = window.open("about:blank", "_blank");
+    handleSend();
+  };
 
   // Staff reload of the stored frozen snapshot (sent/signed) when the initial
   // load failed. Never resends and never rebuilds content from live settings.
@@ -775,6 +799,7 @@ export default function ServiceAgreement() {
                 sending={sending}
                 sendError={sendError}
                 handleSend={handleSend}
+                handleOpenSignOnTablet={handleOpenSignOnTablet}
                 sendDisabledReason={sendDisabledReason}
                 testingOpen={testingOpen}
                 setTestingOpen={setTestingOpen}
