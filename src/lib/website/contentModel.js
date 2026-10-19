@@ -32,7 +32,7 @@ export const DEFAULT_CONTENT = {
       badge: "Chania · Western Crete",
       title: "Local care visits for short-term rental villas.",
       subtitle:
-        "Meet Demetrios, your local contact in Chania and Western Crete. We focus on agreed care visits for short-term rental villas. For owner-occupied homes, we consider exterior-only visits and never enter the home.",
+        "Meet Demetrios, your local contact in Chania and Western Crete. We focus on agreed care visits for short-term rental villas. For private homes where the owner's personal belongings remain, visits are exterior-only; we do not enter the property.",
       ctaPrimary: "Talk to Demetrios",
       ctaSecondary: "Services & Prices",
     },
@@ -40,7 +40,7 @@ export const DEFAULT_CONTENT = {
       badge: "Χανιά · Δυτική Κρήτη",
       title: "Τοπικές επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης.",
       subtitle:
-        "Γνωρίστε τον Δημήτριο, τον τοπικό σας άνθρωπο στα Χανιά και τη Δυτική Κρήτη. Εστιάζουμε σε συμφωνημένες επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης. Για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις και δεν εισερχόμαστε στο σπίτι.",
+        "Γνωρίστε τον Δημήτριο, τον τοπικό σας άνθρωπο στα Χανιά και τη Δυτική Κρήτη. Εστιάζουμε σε συμφωνημένες επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης. Για ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, οι επισκέψεις είναι μόνο εξωτερικές· δεν εισερχόμαστε στο ακίνητο.",
       ctaPrimary: "Μιλήστε με τον Δημήτριο",
       ctaSecondary: "Υπηρεσίες & Τιμές",
     },
@@ -50,9 +50,9 @@ export const DEFAULT_CONTENT = {
       kicker: "Services & Pricing",
       heading: "Clear prices and agreed work.",
       intro:
-        "These are our current service prices. We focus on short-term rental villas; owner-occupied homes are considered for exterior-only visits. We agree each visit's work and price with you before proceeding.",
+        "These are our current service prices. We focus on short-term rental villas; private homes where the owner's personal belongings remain receive exterior-only visits. We agree each visit's work and price with you before proceeding.",
       groupHeading: "Recurring Care Plans — scheduled visits every month",
-      note: "For owner-occupied homes, visits are exterior-only and we do not enter the home. The exact work and final price are agreed with you in advance.",
+      note: "For private homes where the owner's personal belongings remain, visits are exterior-only and we do not enter the property. The exact work and final price are agreed with you in advance.",
       // Public wording for the seven service cards. The seed values mirror
       // exactly what the cards showed when this content became editable.
       // {price} / {hourly} placeholders are filled LIVE from the pricing
@@ -130,9 +130,9 @@ export const DEFAULT_CONTENT = {
       kicker: "Υπηρεσίες & Τιμές",
       heading: "Ξεκάθαρες τιμές και συμφωνημένη εργασία.",
       intro:
-        "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Εστιάζουμε σε βίλες βραχυχρόνιας μίσθωσης· για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις. Συμφωνούμε μαζί σας κάθε εργασία και την τιμή της πριν προχωρήσουμε.",
+        "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Εστιάζουμε σε βίλες βραχυχρόνιας μίσθωσης· για ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, προσφέρουμε μόνο εξωτερικές επισκέψεις. Συμφωνούμε μαζί σας κάθε εργασία και την τιμή της πριν προχωρήσουμε.",
       groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
-      note: "Για κατοικίες όπου μένει ο ιδιοκτήτης, οι επισκέψεις περιορίζονται στους εξωτερικούς χώρους και δεν εισερχόμαστε στο σπίτι. Συμφωνούμε μαζί σας τις εργασίες και την τελική τιμή εκ των προτέρων.",
+      note: "Για ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, οι επισκέψεις περιορίζονται στους εξωτερικούς χώρους και δεν εισερχόμαστε στο ακίνητο. Συμφωνούμε μαζί σας τις εργασίες και την τελική τιμή εκ των προτέρων.",
       cards: {
         on_demand_property_assistance: {
           name: "Υποστήριξη Ακινήτου κατ’ Απαίτηση",
