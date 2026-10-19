@@ -31,8 +31,8 @@ export default function WebsiteAbout() {
         <div className="mt-8 space-y-5 text-muted-foreground leading-relaxed">
           <p>
             {el
-              ? "Το Property Care Crete προσφέρει προγραμματισμένες επισκέψεις φροντίδας κατοικιών στα Χανιά και τη Δυτική Κρήτη. Ελέγχουμε προσβάσιμους χώρους, καταγράφουμε όσα παρατηρούμε και σας ενημερώνουμε όταν κάτι χρειάζεται προσοχή. Τα Property Care και Complete Care περιλαμβάνουν τακτικές φωτογραφίες και αναφορά προς τον πελάτη. Το Quick Check είναι μια σύντομη επίσκεψη χωρίς αυτές τις τακτικές παροχές."
-              : "Property Care Crete provides scheduled home watch and property care in Chania and Western Crete. We check accessible areas, record visible observations and contact you when something needs attention. Property Care and Complete Care include routine photos and a customer visit report; Quick Check is a brief visit without those routine deliverables."}
+              ? "Το Property Care Crete εστιάζει σε προγραμματισμένες επισκέψεις φροντίδας σε βίλες βραχυχρόνιας μίσθωσης στα Χανιά και τη Δυτική Κρήτη. Ελέγχουμε τους συμφωνημένους χώρους, καταγράφουμε όσα παρατηρούμε και επικοινωνούμε μαζί σας όταν κάτι χρειάζεται προσοχή. Για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις και δεν εισερχόμαστε στο σπίτι."
+              : "Property Care Crete focuses on scheduled care visits for short-term rental villas in Chania and Western Crete. We check the agreed areas, record what we observe, and contact you when something needs attention. For owner-occupied homes, we consider exterior-only visits and do not enter the home."}
           </p>
           <p>
             {el
