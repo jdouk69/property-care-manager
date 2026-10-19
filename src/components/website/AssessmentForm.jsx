@@ -19,6 +19,7 @@ export default function AssessmentForm() {
     phone: "",
     property_location: "",
     property_type: "",
+    property_use: "",
     notes: "",
     company_field: "", // honeypot — hidden from humans, catches bots
   });
@@ -42,10 +43,6 @@ export default function AssessmentForm() {
       setStatus("error");
     }
   };
-
-  const types = el
-    ? ["Βίλα", "Διαμέρισμα", "Μονοκατοικία", "Στούντιο", "Εξοχικό"]
-    : ["Villa", "Apartment", "House", "Studio", "Cottage"];
 
   if (status === "sent") {
     return (
@@ -77,18 +74,27 @@ export default function AssessmentForm() {
           <Input id="af-phone" type="tel" value={form.phone} onChange={set("phone")} autoComplete="tel" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="af-type">{el ? "Τύπος ακινήτου" : "Property type"}</Label>
+          <Label htmlFor="af-scope">{el ? "Χρήση ακινήτου και αντικείμενο υπηρεσίας *" : "Property use and service scope *"}</Label>
           <select
-            id="af-type"
-            value={form.property_type}
-            onChange={set("property_type")}
+            id="af-scope"
+            required
+            value={form.property_use}
+            onChange={(e) => setForm((f) => ({
+              ...f,
+              property_use: e.target.value,
+              property_type: e.target.value === "Short-term rental villa" ? "Villa" : "",
+            }))}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <option value="">{el ? "Επιλέξτε…" : "Select…"}</option>
-            {types.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
+            <option value="Short-term rental villa">{el ? "Βίλα βραχυχρόνιας μίσθωσης" : "Short-term rental villa"}</option>
+            <option value="Owner-occupied home — exterior-only">{el ? "Κατοικία ιδιοκατοίκησης — μόνο εξωτερικές επισκέψεις" : "Owner-occupied home — exterior-only"}</option>
           </select>
+          {form.property_use === "Owner-occupied home — exterior-only" && (
+            <p className="text-xs text-muted-foreground">
+              {el ? "Οι επισκέψεις περιορίζονται σε εξωτερικούς χώρους. Δεν εισερχόμαστε στο σπίτι." : "Visits are limited to exterior areas. We do not enter the home."}
+            </p>
+          )}
         </div>
       </div>
       <div className="space-y-1.5">
