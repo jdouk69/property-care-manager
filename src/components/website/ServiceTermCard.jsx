@@ -1,11 +1,15 @@
 import React from "react";
+import ServiceDetailsDialog from "@/components/website/ServiceDetailsDialog";
+import CarePlanDetails from "@/components/website/CarePlanDetails";
 import { Check, Clock } from "lucide-react";
 import { CardArches } from "@/components/website/ArchMotif";
 import { formatPrice } from "@/lib/website/serviceTerms";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // One pricing card. The price headline, unit and every euro amount come from
 // the LIVE feed service object; the wording around them is bilingual static copy.
 export default function ServiceTermCard({ service, terms, unitLabel, highlight }) {
+  const { lang } = useLanguage();
   return (
     <div
       className={`relative flex flex-col gap-3 rounded-2xl border p-5 ${
@@ -14,14 +18,14 @@ export default function ServiceTermCard({ service, terms, unitLabel, highlight }
     >
       <CardArches className="pointer-events-none absolute inset-x-4 top-2 h-3 text-primary/50" />
       <div>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <h3 className="font-heading text-lg font-semibold text-foreground">{terms.name}</h3>
+        <h3 className="font-heading text-lg font-semibold text-foreground">
+          {terms.name}
           {service.service_key === "complete_care" && (
-            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
-              {terms.name === "Πλήρης Φροντίδα" ? "Δημοφιλέστερο" : "Most popular"}
+            <span className="ml-2 inline-block text-sm font-semibold text-red-700">
+              ({lang === "el" ? "Προτεινόμενο" : "Recommended"})
             </span>
           )}
-        </div>
+        </h3>
         <p className="mt-1 font-heading text-2xl font-bold text-primary">
           €{formatPrice(service.price)} <span className="text-sm font-medium text-muted-foreground">{unitLabel}</span>
         </p>
@@ -39,6 +43,7 @@ export default function ServiceTermCard({ service, terms, unitLabel, highlight }
           </p>
         )}
       </div>
+      {["quick_check", "property_care", "complete_care"].includes(service.service_key) && <ServiceDetailsDialog title={terms.name} lang={lang} trigger={<button type="button" className="inline-flex min-h-11 items-center text-left text-sm font-semibold text-primary underline underline-offset-4">{lang === "el" ? "Δείτε όλες τις παροχές" : "See everything included"}</button>}><CarePlanDetails services={[service]} lang={lang} single /></ServiceDetailsDialog>}
     </div>
   );
 }
