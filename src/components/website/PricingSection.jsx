@@ -46,7 +46,7 @@ export default function PricingSection() {
             Array.isArray(list) &&
             REQUIRED_KEYS.every((k) => {
               const s = list.find((x) => x && x.service_key === k);
-              return s && s.price != null;
+              return s && (s.active === false || s.price != null);
             });
           if (ok) setServices(list);
           else retry(attempt);
@@ -70,6 +70,7 @@ export default function PricingSection() {
     // required price component for its copy (e.g. hourly rate), the service is
     // shown as unavailable — never a crash, never invented or partial pricing.
     const terms = s ? serviceTerms(s, lang, sc.cards) : null;
+    if (s?.active === false) return null;
     if (!s || !terms) return <UnavailableServiceCard key={key} name={s ? s.name : null} />;
     return <ServiceTermCard key={key} service={s} terms={terms} unitLabel={billingUnitLabel(s.billing_unit, lang)} highlight={highlight} />;
   };
@@ -112,29 +113,33 @@ export default function PricingSection() {
 
         {services && !error && (
           <div className="mt-6 sm:mt-10 space-y-10">
-            <div>
-              <div className="mb-5 rounded-2xl border border-primary/30 border-l-4 border-l-primary bg-primary/5 p-5 sm:p-6">
-                <h3 className="font-heading text-2xl font-bold leading-snug text-foreground sm:text-3xl">
-                  {sc.groupHeading}
-                </h3>
+            {MONTHLY_KEYS.some((k) => byKey[k]?.active !== false) && (
+              <div>
+                <div className="mb-5 rounded-2xl border border-primary/30 border-l-4 border-l-primary bg-primary/5 p-5 sm:p-6">
+                  <h3 className="font-heading text-2xl font-bold leading-snug text-foreground sm:text-3xl">
+                    {sc.groupHeading}
+                  </h3>
+                </div>
+                <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {MONTHLY_KEYS.map((k) => card(k, k === "complete_care"))}
+                </div>
               </div>
-              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {MONTHLY_KEYS.map((k) => card(k, k === "complete_care"))}
+            )}
+            {ON_DEMAND_KEYS.some((k) => byKey[k]?.active !== false) && (
+              <div>
+                <div className="mb-5 rounded-2xl border border-primary/30 border-l-4 border-l-primary bg-primary/5 p-5 sm:p-6">
+                  <h3 className="font-heading text-2xl font-bold leading-snug text-foreground sm:text-3xl">
+                    {ac.heading}
+                  </h3>
+                  <p className="mt-2 text-base font-medium text-muted-foreground sm:text-lg">
+                    {el ? "Υπηρεσίες μίας χρήσης — χωρίς μηνιαία συνδρομή" : "One-time services — no monthly subscription"}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {ON_DEMAND_KEYS.map((k) => card(k, false))}
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="mb-5 rounded-2xl border border-primary/30 border-l-4 border-l-primary bg-primary/5 p-5 sm:p-6">
-                <h3 className="font-heading text-2xl font-bold leading-snug text-foreground sm:text-3xl">
-                  {ac.heading}
-                </h3>
-                <p className="mt-2 text-base font-medium text-muted-foreground sm:text-lg">
-                  {el ? "Υπηρεσίες μίας χρήσης — χωρίς μηνιαία συνδρομή" : "One-time services — no monthly subscription"}
-                </p>
-              </div>
-              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {ON_DEMAND_KEYS.map((k) => card(k, false))}
-              </div>
-            </div>
+            )}
             {sc.note && <p className="text-center text-xs text-muted-foreground">{sc.note}</p>}
           </div>
         )}
