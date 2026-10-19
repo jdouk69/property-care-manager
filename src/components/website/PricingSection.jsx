@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Info, Loader2, TriangleAlert } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSectionContent } from "@/components/website/WebsiteContentContext";
 import ServiceTermCard from "@/components/website/ServiceTermCard";
@@ -113,30 +113,28 @@ export default function PricingSection() {
         {services && !error && (
           <div className="mt-6 sm:mt-10 space-y-10">
             <div>
-              <h3 className="mb-4 font-heading text-lg font-semibold text-foreground">
-                {sc.groupHeading}
-              </h3>
+              <div className="mb-5 rounded-2xl border border-primary/30 border-l-4 border-l-primary bg-primary/5 p-5 sm:p-6">
+                <h3 className="font-heading text-2xl font-bold leading-snug text-foreground sm:text-3xl">
+                  {sc.groupHeading}
+                </h3>
+              </div>
               <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {MONTHLY_KEYS.map((k) => card(k, k === "complete_care"))}
               </div>
             </div>
             <div>
-              <h3 className="mb-4 font-heading text-lg font-semibold text-foreground">
-                {ac.heading}
-              </h3>
+              <div className="mb-5 rounded-2xl border border-primary/30 border-l-4 border-l-primary bg-primary/5 p-5 sm:p-6">
+                <h3 className="font-heading text-2xl font-bold leading-snug text-foreground sm:text-3xl">
+                  {ac.heading}
+                </h3>
+                <p className="mt-2 text-base font-medium text-muted-foreground sm:text-lg">
+                  {el ? "Υπηρεσίες μίας χρήσης — χωρίς μηνιαία συνδρομή" : "One-time services — no monthly subscription"}
+                </p>
+              </div>
               <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {ON_DEMAND_KEYS.map((k) => card(k, false))}
               </div>
             </div>
-            {/* VAT treatment note — required to be visible and close to the
-                prices, on desktop and mobile alike (decision 2026-10: all
-                advertised prices are VAT-exclusive). */}
-            <p className="mx-auto flex max-w-md items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-center text-sm font-medium text-accent-foreground">
-              <Info className="h-4 w-4 shrink-0 text-primary" />
-              {el
-                ? "Οι τιμές δεν περιλαμβάνουν ΦΠΑ. Ο ισχύων ΦΠΑ προστίθεται στο παραστατικό."
-                : "Prices exclude VAT. Applicable VAT is added to your invoice."}
-            </p>
             {sc.note && <p className="text-center text-xs text-muted-foreground">{sc.note}</p>}
           </div>
         )}
