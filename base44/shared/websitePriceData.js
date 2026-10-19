@@ -11,11 +11,26 @@
 // Nothing else from any record is returned.
 const APPROVED_SERVICES = [
   {
+    record_id: '6a94cb3910ea5c557cb74329',
+    service_key: 'on_demand_property_assistance',
+    name: 'On-Demand Property Assistance',
+    billing_unit: 'visit',
+    live_description: true,
+  },
+  {
     record_id: '6a626bd947df156e4c466653',
     service_key: 'quick_check',
     name: 'Quick Check',
     billing_unit: 'month',
     description: 'A quick monthly visual check of your property: obvious leaks or water issues, visible damage, signs of forced entry, and anything clearly unusual. Every visit is recorded.',
+  },
+  {
+    record_id: '6a626bd947df156e4c466653',
+    service_key: 'quick_check_one_time',
+    name: 'Quick Check — One-Time Visit',
+    billing_unit: 'visit',
+    price_field: 'one_time_price',
+    description: 'A standalone brief visual check, with no monthly subscription.',
   },
   {
     record_id: '6a626bd947df156e4c466654',
@@ -92,7 +107,7 @@ export async function buildWebsitePriceData(base44) {
       name: cfg.name,
       active,
       description: active ? (cfg.live_description ? (rec.description || null) : cfg.description) : null,
-      price: active ? rec.standard_price : null,
+      price: active ? rec[cfg.price_field || 'standard_price'] : null,
       billing_unit: cfg.billing_unit,
       hourly_rate: active && rec.hourly_charge != null ? rec.hourly_charge : null,
       time_allowance: active ? (rec.visit_duration || null) : null,
