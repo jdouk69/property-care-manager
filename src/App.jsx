@@ -56,6 +56,8 @@ import WebsiteHome from '@/pages/website/WebsiteHome';
 import WebsiteAbout from '@/pages/website/WebsiteAbout';
 import WebsiteContact from '@/pages/website/WebsiteContact';
 import SampleReportPage from '@/pages/website/SampleReportPage';
+import CarePlanDetailsPage from '@/pages/website/CarePlanDetailsPage';
+import OnDemandServiceDetailsPage from '@/pages/website/OnDemandServiceDetailsPage';
 import AssessmentRequests from '@/pages/AssessmentRequests';
 import WebsiteEditor from '@/pages/WebsiteEditor';
 
@@ -104,6 +106,8 @@ const AuthenticatedApp = () => {
       <Route path="/contact" element={<WebsiteContact />} />
       {/* Public sample visit report preview (illustrative fixture only). */}
       <Route path="/sample-report" element={<SampleReportPage />} />
+      <Route path="/care-plan-details" element={<CarePlanDetailsPage />} />
+      <Route path="/service-details" element={<OnDemandServiceDetailsPage />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<LoginRedirect />} />}>
         <Route path="/clients" element={<Clients />} />
         <Route path="/clients/:id" element={<ClientHub />} />
