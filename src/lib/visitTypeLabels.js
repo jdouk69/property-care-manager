@@ -1,6 +1,7 @@
 // Centralized customer/staff-facing display names for visit types.
 // The stored enum value is NEVER changed — this only controls how a visit type
 // is rendered on screens and in reports.
+import { EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE, EXTERIOR_ONLY_VISIT_TYPE } from "../../server/shared/propertyScope.js";
 
 // One-time Property Assistance visit type (Correction #15). Shared constant so
 // detection stays in one place.
@@ -15,6 +16,9 @@ export const VISIT_TYPE_LABELS = {
   "Complete Care Property Visit": "Complete Care Visit",
   "Complete Care Follow-up Visit": "Complete Care Follow-up Visit",
   "Departure Inspection": "Departure Visit",
+  "Owner Representative Site Visit": "Contractor & Delivery Visit",
+  [EXTERIOR_ONLY_VISIT_TYPE]: "Exterior-Only Property Visit",
+  [EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE]: "Exterior-Only Follow-up Visit",
 };
 
 export function visitTypeLabel(vt) {
@@ -31,9 +35,7 @@ export function checklistStatusLabel(s) {
   return CHECKLIST_STATUS_LABELS[s] || s || "";
 }
 
-// Quick Check (stored visit type "Home Watch Inspection") does NOT include
-// routine photos or a customer-facing visit report — reports are excluded for
-// this visit type everywhere (model, PDF, delivery queues, reminders).
+// Quick Check includes photos and a brief customer-facing visit report.
 export const QUICK_CHECK_TYPE = "Home Watch Inspection";
 
 export function isQuickCheckVisit(v) {
@@ -41,7 +43,7 @@ export function isQuickCheckVisit(v) {
 }
 
 // Complete Care package visit types: one FULL monthly visit plus one brief
-// FOLLOW-UP check (up to 15 minutes) with a dated photo update — never a
+// FOLLOW-UP check (up to 30 minutes) with a dated photo update — never a
 // second full visit. The stored enum value is never changed.
 export const COMPLETE_CARE_TYPE = "Complete Care Property Visit";
 export const COMPLETE_CARE_FOLLOWUP_TYPE = "Complete Care Follow-up Visit";
@@ -50,12 +52,11 @@ export function isCompleteCareFollowUpVisit(v) {
   return !!v && v.visit_type === COMPLETE_CARE_FOLLOWUP_TYPE;
 }
 
-// Visit types WITHOUT a customer-facing visit report: Quick Check (per the
-// published service terms) and the Complete Care follow-up (its owner
+// Visit types WITHOUT a customer-facing visit report: the Complete Care follow-up (its owner
 // deliverable is the dated photo update instead). Excluded from the report
 // model, PDF, delivery queue and unsent-report reminders everywhere.
 export function isReportExcludedVisit(v) {
-  return isQuickCheckVisit(v) || isCompleteCareFollowUpVisit(v);
+  return isCompleteCareFollowUpVisit(v);
 }
 
 // Customer-report (EN/EL) visit type names. Staff UI keeps English via
@@ -73,11 +74,13 @@ const VISIT_TYPE_EL = {
   "Complete Care Property Visit": "Επίσκεψη Complete Care",
   "Complete Care Follow-up Visit": "Σύντομη Συμπληρωματική Επίσκεψη Complete Care",
   "Emergency Visit": "Επείγουσα Επίσκεψη",
-  "Owner Representative Site Visit": "Επίσκεψη Εκπροσώπου Ιδιοκτήτη σε Χώρο",
+  "Owner Representative Site Visit": "Επίσκεψη για Εργολάβο & Παραδόσεις",
   "Initial Property Onboarding Inspection": "Αρχική Επίσκεψη Ένταξης Ακινήτου",
   "Property Assistance": "Υποστήριξη Ακινήτου",
   "On-Demand Property Assistance": "Υποστήριξη Ακινήτου κατ' Απαίτηση",
   "Grocery Stocking": "Προμήθεια Τροφίμων",
+  [EXTERIOR_ONLY_VISIT_TYPE]: "Επίσκεψη Μόνο σε Εξωτερικούς Χώρους",
+  [EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE]: "Σύντομη Επίσκεψη Μόνο σε Εξωτερικούς Χώρους",
 };
 
 export function visitTypeLabelFor(vt, lang = "en") {
