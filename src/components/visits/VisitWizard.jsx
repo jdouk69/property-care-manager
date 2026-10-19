@@ -34,6 +34,7 @@ import { athensLocalToIso, athensVisitWhen, athensToday } from "@/lib/timezone";
 import { createNotification } from "@/lib/notifications";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
+import { propertyScopeError, OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE, EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE } from "@/lib/propertyScope";
 
 // Seasonal Opening / Closing are NOT listed here: they are booked through
 // Add Service, which records the required per-visit owner approval. The
@@ -44,6 +45,7 @@ const VISIT_TYPES = [
   "Departure Inspection", "Owner Representative Construction Visit",
   "Home Watch Inspection", "Property Care Inspection", "Complete Care Property Visit", "Complete Care Follow-up Visit", "Emergency Visit", "Owner Representative Site Visit",
   "Initial Property Onboarding Inspection", "Grocery Stocking",
+  EXTERIOR_ONLY_VISIT_TYPE, EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE,
 ];
 
 // iPad touch-sizing helpers. Tablet range md–xl (768–1535) gets larger touch targets;
@@ -114,6 +116,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [agreementPackages, setAgreementPackages] = useState({});
   const [properties, setProperties] = useState([]);
   const [propertyId, setPropertyId] = useState(null);
+  const selectedProperty = properties.find((p) => p.id === propertyId) || null;
+  const availableVisitTypes = VISIT_TYPES.filter((vt) => {
+    if (selectedProperty?.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY) {
+      return vt === EXTERIOR_ONLY_VISIT_TYPE || vt === EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE;
+    }
+    return vt !== EXTERIOR_ONLY_VISIT_TYPE && vt !== EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE;
+  });
   // Phase 1: preselect a visit type passed via /visits?visit_type=... (Prep Arrival, One-Time services).
   const [visitType, setVisitType] = useState(VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : VISIT_TYPES[0]);
   const [startTime, setStartTime] = useState(null);
@@ -776,6 +785,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // preserved (only progress fields are reset).
   const restartExistingVisit = async (record) => {
     try {
+      const property = await base44.entities.Property.get(record.property_id);
+      const scopeError = propertyScopeError(property, record.visit_type);
+      if (scopeError) {
+        alert(t(scopeError));
+        return;
+      }
       const { items } = await loadChecklistItems(record.property_id, record.visit_type);
       await base44.entities.PropertyVisit.update(record.id, {
         checklist: items,
@@ -836,6 +851,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   const startVisit = async (overrideType, opts = {}) => {
     const vt = overrideType || visitType;
+    const scopeError = propertyScopeError(selectedProperty, vt);
+    if (scopeError) {
+      alert(t(scopeError));
+      return;
+    }
     // Additional billable service: explicit launch ({ additional: true }) or
     // the package's own visit type with the included allowance consumed.
     const additional = opts && typeof opts.additional === "boolean" ? opts.additional : resolveAdditional(vt);
@@ -1241,7 +1261,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Visit Type")}</Label>
             <Select value={visitType} onValueChange={setVisitType}>
               <SelectTrigger className={FIELD}><SelectValue placeholder={t("Select visit type")} /></SelectTrigger>
-              <SelectContent>{VISIT_TYPES.map((vt) => <SelectItem key={vt} value={vt}>{t(visitTypeLabel(vt))}</SelectItem>)}</SelectContent>
+              <SelectContent>{availableVisitTypes.map((vt) => <SelectItem key={vt} value={vt}>{t(visitTypeLabel(vt))}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1382,7 +1402,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {VISIT_TYPES.map((vt) => {
+          {availableVisitTypes.map((vt) => {
             const isRec = vt === recType;
             return (
               <button key={vt} onClick={() => setVisitType(vt)}
