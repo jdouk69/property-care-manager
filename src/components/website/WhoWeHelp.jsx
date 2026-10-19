@@ -24,10 +24,10 @@ export default function WhoWeHelp() {
     },
     {
       icon: Sun,
-      title: el ? "Κατοικίες ιδιοκατοίκησης" : "Owner-occupied homes",
+      title: el ? "Ιδιωτικές κατοικίες με προσωπικά αντικείμενα" : "Private homes with personal belongings",
       text: el
-        ? "Για κατοικίες όπου μένει ο ιδιοκτήτης, δεχόμαστε μόνο εξωτερικές επισκέψεις. Δεν εισερχόμαστε στο σπίτι."
-        : "For owner-occupied homes, we consider exterior-only visits. We do not enter the home.",
+        ? "Όταν τα προσωπικά αντικείμενα του ιδιοκτήτη παραμένουν στο σπίτι, προσφέρουμε μόνο εξωτερικές επισκέψεις. Δεν εισερχόμαστε στο ακίνητο."
+        : "When the owner's personal belongings remain in the home, we offer exterior-only visits. We do not enter the property.",
     },
     {
       icon: KeyRound,
@@ -47,8 +47,8 @@ export default function WhoWeHelp() {
           </p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-foreground">
             {el
-              ? "Φροντίδα για βίλες βραχυχρόνιας μίσθωσης και εξωτερικές επισκέψεις για κατοικίες ιδιοκατοίκησης."
-              : "Care for short-term rental villas, with exterior-only visits for owner-occupied homes."}
+              ? "Φροντίδα για βίλες βραχυχρόνιας μίσθωσης και εξωτερικές επισκέψεις για ιδιωτικές κατοικίες με προσωπικά αντικείμενα."
+              : "Care for short-term rental villas, with exterior-only visits for private homes where personal belongings remain."}
           </h2>
         </div>
         <div className="mt-6 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-3">
