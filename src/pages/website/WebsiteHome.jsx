@@ -31,7 +31,7 @@ export default function WebsiteHome() {
   usePageMeta({
     title: "Property Care & Home Watch in Chania | Property Care Crete",
     description:
-      "Scheduled care visits for short-term rental villas in Chania and Western Crete, with exterior-only visits available for owner-occupied homes.",
+      "Scheduled care visits for short-term rental villas in Chania and Western Crete, plus exterior-only visits for private homes where the owner's personal belongings remain.",
   });
 
   useEffect(() => {
@@ -77,8 +77,8 @@ export default function WebsiteHome() {
               </h2>
               <p className="mx-auto mt-3 max-w-xl text-muted-foreground leading-relaxed">
                 {el
-                  ? "Πείτε μας λίγα λόγια για το ακίνητό σας και θα επικοινωνήσουμε για να κανονίσουμε αξιολόγηση και εξατομικευμένη προσφορά."
-                  : "Tell us a little about your property and we will get in touch to arrange an assessment and a personal quote."}
+                  ? "Πείτε μας αν πρόκειται για βίλα βραχυχρόνιας μίσθωσης ή για ιδιωτική κατοικία όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη. Για αυτές τις ιδιωτικές κατοικίες προσφέρουμε μόνο εξωτερικές επισκέψεις."
+                  : "Tell us whether the property is a short-term rental or a private home where the owner's personal belongings remain. Private homes with personal belongings receive exterior-only visits."}
               </p>
             </div>
             <AssessmentForm />
