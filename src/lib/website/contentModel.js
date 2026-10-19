@@ -58,6 +58,18 @@ export const DEFAULT_CONTENT = {
       // {price} / {hourly} placeholders are filled LIVE from the pricing
       // feed — never edit an amount into this text.
       cards: {
+        on_demand_property_assistance: {
+          name: "On-Demand Property Assistance",
+          desc: "For a small, specific request while you're away — ask us to check whether the stove is off, let someone in, or take a requested photo.",
+          included: "The €{price} visit fee covers the first 30 minutes. No monthly subscription.",
+          extras: "Additional time is €{hourly}/hour. This is task-based help, not a full property inspection.",
+        },
+        quick_check_one_time: {
+          name: "Quick Check — One-Time Visit",
+          desc: "The same brief visual check as the monthly Quick Check, booked as a standalone visit.",
+          included: "One visit of up to 15 minutes, with no monthly subscription. We’ll let you know promptly if we notice anything unusual.",
+          extras: "Routine photos and a customer-facing visit report are not included with Quick Check.",
+        },
         quick_check: {
           name: "Quick Check",
           desc: "A documented monthly visual visit that keeps an eye on your home while you're away: obvious leaks or water issues, visible damage, signs of forced entry, and anything clearly unusual.",
@@ -122,6 +134,18 @@ export const DEFAULT_CONTENT = {
       groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
       note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα μαζί σας εκ των προτέρων, πριν ξεκινήσουμε.",
       cards: {
+        on_demand_property_assistance: {
+          name: "Υποστήριξη Ακινήτου κατ’ Απαίτηση",
+          desc: "Για ένα μικρό, συγκεκριμένο αίτημα όσο λείπετε — ζητήστε μας να ελέγξουμε αν η κουζίνα είναι σβηστή, να δώσουμε πρόσβαση σε κάποιον ή να σας στείλουμε μια φωτογραφία.",
+          included: "Η χρέωση επίσκεψης των €{price} καλύπτει τα πρώτα 30 λεπτά. Χωρίς μηνιαία συνδρομή.",
+          extras: "Ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα. Πρόκειται για βοήθεια σε συγκεκριμένο αίτημα, όχι για πλήρη επιθεώρηση ακινήτου.",
+        },
+        quick_check_one_time: {
+          name: "Γρήγορος Έλεγχος — Εφάπαξ Επίσκεψη",
+          desc: "Ο ίδιος σύντομος οπτικός έλεγχος με το μηνιαίο Quick Check, ως μεμονωμένη επίσκεψη.",
+          included: "Μία επίσκεψη έως 15 λεπτά, χωρίς μηνιαία συνδρομή. Θα σας ενημερώσουμε άμεσα αν παρατηρήσουμε κάτι ασυνήθιστο.",
+          extras: "Το Quick Check δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά επίσκεψης προς τον πελάτη.",
+        },
         quick_check: {
           name: "Γρήγορος Έλεγχος",
           desc: "Καταγεγραμμένη μηνιαία οπτική επίσκεψη που κρατά το βλέμμα στο σπίτι σας όσο λείπετε: εμφανείς διαρροές ή προβλήματα νερού, ορατές ζημιές, ενδείξεις παραβίασης και οτιδήποτε προφανώς ασυνήθιστο.",
