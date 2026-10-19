@@ -85,15 +85,17 @@ export async function buildWebsitePriceData(base44) {
   for (const cfg of APPROVED_SERVICES) {
     const matches=packages.filter(p=>!p.archived&&p.name===cfg.name);
     const rec = byId[cfg.record_id] || (matches.length===1?matches[0]:null);
-    if (!rec || rec.active === false) continue;
+    if (!rec) continue;
+    const active = rec.active !== false;
     services.push({
       service_key: cfg.service_key,
       name: cfg.name,
-      description: cfg.live_description ? (rec.description || null) : cfg.description,
-      price: rec.standard_price,
+      active,
+      description: active ? (cfg.live_description ? (rec.description || null) : cfg.description) : null,
+      price: active ? rec.standard_price : null,
       billing_unit: cfg.billing_unit,
-      hourly_rate: rec.hourly_charge != null ? rec.hourly_charge : null,
-      time_allowance: rec.visit_duration || null,
+      hourly_rate: active && rec.hourly_charge != null ? rec.hourly_charge : null,
+      time_allowance: active ? (rec.visit_duration || null) : null,
     });
   }
 
