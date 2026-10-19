@@ -640,6 +640,11 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const discardDraft = () => { clearDraft(); setResumable(null); };
 
   const loadChecklistItems = async (pid, vtype) => {
+    if (vtype === EXTERIOR_ONLY_VISIT_TYPE || vtype === EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE) {
+      const seed = SEED[vtype] || [];
+      const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [], owner_visible: false }));
+      return { items, source: "Default", found: true, templateName: "Exterior-only checklist", count: items.length };
+    }
     const all = await base44.entities.ChecklistTemplate.list("-created_date", 500);
     const live = (all || []).filter((t) => !t.archived);
     const propSpecific = live.find((t) => t.visit_type === vtype && t.property_id === pid);
