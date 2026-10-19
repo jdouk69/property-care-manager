@@ -30,17 +30,17 @@ export const DEFAULT_CONTENT = {
   hero: {
     en: {
       badge: "Chania · Western Crete",
-      title: "A local person to check your home while you’re away.",
+      title: "Local care visits for short-term rental villas.",
       subtitle:
-        "Meet Demetrios, your local contact in Chania and Western Crete. We make scheduled visits to check accessible areas of your home, record what we observe, and keep you informed. Arrival preparation and access for approved professionals can be arranged around your needs.",
+        "Meet Demetrios, your local contact in Chania and Western Crete. We focus on agreed care visits for short-term rental villas. For owner-occupied homes, we consider exterior-only visits and never enter the home.",
       ctaPrimary: "Talk to Demetrios",
       ctaSecondary: "Services & Prices",
     },
     el: {
       badge: "Χανιά · Δυτική Κρήτη",
-      title: "Ένας άνθρωπος στα Χανιά για το σπίτι σας όσο λείπετε.",
+      title: "Τοπικές επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης.",
       subtitle:
-        "Είτε λείπετε για λίγες εβδομάδες είτε για το μεγαλύτερο μέρος του χρόνου, το Property Care Crete σας προσφέρει μια αξιόπιστη τοπική παρουσία στα Χανιά και τη Δυτική Κρήτη. Πραγματοποιούμε προγραμματισμένες επισκέψεις στο ακίνητό σας, καταγράφουμε όσα βλέπουμε, σας κρατάμε ενήμερους και σας βοηθάμε να συντονίσετε τους κατάλληλους επαγγελματίες όταν κάτι χρειάζεται προσοχή.",
+        "Γνωρίστε τον Δημήτριο, τον τοπικό σας άνθρωπο στα Χανιά και τη Δυτική Κρήτη. Εστιάζουμε σε συμφωνημένες επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης. Για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις και δεν εισερχόμαστε στο σπίτι.",
       ctaPrimary: "Μιλήστε με τον Δημήτριο",
       ctaSecondary: "Υπηρεσίες & Τιμές",
     },
@@ -50,9 +50,9 @@ export const DEFAULT_CONTENT = {
       kicker: "Services & Pricing",
       heading: "Clear prices and agreed work.",
       intro:
-        "These are our current service prices. After a property assessment, we agree any proposed work and its price with you before we proceed.",
+        "These are our current service prices. We focus on short-term rental villas; owner-occupied homes are considered for exterior-only visits. We agree each visit's work and price with you before proceeding.",
       groupHeading: "Recurring Care Plans — scheduled visits every month",
-      note: "The exact work and final price for your property are always agreed with you in advance, before we start.",
+      note: "For owner-occupied homes, visits are exterior-only and we do not enter the home. The exact work and final price are agreed with you in advance.",
       // Public wording for the seven service cards. The seed values mirror
       // exactly what the cards showed when this content became editable.
       // {price} / {hourly} placeholders are filled LIVE from the pricing
@@ -130,9 +130,9 @@ export const DEFAULT_CONTENT = {
       kicker: "Υπηρεσίες & Τιμές",
       heading: "Ξεκάθαρες τιμές και συμφωνημένη εργασία.",
       intro:
-        "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Μετά την αξιολόγηση του ακινήτου, συμφωνούμε μαζί σας κάθε προτεινόμενη εργασία και την τιμή της πριν προχωρήσουμε.",
+        "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Εστιάζουμε σε βίλες βραχυχρόνιας μίσθωσης· για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις. Συμφωνούμε μαζί σας κάθε εργασία και την τιμή της πριν προχωρήσουμε.",
       groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
-      note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα μαζί σας εκ των προτέρων, πριν ξεκινήσουμε.",
+      note: "Για κατοικίες όπου μένει ο ιδιοκτήτης, οι επισκέψεις περιορίζονται στους εξωτερικούς χώρους και δεν εισερχόμαστε στο σπίτι. Συμφωνούμε μαζί σας τις εργασίες και την τελική τιμή εκ των προτέρων.",
       cards: {
         on_demand_property_assistance: {
           name: "Υποστήριξη Ακινήτου κατ’ Απαίτηση",
