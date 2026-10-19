@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
+import { propertyScopeError, EXTERIOR_ONLY_VISIT_TYPES } from '../../shared/propertyScope.js';
 
 // Guarded creation of property visits.
 //
@@ -9,6 +10,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 // or a direct API call) can create such a visit without it. All other visit
 // types are created unchanged with the exact payload they were given.
 const SEASONAL_TYPES = ['Seasonal Opening', 'Seasonal Closing'];
+const EXTERIOR_CHECKLIST = [
+  'Exterior walls, visible damage or vandalism',
+  'Grounds, paths and visible drainage',
+  'Gates, fences and exterior access points',
+  'Exterior doors and shutters — visible condition',
+  'Windows — visible condition from outside only',
+  'Visible signs of water leaks or storm damage outside',
+  'Garden, balcony or pool areas visible from outside',
+  'Photographs of exterior observations only',
+  'Confirm no entry into the home or interior areas',
+];
 
 export default async function(req) {
   try {
@@ -22,7 +34,23 @@ export default async function(req) {
       return Response.json({ error: 'property_id and visit_type are required' }, { status: 400 });
     }
 
+    const property = await base44.entities.Property.get(visit.property_id).catch(() => null);
+    if (!property) return Response.json({ error: 'Property not found.' }, { status: 404 });
+    const scopeError = propertyScopeError(property, visit.visit_type);
+    if (scopeError) return Response.json({ error: scopeError }, { status: 422 });
+
     const payload = { ...visit };
+    if (EXTERIOR_ONLY_VISIT_TYPES.includes(visit.visit_type)) {
+      payload.checklist = EXTERIOR_CHECKLIST.map((name) => ({
+        name,
+        status: 'Not Checked',
+        notes: '',
+        recommendation: '',
+        action_taken: '',
+        owner_visible: true,
+        photos: [],
+      }));
+    }
     if (SEASONAL_TYPES.includes(visit.visit_type)) {
       const a = visit.owner_approval && typeof visit.owner_approval === 'object'
         ? visit.owner_approval : null;
