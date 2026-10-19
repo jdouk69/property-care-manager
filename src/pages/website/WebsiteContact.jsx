@@ -16,7 +16,7 @@ export default function WebsiteContact() {
   usePageMeta({
     title: "Contact | Property Care Crete",
     description:
-      "Contact Property Care Crete to discuss home watch, scheduled property visits and arrival preparation in Chania and Western Crete.",
+      "Contact Property Care Crete about scheduled care for short-term rental villas or exterior-only visits for owner-occupied homes in Chania and Western Crete.",
   });
 
   return (
@@ -32,8 +32,8 @@ export default function WebsiteContact() {
           </h1>
           <p className="mt-4 max-w-xl text-muted-foreground leading-relaxed">
             {el
-              ? "Ο πιο γρήγορος τρόπος να μας βρείτε είναι τα στοιχεία επικοινωνίας παρακάτω — μιλάμε με χαρά στα ελληνικά ή στα αγγλικά. Αν προτιμάτε, συμπληρώστε τη φόρμα αξιολόγησης και θα επικοινωνήσουμε εμείς με εσάς."
-              : "The quickest way to reach us is the contact details below — we are happy to talk in English or Greek. If you prefer, fill in the assessment form and we will get in touch with you instead."}
+              ? "Εστιάζουμε στη φροντίδα βιλών βραχυχρόνιας μίσθωσης. Για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις και δεν εισερχόμαστε στο σπίτι. Μιλάμε με χαρά ελληνικά ή αγγλικά — επικοινωνήστε μαζί μας παρακάτω ή συμπληρώστε τη φόρμα αξιολόγησης."
+              : "We focus on care for short-term rental villas. For owner-occupied homes, we consider exterior-only visits and do not enter the home. We are happy to talk in English or Greek — use the contact details below or fill in the assessment form."}
           </p>
           <Button asChild size="lg" className="mt-6 rounded-full">
             <WebsiteHashLink href="#assessment">
