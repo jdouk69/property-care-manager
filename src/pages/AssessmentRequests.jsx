@@ -91,6 +91,7 @@ export default function AssessmentRequests() {
                 <p className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary shrink-0" /> {r.email}</p>
                 {r.phone && <p className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary shrink-0" /> {r.phone}</p>}
                 <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-primary shrink-0" /> {r.property_location}{r.property_type ? ` · ${r.property_type}` : ""}</p>
+                {r.property_use && <p className="text-sm font-medium">{el ? "Αντικείμενο υπηρεσίας:" : "Service scope:"} {r.property_use}</p>}
                 {r.notes && (
                   <p className="flex items-start gap-2">
                     <StickyNote className="w-4 h-4 text-primary shrink-0 mt-1" />
