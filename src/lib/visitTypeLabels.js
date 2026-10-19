@@ -1,7 +1,6 @@
 // Centralized customer/staff-facing display names for visit types.
 // The stored enum value is NEVER changed — this only controls how a visit type
 // is rendered on screens and in reports.
-import { EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE, EXTERIOR_ONLY_VISIT_TYPE } from "../../server/shared/propertyScope.js";
 
 // One-time Property Assistance visit type (Correction #15). Shared constant so
 // detection stays in one place.
@@ -17,8 +16,6 @@ export const VISIT_TYPE_LABELS = {
   "Complete Care Follow-up Visit": "Complete Care Follow-up Visit",
   "Departure Inspection": "Departure Visit",
   "Owner Representative Site Visit": "Contractor & Delivery Visit",
-  [EXTERIOR_ONLY_VISIT_TYPE]: "Exterior-Only Property Visit",
-  [EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE]: "Exterior-Only Follow-up Visit",
 };
 
 export function visitTypeLabel(vt) {
@@ -79,8 +76,6 @@ const VISIT_TYPE_EL = {
   "Property Assistance": "Υποστήριξη Ακινήτου",
   "On-Demand Property Assistance": "Υποστήριξη Ακινήτου κατ' Απαίτηση",
   "Grocery Stocking": "Προμήθεια Τροφίμων",
-  [EXTERIOR_ONLY_VISIT_TYPE]: "Επίσκεψη Μόνο σε Εξωτερικούς Χώρους",
-  [EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE]: "Σύντομη Επίσκεψη Μόνο σε Εξωτερικούς Χώρους",
 };
 
 export function visitTypeLabelFor(vt, lang = "en") {
