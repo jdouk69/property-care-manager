@@ -34,7 +34,7 @@ import { athensLocalToIso, athensVisitWhen, athensToday } from "@/lib/timezone";
 import { createNotification } from "@/lib/notifications";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
-import { propertyScopeError, OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE, EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE } from "@/lib/propertyScope";
+import { propertyScopeError, SHORT_TERM_RENTAL_VILLA, OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE, EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE } from "@/lib/propertyScope";
 
 // Seasonal Opening / Closing are NOT listed here: they are booked through
 // Add Service, which records the required per-visit owner approval. The
@@ -121,7 +121,10 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     if (selectedProperty?.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY) {
       return vt === EXTERIOR_ONLY_VISIT_TYPE || vt === EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE;
     }
-    return vt !== EXTERIOR_ONLY_VISIT_TYPE && vt !== EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE;
+    if (selectedProperty?.service_scope === SHORT_TERM_RENTAL_VILLA) {
+      return vt !== EXTERIOR_ONLY_VISIT_TYPE && vt !== EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE;
+    }
+    return false;
   });
   // Phase 1: preselect a visit type passed via /visits?visit_type=... (Prep Arrival, One-Time services).
   const [visitType, setVisitType] = useState(VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : VISIT_TYPES[0]);
