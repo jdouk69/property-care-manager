@@ -24,7 +24,9 @@
         "Initial Property Onboarding Inspection",
         "Property Assistance",
         "On-Demand Property Assistance",
-        "Grocery Stocking"
+        "Grocery Stocking",
+        "Exterior-Only Property Visit",
+        "Exterior-Only Follow-up Visit"
       ],
       "default": "Monthly Property Watch"
     },
