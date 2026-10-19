@@ -18,6 +18,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
 import { serviceFrequencyText } from "@/lib/activeService";
 import { athensMediumDateTime } from "@/lib/timezone";
+import { propertyScopeError } from "@/lib/propertyScope";
 
 const GROUPS = [
   { key: "Emergency", tone: "text-rose-600 bg-rose-500/10 border-rose-500/20" },
@@ -109,6 +110,11 @@ export default function VisitDetail() {
   const fmt = (iso) => (iso ? athensMediumDateTime(iso, lang) : "—");
 
   const startScheduledVisit = async () => {
+    const scopeError = propertyScopeError(property, visit?.visit_type, visit?.status);
+    if (scopeError) {
+      alert(t(scopeError));
+      return;
+    }
     if (!confirm(t("Start this visit now? It will move to In Progress and open the checklist."))) return;
     setStarting(true);
     try {
