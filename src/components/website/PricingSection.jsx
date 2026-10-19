@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { Info, Loader2, TriangleAlert } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSectionContent } from "@/components/website/WebsiteContentContext";
 import ServiceTermCard from "@/components/website/ServiceTermCard";
@@ -141,6 +141,10 @@ export default function PricingSection() {
               </div>
             )}
             {sc.note && <p className="text-center text-xs text-muted-foreground">{sc.note}</p>}
+            <p className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+              <Info className="h-4 w-4 shrink-0 text-primary" />
+              {el ? "Όλες οι αναγραφόμενες τιμές υπηρεσιών περιλαμβάνουν ΦΠΑ." : "All listed service prices include VAT."}
+            </p>
           </div>
         )}
       </div>
