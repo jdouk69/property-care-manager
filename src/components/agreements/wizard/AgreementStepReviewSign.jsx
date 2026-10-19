@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, ChevronDown, ChevronRight, Send, Loader2, Save, FlaskConical, CheckCircle2, FileSignature, RefreshCw } from "lucide-react";
+import { Eye, ChevronDown, ChevronRight, Send, Loader2, Save, FlaskConical, CheckCircle2, FileSignature, RefreshCw, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,7 +19,7 @@ export default function AgreementStepReviewSign({
   previewSnapshot, selectedTemplate, emergencyConfirmedEffective,
   showPreview, setShowPreview,
   saving, saveError, draftSaved, onSaveDraft,
-  sending, sendError, handleSend, sendDisabledReason,
+  sending, sendError, handleSend, handleOpenSignOnTablet, sendDisabledReason,
   testingOpen, setTestingOpen, handleToggleTestMode,
   isFrozen, busy, snapshotReloading, onReloadSnapshot,
   templateProblem, templateChoices, onChooseTemplate,
@@ -196,9 +196,17 @@ export default function AgreementStepReviewSign({
           {sendError && (
             <p className="text-xs text-destructive">{sendError}</p>
           )}
-          <Button onClick={handleSend} disabled={busy || sending || !!sendDisabledReason} className="gap-1.5 w-full sm:w-auto">
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Create Signing Link")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleSend} disabled={busy || sending || !!sendDisabledReason} className="gap-1.5 w-full sm:w-auto">
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Create Signing Link")}
+            </Button>
+            <Button onClick={handleOpenSignOnTablet} disabled={busy || sending || !!sendDisabledReason} variant="outline" className="gap-1.5 w-full sm:w-auto">
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} {t("Create Link & Open on This Tablet")}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("For an in-person signing, this opens the secure customer signing page in a new tab on this device. Hand the tablet to the customer. If the browser blocks the tab, use Copy Link after the link is created.")}
+          </p>
         </div>
       )}
 
