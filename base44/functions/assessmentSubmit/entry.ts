@@ -18,6 +18,7 @@ export default async function (req) {
     const phone = clean(body.phone, 60);
     const property_location = clean(body.property_location, 200);
     const property_type = clean(body.property_type, 60);
+    const property_use = clean(body.property_use, 80);
     const notes = clean(body.notes, 2000);
     const language = body.language === 'Greek' ? 'Greek' : 'English';
 
@@ -32,6 +33,12 @@ export default async function (req) {
     if (!property_location || notes.length < 5) {
       return Response.json({ error: 'Missing information' }, { status: 400 });
     }
+    if (!['Short-term rental villa', 'Owner-occupied home — exterior-only'].includes(property_use)) {
+      return Response.json({ error: 'Choose a supported property use and service scope.' }, { status: 400 });
+    }
+    if (property_use === 'Short-term rental villa' && property_type !== 'Villa') {
+      return Response.json({ error: 'Short-term rental villa enquiries must specify Villa.' }, { status: 400 });
+    }
 
     const base44 = createClientFromRequest(req);
     await base44.asServiceRole.entities.AssessmentRequest.create({
@@ -40,6 +47,7 @@ export default async function (req) {
       phone,
       property_location,
       property_type,
+      property_use,
       notes,
       language,
       status: 'New',
@@ -67,12 +75,14 @@ export default async function (req) {
           ['Τηλέφωνο', phone || '—'],
           ['Τοποθεσία ακινήτου', property_location],
           ['Τύπος ακινήτου', property_type || '—'],
+          ['Αντικείμενο υπηρεσίας', property_use],
         ] : [
           ['Name', name],
           ['Email', email],
           ['Phone', phone || '—'],
           ['Property location', property_location],
           ['Property type', property_type || '—'],
+          ['Service scope', property_use],
         ];
 
         // Plain-text version: labeled lines, line breaks preserved.
