@@ -12,6 +12,7 @@ const fields = [
   { name: "name", label: "Property Name", type: "text", required: true, placeholder: "e.g. Villa Sunset" },
   { name: "owner_id", label: "Owner", type: "entity-select", entity: "Client" },
   { name: "property_type", label: "Property Type", type: "select", options: ["Villa", "Apartment", "House", "Studio", "Cottage", "Commercial"] },
+  { name: "service_scope", label: "Service Scope", type: "select", required: true, options: ["Short-term rental villa", "Owner-occupied home — exterior-only"] },
   { name: "status", label: "Occupancy Status", type: "select", enumContext: "property", options: ["Vacant", "Owner Occupied", "Guest Occupied", "Rental Occupied", "Preparing for Arrival", "Preparing for Departure", "Under Maintenance", "Emergency", "Inactive"] },
   { name: "condition", label: "Current Condition", type: "select", options: ["Excellent", "Good", "Needs Attention", "Poor"] },
   { name: "location", type: "custom", render: (values, setField) => <PropertyLocationFields values={values} setField={setField} /> },
@@ -140,7 +141,7 @@ export default function Properties() {
         sections={[
           {
             title: "Property Details",
-            fields: ["name", "owner_id", "property_type", "status", "condition"],
+            fields: ["name", "owner_id", "property_type", "service_scope", "status", "condition"],
           },
           {
             title: "Location",
