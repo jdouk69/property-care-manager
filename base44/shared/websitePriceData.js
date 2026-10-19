@@ -79,7 +79,7 @@ const APPROVED_SERVICES = [
     service_key: 'grocery_stocking',
     name: 'Grocery Stocking',
     billing_unit: 'visit',
-    description: 'Send us your shopping list and we shop, deliver to the property, and put the basics away before you arrive.',
+    description: 'We shop from your list and stock the property before your guests arrive.',
   },
   {
     record_id: '6a626bd947df156e4c466659',
