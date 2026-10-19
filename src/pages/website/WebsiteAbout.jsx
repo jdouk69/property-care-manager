@@ -14,7 +14,7 @@ export default function WebsiteAbout() {
   usePageMeta({
     title: "About | Property Care Crete",
     description:
-      "Learn about Property Care Crete's scheduled care visits for short-term rental villas and exterior-only visits for owner-occupied homes in Chania and Western Crete.",
+      "Property Care Crete focuses on short-term rental villas in Chania and Western Crete, with exterior-only visits for private homes where the owner's personal belongings remain.",
   });
 
   return (
@@ -31,13 +31,13 @@ export default function WebsiteAbout() {
         <div className="mt-8 space-y-5 text-muted-foreground leading-relaxed">
           <p>
             {el
-              ? "Το Property Care Crete εστιάζει σε προγραμματισμένες επισκέψεις φροντίδας σε βίλες βραχυχρόνιας μίσθωσης στα Χανιά και τη Δυτική Κρήτη. Ελέγχουμε τους συμφωνημένους χώρους, καταγράφουμε όσα παρατηρούμε και επικοινωνούμε μαζί σας όταν κάτι χρειάζεται προσοχή. Για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις και δεν εισερχόμαστε στο σπίτι."
-              : "Property Care Crete focuses on scheduled care visits for short-term rental villas in Chania and Western Crete. We check the agreed areas, record what we observe, and contact you when something needs attention. For owner-occupied homes, we consider exterior-only visits and do not enter the home."}
+              ? "Το Property Care Crete εστιάζει σε προγραμματισμένες επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης στα Χανιά και τη Δυτική Κρήτη. Ελέγχουμε τους συμφωνημένους χώρους, καταγράφουμε όσα παρατηρούμε και σας ενημερώνουμε όταν κάτι χρειάζεται προσοχή. Σε ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, οι επισκέψεις περιορίζονται στους εξωτερικούς χώρους· δεν εισερχόμαστε στο σπίτι. Το αντικείμενο κάθε επίσκεψης συμφωνείται εκ των προτέρων."
+              : "Property Care Crete focuses on scheduled care visits for short-term rental villas in Chania and Western Crete. We check the agreed areas, record what we observe, and contact you when something needs attention. For private homes where the owner's personal belongings remain, visits are exterior-only; we do not enter the property. The scope of each visit is agreed in advance."}
           </p>
           <p>
             {el
-              ? "Το Property Care Crete εστιάζει σε προγραμματισμένες επισκέψεις φροντίδας σε βίλες βραχυχρόνιας μίσθωσης στα Χανιά και τη Δυτική Κρήτη. Ελέγχουμε τους συμφωνημένους χώρους, καταγράφουμε όσα παρατηρούμε και επικοινωνούμε μαζί σας όταν κάτι χρειάζεται προσοχή. Για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις· δεν εισερχόμαστε στο σπίτι. Το αντικείμενο κάθε επίσκεψης συμφωνείται εκ των προτέρων."
-              : "Property Care Crete focuses on scheduled care visits for short-term rental villas in Chania and Western Crete. We check the agreed areas, record what we observe, and contact you when something needs attention. For owner-occupied homes, we consider exterior-only visits; we do not enter the home. The scope of each visit is agreed in advance."}
+              ? "Για βίλες βραχυχρόνιας μίσθωσης, μπορούν να συμφωνηθούν προετοιμασία άφιξης, προμήθειες τροφίμων, φύλαξη κλειδιών και πρόσβαση εγκεκριμένων επαγγελματιών. Οι εσωτερικές επισκέψεις γίνονται μόνο όταν έχει επιβεβαιωθεί ότι το ακίνητο είναι κενό και δεν διαμένει κανείς εκεί. Σε ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, οι υπηρεσίες είναι μόνο εξωτερικές."
+              : "For short-term rental villas, arrival preparation, grocery stocking, key holding and access for approved contractors can be arranged. Interior visits take place only when the property is confirmed vacant and no one is staying there. Services for private homes where the owner's personal belongings remain are exterior-only."}
           </p>
           <p>
             {el
