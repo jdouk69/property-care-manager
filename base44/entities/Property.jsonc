@@ -29,6 +29,14 @@
       ],
       "default": "Villa"
     },
+    "service_scope": {
+      "type": "string",
+      "enum": [
+        "Short-term rental villa",
+        "Owner-occupied home \u2014 exterior-only"
+      ],
+      "description": "Short-term rental villas may receive only agreed services. Owner-occupied homes are exterior-only; no interior entry is permitted."
+    },
     "status": {
       "type": "string",
       "enum": [
