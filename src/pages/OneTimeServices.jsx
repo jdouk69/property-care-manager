@@ -15,7 +15,7 @@ import {
 // are the current package base prices; the assessment (+€40 units,
 // custom-review rules, manual staff approval) always confirms the final price.
 const TIERS = [
-  { tier: "Basic", label: "Quick Check — One-Time Non-Subscriber Visit", price: 85, duration: "up to 15 minutes" },
+  { tier: "Basic", label: "On-Demand Quick Check", price: 65, duration: "15–30 minutes" },
   { tier: "Standard", label: "Property Care — One-Time Non-Subscriber Visit", price: 150, duration: "30–45 minutes" },
   { tier: "Premium", label: "Complete Care — One-Time Non-Subscriber Visit", price: 225, duration: "up to 60 minutes" },
 ];
@@ -36,8 +36,8 @@ const SERVICES = [
     color: "bg-rose-500",
   },
   {
-    label: "Owner-Rep Site Visit",
-    desc: "Owner-representative construction / site visit report.",
+    label: "Contractor & Delivery Visit",
+    desc: "Meet contractors or delivery providers, document the visit with photos, and update the owner.",
     to: "/visits?schedule=1&visit_type=Owner%20Representative%20Site%20Visit",
     icon: ClipboardList,
     color: "bg-amber-500",

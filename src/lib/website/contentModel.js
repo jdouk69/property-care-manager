@@ -30,17 +30,17 @@ export const DEFAULT_CONTENT = {
   hero: {
     en: {
       badge: "Chania · Western Crete",
-      title: "Local care visits for short-term rental villas.",
+      title: "A local person to check your home while you’re away.",
       subtitle:
-        "Meet Demetrios, your local contact in Chania and Western Crete. We focus on agreed care visits for short-term rental villas. For private homes where the owner's personal belongings remain, visits are exterior-only; we do not enter the property.",
+        "Meet Demetrios, your local contact in Chania and Western Crete. We make scheduled visits to check accessible areas of your home, record what we observe, and keep you informed. Arrival preparation and access for approved professionals can be arranged around your needs.",
       ctaPrimary: "Talk to Demetrios",
       ctaSecondary: "Services & Prices",
     },
     el: {
       badge: "Χανιά · Δυτική Κρήτη",
-      title: "Τοπικές επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης.",
+      title: "Ένας άνθρωπος στα Χανιά για το σπίτι σας όσο λείπετε.",
       subtitle:
-        "Γνωρίστε τον Δημήτριο, τον τοπικό σας άνθρωπο στα Χανιά και τη Δυτική Κρήτη. Εστιάζουμε σε συμφωνημένες επισκέψεις φροντίδας για βίλες βραχυχρόνιας μίσθωσης. Για ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, οι επισκέψεις είναι μόνο εξωτερικές· δεν εισερχόμαστε στο ακίνητο.",
+        "Είτε λείπετε για λίγες εβδομάδες είτε για το μεγαλύτερο μέρος του χρόνου, το Property Care Crete σας προσφέρει μια αξιόπιστη τοπική παρουσία στα Χανιά και τη Δυτική Κρήτη. Πραγματοποιούμε προγραμματισμένες επισκέψεις στο ακίνητό σας, καταγράφουμε όσα βλέπουμε, σας κρατάμε ενήμερους και σας βοηθάμε να συντονίσετε τους κατάλληλους επαγγελματίες όταν κάτι χρειάζεται προσοχή.",
       ctaPrimary: "Μιλήστε με τον Δημήτριο",
       ctaSecondary: "Υπηρεσίες & Τιμές",
     },
@@ -50,9 +50,9 @@ export const DEFAULT_CONTENT = {
       kicker: "Services & Pricing",
       heading: "Clear prices and agreed work.",
       intro:
-        "These are our current service prices. We focus on short-term rental villas; private homes where the owner's personal belongings remain receive exterior-only visits. We agree each visit's work and price with you before proceeding.",
+        "These are our current service prices. After a property assessment, we agree any proposed work and its price with you before we proceed.",
       groupHeading: "Recurring Care Plans — scheduled visits every month",
-      note: "For private homes where the owner's personal belongings remain, visits are exterior-only and we do not enter the property. The exact work and final price are agreed with you in advance.",
+      note: "The exact work and final price for your property are always agreed with you in advance, before we start.",
       // Public wording for the seven service cards. The seed values mirror
       // exactly what the cards showed when this content became editable.
       // {price} / {hourly} placeholders are filled LIVE from the pricing
@@ -65,27 +65,27 @@ export const DEFAULT_CONTENT = {
           extras: "Additional time is €{hourly}/hour. This is task-based help, not a full property inspection.",
         },
         quick_check_one_time: {
-          name: "Quick Check — One-Time Visit",
+          name: "On-Demand Quick Check",
           desc: "The same brief visual check as the monthly Quick Check, booked as a standalone visit.",
-          included: "One visit of up to 15 minutes, with no monthly subscription. We’ll let you know promptly if we notice anything unusual.",
-          extras: "Routine photos and a customer-facing visit report are not included with Quick Check.",
+          included: "One visit of 15–30 minutes, with no monthly subscription. We’ll let you know promptly if we notice anything unusual.",
+          extras: "Photos and a brief visit report are included. We notify you of any concerning findings.",
         },
         quick_check: {
           name: "Quick Check",
-          desc: "A documented monthly visual visit that keeps an eye on your home while you're away: obvious leaks or water issues, visible damage, signs of forced entry, and anything clearly unusual.",
-          included: "One scheduled visit per month (up to 15 minutes). Every visit is recorded, and anything unusual is reported to you promptly.",
-          extras: "Routine photos and a customer-facing visit report are part of the Property Care plan.",
+          desc: "Choose Quick Check for a brief general visual check of your property, with photos and a brief visit report.",
+          included: "One scheduled visit each month, 15–30 minutes. We’ll let you know promptly if we notice anything unusual.",
+          extras: "Photos and a brief visit report are included. We notify you of any concerning findings.",
         },
         property_care: {
           name: "Property Care",
-          desc: "A thorough monthly visit covering leaks, moisture, visible damage, doors and windows — plus the specific areas or visible issues you ask us to keep an eye on, agreed with you during onboarding.",
+          desc: "A more thorough visual visit, including accessible areas under sinks, visible moisture or mold, and your agreed monitoring priorities, with routine photos and a written report.",
           included: "One scheduled visit per month (30–45 minutes), including photos and a visit report.",
           extras: "If a visit needs more time than its included allowance, agreed extra time is charged at €{hourly}/hour.",
         },
         complete_care: {
           name: "Complete Care",
-          desc: "Our most comprehensive care, with two visits each month.",
-          included: "One full visit (up to 60 minutes) covering your chosen priorities, with photos and a detailed report. Plus one brief follow-up check (up to 15 minutes) with a short dated photo update.",
+          desc: "Detailed visual care plus agreed checks of faucets, toilets, lights and selected appliances, with follow-up of known concerns and two visits each month.",
+          included: "One full visit (up to 60 minutes) covering your chosen priorities, with photos and a detailed report. Plus one brief follow-up check (up to 30 minutes) with a short dated photo update.",
           extras: "If a visit needs more time than its included allowance, agreed extra time is charged at €{hourly}/hour.",
         },
         owner_arrival_preparation: {
@@ -107,8 +107,8 @@ export const DEFAULT_CONTENT = {
           extras: "Agreed extra time: €{hourly}/hour.",
         },
         owner_representative_site_visit: {
-          name: "Owner Representative Site Visit",
-          desc: "Can't be there when a contractor, delivery or service provider arrives? We can meet them at the property, provide access, document the visit and keep you informed.",
+          name: "Contractor & Delivery Visit",
+          desc: "We meet contractors or delivery providers at your property, take photos, and update you.",
           included: "Includes the first 60 minutes on site.",
           extras: "If a visit needs more time than its included allowance, agreed extra time is charged at €{hourly}/hour.",
         },
@@ -130,9 +130,9 @@ export const DEFAULT_CONTENT = {
       kicker: "Υπηρεσίες & Τιμές",
       heading: "Ξεκάθαρες τιμές και συμφωνημένη εργασία.",
       intro:
-        "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Εστιάζουμε σε βίλες βραχυχρόνιας μίσθωσης· για ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, προσφέρουμε μόνο εξωτερικές επισκέψεις. Συμφωνούμε μαζί σας κάθε εργασία και την τιμή της πριν προχωρήσουμε.",
+        "Αυτές είναι οι τρέχουσες τιμές των υπηρεσιών μας. Μετά την αξιολόγηση του ακινήτου, συμφωνούμε μαζί σας κάθε προτεινόμενη εργασία και την τιμή της πριν προχωρήσουμε.",
       groupHeading: "Μηνιαία Πακέτα Φροντίδας — προγραμματισμένες επισκέψεις κάθε μήνα",
-      note: "Για ιδιωτικές κατοικίες όπου παραμένουν τα προσωπικά αντικείμενα του ιδιοκτήτη, οι επισκέψεις περιορίζονται στους εξωτερικούς χώρους και δεν εισερχόμαστε στο ακίνητο. Συμφωνούμε μαζί σας τις εργασίες και την τελική τιμή εκ των προτέρων.",
+      note: "Η ακριβής εργασία και η τελική τιμή για το ακίνητό σας συμφωνούνται πάντα μαζί σας εκ των προτέρων, πριν ξεκινήσουμε.",
       cards: {
         on_demand_property_assistance: {
           name: "Υποστήριξη Ακινήτου κατ’ Απαίτηση",
@@ -141,27 +141,27 @@ export const DEFAULT_CONTENT = {
           extras: "Ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα. Πρόκειται για βοήθεια σε συγκεκριμένο αίτημα, όχι για πλήρη επιθεώρηση ακινήτου.",
         },
         quick_check_one_time: {
-          name: "Γρήγορος Έλεγχος — Εφάπαξ Επίσκεψη",
+          name: "Quick Check κατ’ Απαίτηση",
           desc: "Ο ίδιος σύντομος οπτικός έλεγχος με το μηνιαίο Quick Check, ως μεμονωμένη επίσκεψη.",
-          included: "Μία επίσκεψη έως 15 λεπτά, χωρίς μηνιαία συνδρομή. Θα σας ενημερώσουμε άμεσα αν παρατηρήσουμε κάτι ασυνήθιστο.",
-          extras: "Το Quick Check δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά επίσκεψης προς τον πελάτη.",
+          included: "Μία επίσκεψη 15–30 λεπτά, χωρίς μηνιαία συνδρομή. Θα σας ενημερώσουμε άμεσα αν παρατηρήσουμε κάτι ασυνήθιστο.",
+          extras: "Περιλαμβάνονται φωτογραφίες και σύντομη αναφορά επίσκεψης. Σας ενημερώνουμε για τυχόν ανησυχητικά ευρήματα.",
         },
         quick_check: {
           name: "Γρήγορος Έλεγχος",
-          desc: "Καταγεγραμμένη μηνιαία οπτική επίσκεψη που κρατά το βλέμμα στο σπίτι σας όσο λείπετε: εμφανείς διαρροές ή προβλήματα νερού, ορατές ζημιές, ενδείξεις παραβίασης και οτιδήποτε προφανώς ασυνήθιστο.",
-          included: "Μια προγραμματισμένη επίσκεψη τον μήνα (έως 15 λεπτά). Κάθε επίσκεψη καταγράφεται και οτιδήποτε ασυνήθιστο σας αναφέρεται άμεσα.",
-          extras: "Τακτικές φωτογραφίες και αναφορά επίσκεψης περιλαμβάνονται στο πακέτο Φροντίδα Ακινήτου.",
+          desc: "Επιλέξτε το Quick Check για έναν σύντομο γενικό οπτικό έλεγχο του ακινήτου σας, με φωτογραφίες και σύντομη αναφορά επίσκεψης.",
+          included: "Μια προγραμματισμένη επίσκεψη κάθε μήνα, 15–30 λεπτά. Θα σας ενημερώσουμε άμεσα αν παρατηρήσουμε κάτι ασυνήθιστο.",
+          extras: "Περιλαμβάνονται φωτογραφίες και σύντομη αναφορά επίσκεψης. Σας ενημερώνουμε για τυχόν ανησυχητικά ευρήματα.",
         },
         property_care: {
           name: "Φροντίδα Ακινήτου",
-          desc: "Μια διεξοδική μηνιαία επίσκεψη για διαρροές, υγρασία, ορατές ζημιές, πόρτες και παράθυρα — καθώς και τις συγκεκριμένες περιοχές ή ζητήματα που επιλέγετε να παρακολουθούμε οπτικά, συμφωνημένα μαζί σας κατά την έναρξη της συνεργασίας.",
+          desc: "Πιο διεξοδική οπτική επίσκεψη, με έλεγχο κάτω από προσβάσιμους νεροχύτες και νιπτήρες, ορατής υγρασίας ή μούχλας και των συμφωνημένων προτεραιοτήτων σας, με τακτικές φωτογραφίες και γραπτή αναφορά.",
           included: "Μια προγραμματισμένη επίσκεψη τον μήνα (30–45 λεπτά), με φωτογραφίες και αναφορά επίσκεψης.",
           extras: "Αν μια επίσκεψη χρειαστεί περισσότερο χρόνο από τον συμφωνημένο, ο επιπλέον χρόνος που συμφωνείται μαζί σας χρεώνεται με €{hourly}/ώρα.",
         },
         complete_care: {
           name: "Πλήρης Φροντίδα",
-          desc: "Η πιο ολοκληρωμένη φροντίδα μας, με δύο επισκέψεις τον μήνα.",
-          included: "Μια πλήρης επίσκεψη τον μήνα (έως 60 λεπτά) για τις προτεραιότητες που έχετε επιλέξει, με φωτογραφίες και αναλυτική αναφορά, καθώς και ένας σύντομος συμπληρωματικός έλεγχος (έως 15 λεπτά) με φωτογραφική ενημέρωση με ημερομηνία.",
+          desc: "Αναλυτική οπτική φροντίδα και συμφωνημένοι έλεγχοι βρυσών, καζανακίων, φώτων και επιλεγμένων συσκευών, παρακολούθηση γνωστών ζητημάτων και δύο επισκέψεις κάθε μήνα.",
+          included: "Μια πλήρης επίσκεψη τον μήνα (έως 60 λεπτά) για τις προτεραιότητες που έχετε επιλέξει, με φωτογραφίες και αναλυτική αναφορά, καθώς και ένας σύντομος συμπληρωματικός έλεγχος (έως 30 λεπτά) με φωτογραφική ενημέρωση με ημερομηνία.",
           extras: "Αν μια επίσκεψη χρειαστεί περισσότερο χρόνο από τον συμφωνημένο, ο επιπλέον χρόνος που συμφωνείται μαζί σας χρεώνεται με €{hourly}/ώρα.",
         },
         owner_arrival_preparation: {
@@ -183,8 +183,8 @@ export const DEFAULT_CONTENT = {
           extras: "Συμφωνημένος επιπλέον χρόνος: €{hourly}/ώρα.",
         },
         owner_representative_site_visit: {
-          name: "Επίσκεψη Εκπροσώπου Ιδιοκτήτη",
-          desc: "Δεν μπορείτε να βρίσκεστε εκεί όταν φτάνει εργολάβος, παράδοση ή πάροχος υπηρεσιών; Μπορούμε να τον συναντήσουμε στο ακίνητο, να δώσουμε πρόσβαση, να καταγράψουμε την επίσκεψη και να σας κρατήσουμε ενήμερους.",
+          name: "Επίσκεψη για Εργολάβο & Παραδόσεις",
+          desc: "Συναντάμε εργολάβους ή παρόχους παραδόσεων στο ακίνητό σας, τραβάμε φωτογραφίες και σας ενημερώνουμε.",
           included: "Περιλαμβάνει τα πρώτα 60 λεπτά επιτόπου.",
           extras: "Αν μια επίσκεψη χρειαστεί περισσότερο χρόνο από τον συμφωνημένο, ο επιπλέον χρόνος που συμφωνείται μαζί σας χρεώνεται με €{hourly}/ώρα.",
         },
@@ -204,8 +204,18 @@ export const DEFAULT_CONTENT = {
     },
   },
   add_on_services: {
-    en: { heading: "On-Demand Services" },
-    el: { heading: "Υπηρεσίες κατ' Απαίτηση" },
+    en: {
+      heading: "Need help while you’re away?",
+      subtitle: "No monthly subscription needed",
+      intro: "From arrival preparation to meeting contractors and stocking groceries, explore the extra help available for your property.",
+      cta: "Explore On-Demand Services & Prices",
+    },
+    el: {
+      heading: "Χρειάζεστε βοήθεια όσο λείπετε;",
+      subtitle: "Χωρίς μηνιαία συνδρομή",
+      intro: "Από την προετοιμασία πριν την άφιξη μέχρι τη συνάντηση εργολάβων και την προμήθεια τροφίμων, δείτε την επιπλέον βοήθεια που προσφέρουμε για το ακίνητό σας.",
+      cta: "Δείτε Υπηρεσίες κατ’ Απαίτηση & Τιμές",
+    },
   },
   how_it_works: {
     en: {
@@ -215,7 +225,7 @@ export const DEFAULT_CONTENT = {
         "You request a property assessment and tell us a little about your home.",
         "We assess the property and agree the care plan and price with you.",
         "We carry out scheduled visits, using a detailed checklist for each visit type.",
-        "Property Care and Complete Care include routine photos and a visit report after the full scheduled visit. Quick Check does not include routine photos or a customer report. Complete Care also includes a brief monthly follow-up with a short dated photo update.",
+        "Property Care and Complete Care include routine photos and a visit report after the full scheduled visit. Quick Check includes photos and a brief visit report. Complete Care also includes a brief monthly follow-up with a short dated photo update.",
         "If anything needs attention, we let you know and proceed only with your approval.",
       ],
     },
@@ -226,7 +236,7 @@ export const DEFAULT_CONTENT = {
         "Ζητάτε αξιολόγηση ακινήτου και μας λέτε λίγα λόγια για το σπίτι σας.",
         "Συζητάμε τις ανάγκες του ακινήτου και συμφωνούμε μαζί σας το πλάνο φροντίδας και την τιμή.",
         "Εκτελούμε προγραμματισμένες επισκέψεις με λεπτομερή λίστα ελέγχου για κάθε τύπο επίσκεψης.",
-        "Τα Property Care και Complete Care περιλαμβάνουν φωτογραφίες και αναφορά μετά την πλήρη προγραμματισμένη επίσκεψη. Το Quick Check δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά προς τον πελάτη. Το Complete Care περιλαμβάνει επίσης σύντομη μηνιαία συμπληρωματική επίσκεψη με φωτογραφική ενημέρωση και ημερομηνία.",
+        "Τα Property Care και Complete Care περιλαμβάνουν φωτογραφίες και αναφορά μετά την πλήρη προγραμματισμένη επίσκεψη. Το Quick Check περιλαμβάνει φωτογραφίες και σύντομη αναφορά επίσκεψης. Το Complete Care περιλαμβάνει επίσης σύντομη μηνιαία συμπληρωματική επίσκεψη με φωτογραφική ενημέρωση και ημερομηνία.",
         "Εάν κάτι χρειάζεται προσοχή, σας ενημερώνουμε και προχωράμε μόνο με την έγκρισή σας.",
       ],
     },
@@ -242,7 +252,7 @@ export const DEFAULT_CONTENT = {
         },
         {
           title: "Photos & reports",
-          text: "Routine photos and a customer-facing visit report are included only with Property Care and Complete Care — not with Quick Check.",
+          text: "Quick Check includes photos and a brief visit report. Property Care includes photos and a written report; Complete Care includes a detailed report after the full visit and a short dated photo update after the brief follow-up.",
         },
         {
           title: "Clear prices, agreed work",
@@ -272,7 +282,7 @@ export const DEFAULT_CONTENT = {
         },
         {
           title: "Φωτογραφίες & αναφορές",
-          text: "Οι τακτικές φωτογραφίες και η αναφορά προς τον ιδιοκτήτη περιλαμβάνονται μόνο στα πακέτα Φροντίδας και Πλήρους Φροντίδας — όχι στον Γρήγορο Έλεγχο.",
+          text: "Ο Γρήγορος Έλεγχος περιλαμβάνει φωτογραφίες και σύντομη αναφορά. Η Φροντίδα Ακινήτου περιλαμβάνει φωτογραφίες και γραπτή αναφορά, ενώ η Πλήρης Φροντίδα αναλυτική αναφορά μετά την πλήρη επίσκεψη και σύντομη φωτογραφική ενημέρωση μετά τον επανέλεγχο.",
         },
         {
           title: "Ξεκάθαρες τιμές, συμφωνημένη εργασία",
@@ -326,7 +336,7 @@ export const DEFAULT_CONTENT = {
       items: [
         {
           q: "Will I receive photos and a report after each visit?",
-          a: "Property Care includes photos and a visit report after every scheduled visit. Complete Care includes a detailed report after the full monthly visit, while the brief monthly follow-up visit includes a short dated photo update. Quick Check does not include routine photos or a report — every visit is still recorded.",
+          a: "Property Care includes photos and a visit report after every scheduled visit. Complete Care includes a detailed report after the full monthly visit, while the brief monthly follow-up visit includes a short dated photo update. Quick Check includes photos and a brief visit report.",
         },
         {
           q: "What happens if you notice a problem?",
@@ -356,7 +366,7 @@ export const DEFAULT_CONTENT = {
       items: [
         {
           q: "Θα λάβω φωτογραφίες και αναφορά μετά από κάθε επίσκεψη;",
-          a: "Το πακέτο Φροντίδα Ακινήτου περιλαμβάνει φωτογραφίες και αναφορά μετά από κάθε προγραμματισμένη επίσκεψη. Το πακέτο Πλήρης Φροντίδα περιλαμβάνει αναλυτική αναφορά μετά την πλήρη μηνιαία επίσκεψη, ενώ η σύντομη μηνιαία συμπληρωματική επίσκεψη περιλαμβάνει μια σύντομη φωτογραφική ενημέρωση με ημερομηνία. Ο Γρήγορος Έλεγχος δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά — κάθε επίσκεψη όμως καταγράφεται.",
+          a: "Το πακέτο Φροντίδα Ακινήτου περιλαμβάνει φωτογραφίες και αναφορά μετά από κάθε προγραμματισμένη επίσκεψη. Το πακέτο Πλήρης Φροντίδα περιλαμβάνει αναλυτική αναφορά μετά την πλήρη μηνιαία επίσκεψη, ενώ η σύντομη μηνιαία συμπληρωματική επίσκεψη περιλαμβάνει μια σύντομη φωτογραφική ενημέρωση με ημερομηνία. Ο Γρήγορος Έλεγχος περιλαμβάνει φωτογραφίες και σύντομη αναφορά επίσκεψης.",
         },
         {
           q: "Τι γίνεται αν παρατηρήσετε κάποιο πρόβλημα;",
@@ -442,7 +452,7 @@ export const EDITOR_SCHEMA = {
     label: "Services",
     info:
       "Prices, hourly rates, time allowances and visit counts are never edited here — they come live from your Service Package records via the secure pricing feed. " +
-      "This tab manages the public wording of all seven service cards. In the wording you can use the placeholders {price} and {hourly}; they are replaced with the live amounts when the page is viewed, so the text can never show a stale price.",
+      "This tab manages the public wording of the service cards. In the wording you can use the placeholders {price} and {hourly}; they are replaced with the live amounts when the page is viewed, so the text can never show a stale price.",
     fields: [
       { key: "kicker", label: "Small label above the heading", type: "text" },
       { key: "heading", label: "Heading", type: "text" },
@@ -454,8 +464,13 @@ export const EDITOR_SCHEMA = {
   },
   add_on_services: {
     label: "Add-on Services",
-    info: "Heading for the On-Demand Services group inside the pricing section. The services and their prices come live from the pricing feed.",
-    fields: [{ key: "heading", label: "Group heading", type: "text" }],
+    info: "Invitation to explore on-demand services below the monthly plans. Service prices come live from the pricing feed.",
+    fields: [
+      { key: "heading", label: "Heading", type: "text" },
+      { key: "subtitle", label: "Subscription note", type: "text" },
+      { key: "intro", label: "Intro paragraph", type: "textarea", rows: 3 },
+      { key: "cta", label: "Button text", type: "text" },
+    ],
   },
   how_it_works: {
     label: "How It Works",
