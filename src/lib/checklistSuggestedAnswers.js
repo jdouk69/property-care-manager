@@ -321,6 +321,43 @@ registry["ONBOARDING · Immediate follow-up items identified"] = {
  concern: [o("Immediate follow-up required","An immediate follow-up item was identified during onboarding. The required action and responsible party need confirmation.")],
  unable: [o("Follow-up review incomplete","Immediate follow-up requirements could not be fully reviewed because the relevant access or information was unavailable.")]
 };
+// Exterior-only visits: observations stay outside and never imply interior access.
+add(['Exterior walls, visible damage or vandalism'],
+ [o('No obvious exterior wall damage','No obvious damage or signs of vandalism were observed on the exterior walls visible from the accessible outside areas checked.')],
+ [o('Visible exterior wall damage','Visible damage or possible vandalism was observed on an exterior wall. The location and appearance are described in the additional notes; the cause has not been confirmed.')],
+ [o('Exterior wall view restricted','The relevant exterior wall could not be visually checked because the view or safe outside access was restricted.')]);
+add(['Grounds, paths and visible drainage'],
+ [o('No obvious grounds or drainage concern','No obvious obstruction or standing water was observed on the accessible grounds, paths or visible drainage points checked. Concealed drainage was not assessed.')],
+ [o('Obstruction or standing water outside','An obstruction or standing water was observed on the grounds, a path or a visible drainage point. The location is described in the additional notes.')],
+ [o('Grounds or drainage inaccessible','The relevant grounds, path or visible drainage point could not be checked because safe outside access or the view was restricted.')]);
+add(['Gates, fences and exterior access points'],
+ [o('No obvious access-point concern','No obvious damage or unsecured gate was observed at the accessible gates, fences and exterior access points checked.')],
+ [o('Gate unsecured or visible damage','An unsecured gate or visible damage to a gate, fence or exterior access point was observed. The affected location is recorded in the additional notes.')],
+ [o('Exterior access point inaccessible','The relevant gate, fence or exterior access point could not be visually checked because safe access or the view was restricted.')]);
+add(['Exterior doors and shutters — visible condition'],
+ [o('No obvious door or shutter concern','No obvious visible damage or unsecured opening was observed on the exterior doors and shutters checked from outside. No interior entry was made for this check.')],
+ [o('Door or shutter concern visible','Visible damage or an apparently unsecured exterior door or shutter was observed from outside. The location is described in the additional notes.')],
+ [o('Door or shutter view restricted','The relevant exterior door or shutter could not be visually checked because the view from safe outside observation points was restricted.')]);
+add(['Windows — visible condition from outside only'],
+ [o('No obvious window concern outside','No obvious visible damage or open window was observed on the windows checked from outside. Interior window condition was not assessed.')],
+ [o('Window concern visible outside','An open window or visible window damage was observed from outside. The affected location is described in the additional notes.')],
+ [o('Outside window view restricted','The relevant window could not be visually checked because the view from safe outside observation points was restricted.')]);
+add(['Visible signs of water leaks or storm damage outside'],
+ [o('No obvious exterior water or storm concern','No obvious visible signs of water leakage or storm-related damage were observed in the accessible outside areas checked. Hidden damage was not assessed.')],
+ [o('Water or possible storm damage outside','Visible water, staining or possible storm-related damage was observed outside. The location and appearance are described in the additional notes; the cause has not been confirmed.')],
+ [o('Outside area inaccessible','The relevant outside area could not be visually checked for water or storm-related concerns because safe access or the view was restricted.')]);
+add(['Garden, balcony or pool areas visible from outside'],
+ [o('No obvious concern in visible outside areas','No obvious concern was observed in the garden, balcony or pool areas visible from the outside observation points used. Concealed areas, pool chemistry and equipment operation were not assessed.')],
+ [o('Concern visible from outside','A visible concern was observed in a garden, balcony or pool area from outside. The area and observation are described in the additional notes.')],
+ [o('Outside view unavailable','The relevant garden, balcony or pool area could not be visually checked because no safe outside view was available.')]);
+add(['Photographs of exterior observations only'],
+ [o('Exterior photographs recorded','Photographs of the exterior observations were captured for this visit. No interior photographs were taken.')],
+ [o('Exterior photo coverage limited','Exterior photographs were captured, but coverage of a relevant observation was limited. The missing view and reason are described in the additional notes.')],
+ [o('Exterior photographs unavailable','The required exterior photographs could not be captured. The reason and affected observations are recorded in the additional notes.')]);
+add(['Confirm no entry into the home or interior areas'],
+ [o('No interior entry made','No entry into the home or interior areas was made during this exterior-only visit.')],
+ [o('Interior access exception to document','An exception to the exterior-only access boundary occurred. The circumstances and any owner instructions must be recorded and brought to the responsible person’s attention.')],
+ [o('Access boundary not confirmed','The no-interior-entry confirmation could not be established from the available visit information. The missing information is recorded in the additional notes.')]);
 export const CHECKLIST_SUGGESTED_ANSWERS = registry;
 const STATUS_ALIASES = { Pass: 'Normal', 'Needs Attention': 'Important', Critical: 'Emergency' };
 export function hasSuggestedAnswers(visitType, name) {
