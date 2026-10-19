@@ -21,6 +21,14 @@
     "property_type": {
       "type": "string"
     },
+    "property_use": {
+      "type": "string",
+      "enum": [
+        "Short-term rental villa",
+        "Owner-occupied home \u2014 exterior-only"
+      ],
+      "description": "Requested property use and the service scope discussed in the public enquiry."
+    },
     "notes": {
       "type": "string",
       "description": "What the requester needs, in their own words."
