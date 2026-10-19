@@ -479,6 +479,8 @@ export const EL = {
   "Base price before VAT. Prefilled from the selected package.": "Βασική τιμή προ ΦΠΑ. Προσυμπληρώνεται από το επιλεγμένο πακέτο.",
   "Billing type": "Τύπος χρέωσης",
   "Create Signing Link": "Δημιουργία συνδέσμου υπογραφής",
+  "Create Link & Open on This Tablet": "Δημιουργία συνδέσμου και άνοιγμα σε αυτό το tablet",
+  "For an in-person signing, this opens the secure customer signing page in a new tab on this device. Hand the tablet to the customer. If the browser blocks the tab, use Copy Link after the link is created.": "Για υπογραφή από κοντά, ανοίγει την ασφαλή σελίδα υπογραφής πελάτη σε νέα καρτέλα αυτής της συσκευής. Δώστε το tablet στον πελάτη. Αν το πρόγραμμα περιήγησης αποκλείσει την καρτέλα, χρησιμοποιήστε την επιλογή Αντιγραφή συνδέσμου αφού δημιουργηθεί ο σύνδεσμος.",
   "Customer intake stays available in the Client Hub. Existing intake rules are unchanged.": "Η καταχώρηση πελάτη παραμένει διαθέσιμη στο κέντρο πελάτη. Οι υφιστάμενοι κανόνες καταχώρησης δεν αλλάζουν.",
   "Draft saved": "Το σχέδιο αποθηκεύτηκε",
   "Edit Customer": "Επεξεργασία πελάτη",
