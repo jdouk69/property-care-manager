@@ -95,8 +95,8 @@ export function buildSampleVisit(lang = "en") {
         : "AI-generated demonstration images — not a client's property.",
       photosReportsHeading: el ? "ΦΩΤΟΓΡΑΦΙΕΣ & ΑΝΑΦΟΡΕΣ" : "PHOTOS & REPORTS",
       photosReportsText: el
-        ? "Περιλαμβάνονται στα πακέτα Φροντίδα Ακινήτου και Πλήρης Φροντίδα. Ο Γρήγορος Έλεγχος δεν περιλαμβάνει τακτικές φωτογραφίες ή αναφορά προς τον ιδιοκτήτη."
-        : "Included with Property Care and Complete Care. Quick Check does not include routine photos or a customer-facing visit report.",
+        ? "Ο Γρήγορος Έλεγχος περιλαμβάνει φωτογραφίες και σύντομη αναφορά. Τα πακέτα Φροντίδα Ακινήτου και Πλήρης Φροντίδα περιλαμβάνουν φωτογραφίες και γραπτή αναφορά μετά την πλήρη επίσκεψη."
+        : "Quick Check includes photos and a brief visit report. Property Care includes photos and a written report; Complete Care includes a detailed report after the full visit and a short dated photo update after the follow-up.",
       ourRoleHeading: el ? "Ο ΡΟΛΟΣ ΜΑΣ" : "OUR ROLE",
       ourRoleText: el
         ? "Μόνο οπτικές παρατηρήσεις σε προσβάσιμους χώρους τη στιγμή της επίσκεψης. Δεν αποτελεί επιθεώρηση κτιρίου, μηχανική αξιολόγηση, πιστοποίηση ή εγγύηση ότι δεν υπάρχουν κρυφές ατέλειες."

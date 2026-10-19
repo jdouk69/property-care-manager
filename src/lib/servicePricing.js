@@ -7,7 +7,7 @@
 
 export const SIZE_OPTIONS = ["Under 100 m²", "100–200 m²", "200–300 m²", "300+ m²"];
 export const COMPLEXITY_OPTIONS = ["Simple", "Standard", "Complex"];
-export const VISIT_TIME_OPTIONS = ["Up to 15 minutes", "30–45 minutes", "Up to 60 minutes", "More than 60 minutes"];
+export const VISIT_TIME_OPTIONS = ["Up to 15 minutes", "15–30 minutes", "30–45 minutes", "Up to 60 minutes", "More than 60 minutes"];
 export const SERVICE_AREA_OPTIONS = ["Within normal service area", "Outside normal service area / review required"];
 
 // Assessment indicators only — NEVER automatic individual surcharges.
@@ -27,10 +27,11 @@ export const PRICING_NOTE =
 
 // Included visit time (minutes) per service tier — used ONLY to judge whether
 // the staff-estimated visit time exceeds the selected package's allowance.
-export const TIER_ALLOWANCE_MINUTES = { Basic: 15, Standard: 45, Premium: 60 };
+export const TIER_ALLOWANCE_MINUTES = { Basic: 30, Standard: 45, Premium: 60 };
 
 const ESTIMATED_MINUTES = {
   "Up to 15 minutes": 15,
+  "15–30 minutes": 30,
   "30–45 minutes": 45,
   "Up to 60 minutes": 60,
   "More than 60 minutes": 75,

@@ -170,7 +170,7 @@ export default function PackageServiceCard({
                     <p className="text-sm font-semibold truncate">{t("Start Follow-up Visit")}</p>
                     <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 shrink-0">{t("Included in package")}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{t("Short follow-up checklist · up to 15 minutes")}</p>
+                  <p className="text-xs text-muted-foreground truncate">{t("Short follow-up checklist · up to 30 minutes")}</p>
                 </div>
               </div>
             </button>

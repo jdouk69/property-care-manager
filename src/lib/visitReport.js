@@ -177,9 +177,8 @@ export function buildOwnerReportModel(visit, ctx = {}) {
   const L = reportLabelsFor(lang);
   const cl = visit?.checklist || [];
 
-  // Quick Check visits and the Complete Care follow-up do not include a
-  // customer-facing visit report (per the published service terms). No
-  // report model is built.
+  // The Complete Care follow-up uses a dated photo update instead of a
+  // customer-facing visit report. Quick Check includes a brief report.
   if (isReportExcludedVisit(visit)) {
     return { reportExcluded: true, language: lang, labels: L };
   }

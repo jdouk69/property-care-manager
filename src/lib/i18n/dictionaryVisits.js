@@ -379,7 +379,7 @@ export const VISITS_EL = {
   "Follow-up not started": "Ο συμπληρωματικός έλεγχος δεν ξεκίνησε",
   "Follow-up completed": "Ο συμπληρωματικός έλεγχος ολοκληρώθηκε",
   "Follow-up scheduled or in progress": "Ο συμπληρωματικός έλεγχος είναι προγραμματισμένος ή σε εξέλιξη",
-  "Short follow-up checklist · up to 15 minutes": "Σύντομη λίστα ελέγχου · έως 15 λεπτά",
+  "Short follow-up checklist · up to 30 minutes": "Σύντομη λίστα ελέγχου · έως 30 λεπτά",
   "This visit type does not include a customer-facing visit report.": "Αυτός ο τύπος επίσκεψης δεν περιλαμβάνει αναφορά επίσκεψης προς τον ιδιοκτήτη.",
 
   // Complete Care follow-up photo update (staff UI)

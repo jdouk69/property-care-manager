@@ -90,7 +90,7 @@ export default function ReportDeliveryQueue() {
       ]);
       // QA test property's synthetic visits stay out of the real delivery queue.
       const qaIds = qaPropertyIds(props || []);
-      // Quick Check visits have no customer-facing report at all — never queued.
+      // Follow-up visits use a photo update; Quick Check reports remain in the queue.
       setVisits((vs || []).filter((v) => v.status === "Completed" && !v.archived && !qaIds.has(v.property_id) && !isReportExcludedVisit(v)));
       setProperties(props || []);
       setClients(cls || []);

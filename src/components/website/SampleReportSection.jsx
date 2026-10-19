@@ -47,8 +47,8 @@ export default function SampleReportSection() {
 
         <p className="mt-6 mx-auto max-w-2xl rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground leading-relaxed">
           {el
-            ? "Φωτογραφίες και αναφορές προς τον ιδιοκτήτη περιλαμβάνονται στα πακέτα Φροντίδα Ακινήτου και Πλήρης Φροντίδα, όχι στον Γρήγορο Έλεγχο. Οι επισκέψεις μας είναι πρακτικοί οπτικοί έλεγχοι — όχι επαγγελματικές επιθεωρήσεις κτιρίων."
-            : "Photos and customer-facing reports are included with Property Care and Complete Care, but not with Quick Check. Our visits are practical visual checks—not professional building inspections."}
+            ? "Ο Γρήγορος Έλεγχος περιλαμβάνει φωτογραφίες και σύντομη αναφορά. Η Φροντίδα Ακινήτου περιλαμβάνει φωτογραφίες και γραπτή αναφορά, ενώ η Πλήρης Φροντίδα αναλυτική αναφορά μετά την πλήρη επίσκεψη και σύντομη φωτογραφική ενημέρωση μετά τον επανέλεγχο. Οι επισκέψεις μας είναι πρακτικοί οπτικοί έλεγχοι — όχι επαγγελματικές επιθεωρήσεις κτιρίων."
+            : "Quick Check includes photos and a brief visit report. Property Care includes photos and a written report; Complete Care includes a detailed report after the full visit and a short dated photo update after the brief follow-up. Our visits are practical visual checks—not professional building inspections."}
         </p>
       </div>
     </section>
