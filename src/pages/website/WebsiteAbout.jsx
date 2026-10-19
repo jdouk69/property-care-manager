@@ -14,7 +14,7 @@ export default function WebsiteAbout() {
   usePageMeta({
     title: "About | Property Care Crete",
     description:
-      "Learn about Property Care Crete and our practical home watch, property care and owner support services in Chania and Western Crete.",
+      "Learn about Property Care Crete's scheduled care visits for short-term rental villas and exterior-only visits for owner-occupied homes in Chania and Western Crete.",
   });
 
   return (
@@ -36,8 +36,8 @@ export default function WebsiteAbout() {
           </p>
           <p>
             {el
-              ? "Βοηθάμε ιδιοκτήτες βιλών, διαμερισμάτων και εξοχικών να γνωρίζουν τι παρατηρήθηκε στο σπίτι τους όσο λείπουν. Μπορούμε να οργανώσουμε προετοιμασία άφιξης, προμήθειες τροφίμων, φύλαξη κλειδιών και πρόσβαση εγκεκριμένων επαγγελματιών. Το αντικείμενο κάθε υπηρεσίας συμφωνείται εκ των προτέρων."
-              : "We help owners of villas, apartments and holiday homes stay informed while they are away. Arrival preparation, grocery stocking, key holding and access for approved contractors can be arranged. The scope of each service is agreed with you in advance."}
+              ? "Το Property Care Crete εστιάζει σε προγραμματισμένες επισκέψεις φροντίδας σε βίλες βραχυχρόνιας μίσθωσης στα Χανιά και τη Δυτική Κρήτη. Ελέγχουμε τους συμφωνημένους χώρους, καταγράφουμε όσα παρατηρούμε και επικοινωνούμε μαζί σας όταν κάτι χρειάζεται προσοχή. Για κατοικίες όπου μένει ο ιδιοκτήτης, εξετάζουμε μόνο εξωτερικές επισκέψεις· δεν εισερχόμαστε στο σπίτι. Το αντικείμενο κάθε επίσκεψης συμφωνείται εκ των προτέρων."
+              : "Property Care Crete focuses on scheduled care visits for short-term rental villas in Chania and Western Crete. We check the agreed areas, record what we observe, and contact you when something needs attention. For owner-occupied homes, we consider exterior-only visits; we do not enter the home. The scope of each visit is agreed in advance."}
           </p>
           <p>
             {el
