@@ -683,6 +683,7 @@ export default function ResourceListPage({
                 ? renderCard(item, lookups, {
                     open: onOpenItem ? () => onOpenItem(item) : () => openEdit(item),
                     updateStatus,
+                    updateRecord: (record, patch) => persistRecord(record, patch, { updateUI: true }),
                   })
                 : (
                   <button
