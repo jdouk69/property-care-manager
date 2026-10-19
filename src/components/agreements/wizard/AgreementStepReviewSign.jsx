@@ -201,11 +201,11 @@ export default function AgreementStepReviewSign({
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Create Signing Link")}
             </Button>
             <Button onClick={handleOpenSignOnTablet} disabled={busy || sending || !!sendDisabledReason} variant="outline" className="gap-1.5 w-full sm:w-auto">
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} {t("Create Link & Open on This Tablet")}
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} {t("Create Link & Open for In-Person Signing")}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            {t("For an in-person signing, this opens the secure customer signing page in a new tab on this device. Hand the tablet to the customer. If the browser blocks the tab, use Copy Link after the link is created.")}
+            {t("For an in-person signing, this opens the secure customer signing page in a new tab on this device. Hand your phone or tablet to the customer. If the browser blocks the tab, use Copy Link after the link is created.")}
           </p>
         </div>
       )}
