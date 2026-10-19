@@ -17,21 +17,21 @@ export default function WhoWeHelp() {
   const cards = [
     {
       icon: Plane,
-      title: el ? "Απώντες ιδιοκτήτες" : "Absent owners",
+      title: el ? "Βίλες βραχυχρόνιας μίσθωσης" : "Short-term rental villas",
       text: el
         ? "Έχετε βίλα βραχυχρόνιας μίσθωσης; Κάνουμε συμφωνημένες επισκέψεις και σας ενημερώνουμε για όσα παρατηρούμε."
         : "Own a short-term rental villa? We make visits within the agreed scope and keep you informed about what we observe.",
     },
     {
       icon: Sun,
-      title: el ? "Εποχιακοί κάτοικοι" : "Seasonal residents",
+      title: el ? "Κατοικίες ιδιοκατοίκησης" : "Owner-occupied homes",
       text: el
         ? "Για κατοικίες όπου μένει ο ιδιοκτήτης, δεχόμαστε μόνο εξωτερικές επισκέψεις. Δεν εισερχόμαστε στο σπίτι."
         : "For owner-occupied homes, we consider exterior-only visits. We do not enter the home.",
     },
     {
       icon: KeyRound,
-      title: el ? "Ενοικίαση & επισκέπτες" : "Rentals & guests",
+      title: el ? "Συμφωνημένο αντικείμενο" : "Agreed visit scope",
       text: el
         ? "Κάθε επίσκεψη και οι συγκεκριμένες εργασίες συμφωνούνται μαζί σας εκ των προτέρων."
         : "We agree each visit and its specific tasks with you in advance.",
