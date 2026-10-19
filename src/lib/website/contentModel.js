@@ -114,7 +114,7 @@ export const DEFAULT_CONTENT = {
         },
         grocery_stocking: {
           name: "Grocery Stocking",
-          desc: "We shop for your groceries and stock the property before you or your guests arrive.",
+          desc: "We shop from your list and stock the property before your guests arrive.",
           included: "Includes up to 15 minutes of shopping.",
           extras: "If your order needs more shopping time than included, agreed extra time is charged at €{hourly}/hour. Groceries are charged separately.",
         },
@@ -190,7 +190,7 @@ export const DEFAULT_CONTENT = {
         },
         grocery_stocking: {
           name: "Προμήθεια Τροφίμων",
-          desc: "Αγοράζουμε τα είδη διατροφής σας και εφοδιάζουμε το ακίνητο πριν φτάσετε εσείς ή οι επισκέπτες σας.",
+          desc: "Ψωνίζουμε σύμφωνα με τη λίστα σας και εφοδιάζουμε το ακίνητο πριν από την άφιξη των επισκεπτών σας.",
           included: "Περιλαμβάνει έως 15 λεπτά αγορών.",
           extras: "Αν η παραγγελία σας χρειαστεί περισσότερο χρόνο αγορών από τον συμφωνημένο, ο επιπλέον χρόνος χρεώνεται με €{hourly}/ώρα. Τα τρόφιμα χρεώνονται ξεχωριστά.",
         },
