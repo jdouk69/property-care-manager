@@ -19,22 +19,22 @@ export default function WhoWeHelp() {
       icon: Plane,
       title: el ? "Απώντες ιδιοκτήτες" : "Absent owners",
       text: el
-        ? "Ζείτε στο εξωτερικό ή μακριά από την Κρήτη; Το ακίνητό σας ελέγχεται τακτικά και ενημερώνεστε για οτιδήποτε αξίζει προσοχή."
-        : "You live abroad or far from Crete. Your property is checked on a regular schedule, and you hear about anything that needs attention.",
+        ? "Έχετε βίλα βραχυχρόνιας μίσθωσης; Κάνουμε συμφωνημένες επισκέψεις και σας ενημερώνουμε για όσα παρατηρούμε."
+        : "Own a short-term rental villa? We make visits within the agreed scope and keep you informed about what we observe.",
     },
     {
       icon: Sun,
       title: el ? "Εποχιακοί κάτοικοι" : "Seasonal residents",
       text: el
-        ? "Έρχεστε για λίγους μήνες τον χρόνο; Φροντίζουμε το ακίνητό σας όσο λείπετε και το ετοιμάζουμε πριν την άφιξή σας."
-        : "You spend part of the year here. We look after the property while you are away and prepare it before you arrive.",
+        ? "Για κατοικίες όπου μένει ο ιδιοκτήτης, δεχόμαστε μόνο εξωτερικές επισκέψεις. Δεν εισερχόμαστε στο σπίτι."
+        : "For owner-occupied homes, we consider exterior-only visits. We do not enter the home.",
     },
     {
       icon: KeyRound,
       title: el ? "Ενοικίαση & επισκέπτες" : "Rentals & guests",
       text: el
-        ? "Υποδέχεστε ενοικιαστές ή επισκέπτες; Κατόπιν εντολής σας, ετοιμάζουμε το ακίνητο πριν από κάποια άφιξη."
-        : "You host tenants or guests. On your instruction, we prepare the property before an arrival.",
+        ? "Κάθε επίσκεψη και οι συγκεκριμένες εργασίες συμφωνούνται μαζί σας εκ των προτέρων."
+        : "We agree each visit and its specific tasks with you in advance.",
     },
   ];
 
@@ -47,8 +47,8 @@ export default function WhoWeHelp() {
           </p>
           <h2 className="mt-2 font-heading text-2xl sm:text-3xl font-bold text-foreground">
             {el
-              ? "Κάθε ιδιοκτήτης που θέλει να ξέρει ότι το ακίνητό του είναι σε καλά χέρια."
-              : "Any owner who wants to know their property is in good hands."}
+              ? "Φροντίδα για βίλες βραχυχρόνιας μίσθωσης και εξωτερικές επισκέψεις για κατοικίες ιδιοκατοίκησης."
+              : "Care for short-term rental villas, with exterior-only visits for owner-occupied homes."}
           </h2>
         </div>
         <div className="mt-6 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-3">
