@@ -31,7 +31,7 @@ export default function WebsiteHome() {
   usePageMeta({
     title: "Property Care & Home Watch in Chania | Property Care Crete",
     description:
-      "Property care and home watch in Chania, Crete. Scheduled visits, arrival preparation and local support for owners who are away. Photos and reports included with selected plans.",
+      "Scheduled care visits for short-term rental villas in Chania and Western Crete, with exterior-only visits available for owner-occupied homes.",
   });
 
   useEffect(() => {
