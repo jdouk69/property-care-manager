@@ -90,7 +90,13 @@ export default function ServicePackages() {
         searchKeys={["name", "description"]}
         addItemLabel="Add Service"
         defaultValues={{ billing_type: "Monthly", recurring: "Recurring", vat_setting: "Standard 24%", active: true, standard_price: 0, included_visits_per_period: 1 }}
-        renderCard={(item, _lookups, helpers) => <ServicePackageCard item={item} onOpen={helpers.open} />}
+        renderCard={(item, _lookups, helpers) => (
+          <ServicePackageCard
+            item={item}
+            onOpen={helpers.open}
+            onToggle={(record, active) => helpers.updateRecord(record, { active })}
+          />
+        )}
       />
     </AppLayout>
   );
