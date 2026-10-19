@@ -1,5 +1,5 @@
-import React from "react";
-import { Pencil } from "lucide-react";
+import React, { useState } from "react";
+import { Loader2, Pencil, Power } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 
@@ -9,10 +9,13 @@ import { badgeTone } from "@/components/resource/ResourceListPage";
 // by the one-time price), and additional-time rates.
 const PERIOD_WORD = { Monthly: "month", Quarterly: "quarter", Annual: "year" };
 
-export default function ServicePackageCard({ item, onOpen }) {
-  const { t, tEnum } = useLanguage();
+export default function ServicePackageCard({ item, onOpen, onToggle }) {
+  const { t, tEnum, lang } = useLanguage();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const p = item || {};
   const recurring = p.recurring === "Recurring";
+  const isActive = p.active !== false;
   const period = t(PERIOD_WORD[p.billing_type] || "month");
   const eur = (n) => (n != null && Number(n) > 0 ? `€${Number(n).toFixed(0)}` : null);
 
@@ -27,11 +30,27 @@ export default function ServicePackageCard({ item, onOpen }) {
   if (p.hourly_charge) rows.push([t("Additional Time Rate"), `${eur(p.hourly_charge)} / ${t("hour")}`]);
   if (p.emergency_surcharge) rows.push([t("Emergency Increment (30 min)"), eur(p.emergency_surcharge)]);
 
+  const toggle = async (event) => {
+    event.stopPropagation();
+    if (!onToggle || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onToggle(p, !isActive);
+    } catch (e) {
+      setError(e?.message || (lang === "el" ? "Δεν ήταν δυνατή η αλλαγή κατάστασης." : "Could not update package status."));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <button
-      onClick={onOpen}
-      className="text-left w-full rounded-2xl border border-border bg-card p-4 hover:shadow-md hover:border-primary/30 transition-all active:scale-[0.99] group"
-    >
+    <div className="w-full rounded-2xl border border-border bg-card p-4">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="text-left w-full hover:opacity-90 transition group"
+      >
       <div className="flex items-start justify-between gap-2">
         <div className="font-medium text-foreground truncate flex-1">{p.name}</div>
         <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition shrink-0" />
@@ -45,10 +64,25 @@ export default function ServicePackageCard({ item, onOpen }) {
         ))}
       </div>
       <div className="flex flex-wrap gap-1.5 mt-3">
-        {[p.billing_type, p.active ? "Active" : "Inactive"].filter(Boolean).map((v) => (
+        {[p.billing_type, isActive ? "Active" : "Inactive"].filter(Boolean).map((v) => (
           <span key={v} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{tEnum(v)}</span>
         ))}
-      </div>
-    </button>
+      </button>
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={saving}
+        className={`mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition disabled:cursor-wait disabled:opacity-60 ${
+          isActive
+            ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+            : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+        }`}
+        aria-label={lang === "el" ? (isActive ? "Απενεργοποίηση υπηρεσίας" : "Ενεργοποίηση υπηρεσίας") : (isActive ? "Deactivate package" : "Activate package")}
+      >
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4" />}
+        {lang === "el" ? (isActive ? "Απενεργοποίηση" : "Ενεργοποίηση") : (isActive ? "Deactivate package" : "Activate package")}
+      </button>
+      {error && <p className="mt-2 text-xs text-destructive" role="alert">{error}</p>}
+    </div>
   );
 }
