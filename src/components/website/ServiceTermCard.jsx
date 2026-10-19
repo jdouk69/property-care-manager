@@ -14,7 +14,14 @@ export default function ServiceTermCard({ service, terms, unitLabel, highlight }
     >
       <CardArches className="pointer-events-none absolute inset-x-4 top-2 h-3 text-primary/50" />
       <div>
-        <h3 className="font-heading text-lg font-semibold text-foreground">{terms.name}</h3>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <h3 className="font-heading text-lg font-semibold text-foreground">{terms.name}</h3>
+          {service.service_key === "complete_care" && (
+            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+              {terms.name === "Πλήρης Φροντίδα" ? "Δημοφιλέστερο" : "Most popular"}
+            </span>
+          )}
+        </div>
         <p className="mt-1 font-heading text-2xl font-bold text-primary">
           €{formatPrice(service.price)} <span className="text-sm font-medium text-muted-foreground">{unitLabel}</span>
         </p>
