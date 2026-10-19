@@ -67,6 +67,7 @@ export default function ServicePackageCard({ item, onOpen, onToggle }) {
         {[p.billing_type, isActive ? "Active" : "Inactive"].filter(Boolean).map((v) => (
           <span key={v} className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(v)}`}>{tEnum(v)}</span>
         ))}
+        </div>
       </button>
       <button
         type="button"
