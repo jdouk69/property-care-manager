@@ -21,7 +21,7 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = "defau
         {Icon && <Icon className="w-5 h-5" />}
       </div>
       <div className="min-w-0">
-        <p className="text-2xl font-semibold leading-none text-foreground">{value}</p>
+        <p className="min-w-0 max-w-full whitespace-nowrap text-[clamp(0.75rem,1.8vw,1.5rem)] font-semibold leading-none tracking-tight tabular-nums text-foreground">{value}</p>
         <p className="text-xs text-muted-foreground mt-1 truncate">{label}</p>
         {hint && <p className="text-[11px] text-muted-foreground/80 mt-0.5 truncate">{hint}</p>}
       </div>
