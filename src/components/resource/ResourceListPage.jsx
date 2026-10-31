@@ -79,7 +79,7 @@ export default function ResourceListPage({
   renderCard, filterFn, dictation, emptyTitle, canEditItem,
 }) {
   const { user } = useAuth();
-  const { t, tEnum } = useLanguage();
+  const { t, tEnum, lang } = useLanguage();
   const isAdmin = user?.role === "admin";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -536,6 +536,11 @@ export default function ResourceListPage({
       <div key={f.name}>
         {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 block">{t(f.label)}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
         {renderField(f)}
+        {f.helpText && (
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+            {typeof f.helpText === "string" ? t(f.helpText) : f.helpText[lang] || f.helpText.en}
+          </p>
+        )}
       </div>
     );
   };
