@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image } from "@/components/ui/image";
 import { useToast } from "@/components/ui/use-toast";
 import { eur, monthLabel } from "@/lib/billing";
+import { invoiceAmounts } from "../../../server/shared/invoiceVat.js";
 import { computeVatTotals, resolveVatRate } from "@/lib/invoiceGeneration";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -23,6 +24,8 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
   const { toast } = useToast();
   const { t, lang } = useLanguage();
   const [business, setBusiness] = useState({});
+  const [agreements, setAgreements] = useState(null);
+  const [pricingError, setPricingError] = useState("");
   const [number, setNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -32,6 +35,7 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
+    base44.entities.PropertyServiceAgreement.list("-created_date", 1000).then(setAgreements).catch(() => setPricingError("Could not load agreement VAT terms. Please reopen the review."));
     base44.entities.BusinessSettings.list().then((l) => setBusiness((l || [])[0] || {})).catch(() => {});
   }, []);
 
@@ -51,10 +55,15 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
 
   const property = properties.find((p) => p.id === draft.property_id);
   const rate = resolveVatRate(business);
-  const { vat, total } = computeVatTotals(draft.subtotal, rate);
+  let priced = null;
+  let calculationError = pricingError;
+  try { if (draft.source_charges && agreements) priced = invoiceAmounts(draft.source_charges, agreements, rate); } catch (e) { calculationError = e.message; }
+  const { vat, total } = priced || computeVatTotals(draft.subtotal, rate);
+  const pricedLines = priced ? draft.line_items.map((line, i) => ({ ...line, ...priced.lines[i] })) : draft.line_items;
+  const priceReady = !calculationError && (!draft.source_charges || !!priced);
 
   const save = async () => {
-    if (!number.trim()) return;
+    if (!number.trim() || !priceReady) return;
     setSaving(true);
     try {
       const record = {
@@ -62,11 +71,12 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
         client_id: draft.client_id,
         property_id: draft.property_id,
         billing_period: draft.billing_period,
-        line_items: draft.line_items,
+        line_items: pricedLines,
+        subtotal: priced?.subtotal ?? draft.subtotal,
         charge_ids: draft.charge_ids,
         invoice_date: invoiceDate,
         due_date: dueDate,
-        services: draft.line_items.map((it) => `${it.description} - ${eur(it.amount)}`).join("\n"),
+        services: pricedLines.map((it) => `${it.description} - ${eur(it.amount)}`).join("\n"),
         vat,
         total,
         amount_paid: 0,
@@ -106,6 +116,7 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        {!priceReady && <p role="status" className="text-sm text-amber-700">{calculationError || t("Loading agreement VAT terms…")}</p>}
         <DialogHeader>
           <DialogTitle>{t("Review Invoice")} — {localizedMonthLabel(draft.billing_period, lang) || monthLabel(draft.billing_period) || draft.billing_period}</DialogTitle>
           <DialogDescription>
@@ -157,7 +168,7 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
               <span>{t("Description")}</span><span>{t("Amount")}</span>
             </div>
             <div className="divide-y divide-border">
-              {draft.line_items.map((it, i) => (
+              {pricedLines.map((it, i) => (
                 <div key={i} className="grid grid-cols-[1fr_auto] gap-3 px-3 py-2">
                   <span className="text-sm leading-snug break-words">{it.description}</span>
                   <span className="text-sm">{eur(it.amount)}</span>
@@ -165,8 +176,8 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
               ))}
             </div>
             <div className="px-3 py-2 bg-muted/30 space-y-1 border-t border-border">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("Subtotal")}</span><span>{eur(draft.subtotal)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("VAT {rate}%", { rate })}</span><span>{eur(vat)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("Subtotal")}</span><span>{eur(priced?.subtotal ?? draft.subtotal)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("VAT")}</span><span>{eur(vat)}</span></div>
               <div className="flex justify-between text-base font-semibold pt-1 border-t border-border"><span>{t("TOTAL DUE")}</span><span>{eur(total)}</span></div>
             </div>
           </div>
@@ -187,7 +198,7 @@ export default function InvoiceReviewModal({ open, onOpenChange, draft, client, 
                 {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} {t("Download PDF")}
               </Button>
             ) : (
-              <Button className="h-11 px-6 gap-1.5" onClick={save} disabled={saving || !number.trim() || !invoiceDate}>
+              <Button className="h-11 px-6 gap-1.5" onClick={save} disabled={!priceReady || saving || !number.trim() || !invoiceDate}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Save Invoice")}
               </Button>
             )}
