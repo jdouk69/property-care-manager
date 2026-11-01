@@ -1,4 +1,4 @@
-import { invoiceAmounts } from "../../../server/shared/invoiceVat.js";
+import { invoiceAmounts } from "@/lib/invoiceVat";
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Loader2, FilePlus2, Receipt, AlertTriangle } from "lucide-react";
