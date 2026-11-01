@@ -1,3 +1,4 @@
+import MigrationCard from '@/components/settings/MigrationCard';
 import React, { useState, useEffect, useRef } from "react";
 import { Settings as SettingsIcon, Loader2, Check, Plus, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,9 @@ import PaymentDetailsCard from "@/components/settings/PaymentDetailsCard";
 import TaxDetailsCard from "@/components/settings/TaxDetailsCard";
 
 const FUTURE_FEATURES = [
-  "Client Portal", "Client Mobile App", "Online Payments", "Invoicing", "AI Inspection Assistant",
+  "Client Portal", "Client Mobile App", "Online Payments", "AI Inspection Assistant",
   "Voice Notes", "OCR Receipt Scanning", "GPS Visit Verification", "Route Optimization",
-  "Employee Scheduling", "Inventory Management", "Automated Weather Alerts", "Smart Reminders", "Digital Signatures"
+  "Employee Scheduling", "Inventory Management", "Automated Weather Alerts", "Smart Reminders"
 ];
 
 export default function Settings() {
@@ -145,7 +146,18 @@ export default function Settings() {
         <OwnerProfileCard settings={settings} applyFields={applyFields} />
 
         {/* Reminder preferences — per-category reminder timing */}
+        <MigrationCard />
         <NotificationsRemindersCard settings={settings} setField={setField} />
+
+        {/* Available features */}
+        <div className="rounded-2xl border border-border bg-card p-5 mb-4">
+          <div className="flex items-center gap-2 mb-1"><Check className="w-4 h-4 text-emerald-600" /><h3 className="font-medium text-sm">{t("Available now")}</h3></div>
+          <p className="text-xs text-muted-foreground mb-4">{t("These tools are available in the app.")}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <a href="/invoices" className="text-sm text-primary underline underline-offset-4 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted">{t("Invoicing")}</a>
+            <a href="/agreements/new" className="text-sm text-primary underline underline-offset-4 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted">{t("Digital Signatures")}</a>
+          </div>
+        </div>
 
         {/* Future features */}
         <div className="rounded-2xl border border-border bg-card p-5">
