@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  ArrowLeft, Home, ListChecks, ClipboardCheck, Wrench, Wallet, Clock,
-  MapPin, KeyRound, Wifi, Image as ImageIcon, Calendar, Truck, MessageSquare,
-  FileText, FolderOpen, Receipt, Plus, CheckCircle2, Loader2, Navigation, CalendarClock, Pencil, Euro, CalendarPlus
+  Home, ListChecks, ClipboardCheck, Wrench, Wallet, Clock,
+  MapPin, KeyRound, Wifi, Truck, MessageSquare,
+  FileText, FolderOpen, Receipt, Plus, Loader2, Navigation, CalendarClock, Pencil, Euro, CalendarPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
