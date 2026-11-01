@@ -167,6 +167,16 @@
         "type": "string"
       }
     },
+    "subtotal": {
+      "type": "number"
+    },
+    "vat_correction_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
     "payment_details_snapshot": {
       "type": "object",
       "additionalProperties": true,
