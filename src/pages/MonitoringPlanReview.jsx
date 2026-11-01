@@ -76,6 +76,7 @@ export default function MonitoringPlanReview() {
   const [intakeAmbiguous, setIntakeAmbiguous] = useState(false);
   const [serviceStatus, setServiceStatus] = useState(null);
   const [rows, setRows] = useState([]);
+  const [visitCompleted, setVisitCompleted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -88,6 +89,8 @@ export default function MonitoringPlanReview() {
           base44.entities.CustomerIntake.list("-created_date", 200),
         ]);
         setProperty(prop);
+        const visits = await base44.entities.PropertyVisit.filter({property_id:id});
+        setVisitCompleted(visits.some(v=>!v.archived && v.visit_type === "Initial Property Onboarding Inspection" && v.status === "Completed"));
         const cid = prop.owner_id || "";
         const clientProps = (allProps || []).filter((p) => p.owner_id === cid && !p.archived);
         setClientPropertyCount(clientProps.length);
@@ -111,7 +114,7 @@ export default function MonitoringPlanReview() {
 
   const visitType = serviceStatus?.status === "ok" ? serviceStatus.visitType : "";
   const pkg = serviceStatus?.package || null;
-  const canConfirm = !!serviceStatus && serviceStatus.status === "ok" && !saving;
+  const canConfirm = !!serviceStatus && serviceStatus.status === "ok" && visitCompleted && !saving;
 
   // Local-only state updates. The Include switch is always tappable so staff can
   // turn it ON first, reveal the wording field, then enter/edit the wording. Scope
@@ -320,6 +323,7 @@ export default function MonitoringPlanReview() {
           </div>
         )}
 
+        {!visitCompleted && <p role="status" className="rounded-xl border p-4">{t("Review the plan now. Complete the initial onboarding visit before confirming it.")}</p>}
         {/* Confirm bar */}
         <div className="fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 lg:left-64">
           <div className="max-w-3xl mx-auto flex items-center gap-2">
