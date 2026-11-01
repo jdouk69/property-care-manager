@@ -11,6 +11,7 @@
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { nextInvoiceNumber } from '../../shared/invoiceNumbering.js';
+import { priceLinkedInvoice } from '../../shared/invoiceChargePricing.js';
 import { validateInvoiceDraft } from '../../shared/invoiceValidation.js';
 
 async function listInvoices(base44) {
@@ -25,7 +26,27 @@ export default async function(req) {
     if (user.role !== "admin") return Response.json({ error: "Forbidden — admin only" }, { status: 403 });
 
     const body = await req.json().catch(() => ({}));
+    if (body.action === 'recalculateDraft') {
+      const old = await base44.asServiceRole.entities.Invoice.get(body.invoice_id);
+      if (old.status !== 'Draft' || old.finalized_at || old.sent_at || Number(old.amount_paid) > 0 || (old.payments || []).length) {
+        return Response.json({ error: 'Only an unissued, unpaid draft can be recalculated.' }, {status:409});
+      }
+      if (old.total !== body.expected_total) return Response.json({error:'Invoice changed. Refresh and review it again.'},{status:409});
+      const pricing = await priceLinkedInvoice(base44, old);
+      if (!pricing) return Response.json({error:'This invoice has no linked charges to recalculate.'},{status:400});
+      const validationError = validateInvoiceDraft({...old,...pricing});
+      if (validationError) return Response.json({error:validationError},{status:400});
+      const history = [...(old.vat_correction_history || []), {at:new Date().toISOString(), by:user.id || user.email,
+        reason:'Recalculated from linked charges and frozen agreement VAT terms', before:{line_items:old.line_items,vat:old.vat,total:old.total}, after:pricing}];
+      const fresh = await base44.asServiceRole.entities.Invoice.get(old.id);
+      if (fresh.status !== 'Draft' || fresh.finalized_at || fresh.sent_at || fresh.updated_date !== old.updated_date) return Response.json({error:'Invoice changed. Refresh and review it again.'},{status:409});
+      const record = await base44.asServiceRole.entities.Invoice.update(old.id,{...pricing,services:pricing.line_items.map(line=>`${line.description} - €${line.amount.toFixed(2)}`).join('\n'),vat_correction_history:history});
+      return Response.json({ok:true,record});
+    }
     const record = body.record || {};
+    if(record.charge_ids?.length){const existing=(await listInvoices(base44)).find(i=>!i.archived&&i.status!=='Cancelled'&&i.charge_ids?.some(id=>record.charge_ids.includes(id)));if(existing){if(existing.charge_ids.length===record.charge_ids.length&&existing.charge_ids.every(id=>record.charge_ids.includes(id)))return Response.json({ok:true,record:existing,number:existing.invoice_number,already_exists:true});return Response.json({error:'Some charges already belong to another invoice.'},{status:409});}}
+    const pricing = await priceLinkedInvoice(base44, record);
+    if (pricing) Object.assign(record, pricing);
     if (!Array.isArray(record.line_items) || record.line_items.length === 0) {
       return Response.json({ error: "An invoice needs at least one line item" }, { status: 400 });
     }
