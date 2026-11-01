@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Image } from "@/components/ui/image";
 import { useToast } from "@/components/ui/use-toast";
 import { eur, monthLabel } from "@/lib/billing";
-import { invoiceAmounts } from "../../../server/shared/invoiceVat.js";
+import { invoiceAmounts } from "@/lib/invoiceVat";
 import { computeVatTotals, resolveVatRate } from "@/lib/invoiceGeneration";
 import { generateInvoicePdf } from "@/lib/invoicePdf";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
