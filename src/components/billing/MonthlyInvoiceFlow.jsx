@@ -1,3 +1,4 @@
+import { invoiceAmounts } from "../../../server/shared/invoiceVat.js";
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Loader2, FilePlus2, Receipt, AlertTriangle } from "lucide-react";
@@ -11,7 +12,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { chargeMonthKey, eur } from "@/lib/billing";
 import { paidTotalOf, PAYMENT_EPS } from "@/lib/payments";
 import {
-  buildInvoiceDraft, computeVatTotals, resolveVatRate, round2,
+  buildInvoiceDraft, resolveVatRate,
   findInvoiceContainingCharge, findInvoiceForPeriod,
 } from "@/lib/invoiceGeneration";
 import { localizedMonthLabel, localizedShortDate } from "@/lib/i18n/billingDisplay";
@@ -34,6 +35,7 @@ export default function MonthlyInvoiceFlow({ open, onOpenChange }) {
   const [properties, setProperties] = useState([]);
   const [charges, setCharges] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [agreements, setAgreements] = useState([]);
   const [business, setBusiness] = useState({});
   const [loading, setLoading] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -64,13 +66,15 @@ export default function MonthlyInvoiceFlow({ open, onOpenChange }) {
       base44.entities.Property.list("-created_date", 500),
       base44.entities.BillingCharge.list("-created_date", 500),
       base44.entities.Invoice.list("-created_date", 500),
+      base44.entities.PropertyServiceAgreement.list("-created_date", 1000),
       base44.entities.BusinessSettings.list().then((l) => (l || [])[0] || {}),
-    ]).then(([c, p, ch, inv, b]) => {
+    ]).then(([c, p, ch, inv, ag, b]) => {
       setClients((c || []).filter((x) => !x.archived && x.status !== "Inactive"));
       setProperties((p || []).filter((x) => !x.archived));
       setCharges(ch || []);
       setInvoices(inv || []);
       setBusiness(b);
+      setAgreements(ag || []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [open]);
 
@@ -110,16 +114,18 @@ export default function MonthlyInvoiceFlow({ open, onOpenChange }) {
     return out;
   }, [charges, invoices, clientId, propertySel, month]);
 
-  // Ledger amounts exclude VAT; VAT is computed additively here (display) and
+  // Frozen agreement VAT terms determine whether ledger amounts include VAT;
   // again at save in InvoiceReviewModal — same existing functions/settings.
   const rate = resolveVatRate(business);
-  const subtotal = round2(eligible.reduce((s, c) => s + (c.amount || 0), 0));
-  const { vat, total } = computeVatTotals(subtotal, rate);
+  let pricingError = "";
+  let totals = {subtotal:0,vat:0,total:0};
+  try { totals = invoiceAmounts(eligible, agreements, rate); } catch(e) {pricingError = e.message;}
+  const {subtotal,vat,total} = totals;
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || t("Property");
 
   const createInvoice = async () => {
-    if (eligible.length === 0) return;
+    if (eligible.length === 0 || pricingError) return;
     // A specific property already has an active invoice for this month.
     if (propertySel !== "all") {
       const existing = findInvoiceForPeriod(invoices, propertySel, month);
@@ -174,7 +180,8 @@ export default function MonthlyInvoiceFlow({ open, onOpenChange }) {
     <>
       <Dialog open={open && !review} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+          {pricingError && <p role="alert" className="text-sm text-amber-700">{pricingError}</p>}
+        <DialogHeader>
             <DialogTitle>{t("Create Monthly Invoice")}</DialogTitle>
             <DialogDescription>{t("Review one billing period's uninvoiced Due charges and create a single invoice. Nothing is sent automatically.")}</DialogDescription>
           </DialogHeader>
@@ -246,11 +253,11 @@ export default function MonthlyInvoiceFlow({ open, onOpenChange }) {
                       </div>
                       <div className="px-3 py-2.5 bg-muted/30 space-y-1 border-t border-border">
                         <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("Subtotal")}</span><span>{eur(subtotal)}</span></div>
-                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("VAT {rate}%", { rate })}</span><span>{eur(vat)}</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t("VAT")}</span><span>{eur(vat)}</span></div>
                         <div className="flex justify-between text-base font-semibold pt-1 border-t border-border"><span>{t("Total Due")}</span><span>{eur(total)}</span></div>
                       </div>
                     </div>
-                    <Button className="w-full h-11 gap-1.5" onClick={createInvoice} disabled={creating}>
+                    <Button className="w-full h-11 gap-1.5" onClick={createInvoice} disabled={!!pricingError || creating}>
                       {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <FilePlus2 className="w-4 h-4" />} {t("Create Invoice")}
                     </Button>
                   </div>
