@@ -18,6 +18,7 @@
 
 import { nextInvoiceNumber, isActiveInvoice } from './invoiceNumbering.js';
 import { addDays } from './servicePeriods.js';
+import { invoiceAmounts } from './invoiceVat.js';
 import { validateInvoiceDraft } from './invoiceValidation.js';
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -88,9 +89,11 @@ export async function ensureDraftInvoiceForCharge(base44, charge, agreement) {
   const settings = ((await base44.asServiceRole.entities.BusinessSettings.list('-created_date', 1).catch(() => [])) || [])[0] || {};
   const rate = Number(settings.vat_rate);
   const vatRate = Number.isFinite(rate) && rate > 0 ? rate : 24;
-  const subtotal = round2(Number(charge.amount) || 0);
-  const vat = round2((subtotal * vatRate) / 100);
-  const total = round2(subtotal + vat);
+  if (!agreement && charge.property_service_agreement_id) {
+    agreement = await base44.asServiceRole.entities.PropertyServiceAgreement.get(charge.property_service_agreement_id);
+  }
+  const amounts = invoiceAmounts([charge], agreement ? [agreement] : [], vatRate);
+  const { subtotal, vat, total } = amounts;
   const description = charge.description || 'Service';
   const invoiceDate = String(charge.billing_date || '').slice(0, 10);
   const year = Number(invoiceDate.slice(0, 4)) || new Date().getFullYear();
@@ -101,7 +104,8 @@ export async function ensureDraftInvoiceForCharge(base44, charge, agreement) {
     property_id: charge.property_id || (agreement && agreement.property_id) || '',
     property_service_agreement_id: (agreement && agreement.id) || charge.property_service_agreement_id || '',
     billing_period: String(charge.billing_period || '').slice(0, 7),
-    line_items: [{ description, amount: subtotal }],
+    line_items: [{ description, ...amounts.lines[0] }],
+    subtotal,
     charge_ids: [charge.id],
     invoice_date: invoiceDate,
     due_date: addDays(invoiceDate, 14),
