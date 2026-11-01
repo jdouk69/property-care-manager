@@ -32,6 +32,8 @@ const fields = [
 
 export default function Invoices() {
   const { t, lang } = useLanguage();
+  const [recalculating, setRecalculating] = useState(null);
+  const [vatMessage, setVatMessage] = useState("");
   const [business, setBusiness] = useState({});
   const [clients, setClients] = useState([]);
   const [downloadingId, setDownloadingId] = useState(null);
@@ -90,6 +92,7 @@ export default function Invoices() {
 
   return (
     <AppLayout>
+      {vatMessage && <p role="status" className="mx-4 mt-4 rounded-xl border p-3 text-sm">{vatMessage}</p>}
       <ResourceListPage
         entityName="Invoice"
         title="Invoices"
@@ -120,7 +123,21 @@ export default function Invoices() {
           const finalized = !!item.finalized_at;
           const sendable = !["Paid", "Cancelled"].includes(item.status);
           return (
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
+              {item.status === "Draft" && !finalized && item.charge_ids?.length > 0 && (
+                <button disabled={!!recalculating} onClick={async e => {
+                  e.stopPropagation(); setRecalculating(item.id); setVatMessage("");
+                  try {
+                    const res = await base44.functions.invoke("createInvoice", {action:"recalculateDraft",invoice_id:item.id,expected_total:item.total});
+                    if (res.data?.error) throw new Error(res.data.error);
+                    setVatMessage(t("Draft recalculated from agreement VAT terms. Total: {total}", {total:`€${res.data.record.total.toFixed(2)}`}));
+                    setReloadTick(x=>x+1);
+                  } catch(e) {setVatMessage(e.message || String(e));}
+                  finally {setRecalculating(null);}
+                }} className="text-xs px-3 py-2 rounded-lg border border-primary text-primary underline min-h-11">
+                  {recalculating === item.id ? t("Recalculating…") : t("Recalculate draft VAT")}
+                </button>
+              )}
               {item.status === "Draft" && !finalized && (
                 <button onClick={(e) => { e.stopPropagation(); setFinalizeDialog(item); }}
                   className="text-[11px] px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-600 border-amber-500/20 inline-flex items-center gap-1 min-h-[32px]">
