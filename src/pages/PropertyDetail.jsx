@@ -205,7 +205,7 @@ export default function PropertyDetail() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">€{(a.agreed_price || 0).toFixed(2)} · {t(a.billing_type)}{a.inspection_frequency ? ` · ${a.inspection_frequency}` : ""}{a.start_date ? ` · ${t("Start:")} ${a.start_date}` : ""}{a.renewal_date ? ` · ${t("Renewal:")} ${a.renewal_date}` : ""}</p>
                   {a.status === "Active" && a.signing_status === "Signed"
-                    ? <p className="text-xs text-emerald-700 font-medium mt-1">{t("Current operational service agreement")}</p>
+                    ? <Link to={`/agreements/${a.id}`} className="inline-block border rounded-lg p-3 text-primary underline underline-offset-4 mt-2">{t("Open signed agreement")} · {t("Version")} {a.agreement_version || 1}</Link>
                     : isAdmin
                       ? <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{t("Open Agreement")}</Link>
                       : <p className="text-xs text-muted-foreground mt-1">{t("Managed by Owner/Admin")}</p>}
