@@ -71,7 +71,7 @@ export default function OnboardingSummary({ properties, selectedPropertyId, onSe
     if (action.to) {
       return (
         <Link to={action.to}>
-          <Button size="sm" variant="outline" className="gap-1.5 mt-2 h-9">
+          <Button size="sm" variant="outline" className="gap-1.5 mt-2 min-h-11 h-auto py-2 whitespace-normal underline underline-offset-4">
             {t(action.label)} <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </Link>
@@ -83,7 +83,7 @@ export default function OnboardingSummary({ properties, selectedPropertyId, onSe
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       };
       return (
-        <Button size="sm" variant="outline" className="gap-1.5 mt-2 h-9" onClick={scroll}>
+        <Button size="sm" variant="outline" className="gap-1.5 mt-2 min-h-11 h-auto py-2 whitespace-normal underline underline-offset-4" onClick={scroll}>
           {t(action.label)} <ArrowRight className="w-3.5 h-3.5" />
         </Button>
       );
@@ -92,10 +92,10 @@ export default function OnboardingSummary({ properties, selectedPropertyId, onSe
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 font-medium text-sm">
-          <Sparkles className="w-4 h-4 text-primary" /> {t("Onboarding")}
+    <div className="rounded-2xl border-2 border-border bg-card p-4 mb-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2 mb-3 rounded-xl bg-muted/50 px-3 py-2.5">
+        <div className="flex items-center gap-3 font-semibold text-base">
+          <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><Sparkles className="w-5 h-5" /></span> {t("Onboarding")}
         </div>
         {ready && (
           <span className="text-xs px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
@@ -134,12 +134,32 @@ export default function OnboardingSummary({ properties, selectedPropertyId, onSe
 
       {/* One clear next action (from existing records) */}
       {ready ? null : primaryAction && !serviceConflict && (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 mt-3 flex items-center justify-between gap-3">
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-wide text-primary">{t("Next action")}</p>
-            <p className="font-medium text-sm truncate">{t(primaryAction.action.label)}</p>
+            <p className="font-medium text-sm">{t(primaryAction.action.label)}</p>
           </div>
           <div className="shrink-0">{renderAction(primaryAction.action)}</div>
+        </div>
+      )}
+
+      {agreementStage.complete && !onboarding.isOneTime && (
+        <div className="mt-4 space-y-3 rounded-xl border border-border p-3">
+          <h3 className="font-semibold text-sm">{t("Finish property onboarding")}</h3>
+          <p className="text-sm text-muted-foreground">{t("Scheduling reserves the appointment. Complete the visit, then confirm the monitoring plan. Readiness updates automatically when both are complete.")}</p>
+          {[byKey.activation, byKey.onboarding_visit, byKey.monitoring, byKey.ready].filter(Boolean).map(stage => (
+            <div key={stage.key} className="border-t pt-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <p className="font-medium text-sm">{t(stage.name)}</p>
+                <span className={`text-xs ${stage.complete ? "text-emerald-700" : "text-muted-foreground"}`}>{t(stage.status)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{t(stage.detail)}</p>
+              {stage.key === "monitoring" && !byKey.onboarding_visit?.complete && stage.action && (
+                <p className="text-xs text-muted-foreground mt-2">{t("You can review the plan now. Confirm it after recording the findings from the first visit.")}</p>
+              )}
+              {renderAction(stage.action)}
+            </div>
+          ))}
         </div>
       )}
 
