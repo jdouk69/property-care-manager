@@ -1,4 +1,3 @@
-import MigrationCard from '@/components/settings/MigrationCard';
 import React, { useState, useEffect, useRef } from "react";
 import { Settings as SettingsIcon, Loader2, Check, Plus, X, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -146,7 +145,6 @@ export default function Settings() {
         <OwnerProfileCard settings={settings} applyFields={applyFields} />
 
         {/* Reminder preferences — per-category reminder timing */}
-        <MigrationCard />
         <NotificationsRemindersCard settings={settings} setField={setField} />
 
         {/* Available features */}
