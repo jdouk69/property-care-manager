@@ -28,7 +28,7 @@ function fmtDate(v) {
   if (!v) return "";
   const d = new Date(v);
   if (isNaN(d.getTime())) return String(v);
-  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Athens" });
 }
 
 function ownerCheckCount(property, visitType) {
@@ -51,12 +51,10 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   // Stage 1 — Customer Intake (client-level)
   let s1;
   if (intakeRecords.length === 0) {
-    if ((properties || []).length > 0) {
-      // Legacy / manually created client — no intake on file; do not block.
-      s1 = { key: "intake", name: "Customer Intake", complete: true, status: "Not used (manual)", detail: "No intake on file", action: null };
-    } else {
-      s1 = { key: "intake", name: "Customer Intake", complete: false, status: "Not Sent", detail: "Send the secure intake form", action: { label: "Send Intake Form", scroll: "client-intake" } };
-    }
+    // The staff workflow is manual unless an intake is explicitly started.
+    // Sending the secure form remains available in the Client Hub, but is not
+    // a blocker for adding the property or continuing onboarding.
+    s1 = { key: "intake", name: "Customer Intake", complete: true, status: "Not used (manual)", detail: "No intake on file", action: null };
   } else {
     const status = latest.status || "Draft";
     let action = null;
@@ -185,7 +183,7 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   } else if (inProgressVisit) {
     s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "In Progress", detail: "Onboarding visit in progress", action: { label: "Continue Onboarding Visit", to: `/visits/${inProgressVisit.id}` } };
   } else if (scheduledVisit) {
-    s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "Scheduled", detail: fmtDate(scheduledVisit.start_time || scheduledVisit.scheduled_time), action: { label: "View Scheduled Visit", to: `/visits/${scheduledVisit.id}` } };
+    s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "Scheduled", detail: fmtDate(scheduledVisit.scheduled_time || scheduledVisit.start_time), action: { label: "View Scheduled Visit", to: `/visits/${scheduledVisit.id}` } };
   } else if (conflict) {
     s5 = { key: "onboarding_visit", name: "Initial Property Onboarding Visit", complete: false, status: "Agreement conflict", detail: "Resolve agreement conflict first", action: null };
   } else if (singleActive && selectedProperty) {
@@ -205,7 +203,7 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
   if (conflict) {
     s6 = { key: "monitoring", name: "Monitoring Plan", complete: false, status: "Agreement conflict", detail: "Multiple active agreements — resolve first", action: null };
   } else if (!s5.complete) {
-    s6 = { key: "monitoring", name: "Monitoring Plan", complete: false, status: "Waiting for onboarding visit", detail: "Complete the onboarding visit first", action: null };
+    s6 = { key: "monitoring", name: "Monitoring Plan", complete: false, status: "Waiting for onboarding visit", detail: "Complete the onboarding visit first", action: svc.status === "ok" ? { label: "Review Monitoring Plan", to: `/properties/${selectedProperty.id}/monitoring-plan` } : null };
   } else if (svc.status !== "ok") {
     s6 = { key: "monitoring", name: "Monitoring Plan", complete: false, status: "Waiting for active service", detail: "No active agreement for current service", action: null };
   } else if (planConfirmed) {
@@ -222,12 +220,9 @@ export function deriveOnboarding({ client, properties, selectedProperty, intakes
 
   const stages = [s1, s2, sA, s3, s4, s5, s6, s7];
 
-  // Interface update: the next action follows the recurring service pipeline
-  // (agreement → activation → onboarding visit → monitoring) and only falls
-  // back to the pricing assessment when the pipeline has no pending action, so
-  // staff can proceed straight to an agreement while the assessment stays
-  // available in the stage details. No stage or completion rule is changed.
-  const primaryAction = conflict ? null : [s1, s2, s3, s4, s5, s6, sA].find((s) => !s.complete && s.action) || null;
+  // Keep the next action in the same order as the onboarding stages. A later
+  // actionable stage must not skip an earlier incomplete stage.
+  const primaryAction = conflict ? null : stages.find((s) => !s.complete && s.action) || null;
 
   return { stages, primaryAction, ready, serviceConflict: conflict };
 }
