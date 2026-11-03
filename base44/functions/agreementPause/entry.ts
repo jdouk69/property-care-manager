@@ -1,4 +1,4 @@
-import { createClientFromRequest } from '../../adapter';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { athensToday } from '../../shared/timezone.js';
 import { addDays } from '../../shared/servicePeriods.js';
 import { coveredThrough } from '../../shared/recurringCharges.js';
