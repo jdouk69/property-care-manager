@@ -13,9 +13,11 @@ import AssessmentForm from "@/components/assessment/AssessmentForm";
 import SeasonalApprovalFields from "@/components/visits/SeasonalApprovalFields";
 import PricingRecommendationCard from "@/components/assessment/PricingRecommendationCard";
 import {
-  buildRecommendation, formatPricePlusVat, PRICING_NOTE, CHARACTERISTICS,
+  buildRecommendation, formatPricePlusVat, PRICING_NOTE, CHARACTERISTICS, isAssessmentComplete, SIZE_LABELS, vatPriceLabel,
 } from "@/lib/servicePricing";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { recommendedVisitType } from "@/lib/activeService";
+import { OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE } from "../../server/shared/propertyScope.js";
 import {
   Loader2, ClipboardCheck, Repeat, CalendarClock, AlertTriangle, Pencil, Home as HomeIcon,
 } from "lucide-react";
@@ -53,6 +55,8 @@ export default function ServiceSetup() {
   const [client, setClient] = useState(null);
   const [packages, setPackages] = useState([]);
   const [existingAgreements, setExistingAgreements] = useState([]);
+  const [additionalService, setAdditionalService] = useState(false);
+  const [termsReady, setTermsReady] = useState(null);
 
   const [assessment, setAssessment] = useState({ ...EMPTY_ASSESSMENT });
   const [assessmentDone, setAssessmentDone] = useState(false);
@@ -78,7 +82,7 @@ export default function ServiceSetup() {
           ...EMPTY_ASSESSMENT,
           ...Object.fromEntries(Object.keys(EMPTY_ASSESSMENT).map((k) => [k, p[k] ?? EMPTY_ASSESSMENT[k]])),
         });
-        setAssessmentDone(!!p.assessment_completed_at);
+        setAssessmentDone(!!p.assessment_completed_at && isAssessmentComplete(p));
         if (p.owner_id) { try { setClient(await base44.entities.Client.get(p.owner_id)); } catch (e) {} }
         const pkgs = await base44.entities.ServicePackage.list("-created_date", 500);
         setPackages((pkgs || []).filter((x) => TIERS.includes(x.service_tier) && x.active !== false));
@@ -89,7 +93,15 @@ export default function ServiceSetup() {
         const qTier = params.get("tier");
         if (TIERS.includes(qTier)) setTier(qTier);
         const ags = await base44.entities.PropertyServiceAgreement.filter({ property_id: id });
-        setExistingAgreements((ags || []).filter((a) => !a.archived && !["Ended", "Cancelled"].includes(a.status)));
+        const existing = (ags || []).filter((a) => !a.archived && !["Ended", "Cancelled"].includes(a.status));
+        setExistingAgreements(existing);
+        const draft = existing.find(a => a.signing_status === "Draft");
+        const existingPkg = pkgs.find(p => p.id === draft?.service_package_id);
+        if (existingPkg && !params.get("tier")) setTier(existingPkg.service_tier);
+        try {
+          const terms = await base44.entities.AgreementTermsTemplate.list();
+          setTermsReady(terms.some(t => !t.archived && t.active === true && t.legal_approved === true));
+        } catch (e) { setTermsReady(null); }
       } catch (e) {
         setProp(null);
       }
@@ -97,10 +109,13 @@ export default function ServiceSetup() {
     })();
   }, [id]);
 
-  const setField = (k, v) => setAssessment((s) => ({ ...s, [k]: v }));
+  const setField = (k, v) => {
+    setAssessmentDone(false);
+    setAssessment((s) => ({ ...s, [k]: v }));
+  };
 
   const saveAssessment = async () => {
-    if (!assessment.assessment_interior_size || !assessment.assessment_complexity || !assessment.assessment_visit_time || !assessment.assessment_service_area) {
+    if (!isAssessmentComplete(assessment)) {
       setError(t("Complete size, complexity, estimated visit time and service area first."));
       return;
     }
@@ -116,6 +131,8 @@ export default function ServiceSetup() {
     setSaving(false);
   };
 
+  const existingDraft = purchaseType === "Recurring" ? existingAgreements.find(a => a.signing_status === "Draft") : null;
+  const continueDraft = existingDraft && !additionalService;
   const pkg = tier ? packages.find((p) => p.service_tier === tier) : null;
   // Seasonal Opening / Closing (if ever offered through this flow) require
   // the same per-visit owner approval as Add Service — createVisit also
@@ -133,7 +150,7 @@ export default function ServiceSetup() {
   // assessment values themselves are never modified.
   const propertySummary = useMemo(() => {
     const parts = [];
-    if (assessment.assessment_interior_size) parts.push(t(assessment.assessment_interior_size));
+    if (assessment.assessment_interior_size) parts.push(t(SIZE_LABELS[assessment.assessment_interior_size] || assessment.assessment_interior_size));
     const units = 1 + (Number(assessment.assessment_additional_units) || 0);
     parts.push(units === 1
       ? t("1 residence")
@@ -169,7 +186,12 @@ export default function ServiceSetup() {
   // Scheduled visit; NO agreement and NO recurring schedule is ever created.
   // Existing agreements are never modified by this flow.
   const createService = async (finalPrice, reason, reviewStatus) => {
-    if (!pkg || !rec) return;
+    if (!pkg || !rec || saving) return;
+    if (continueDraft) { navigate(`/agreements/${existingDraft.id}`); return; }
+    if (!assessmentDone || !isAssessmentComplete(assessment)) {
+      setError(t("Save a complete assessment before approving a price."));
+      return;
+    }
     if (purchaseType === "One-time" && !visitDate) { setError(t("Select the date for the one-time visit.")); return; }
     if (seasonalPkg && !approvalValid) { setError(t("Record the owner approval for this seasonal visit before scheduling.")); return; }
     setSaving(true); setError("");
@@ -205,7 +227,10 @@ export default function ServiceSetup() {
           ]),
         };
         const visit = (await base44.functions.invoke("createVisit", {
-          property_id: prop.id, visit_type: pkg.default_visit_type || "Property Care Inspection",
+          property_id: prop.id,
+          visit_type: prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY
+            ? EXTERIOR_ONLY_VISIT_TYPE
+            : (recommendedVisitType(pkg, prop.service_scope) || "Property Care Inspection"),
           status: "Scheduled", scheduled_time: new Date(`${visitDate}T09:00:00`).toISOString(),
           agreed_price: finalPrice, pricing_snapshot: snapshot,
           ...(seasonalPkg ? {
@@ -241,7 +266,16 @@ export default function ServiceSetup() {
           {prop.name}{client ? ` · ${client.name}` : ""} — {t("assess the property, get a pricing recommendation, then approve the service.")}
         </p>
 
-        {existingAgreements.length > 0 && (
+        {termsReady === false && <div className="mt-4 rounded-xl border border-amber-500/30 p-3 text-sm">
+          <p>{t("Agreement terms setup is incomplete. Assessment and draft preparation can continue, but customer signing requires active, approved terms.")}</p>
+          <Link className="underline" to="/agreement-terms" target="_blank">{t("Open Agreement Terms setup")}</Link>
+        </div>}
+        {continueDraft && <div className="mt-4 rounded-xl border border-primary/30 p-4 space-y-2">
+          <p className="font-medium">{t("This assessment already has a draft agreement.")}</p>
+          <Link to={`/agreements/${existingDraft.id}`}><Button>{t("Continue existing agreement")}</Button></Link>
+          <p className="text-xs text-muted-foreground">{t("Use the existing draft to review its approved price and signing requirements.")}</p>
+        </div>}
+        {existingAgreements.length > 0 && !continueDraft && (
           <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3.5 flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700">
@@ -254,7 +288,7 @@ export default function ServiceSetup() {
         <section className="mt-5 rounded-2xl border border-border bg-card p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2 mb-4">
             <h2 className="text-sm font-semibold flex items-center gap-2">
-              <ClipboardCheck className="w-4 h-4 text-primary" /> {t("Property Assessment")}
+              <ClipboardCheck className="w-4 h-4 text-primary" /> {t("1. Complete and save the assessment")}
               {assessmentDone && <span className="text-[11px] font-medium text-emerald-600">{t("Saved")}</span>}
             </h2>
             {assessmentDone && (
@@ -271,7 +305,9 @@ export default function ServiceSetup() {
             </div>
           ) : (
             <>
-              <AssessmentForm values={assessment} setField={setField} />
+              <fieldset disabled={saving}>
+                <AssessmentForm values={assessment} setField={setField} />
+              </fieldset>
               <div className="mt-4 flex items-center gap-3">
                 <Button className="h-11 px-5" onClick={saveAssessment} disabled={saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Save Assessment")}
@@ -283,7 +319,7 @@ export default function ServiceSetup() {
 
         {/* Step 2 — purchase type & level */}
         <section className="mt-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
-          <h2 className="text-sm font-semibold mb-3">{t("How would you like this service?")}</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("2. Select service and package")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {PURCHASE_TYPES.map((pt) => (
               <button
@@ -316,7 +352,7 @@ export default function ServiceSetup() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-sm">{t(TIER_CARD_LABELS[tierOpt])}</span>
                     <span className="text-sm font-semibold text-primary">
-                      {price != null ? t("From {price}", { price: formatPricePlusVat(price, { perMonth: purchaseType === "Recurring" }) }) : "—"}
+                      {price != null ? t("From {price}", { price: formatPricePlusVat(price, { perMonth: purchaseType === "Recurring", vatSetting: p.vat_setting }) }) : "—"}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -334,6 +370,9 @@ export default function ServiceSetup() {
           <p className="text-xs text-muted-foreground mt-3">{t(PRICING_NOTE)}</p>
         </section>
 
+        <p className="text-sm text-muted-foreground mt-4">{t("3. Review the price breakdown and approve your price. Recurring service continues to a draft agreement for review and signature.")}</p>
+        {!tier && <p className="text-sm text-muted-foreground mt-2">{t("Select a service level above to see its price recommendation.")}</p>}
+        {!assessmentDone && <p className="text-sm text-amber-700 mt-2" role="status">{t("Save a complete assessment before approving a price.")}</p>}
         {/* Step 3 — recommendation */}
         {rec && pkg && (
           <div className="mt-4">
@@ -356,6 +395,9 @@ export default function ServiceSetup() {
             )}
             <PricingRecommendationCard
               rec={rec}
+              vatSetting={pkg.vat_setting}
+              existingAgreementTo={continueDraft ? `/agreements/${existingDraft.id}` : null}
+              onStartAdditional={() => setAdditionalService(true)}
               tierName={TIER_CARD_LABELS[tier]}
               purchaseType={purchaseType}
               propertySummary={propertySummary}
@@ -363,7 +405,7 @@ export default function ServiceSetup() {
               onAdjustPrice={openAdjust}
               onSetCustomPrice={openAdjust}
               onChooseDifferentPlan={() => { setTier(""); setVisitDate(""); }}
-              disabled={saving}
+              disabled={saving || !assessmentDone || !isAssessmentComplete(assessment)}
             />
           </div>
         )}
@@ -375,14 +417,14 @@ export default function ServiceSetup() {
             <DialogHeader>
               <DialogTitle>{rec && rec.status === "custom_review" ? t("Set Custom Price") : t("Adjust Price")}</DialogTitle>
               <DialogDescription>
-                {rec && t("Recommendation: {price}. The recommendation is preserved; your final price and reason are recorded with your approval.", { price: formatPricePlusVat(rec.recommendedPrice, { perMonth: purchaseType === "Recurring" }) })}
+                {rec && t("Recommendation: {price}. The recommendation is preserved; your final price and reason are recorded with your approval.", { price: formatPricePlusVat(rec.recommendedPrice, { perMonth: purchaseType === "Recurring", vatSetting: pkg?.vat_setting }) })}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-3 py-1">
               <div>
-                <Label className="mb-1.5 block">{t("Final agreed service price (€, excl. VAT) *")}</Label>
+                <Label className="mb-1.5 block">{t("Final agreed service price (€) *")}</Label>
                 <Input className="h-12" type="number" min="0" step="0.01" value={adjustPrice} onChange={(e) => setAdjustPrice(e.target.value)} />
-                {purchaseType === "Recurring" && <p className="text-xs text-muted-foreground mt-1">{t("Monthly recurring price before VAT.")}</p>}
+                {purchaseType === "Recurring" && <p className="text-xs text-muted-foreground mt-1">{t("Monthly recurring price.")} {t(vatPriceLabel(pkg?.vat_setting))}</p>}
               </div>
               <div>
                 <Label className="mb-1.5 block">{t("Adjustment reason / note")} {rec && adjustPrice !== "" && Number(adjustPrice) !== rec.recommendedPrice ? "*" : ""}</Label>
