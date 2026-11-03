@@ -148,7 +148,7 @@ export default function DictateInspectionDialog({ open, onOpenChange, checklist,
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="max-w-sm sm:max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-y-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <DialogHeader>
           <DialogTitle>{t(title)}</DialogTitle>
           <DialogDescription className="text-left">
