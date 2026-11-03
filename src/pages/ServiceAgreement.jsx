@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Loader2, Save, User, Building2, FileText,
-  Lock, Send, CheckCircle2, Copy, MessageCircle, Download, ListChecks,
+  Lock, Send, CheckCircle2, Pause, Copy, MessageCircle, Download, ListChecks,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import PageBackButton from "@/components/ui/PageBackButton";
@@ -16,9 +16,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import AgreementStepCustomerProperty from "@/components/agreements/wizard/AgreementStepCustomerProperty";
 import AgreementStepServicePrice from "@/components/agreements/wizard/AgreementStepServicePrice";
 import AgreementStepReviewSign from "@/components/agreements/wizard/AgreementStepReviewSign";
+import { termsTemplateIssue } from "@/lib/termsReadiness";
+import { agreementStartStep } from "@/lib/agreementNavigation";
 import AgreementHistory from "@/components/agreements/AgreementHistory";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
 import CreateReplacementButton from "@/components/agreements/CreateReplacementButton";
+import AgreementPauseControls from "@/components/agreements/AgreementPauseControls";
 import { buildSentSnapshot } from "@/lib/agreementTerms";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -76,6 +79,8 @@ export default function ServiceAgreement() {
   const propertyParam = params.get("property");
 
   const [step, setStep] = useState(1);
+  const stepHeadingRef = useRef(null);
+  const [assessmentPriceApproved, setAssessmentPriceApproved] = useState(false);
   // A NEW draft created from this screen: the page stays mounted (review/sign
   // flow continues) while the URL switches to /agreements/:id. justCreatedRef
   // stops the load effect from refetching over in-flight state updates.
@@ -112,6 +117,7 @@ export default function ServiceAgreement() {
   // do not block it while the agreement is saved and frozen asynchronously.
   const signOnTabletWindowRef = useRef(null);
   const [downloadingSigned, setDownloadingSigned] = useState(false);
+  const [signedDownloadError, setSignedDownloadError] = useState("");
   // Shared guard for Save Draft / Create Signing Link (see runExclusive):
   // busyRef is the synchronous guard rapid taps cannot bypass; while either
   // operation runs, BOTH buttons are disabled.
@@ -154,6 +160,7 @@ export default function ServiceAgreement() {
     signer_name: "",
     signer_email: "",
     signed_at: "",
+    signed_pdf_url: "",
     activated_at: "",
     activated_by: "",
     is_test_agreement: false,
@@ -162,9 +169,11 @@ export default function ServiceAgreement() {
 
   const handleDownloadSigned = async () => {
     if (!values.public_token) return;
+    setSignedDownloadError("");
     setDownloadingSigned(true);
-    try { await downloadSignedAgreementPdf(values.public_token); } catch (e) {}
-    setDownloadingSigned(false);
+    try { await downloadSignedAgreementPdf(values.public_token); }
+    catch (e) { setSignedDownloadError(e?.message || "The signed PDF could not be downloaded. Please try again."); }
+    finally { setDownloadingSigned(false); }
   };
   const set = (k, v) => setValues((s) => ({ ...s, [k]: v }));
   // Changing any emergency field resets the staff confirmation, forcing reconfirm.
@@ -226,6 +235,7 @@ export default function ServiceAgreement() {
             additional_terms: loaded.additional_terms || "",
             notes: loaded.notes || "",
             next_invoice_date: loaded.next_invoice_date || "",
+            pause_until: loaded.pause_until || "",
             created_from_package_price: loaded.created_from_package_price ?? 0,
             previous_agreed_price: loaded.previous_agreed_price ?? null,
             recommended_price: loaded.recommended_price ?? null,
@@ -244,13 +254,15 @@ export default function ServiceAgreement() {
             signer_name: loaded.signer_name || "",
             signer_email: loaded.signer_email || "",
             signed_at: loaded.signed_at || "",
+            signed_pdf_url: loaded.signed_pdf_url || "",
             activated_at: loaded.activated_at || "",
             activated_by: loaded.activated_by || "",
             is_test_agreement: loaded.is_test_agreement === true,
             sent_snapshot: loaded.sent_snapshot || null,
           });
           // Sent/signed agreements open directly on Review & Sign.
-          setStep(FROZEN_STATUSES.includes(loaded.signing_status) || loaded.status === "Active" ? 3 : 1);
+          setStep(agreementStartStep(loaded));
+          setAssessmentPriceApproved(!!loaded.price_approved_at);
           // Load version history for the agreement group (legacy w/o group id: just this version).
           if (loaded.agreement_group_id) {
             try {
@@ -316,22 +328,12 @@ export default function ServiceAgreement() {
   // Problem states for a DRAFT's linked template (missing / archived /
   // unsuitable): shown on Review & Sign together with an explicit staff choice
   // to link a different template. Sent/signed versions are never affected.
-  const templateProblem =
-    isEdit && values.signing_status === "Draft"
-      ? !linkedTemplate
-        ? values.terms_template_id
-          ? templates.some((tp) => tp.id === values.terms_template_id)
-            ? t("The linked terms template is archived and cannot be used for sending. Choose a different template to continue.")
-            : t("The linked terms template could not be found. Choose a different template to continue.")
-          : t("No terms template is linked to this draft. Choose one to link it before sending.")
-        : linkedTemplate.archived === true ||
-            (!values.is_test_agreement && (linkedTemplate.active !== true || linkedTemplate.legal_approved !== true))
-          ? t("The linked terms template is not eligible for sending (archived, inactive, or not legally approved). Choose a different template to continue.")
-          : ""
-      : "";
+  const templateProblem = isEdit && values.signing_status === "Draft"
+    ? t(termsTemplateIssue(linkedTemplate, values.terms_template_id, values.is_test_agreement)) : "";
   const isFrozen = FROZEN_STATUSES.includes(values.signing_status) || values.status === "Active";
   const canActivate = isEdit && values.status === "Pending" && values.signing_status === "Signed";
   const isActive = isEdit && values.status === "Active" && values.signing_status === "Signed";
+  const isPaused = isEdit && values.status === "Paused" && values.signing_status === "Signed";
   const hasActiveSibling = (groupVersions || []).some((a) => a.id !== activeId && a.status === "Active");
   const canReplace = isEdit && (["Sent", "Viewed", "Signed", "Declined"].includes(values.signing_status) || values.status === "Active");
   const isDeclinedReplace = isEdit && values.signing_status === "Declined";
@@ -342,7 +344,7 @@ export default function ServiceAgreement() {
     !!(values.emergency_authorization || "").trim() &&
     values.emergency_max_amount !== "" &&
     values.emergency_max_amount !== null &&
-    !isNaN(Number(values.emergency_max_amount)) &&
+    Number.isFinite(Number(values.emergency_max_amount)) && Number(values.emergency_max_amount) >= 0 &&
     !!(values.emergency_unreachable_instructions || "").trim();
   const emergencyConfirmedEffective = emergencyFieldsComplete && !!values.emergency_authorization_confirmed;
 
@@ -366,6 +368,8 @@ export default function ServiceAgreement() {
         ? t("Confirm the emergency authorization before sending.")
         : !selectedTemplate
           ? t("No agreement terms template is available.")
+          : selectedTemplate.archived === true
+            ? t("The selected terms template is archived.")
           : freqMismatch && !(values.included_services_override || "").trim()
             ? t("Visit frequency differs from the package frequency. Use the package frequency, or record the agreed customer-specific service changes first.")
             : !values.is_test_agreement && selectedTemplate.active !== true
@@ -524,8 +528,6 @@ export default function ServiceAgreement() {
         signOnTabletWindowRef.current = null;
         if (tabletWindow && !tabletWindow.closed && data.public_link) {
           tabletWindow.location.replace(data.public_link);
-        } else if (tabletWindow && !tabletWindow.closed) {
-          tabletWindow.close();
         }
         const token = data.public_link ? String(data.public_link).split("/agreement/")[1] || "" : "";
         // Load the authoritative frozen snapshot IMMEDIATELY after the send
@@ -563,7 +565,7 @@ export default function ServiceAgreement() {
     setSending(false);
   });
 
-  // Open the tab directly from the user tap (before any awaited work) so
+  // Open the tab directly from the user's tap (before any awaited work) so
   // tablet/mobile popup blockers allow the public signing page to load.
   const handleOpenSignOnTablet = () => {
     if (busyRef.current) return;
@@ -684,6 +686,10 @@ export default function ServiceAgreement() {
     }));
   };
 
+  useEffect(() => {
+    if (!loading) stepHeadingRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
+  }, [step, loading]);
+
   const canAdvance = step === 1 ? !!values.property_id : step === 2 ? !!values.service_package_id : false;
 
   if (loading) return <AppLayout><div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div></AppLayout>;
@@ -692,9 +698,15 @@ export default function ServiceAgreement() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-28 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-12">
         <PageBackButton fallback={backTo} className="mb-1" />
-        <h1 className="text-xl font-semibold">{isEdit ? t("Edit Service Agreement") : t("New Service Agreement")}</h1>
+        <h1 ref={stepHeadingRef} className="text-xl font-semibold scroll-mt-20">{!isFrozen && values.signing_status === "Draft" ? t("Prepare service agreement") : isEdit ? t("Edit Service Agreement") : t("New Service Agreement")}</h1>
+        {!isFrozen && values.signing_status === "Draft" && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 mt-3 text-sm space-y-1">
+            <p className="font-medium">{assessmentPriceApproved ? t("Assessment and price approval complete") : t("Prepare the agreement for your customer")}</p>
+            <p>{step === 1 ? t("Confirm the customer and property, then continue to service details.") : step === 2 ? t("Check the service and approved price, confirm dates and emergency instructions, then continue to review and signing.") : t("Review the agreement and complete the signing requirements shown below.")}</p>
+          </div>
+        )}
 
         {/* Frozen banner */}
         {isFrozen && (
@@ -715,7 +727,7 @@ export default function ServiceAgreement() {
         ) : (
           <>
             {/* Step indicator */}
-            <div className="flex items-center gap-2 mt-3 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mt-3 mb-4">
               {[1, 2, 3].map((n) => (
                 <button
                   key={n}
@@ -755,6 +767,7 @@ export default function ServiceAgreement() {
                 values={values}
                 set={set}
                 setEmergency={setEmergency}
+                emergencyContact={client}
                 packages={packages}
                 selectedPackage={selectedPackage}
                 onPackageChange={onPackageChange}
@@ -811,11 +824,14 @@ export default function ServiceAgreement() {
                 templateProblem={templateProblem}
                 templateChoices={templates.filter((tp) => !tp.archived)}
                 onChooseTemplate={chooseTemplate}
+                onDownloadSigned={handleDownloadSigned}
+                downloadingSigned={downloadingSigned}
+                signedDownloadError={signedDownloadError}
               />
             )}
 
             {/* Previous / Next navigation */}
-            <div className="flex items-center justify-between gap-2 mt-6">
+            <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 z-20 flex flex-wrap items-center justify-between gap-2 mt-6 border-t border-border bg-background p-3 shadow-sm">
               <Button
                 variant="outline"
                 onClick={() => setStep((s) => Math.max(1, s - 1))}
@@ -830,7 +846,7 @@ export default function ServiceAgreement() {
                   disabled={!canAdvance}
                   className="gap-1.5 min-h-[44px]"
                 >
-                  {t("Next")} <ArrowRight className="w-4 h-4" />
+                  {t(step === 1 ? "Continue to service details" : "Continue to review & sign")} <ArrowRight className="w-4 h-4" />
                 </Button>
               ) : <span className="text-xs text-muted-foreground hidden sm:block">{t("Review & Sign")}</span>}
             </div>
@@ -862,10 +878,10 @@ export default function ServiceAgreement() {
 
             {/* Signed panel (Pending/Signed = activation pending; Active/Signed = active) */}
             {isEdit && values.signing_status === "Signed" && (
-              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-1.5 mt-6">
+              <div className={`rounded-2xl border p-4 space-y-1.5 mt-6 ${isPaused ? "border-amber-500/40 bg-amber-500/10" : "border-emerald-500/40 bg-emerald-500/10"}`}>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <p className="text-sm font-medium text-emerald-700">{isActive ? t("Active Service Agreement") : t("Agreement signed")}</p>
+                  {isPaused ? <Pause className="w-4 h-4 text-amber-600" /> : <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                  <p className={`text-sm font-medium ${isPaused ? "text-amber-800 dark:text-amber-300" : "text-emerald-700"}`}>{isActive ? t("Active Service Agreement") : isPaused ? t("Paused Service Agreement") : t("Agreement signed")}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">{t("Version {version} · Terms {terms}", { version: values.agreement_version, terms: values.terms_version || "—" })}</p>
                 {values.signer_name && <p className="text-xs text-muted-foreground">{t("Signed by: {name}", { name: values.signer_name })}</p>}
@@ -884,6 +900,7 @@ export default function ServiceAgreement() {
                     </button>
                   </div>
                 )}
+                {signedDownloadError && <p role="alert" className="text-xs text-destructive">{signedDownloadError}</p>}
                 {canActivate && (
                   <div className="pt-2">
                     <ActivateServiceButton agreementId={activeId} isReplacement={hasActiveSibling} onActivated={() => navigate(0)} />
@@ -894,6 +911,16 @@ export default function ServiceAgreement() {
                 )}
                 {isActive && (
                   <p className="text-xs text-muted-foreground pt-1">{t("This is the current operational service agreement. To change terms, create a replacement version below.")}</p>
+                )}
+                {(isActive || isPaused) && (
+                  <div className="pt-2 space-y-2">
+                    <AgreementPauseControls
+                      agreementId={activeId}
+                      status={values.status}
+                      pauseUntil={values.pause_until}
+                      onChanged={() => navigate(0)}
+                    />
+                  </div>
                 )}
                 {isActive && (
                   <div className="pt-2">
@@ -914,9 +941,10 @@ export default function ServiceAgreement() {
 
             {/* Version history */}
             {isEdit && groupVersions.length > 0 && (
-              <div className="mt-6">
-                <AgreementHistory versions={groupVersions} currentId={activeId} />
-              </div>
+              <details className="mt-6 rounded-xl border border-border p-3">
+                <summary className="cursor-pointer text-sm font-medium">{t("Agreement History")}</summary>
+                <div className="mt-3"><AgreementHistory versions={groupVersions} currentId={activeId} /></div>
+              </details>
             )}
           </>
         )}
