@@ -84,24 +84,28 @@ function readMobileTabRoutes() {
   return defaults;
 }
 
-function SidebarContent({ onNavigate, isAdmin = false }) {
+function SidebarContent({ onNavigate, isAdmin = false, mobile = false }) {
   const { t } = useLanguage();
   const newRequests = useNewAssessmentCount(isAdmin);
+  const itemSizing = mobile
+    ? "px-4 py-4 rounded-2xl text-base"
+    : "px-3 py-2.5 rounded-xl text-sm";
+  const iconSizing = mobile ? "w-5 h-5" : "w-[18px] h-[18px]";
+  const itemClass = (isActive) =>
+    `flex items-center gap-3 ${itemSizing} font-medium transition-colors ${
+      isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+    }`;
   return (
-    <nav className="flex flex-col gap-1 px-3 py-4">
+    <nav className={`flex flex-col ${mobile ? "gap-2 px-4 py-5" : "gap-1 px-3 py-4"}`}>
       {NAV_ITEMS.filter((item) => isAdmin || !ADMIN_ONLY_NAV.has(item.to)).map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           end={item.end}
           onClick={onNavigate}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`
-          }
+          className={({ isActive }) => itemClass(isActive)}
         >
-          <item.icon className="w-[18px] h-[18px] shrink-0" />
+          <item.icon className={`${iconSizing} shrink-0`} />
           {t(item.label)}
           {item.to === "/assessment-requests" && newRequests > 0 && (
             <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">
@@ -116,42 +120,36 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
           <NavLink
             to="/admin/users"
             onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`
-            }
+            className={({ isActive }) => itemClass(isActive)}
           >
-            <UserCog className="w-[18px] h-[18px] shrink-0" />
+            <UserCog className={`${iconSizing} shrink-0`} />
             {t("Users & Staff")}
           </NavLink>
           <NavLink
             to="/business-billing"
             onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`
-            }
+            className={({ isActive }) => itemClass(isActive)}
           >
-            <Briefcase className="w-[18px] h-[18px] shrink-0" />
+            <Briefcase className={`${iconSizing} shrink-0`} />
             {t("Business & Billing")}
           </NavLink>
           <NavLink
             to="/website-editor"
             onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"}`
-            }
+            className={({ isActive }) => itemClass(isActive)}
           >
-            <Globe className="w-[18px] h-[18px] shrink-0" />
+            <Globe className={`${iconSizing} shrink-0`} />
             {t("Edit Website")}
           </NavLink>
         </>
       )}
       <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">{t("System")}</div>
-      <NavLink to="/search" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
-        <Search className="w-[18px] h-[18px]" /> {t("Search")}
+      <NavLink to="/search" onClick={onNavigate} className={({ isActive }) => itemClass(isActive)}>
+        <Search className={iconSizing} /> {t("Search")}
       </NavLink>
       {isAdmin && (
-        <NavLink to="/settings" onClick={onNavigate} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-sidebar-accent"}`}>
-          <SettingsIcon className="w-[18px] h-[18px]" /> {t("Settings")}
+        <NavLink to="/settings" onClick={onNavigate} className={({ isActive }) => itemClass(isActive)}>
+          <SettingsIcon className={iconSizing} /> {t("Settings")}
         </NavLink>
       )}
     </nav>
@@ -251,8 +249,8 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
               </div>
               <span className="font-semibold text-sm">{businessName}</span>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <SidebarContent isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <SidebarContent mobile isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} />
             </div>
             <div className="border-t border-sidebar-border p-4">
               <AccountMenu variant="block" />
