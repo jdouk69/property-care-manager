@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
   LayoutDashboard, Users, Home, ListChecks, Wrench, HardHat,
@@ -48,12 +48,41 @@ export const NAV_ITEMS = [
 const ADMIN_ONLY_NAV = new Set(["/services", "/checklist-templates", "/billing", "/invoices", "/automation", "/assessment-requests"]);
 
 const MOBILE_NAV = [
-  { to: "/", label: "Home", icon: LayoutDashboard, end: true },
-  { to: "/tasks", label: "Tasks", icon: ListChecks },
-  { to: "/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/search", label: "Search", icon: Search },
-  { to: "__more__", label: "More", icon: Menu },
+  { key: "home", to: "/", label: "Home", icon: LayoutDashboard, end: true },
+  { key: "tasks", to: "/tasks", label: "Tasks", icon: ListChecks },
+  { key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays },
+  { key: "search", to: "/search", label: "Search", icon: Search },
+  { key: "more", to: "__more__", label: "More", icon: Menu },
 ];
+
+const MOBILE_TAB_STORAGE_KEY = "pcc-mobile-tab-routes-v1";
+const MOBILE_TAB_ROOTS = {
+  home: "/",
+  tasks: "/tasks",
+  calendar: "/calendar",
+  search: "/search",
+};
+
+function mobileTabForPath(pathname) {
+  if (pathname === "/") return "home";
+  return Object.entries(MOBILE_TAB_ROOTS).filter(([key]) => key !== "home")
+    .find(([, root]) => pathname === root || pathname.startsWith(`${root}/`))?.[0] || null;
+}
+
+function readMobileTabRoutes() {
+  const defaults = Object.fromEntries(Object.entries(MOBILE_TAB_ROOTS).map(([key, path]) => [key, { path, scrollY: 0 }]));
+  if (typeof window === "undefined") return defaults;
+  try {
+    const stored = JSON.parse(window.sessionStorage.getItem(MOBILE_TAB_STORAGE_KEY) || "{}");
+    for (const [key, root] of Object.entries(MOBILE_TAB_ROOTS)) {
+      const candidate = stored[key];
+      const pathname = typeof candidate?.path === "string" ? candidate.path.split(/[?#]/, 1)[0] : "";
+      const valid = key === "home" ? pathname === "/" : pathname === root || pathname.startsWith(`${root}/`);
+      if (valid) defaults[key] = { path: candidate.path, scrollY: Math.max(0, Number(candidate.scrollY) || 0) };
+    }
+  } catch {}
+  return defaults;
+}
 
 function SidebarContent({ onNavigate, isAdmin = false }) {
   const { t } = useLanguage();
@@ -131,6 +160,9 @@ function SidebarContent({ onNavigate, isAdmin = false }) {
 
 export default function AppLayout({ businessName = "Property Care Manager", children, defaultCollapsed = false }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [mobileTabRoutes, setMobileTabRoutes] = useState(readMobileTabRoutes);
   const { user } = useAuth();
   const { t } = useLanguage();
   const isAdmin = user?.role === "admin";
@@ -138,6 +170,41 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
   // and mobile sheet navigation is untouched).
   const [collapsed, setCollapsed] = useState(false);
   const toggleCollapsed = () => setCollapsed((c) => !c);
+  const currentTab = mobileTabForPath(location.pathname);
+  const currentPath = `${location.pathname}${location.search}${location.hash}`;
+
+  const saveTabRoute = (key, path, scrollY) => {
+    if (!key || !MOBILE_TAB_ROOTS[key]) return;
+    const next = { ...mobileTabRoutes, [key]: { path, scrollY: Math.max(0, Number(scrollY) || 0) } };
+    setMobileTabRoutes(next);
+    try { window.sessionStorage.setItem(MOBILE_TAB_STORAGE_KEY, JSON.stringify(next)); } catch {}
+  };
+
+  useEffect(() => {
+    if (!currentTab) return;
+    const restoredY = location.state?.mobileTabRestore?.scrollY;
+    const next = {
+      ...readMobileTabRoutes(),
+      [currentTab]: { path: currentPath, scrollY: Math.max(0, Number(restoredY) || 0) },
+    };
+    setMobileTabRoutes(next);
+    try { window.sessionStorage.setItem(MOBILE_TAB_STORAGE_KEY, JSON.stringify(next)); } catch {}
+  }, [currentTab, currentPath, location.key]);
+
+  const openMore = () => {
+    if (currentTab) saveTabRoute(currentTab, currentPath, window.scrollY);
+    setMobileOpen(true);
+  };
+
+  const openMobileTab = (event, item) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (currentTab) saveTabRoute(currentTab, currentPath, window.scrollY);
+    const target = currentTab === item.key
+      ? { path: currentPath, scrollY: window.scrollY }
+      : mobileTabRoutes[item.key] || { path: item.to, scrollY: 0 };
+    navigate(target.path, { state: { mobileTabRestore: { scrollY: target.scrollY, tab: item.key } } });
+  };
   // Reset the collapse only when the page context changes (e.g. entering or
   // leaving an active visit). While the context stays the same, manual
   // toggles by the staff member persist.
@@ -207,7 +274,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
         </button>
       )}
       {/* Main */}
-      <main className={`min-h-screen transition-[padding] duration-300 ease-in-out ${collapsed ? "lg:pl-0" : "lg:pl-64"}`}>
+      <main className={`min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] transition-[padding] duration-300 ease-in-out lg:pb-0 ${collapsed ? "lg:pl-0" : "lg:pl-64"}`}>
         <div className="hidden lg:flex items-center justify-end h-14 px-6 border-b border-border">
           <div className="flex items-center gap-1">
             <NotificationBell />
@@ -225,7 +292,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           item.to === "__more__" ? (
             <button
               key={item.to}
-              onClick={() => setMobileOpen(true)}
+              onClick={openMore}
               className="flex flex-col items-center justify-center gap-0.5 flex-1 text-[10px] md:text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               <item.icon className="w-5 h-5 md:w-6 md:h-6" />
@@ -234,8 +301,9 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           ) : (
             <NavLink
               key={item.to}
-              to={item.to}
+              to={mobileTabRoutes[item.key]?.path || item.to}
               end={item.end}
+              onClick={(event) => openMobileTab(event, item)}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center gap-0.5 flex-1 text-[10px] md:text-xs font-medium transition-colors ${
                   isActive ? "text-primary" : "text-muted-foreground"
