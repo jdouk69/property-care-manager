@@ -87,7 +87,7 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton className="mb-3" />
         <PageHeader title={t("Settings")} subtitle={t("Operational and system preferences")} icon={SettingsIcon} />
         <div className="flex items-center justify-end gap-1.5 h-5 text-xs text-muted-foreground">
