@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { EMERGENCY_EXAMPLES, emergencyExamplePatch } from "@/lib/emergencyExamples";
 import { ShieldAlert, CheckCircle2, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,10 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
-const SUGGESTED_AMOUNT = 300;
-
-export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed, canConfirm = true, prefilled = {} }) {
+export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed, canConfirm = true, prefilled = {}, emergencyContact }) {
   const { t } = useLanguage();
+  const [choice, setChoice] = useState("");
+  const applyExample = () => {
+    const patch = emergencyExamplePatch(choice, values.emergency_max_amount, t, frozen);
+    if (!patch) return;
+    Object.entries(patch).forEach(([field, value]) => set(field, value));
+    setConfirmed(false);
+  };
   return (
     <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
       <div className="flex items-center gap-2">
@@ -17,6 +23,31 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("Emergency Repair Authorization")}</p>
       </div>
 
+      {!frozen && (
+        <div className="rounded-xl bg-muted/30 border border-border p-3 space-y-3">
+          <p className="text-sm">{t("Ask the client what emergency work they authorize, their spending limit, and who to contact if they are unavailable. Enter their instructions here for review with the agreement.")}</p>
+          <Label htmlFor="emergency-choice" className="block text-sm">{t("Choose a starting point")}</Label>
+          <select id="emergency-choice" className="w-full min-h-[44px] rounded-md border border-input bg-background px-3 text-sm" value={choice} onChange={(e) => setChoice(e.target.value)}>
+            <option value="">{t("Select an option…")}</option>
+            {Object.entries(EMERGENCY_EXAMPLES).map(([key, example]) => <option key={key} value={key}>{t(example.label)}</option>)}
+            <option value="custom">{t("Enter custom instructions")}</option>
+          </select>
+          {EMERGENCY_EXAMPLES[choice] && <>
+            <p className="text-xs text-muted-foreground">{t("Applying an example replaces the two instruction fields below. You can edit the wording afterward.")}</p>
+            {choice === "contact" && <p className="text-xs text-muted-foreground">{t("This option sets the spending limit to €0: owner approval is required before paid work.")}</p>}
+            <Button type="button" variant="outline" onClick={applyExample}>{t("Fill fields with selected example")}</Button>
+          </>}
+          <details className="text-sm">
+            <summary className="cursor-pointer font-medium">{t("Read examples without changing fields")}</summary>
+            <div className="mt-3 space-y-4">{Object.entries(EMERGENCY_EXAMPLES).map(([key, example]) => <div key={key} className="space-y-2">
+              <p className="font-medium">{t(example.label)}</p>
+              <p>{t(example.authorization)}</p>
+              <p className="text-muted-foreground">{t("If Owner Cannot Be Reached")}: {t(example.unreachable)}</p>
+            </div>)}</div>
+          </details>
+          <p className="text-xs text-muted-foreground">{t("These are suggested words, not customer approval. Confirm the instructions and limit with the client and have them review the final agreement before signing.")}</p>
+        </div>
+      )}
       <div>
         <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Emergency Authorization")}</Label>
         <Textarea
@@ -29,36 +60,15 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">{t("Max Amount Without Contacting Owner (€)")}</Label>
-          <span className="text-[11px] text-amber-600 font-medium">{t("Suggested: €{amount}", { amount: SUGGESTED_AMOUNT })}</span>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            type="number"
-            step="0.01"
-            value={values.emergency_max_amount ?? ""}
-            onChange={(e) => set("emergency_max_amount", e.target.value === "" ? "" : Number(e.target.value))}
-            disabled={frozen}
-            placeholder="300"
-            className="min-w-0"
-          />
-          {!frozen && values.emergency_max_amount !== SUGGESTED_AMOUNT && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() => set("emergency_max_amount", SUGGESTED_AMOUNT)}
-            >
-              {t("Use €{amount}", { amount: SUGGESTED_AMOUNT })}
-            </Button>
-          )}
-        </div>
-        <p className="text-xs text-amber-600/90 mt-1.5 flex items-start gap-1.5">
-          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          {t("€{amount} is only a staff-side suggestion. Review and confirm this amount before sending the agreement to the customer — it is not customer-approved until the customer signs.", { amount: SUGGESTED_AMOUNT })}
-        </p>
+        <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Max Amount Without Contacting Owner (€)")}</Label>
+        <Input type="number" min="0" step="0.01" value={values.emergency_max_amount ?? ""}
+          onChange={(e) => set("emergency_max_amount", e.target.value === "" ? "" : Number(e.target.value))}
+          disabled={frozen} placeholder={t("Enter the limit discussed with the client")} className="min-w-0" />
+        {!frozen && <div className="flex flex-wrap items-center gap-2 mt-2">
+          <Button type="button" size="sm" variant="outline" onClick={() => set("emergency_max_amount", 300)}>{t("Use €{amount}", { amount: 300 })}</Button>
+          <span className="text-xs text-muted-foreground">{t("Optional suggested limit. Confirm the amount with the client.")}</span>
+        </div>}
+        {!frozen && <p className="text-xs text-muted-foreground mt-1.5">{t("Enter the total per incident, including VAT and call-out fees. Enter 0 if paid work always requires owner approval. No amount is selected by default.")}</p>}
         {prefilled.max_amount && (
           <p className="text-[11px] text-blue-600 flex items-center gap-1.5 mt-1.5">
             <Info className="w-3 h-3 shrink-0" /> {t("From customer intake — review required")}
@@ -75,6 +85,10 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
           disabled={frozen}
           placeholder={t("Instructions for what to do if you cannot reach the owner in an emergency.")}
         />
+        {!frozen && <p className="text-xs text-muted-foreground mt-1.5">
+          {t("Emergency contact on file")}: {emergencyContact?.emergency_contact_name || t("Not provided")}{emergencyContact?.emergency_contact_phone ? ` · ${emergencyContact.emergency_contact_phone}` : ""}
+          {(!emergencyContact?.emergency_contact_name || !emergencyContact?.emergency_contact_phone) && ` — ${t("Add or update the backup contact in the Client Hub.")}`}
+        </p>}
         {prefilled.unreachable && (
           <p className="text-[11px] text-blue-600 flex items-center gap-1.5 mt-1.5">
             <Info className="w-3 h-3 shrink-0" /> {t("From customer intake — review required")}
