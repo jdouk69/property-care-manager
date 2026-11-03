@@ -168,7 +168,7 @@ const AuthenticatedApp = () => {
 function App() {
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="system" disableTransitionOnChange>
       <LanguageProvider>
       <AuthProvider>
         <QueryClientProvider client={queryClientInstance}>
