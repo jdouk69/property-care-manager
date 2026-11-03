@@ -1,5 +1,6 @@
 import React from "react";
-import { Eye, ChevronDown, ChevronRight, Send, Loader2, Save, FlaskConical, CheckCircle2, FileSignature, RefreshCw, ExternalLink } from "lucide-react";
+import { hasEligibleTerms, termsTemplateIssue } from "@/lib/termsReadiness";
+import { Eye, ChevronDown, ChevronRight, Send, Loader2, Save, FlaskConical, CheckCircle2, FileSignature, RefreshCw, ExternalLink, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,9 +24,14 @@ export default function AgreementStepReviewSign({
   testingOpen, setTestingOpen, handleToggleTestMode,
   isFrozen, busy, snapshotReloading, onReloadSnapshot,
   templateProblem, templateChoices, onChooseTemplate,
+  onDownloadSigned, downloadingSigned, signedDownloadError,
 }) {
   const { t, tEnum } = useLanguage();
   const isDraft = (values.signing_status || "Draft") === "Draft";
+  const termsIssue = termsTemplateIssue(selectedTemplate, values.terms_template_id, values.is_test_agreement);
+  const eligibleTermsAvailable = hasEligibleTerms(templateChoices);
+  const attentionReason = termsIssue ? t(termsIssue) : sendDisabledReason;
+
 
   const vatWording =
     (previewSnapshot && previewSnapshot.fees && previewSnapshot.fees.vat_wording) ||
@@ -35,7 +41,7 @@ export default function AgreementStepReviewSign({
     [t("Customer"), client?.name || "—"],
     [t("Property"), selectedProperty ? `${selectedProperty.name}${selectedProperty.address ? ` — ${selectedProperty.address}` : ""}` : "—"],
     [t("Package"), selectedPackage?.name || "—"],
-    [t("Agreed price"), `€${(Number(values.agreed_price) || 0).toFixed(2)} + VAT`],
+    [t("Agreed price"), `€${(Number(values.agreed_price) || 0).toFixed(2)}`],
     [t("Billing type"), tEnum(values.billing_type)],
     [t("Visit frequency"), values.inspection_frequency || "—"],
     [t("Start date"), values.start_date || "—"],
@@ -44,6 +50,16 @@ export default function AgreementStepReviewSign({
 
   return (
     <div className="space-y-4">
+      {values.signing_status === "Signed" && values.signed_pdf_url && values.public_token && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-4 space-y-2">
+          <p className="text-sm font-medium">{t("Your signed agreement")}</p>
+          <Button type="button" onClick={onDownloadSigned} disabled={downloadingSigned} className="w-full min-h-[48px] h-auto py-3 whitespace-normal gap-2">
+            {downloadingSigned ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Download className="w-4 h-4 shrink-0" />}
+            {t("View / Download Signed Agreement")}
+          </Button>
+          {signedDownloadError && <p role="alert" className="text-sm text-destructive">{signedDownloadError}</p>}
+        </div>
+      )}
       {/* Concise summary */}
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 mb-3">
@@ -60,6 +76,37 @@ export default function AgreementStepReviewSign({
         </div>
       </div>
 
+      {/* Linked-template problem: explicit staff choice required before a
+          different template can be linked. Draft-only; sent/signed versions
+          are never changed. */}
+      {isDraft && (attentionReason || templateProblem) && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300">{t("What needs attention before signing")}</h3>
+          <p className="text-sm text-amber-700">{attentionReason || templateProblem}</p>
+          {termsIssue && <>
+            <p className="text-sm">{t(eligibleTermsAvailable ? "An approved active template is available. Select it below after confirming it contains the terms you intend to use." : "No active, approved terms template is available. Review the terms in Agreement Terms setup before preparing this agreement for customer signing.")}</p>
+            <p className="text-xs text-muted-foreground">{t("Save this draft before opening terms setup. Approval should be recorded only after the terms have actually been reviewed and approved for customer use.")}</p>
+            <a href="/agreement-terms" target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[44px] items-center rounded-md border border-input px-3 text-sm font-medium">{t("Open Agreement Terms setup")}</a>
+          </>}
+          <Label className="text-xs">{t("Terms template for this draft and preview")}</Label>
+          <Select value={values.terms_template_id || undefined} onValueChange={onChooseTemplate}>
+            <SelectTrigger className="h-10">
+              <SelectValue placeholder={t("Choose a terms template")} />
+            </SelectTrigger>
+            <SelectContent>
+              {templateChoices.map((tp) => (
+                <SelectItem key={tp.id} value={tp.id}>
+                  {tp.name} · v{tp.version}{tp.active === true && tp.legal_approved === true ? "" : ` · ${t("Draft — preview only")}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {t("Choosing here links the selected template to this draft when you save. Already sent or signed versions are never changed.")}
+          </p>
+        </div>
+      )}
+
       {/* Full customer agreement preview (frozen snapshot for sent/signed) */}
       <button
         type="button"
@@ -75,6 +122,7 @@ export default function AgreementStepReviewSign({
 
       {showPreview && (
         <div className="-mt-1">
+          <button type="button" className="text-sm underline mb-2" onClick={() => setShowPreview(false)}>{t("Close preview and return to signing controls")}</button>
           {isFrozen && !previewSnapshot ? (
             /* Frozen agreement whose stored snapshot could not be loaded:
                clear message + reload action. Never a live rebuild, never a
@@ -93,7 +141,7 @@ export default function AgreementStepReviewSign({
             </div>
           ) : !isFrozen && !selectedTemplate ? (
             <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              {t("No terms template available to preview.")}
+              {t("Choose a terms template in the section below to see the draft preview. Selecting a draft template does not approve it for customer use.")}
             </div>
           ) : (
             <AgreementPreview
@@ -104,34 +152,76 @@ export default function AgreementStepReviewSign({
               frozen={isFrozen}
             />
           )}
+          <button type="button" className="text-sm underline mt-2" onClick={() => setShowPreview(false)}>{t("Close preview and return to signing controls")}</button>
         </div>
       )}
 
-      {/* Linked-template problem: explicit staff choice required before a
-          different template can be linked. Draft-only; sent/signed versions
-          are never changed. */}
-      {isDraft && templateProblem && (
-        <div className="rounded-2xl border border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20 p-4 space-y-2">
-          <p className="text-xs font-medium text-amber-700">{templateProblem}</p>
-          <Label className="text-xs">{t("Link a different terms template")}</Label>
-          <Select value={values.terms_template_id || undefined} onValueChange={onChooseTemplate}>
-            <SelectTrigger className="h-10">
-              <SelectValue placeholder={t("Choose a terms template")} />
-            </SelectTrigger>
-            <SelectContent>
-              {templateChoices.map((tp) => (
-                <SelectItem key={tp.id} value={tp.id}>
-                  {tp.name} · v{tp.version}{tp.active === true && tp.legal_approved === true ? "" : ` · ${t("Not eligible for production send")}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Save draft — stays in the review/signing flow. */}
+      {isDraft && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <Button onClick={onSaveDraft} disabled={busy || saving} variant="outline" className="gap-1.5 w-full sm:w-auto">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Save Draft")}
+            </Button>
+            {draftSaved && !saveError && (
+              <span className="text-xs text-emerald-700 font-medium inline-flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> {t("Draft saved")}
+              </span>
+            )}
+          </div>
+          {saveError && <p className="text-xs text-destructive">{saveError}</p>}
+          <p className="text-xs text-muted-foreground">{t("Saving keeps you in the review & signing flow — nothing is sent.")}</p>
+        </div>
+      )}
+      {/* Send for signature — saves the reviewed edits FIRST, then freezes. */}
+      {isDraft && (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Send className="w-4 h-4 text-primary" />
+            <p className="text-sm font-medium">{t("Signing")}</p>
+          </div>
+          <p className="text-sm">{t("When the agreement is ready, create a signing link to share with the customer, or open it for in-person signing.")}</p>
+          <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{t("How signing works")}</summary><div className="mt-2">          <p className="text-xs text-muted-foreground">
+            {t("Your latest edits are saved first, then this agreement version is frozen and a secure customer signing link is created. No email is sent automatically — deliver the link yourself (Copy Link / Copy Message). After this, customer-facing terms cannot be changed without a replacement version.")}
+          </p>
+</div></details>
+          {values.is_test_agreement && (
+            <p className="text-xs text-amber-600 font-medium">{t("TEST mode active — legal-approval gate bypassed for this test draft only. Customer-facing surfaces and PDF are watermarked.")}</p>
+          )}
+          {sendDisabledReason && <p className="text-sm text-amber-700">{t("Signing is unavailable until the items in What needs attention are resolved. You can save the draft now.")}</p>}
+          {sendError && (
+            <p className="text-xs text-destructive">{sendError}</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleSend} disabled={busy || sending || !!sendDisabledReason} className="gap-1.5 w-full sm:w-auto">
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Create Signing Link")}
+            </Button>
+            <Button onClick={handleOpenSignOnTablet} disabled={busy || sending || !!sendDisabledReason} variant="outline" className="gap-1.5 w-full sm:w-auto">
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} {t("Create Link & Open for In-Person Signing")}
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
-            {t("Choosing here links the selected template to this draft when you save. Already sent or signed versions are never changed.")}
+            {t("For an in-person signing, this opens the secure customer signing page in a new tab on this device. Hand your phone or tablet to the customer. If the browser blocks the tab, use Copy Link after the link is created.")}
           </p>
         </div>
       )}
 
+      {isDraft && <details className="rounded-2xl border border-border p-4">
+        <summary className="cursor-pointer text-sm font-medium">{t("Advanced options")}{values.is_test_agreement && <span className="ml-2 text-amber-700">TEST</span>}</summary>
+        <div className="mt-3 space-y-3">
+          {selectedTemplate && (
+            <p className="text-xs text-muted-foreground">
+              {t("Terms template: {name} · Version {version} · {state}", {
+                name: selectedTemplate.name,
+                version: selectedTemplate.version,
+                state: selectedTemplate.active !== true
+                  ? t("Draft / inactive")
+                  : selectedTemplate.legal_approved !== true
+                    ? t("Active — legal approval pending")
+                    : t("Active + legally approved"),
+              })}
+            </p>
+          )}
       {/* Testing options — collapsed by default; visible TEST indicator when on. */}
       {isDraft && (
         <div>
@@ -164,69 +254,8 @@ export default function AgreementStepReviewSign({
         </div>
       )}
 
-      {/* Send for signature — saves the reviewed edits FIRST, then freezes. */}
-      {isDraft && (
-        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Send className="w-4 h-4 text-primary" />
-            <p className="text-sm font-medium">{t("Create Signing Link")}</p>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t("Your latest edits are saved first, then this agreement version is frozen and a secure customer signing link is created. No email is sent automatically — deliver the link yourself (Copy Link / Copy Message). After this, customer-facing terms cannot be changed without a replacement version.")}
-          </p>
-          {selectedTemplate && (
-            <p className="text-xs text-muted-foreground">
-              {t("Terms template: {name} · Version {version} · {state}", {
-                name: selectedTemplate.name,
-                version: selectedTemplate.version,
-                state: selectedTemplate.active !== true
-                  ? t("Draft / inactive")
-                  : selectedTemplate.legal_approved !== true
-                    ? t("Active — legal approval pending")
-                    : t("Active + legally approved"),
-              })}
-            </p>
-          )}
-          {values.is_test_agreement && (
-            <p className="text-xs text-amber-600 font-medium">{t("TEST mode active — legal-approval gate bypassed for this test draft only. Customer-facing surfaces and PDF are watermarked.")}</p>
-          )}
-          {sendDisabledReason && (
-            <p className="text-xs text-amber-600">{sendDisabledReason}</p>
-          )}
-          {sendError && (
-            <p className="text-xs text-destructive">{sendError}</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={handleSend} disabled={busy || sending || !!sendDisabledReason} className="gap-1.5 w-full sm:w-auto">
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Create Signing Link")}
-            </Button>
-            <Button onClick={handleOpenSignOnTablet} disabled={busy || sending || !!sendDisabledReason} variant="outline" className="gap-1.5 w-full sm:w-auto">
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />} {t("Create Link & Open for In-Person Signing")}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t("For an in-person signing, this opens the secure customer signing page in a new tab on this device. Hand your phone or tablet to the customer. If the browser blocks the tab, use Copy Link after the link is created.")}
-          </p>
         </div>
-      )}
-
-      {/* Save draft — stays in the review/signing flow. */}
-      {isDraft && (
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <Button onClick={onSaveDraft} disabled={busy || saving} variant="outline" className="gap-1.5 w-full sm:w-auto">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t("Save Draft")}
-            </Button>
-            {draftSaved && !saveError && (
-              <span className="text-xs text-emerald-700 font-medium inline-flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> {t("Draft saved")}
-              </span>
-            )}
-          </div>
-          {saveError && <p className="text-xs text-destructive">{saveError}</p>}
-          <p className="text-xs text-muted-foreground">{t("Saving keeps you in the review & signing flow — nothing is sent.")}</p>
-        </div>
-      )}
+      </details>}
     </div>
   );
 }
