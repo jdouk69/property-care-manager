@@ -18,7 +18,10 @@ export default async function (req) {
     const phone = clean(body.phone, 60);
     const property_location = clean(body.property_location, 200);
     const property_type = clean(body.property_type, 60);
-    const property_use = clean(body.property_use, 80);
+    const submittedPropertyUse = clean(body.property_use, 80);
+    const property_use = submittedPropertyUse === 'Owner-occupied home'
+      ? 'Owner-occupied home — exterior-only'
+      : submittedPropertyUse;
     const notes = clean(body.notes, 2000);
     const language = body.language === 'Greek' ? 'Greek' : 'English';
 
