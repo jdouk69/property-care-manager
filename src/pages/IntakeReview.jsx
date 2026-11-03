@@ -199,7 +199,7 @@ export default function IntakeReview() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton fallback={`/clients/${id}`} className="mb-1" />
         <div className="flex items-center justify-between gap-3 mb-1">
           <h1 className="text-xl font-semibold">{t("Review Intake")}</h1>
