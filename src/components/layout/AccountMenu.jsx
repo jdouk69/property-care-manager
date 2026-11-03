@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -27,19 +28,26 @@ export default function AccountMenu({ variant = "dropdown" }) {
   const roleLabel = rawRoleLabel ? t(rawRoleLabel) : "";
 
   if (variant === "block") {
-    // Flat account row used in the mobile "More" sheet.
+    // Mobile More sheet account row with actions on a separate line.
     return (
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
-          {initials(name, email)}
+      <div className="space-y-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
+            {initials(name, email)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{name}</div>
+            {roleLabel && <div className="text-xs text-muted-foreground truncate">{roleLabel}</div>}
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{name}</div>
-          {roleLabel && <div className="text-xs text-muted-foreground">{roleLabel}</div>}
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button asChild variant="outline" size="sm" className="flex-1 min-w-[5rem]">
+            <Link to="/profile">{t("Profile")}</Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => logout()} className="flex-1 min-w-[7rem] gap-1.5">
+            <LogOut className="w-3.5 h-3.5" /> {t("Sign Out")}
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={() => logout()} className="gap-1.5 shrink-0">
-          <LogOut className="w-3.5 h-3.5" /> {t("Sign Out")}
-        </Button>
       </div>
     );
   }
