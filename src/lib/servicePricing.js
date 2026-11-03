@@ -6,6 +6,16 @@
 // NOTE: "+ VAT" is a V1 pricing DISPLAY treatment only — no VAT accounting.
 
 export const SIZE_OPTIONS = ["Under 100 m²", "100–200 m²", "200–300 m²", "300+ m²"];
+export const SIZE_LABELS = { "200–300 m²": "Over 200 up to 300 m²" };
+
+export function isAssessmentComplete(assessment = {}) {
+  return SIZE_OPTIONS.includes(assessment.assessment_interior_size) &&
+    COMPLEXITY_OPTIONS.includes(assessment.assessment_complexity) &&
+    VISIT_TIME_OPTIONS.includes(assessment.assessment_visit_time) &&
+    SERVICE_AREA_OPTIONS.includes(assessment.assessment_service_area) &&
+    Number.isInteger(Number(assessment.assessment_additional_units ?? 0)) &&
+    Number(assessment.assessment_additional_units ?? 0) >= 0;
+}
 export const COMPLEXITY_OPTIONS = ["Simple", "Standard", "Complex"];
 export const VISIT_TIME_OPTIONS = ["Up to 15 minutes", "15–30 minutes", "30–45 minutes", "Up to 60 minutes", "More than 60 minutes"];
 export const SERVICE_AREA_OPTIONS = ["Within normal service area", "Outside normal service area / review required"];
@@ -37,10 +47,14 @@ const ESTIMATED_MINUTES = {
   "More than 60 minutes": 75,
 };
 
-export function formatPricePlusVat(price, { perMonth = false } = {}) {
+export function vatPriceLabel(vatSetting) {
+  return vatSetting === "Included" ? "VAT included" : vatSetting === "Exempt" ? "VAT exempt" : "+ VAT";
+}
+
+export function formatPricePlusVat(price, { perMonth = false, vatSetting } = {}) {
   const n = Math.round((Number(price) || 0) * 100) / 100;
   const str = Number.isInteger(n) ? `€${n}` : `€${n.toFixed(2)}`;
-  return `${str}${perMonth ? "/month" : ""} + VAT`;
+  return `${str}${perMonth ? "/month" : ""} ${vatPriceLabel(vatSetting)}`;
 }
 
 // Build the pricing recommendation for one (tier, purchase type) combination.
@@ -52,8 +66,8 @@ export function buildRecommendation({ tier, purchaseType, basePrice, oneTimePric
   const unitAdjustment = units * UNIT_CHARGE;
 
   const reasons = [];
-  if (assessment.assessment_interior_size === "300+ m²") {
-    reasons.push("Property is 300+ m²");
+  if (["200–300 m²", "300+ m²"].includes(assessment.assessment_interior_size)) {
+    reasons.push("Property exceeds the 200 m² standard pricing limit");
   }
   if (assessment.assessment_complexity === "Complex") {
     reasons.push("Property is marked Complex");
