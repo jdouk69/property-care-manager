@@ -234,7 +234,7 @@ export default function ServiceSetup() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton fallback={`/properties/${id}`} className="mb-1" />
         <h1 className="text-xl sm:text-2xl font-semibold">{t("Service & Pricing Assessment")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
