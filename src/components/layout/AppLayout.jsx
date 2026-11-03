@@ -199,11 +199,17 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
   const openMobileTab = (event, item) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    if (currentTab) saveTabRoute(currentTab, currentPath, window.scrollY);
-    const target = currentTab === item.key
-      ? { path: currentPath, scrollY: window.scrollY }
+    const resetSelectedTab = currentTab === item.key;
+    if (currentTab) {
+      saveTabRoute(currentTab, resetSelectedTab ? item.to : currentPath, resetSelectedTab ? 0 : window.scrollY);
+    }
+    const target = resetSelectedTab
+      ? { path: item.to, scrollY: 0 }
       : mobileTabRoutes[item.key] || { path: item.to, scrollY: 0 };
-    navigate(target.path, { state: { mobileTabRestore: { scrollY: target.scrollY, tab: item.key } } });
+    navigate(target.path, {
+      replace: resetSelectedTab,
+      state: { mobileTabRestore: { scrollY: target.scrollY, tab: item.key } },
+    });
   };
   // Reset the collapse only when the page context changes (e.g. entering or
   // leaving an active visit). While the context stays the same, manual
