@@ -78,7 +78,7 @@ export default function Calendar() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton className="mb-3" />
         <PageHeader title={t("Calendar")} subtitle={t("Your schedule at a glance")} icon={CalendarDays}
           actions={<Link to="/tasks"><Button size="sm" className="rounded-full gap-1.5 h-9 px-4"><Plus className="w-4 h-4" /> {t("Add Task")}</Button></Link>}

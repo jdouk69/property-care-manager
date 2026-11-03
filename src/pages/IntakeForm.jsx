@@ -197,7 +197,7 @@ export default function IntakeForm() {
 
   return (
     <Shell>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-28">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 pb-28 pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <header className="mb-6">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center"><Home className="w-4 h-4 text-primary-foreground" /></div>
@@ -306,7 +306,7 @@ export default function IntakeForm() {
           </div>
         )}
 
-        <div className="fixed bottom-0 inset-x-0 z-20 bg-white/90 backdrop-blur border-t border-slate-200">
+        <div className="fixed bottom-0 inset-x-0 z-20 pb-[env(safe-area-inset-bottom)] bg-white/90 backdrop-blur border-t border-slate-200">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <SaveIndicator saving={saving} savedAt={savedAt} />
             <Button onClick={submit} disabled={submitting} className="gap-2 h-11 px-6">

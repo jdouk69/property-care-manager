@@ -7,7 +7,7 @@ import PropertySummaryExport from "@/components/reports/PropertySummaryExport";
 export default function Reports() {
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton fallback="/" className="mb-3" />
 
         {/* Customer report delivery queue (centralized operational area) */}

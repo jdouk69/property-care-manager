@@ -186,7 +186,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <div className="mb-5">
           <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString(lang === "el" ? "el-GR" : "en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: TZ })}</p>
           <h1 className="text-2xl font-semibold tracking-tight mt-0.5">{tr(greeting())}, {ownerName}</h1>

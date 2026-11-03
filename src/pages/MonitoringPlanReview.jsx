@@ -193,7 +193,7 @@ export default function MonitoringPlanReview() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-28 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-28 pb-[calc(12rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton fallback={`/properties/${id}`} className="mb-3" />
         <h1 className="text-xl font-semibold mb-3">{t("Monitoring Plan Review")}</h1>
 
@@ -325,7 +325,7 @@ export default function MonitoringPlanReview() {
 
         {!visitCompleted && <p role="status" className="rounded-xl border p-4">{t("Review the plan now. Complete the initial onboarding visit before confirming it.")}</p>}
         {/* Confirm bar */}
-        <div className="fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 lg:left-64">
+        <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 lg:left-64">
           <div className="max-w-3xl mx-auto flex items-center gap-2">
             <Button variant="outline" onClick={() => navigate(-1)} className="rounded-2xl">{t("Back")}</Button>
             <Button onClick={onConfirm} disabled={!canConfirm} className="flex-1 h-auto min-h-12 py-2.5 rounded-2xl text-base gap-2 whitespace-normal leading-snug">

@@ -185,7 +185,7 @@ export default function ClientHub() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton fallback="/clients" className="mb-1" />
 
         {/* Header */}
