@@ -15,7 +15,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 // Hub, and the existing manual-entry path and started-intake rules are
 // unchanged.
 export default function AgreementStepCustomerProperty({ client, properties, values, set, isFrozen }) {
-  const { t } = useLanguage();
+  const { t, tEnum } = useLanguage();
   const selected = properties.find((p) => p.id === values.property_id) || null;
 
   return (
@@ -67,6 +67,11 @@ export default function AgreementStepCustomerProperty({ client, properties, valu
             {selected.address ? <span className="min-w-0">{selected.address}</span> : <span className="text-amber-600 font-medium">{t("No address on file — add it before sending for signature")}</span>}
           </p>
         )}
+        {selected && (
+          <p className={`text-sm ${selected.service_scope ? "text-muted-foreground" : "text-amber-700 font-medium"}`}>
+            {t("Service scope:")} {selected.service_scope ? tEnum(selected.service_scope) : t("Not set — choose a service scope before creating an agreement or visit.")}
+          </p>
+        )}
         {!selected && properties.length === 0 && (
           <Label className="text-xs text-muted-foreground">{t("Add a property before creating a service agreement.")}</Label>
         )}
@@ -75,7 +80,7 @@ export default function AgreementStepCustomerProperty({ client, properties, valu
       <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2.5">
         <Info className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground">
-          {t("Customer intake stays available in the Client Hub. Existing intake rules are unchanged.")}
+          {t("Customer intake is available in the Client Hub if you need to collect more information.")}
         </p>
       </div>
     </div>
