@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed, canConfirm = true, prefilled = {}, emergencyContact }) {
   const { t } = useLanguage();
@@ -27,11 +28,15 @@ export default function EmergencyAuthSection({ values, set, frozen, confirmed, s
         <div className="rounded-xl bg-muted/30 border border-border p-3 space-y-3">
           <p className="text-sm">{t("Ask the client what emergency work they authorize, their spending limit, and who to contact if they are unavailable. Enter their instructions here for review with the agreement.")}</p>
           <Label htmlFor="emergency-choice" className="block text-sm">{t("Choose a starting point")}</Label>
-          <select id="emergency-choice" className="w-full min-h-[44px] rounded-md border border-input bg-background px-3 text-sm" value={choice} onChange={(e) => setChoice(e.target.value)}>
-            <option value="">{t("Select an option…")}</option>
-            {Object.entries(EMERGENCY_EXAMPLES).map(([key, example]) => <option key={key} value={key}>{t(example.label)}</option>)}
-            <option value="custom">{t("Enter custom instructions")}</option>
-          </select>
+          <Select value={choice || undefined} onValueChange={setChoice}>
+            <SelectTrigger id="emergency-choice" className="min-h-[44px] bg-background text-sm">
+              <SelectValue placeholder={t("Select an option…")} />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(EMERGENCY_EXAMPLES).map(([key, example]) => <SelectItem key={key} value={key}>{t(example.label)}</SelectItem>)}
+              <SelectItem value="custom">{t("Enter custom instructions")}</SelectItem>
+            </SelectContent>
+          </Select>
           {EMERGENCY_EXAMPLES[choice] && <>
             <p className="text-xs text-muted-foreground">{t("Applying an example replaces the two instruction fields below. You can edit the wording afterward.")}</p>
             {choice === "contact" && <p className="text-xs text-muted-foreground">{t("This option sets the spending limit to €0: owner approval is required before paid work.")}</p>}
