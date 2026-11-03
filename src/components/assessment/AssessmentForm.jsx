@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import {
-  SIZE_OPTIONS, COMPLEXITY_OPTIONS, VISIT_TIME_OPTIONS, SERVICE_AREA_OPTIONS, CHARACTERISTICS,
+  SIZE_OPTIONS, SIZE_LABELS, COMPLEXITY_OPTIONS, VISIT_TIME_OPTIONS, SERVICE_AREA_OPTIONS, CHARACTERISTICS,
 } from "@/lib/servicePricing";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -22,11 +22,12 @@ export default function AssessmentForm({ values, setField }) {
         <Select value={values.assessment_interior_size || ""} onValueChange={(v) => setField("assessment_interior_size", v)}>
           <SelectTrigger className="sm:h-12"><SelectValue placeholder={t("Select size…")} /></SelectTrigger>
           <SelectContent>
-            {SIZE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{t(o)}</SelectItem>)}
+            {SIZE_OPTIONS.map((o) => <SelectItem key={o} value={o}>{t(SIZE_LABELS[o] || o)}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
+      <p className="text-xs text-muted-foreground">{t("Standard package pricing covers properties up to 200 m². Larger properties require custom pricing review.")}</p>
       <div>
         <Label className="text-xs sm:text-sm text-muted-foreground mb-1.5 block">{t("Additional separately checked residences/units *")}</Label>
         <Input
