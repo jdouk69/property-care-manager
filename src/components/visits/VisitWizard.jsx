@@ -1510,7 +1510,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       billingClassificationFor({ additionalService, billable, agreement, pkg, visitType });
 
     return (
-      <div className="pb-40">
+      <div className="pb-40 pb-[calc(10rem+env(safe-area-inset-bottom))]">
         <div ref={stickyBarRef} className="sticky top-14 lg:top-0 z-10 bg-background/90 backdrop-blur border-b border-border -mx-4 px-4 py-3 mb-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -1838,7 +1838,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         </div>
         </div>
         {/* Page navigation keeps all visit state in this same wizard. */}
-        <div className={`fixed bottom-16 lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 ${sidebarCollapsed ? "lg:left-0" : "lg:left-64"}`}>
+        <div className={`fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 inset-x-0 z-30 bg-background/95 backdrop-blur border-t border-border p-3 ${sidebarCollapsed ? "lg:left-0" : "lg:left-64"}`}>
           <div className={`space-y-2 ${sidebarCollapsed || activeWide ? "w-full 2xl:mx-auto 2xl:max-w-5xl" : "max-w-2xl mx-auto"}`}>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => visitPage === "inspection" ? backFromActive() : goToStep(visitPage === "details" ? "step-inspection" : "step-details")} className={`rounded-2xl ${BTN}`}>{t("Back")}</Button>
