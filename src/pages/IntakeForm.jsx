@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Loader2, CheckCircle2, AlertTriangle, Plus, Trash2, Home } from "lucide-react";
 import { INTAKE_SECTIONS, MONITORING_AREAS, emptyPayload } from "@/lib/intakeSchema";
 
@@ -226,11 +227,14 @@ export default function IntakeForm() {
                         ? <Textarea value={fieldVal(f.name)} onChange={(e) => setField(f.name, e.target.value)} rows={3} className="bg-white" />
                         : f.type === "select"
                           ? (
-                            <select value={fieldVal(f.name)} onChange={(e) => setField(f.name, e.target.value)}
-                              className="w-full min-w-0 h-10 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                              <option value="">Select…</option>
-                              {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
-                            </select>
+                            <Select value={fieldVal(f.name) || ""} onValueChange={(value) => setField(f.name, value)}>
+                              <SelectTrigger className="h-11 border-slate-200 bg-white text-sm">
+                                <SelectValue placeholder="Select…" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {f.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
                           )
                           : <Input value={fieldVal(f.name)} onChange={(e) => setField(f.name, e.target.value)} className="bg-white" />
                       }
