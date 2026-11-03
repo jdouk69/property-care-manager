@@ -1,4 +1,5 @@
 import React from "react";
+import { vatPriceLabel } from "@/lib/servicePricing";
 import { Package, AlertTriangle, SlidersHorizontal, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,7 @@ export default function AgreementStepServicePrice({
   packages, selectedPackage, onPackageChange,
   onBillingTypeChange, onStartDateChange,
   isFrozen, isEdit, freqMismatch,
-  latestIntake, intakePrefill,
+  latestIntake, intakePrefill, emergencyContact,
   emergencyFieldsComplete, emergencyConfirmedEffective,
   pkgRefOpen, intakeRefOpen, advancedOpen, additionalOpen, hasExtra,
   togglePkgRef, toggleIntakeRef, toggleAdvanced, toggleAdditional,
@@ -72,7 +73,7 @@ export default function AgreementStepServicePrice({
             {isEdit ? (
               <>
                 <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm flex items-center justify-between gap-2 min-h-[44px]">
-                  <span className="font-medium truncate">€{(Number(values.agreed_price) || 0).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">+ VAT</span></span>
+                  <span className="font-medium truncate">€{(Number(values.agreed_price) || 0).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">{t(vatPriceLabel(selectedPackage?.vat_setting))}</span></span>
                   {!isFrozen && (
                     <button type="button" onClick={openPriceChange} className="text-xs text-primary font-medium shrink-0 hover:underline">
                       {t("Change Price")}
@@ -84,7 +85,7 @@ export default function AgreementStepServicePrice({
             ) : (
               <>
                 <Input type="number" step="0.01" value={values.agreed_price ?? ""} onChange={(e) => set("agreed_price", e.target.value)} disabled={isFrozen} />
-                <p className="text-xs text-muted-foreground mt-1">{t("Base price before VAT. Prefilled from the selected package.")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t(vatPriceLabel(selectedPackage?.vat_setting))} · {t("Prefilled from the selected package.")}</p>
               </>
             )}
           </div>
@@ -118,6 +119,7 @@ export default function AgreementStepServicePrice({
       {/* Emergency authorization — unchanged staff-confirmation requirement. */}
       <EmergencyAuthSection
         values={values}
+        emergencyContact={emergencyContact}
         set={setEmergency}
         frozen={isFrozen}
         confirmed={!!values.emergency_authorization_confirmed}
@@ -126,6 +128,10 @@ export default function AgreementStepServicePrice({
         setConfirmed={(v) => set("emergency_authorization_confirmed", v)}
       />
 
+      <details className="rounded-2xl border border-dashed border-border bg-muted/20 p-4">
+        <summary className="cursor-pointer text-sm font-medium text-muted-foreground">{t("Reference and additional settings (optional)")}</summary>
+        <p className="text-xs text-muted-foreground mt-2 mb-4">{t("Open only to check package or intake details, add customer-specific terms, or view advanced settings. These are not extra onboarding steps.")}</p>
+        <div className="space-y-3">
       {/* Collapsed-by-default sections — all fields remain accessible. */}
       <AgreementCollapse
         open={pkgRefOpen} onToggle={togglePkgRef}
@@ -137,7 +143,7 @@ export default function AgreementStepServicePrice({
             <p className="text-sm font-medium">{selectedPackage.name}</p>
             {selectedPackage.description && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{selectedPackage.description}</p>}
             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
-              <div>{t("Standard price:")} <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)} + VAT</span></div>
+              <div>{t("Standard price:")} <span className="text-foreground">€{(selectedPackage.standard_price || 0).toFixed(2)} {t(vatPriceLabel(selectedPackage.vat_setting))}</span></div>
               <div>{t("Billing:")} <span className="text-foreground">{tEnum(selectedPackage.billing_type)}</span></div>
               <div>{t("Visit duration:")} <span className="text-foreground">{selectedPackage.visit_duration || "—"}</span></div>
               <div>{t("Frequency:")} <span className="text-foreground">{selectedPackage.inspection_frequency ? t(selectedPackage.inspection_frequency) : "—"}</span></div>
@@ -206,6 +212,9 @@ export default function AgreementStepServicePrice({
           </div>
         </div>
       </AgreementCollapse>
+        </div>
+      </details>
+      <p className="text-sm font-medium">{t("Next: continue to review & sign to check the agreement and prepare it for the customer.")}</p>
     </div>
   );
 }
