@@ -53,7 +53,7 @@ export default function Search() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton className="mb-3" />
         <PageHeader title={t("Search")} subtitle={t("Find anything across your business")} icon={SearchIcon} />
         <div className="relative">
