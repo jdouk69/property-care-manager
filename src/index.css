@@ -93,12 +93,10 @@
 
   html {
     scroll-behavior: smooth;
-    overscroll-behavior-y: contain;
   }
 
   body {
     @apply bg-background text-foreground font-body;
-    overscroll-behavior-y: contain;
   }
 }
 
