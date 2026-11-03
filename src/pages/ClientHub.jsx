@@ -13,9 +13,13 @@ import { Button } from "@/components/ui/button";
 import EmptyState from "@/components/ui/EmptyState";
 import ClientIntakePanel from "@/components/intake/ClientIntakePanel";
 import { downloadSignedAgreementPdf } from "@/lib/agreementDownload";
+import { clientAgreementTarget } from "@/lib/clientAgreementTarget.mjs";
+import { clientAgreementSections, clientAgreementLabel } from "@/lib/clientAgreementSections.mjs";
 import ActivateServiceButton from "@/components/agreements/ActivateServiceButton";
+import AgreementPauseControls from "@/components/agreements/AgreementPauseControls";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { deriveOnboarding } from "@/lib/onboarding";
+import { hasEligibleTerms } from "@/lib/termsReadiness";
 import OnboardingSummary from "@/components/onboarding/OnboardingSummary";
 import ScheduleFirstVisitCard from "@/components/onboarding/ScheduleFirstVisitCard";
 import OnboardingCompleteDialog from "@/components/onboarding/OnboardingCompleteDialog";
@@ -43,10 +47,10 @@ function InfoChip({ icon: Icon, label, value }) {
 function ActivitySection({ title, icon: Icon, to, count, items, emptyTitle }) {
   const { t } = useLanguage();
   return (
-    <div className="rounded-2xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2 font-medium text-sm">
-          <Icon className="w-4 h-4 text-muted-foreground" /> {t(title)}
+    <div className="rounded-2xl border-2 border-border bg-card overflow-hidden shadow-sm">
+      <div className="flex items-center justify-between px-4 py-3.5 border-b-2 border-border bg-muted/50">
+        <div className="flex items-center gap-3 font-semibold text-base">
+          <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><Icon className="w-5 h-5" /></span> {t(title)}
           {count > 0 && <span className="text-xs text-muted-foreground">({count})</span>}
         </div>
         {to && <Link to={to} className="text-xs text-primary flex items-center gap-1 hover:underline">{t("View all")} <ArrowRight className="w-3 h-3" /></Link>}
@@ -85,23 +89,28 @@ export default function ClientHub() {
   const [communications, setCommunications] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [agreements, setAgreements] = useState([]);
+  const [termsReady, setTermsReady] = useState(null);
   const [intakes, setIntakes] = useState([]);
   const [charges, setCharges] = useState([]);
   const [downloadingPdf, setDownloadingPdf] = useState("");
+  const [downloadError, setDownloadError] = useState(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
   const [readyNotif, setReadyNotif] = useState(null);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
 
   const handleDownloadSigned = async (token) => {
     if (!token) return;
+    setDownloadError(null);
     setDownloadingPdf(token);
-    try { await downloadSignedAgreementPdf(token); } catch (e) {}
-    setDownloadingPdf("");
+    try { await downloadSignedAgreementPdf(token); }
+    catch (e) { setDownloadError({token,message:e?.message || t("The signed PDF could not be downloaded. Please try again.")}); }
+    finally { setDownloadingPdf(""); }
   };
 
   useEffect(() => {
     (async () => {
       try {
+        base44.entities.AgreementTermsTemplate.list().then(terms => setTermsReady(hasEligibleTerms(terms))).catch(() => setTermsReady(null));
         const [c, allProps, pkgs, allVisits, allTasks, allMaint, allExp, allInv, allComm, allDocs, allAgs, allIntakes, allCharges] = await Promise.all([
           base44.entities.Client.get(id),
           base44.entities.Property.list("-created_date", 500),
@@ -169,6 +178,16 @@ export default function ClientHub() {
 
   const propName = (pid) => properties.find((p) => p.id === pid)?.name || t("Property");
   const onboarding = deriveOnboarding({ client, properties, selectedProperty, intakes, agreements, visits, servicePackages });
+  const agreementTarget = clientAgreementTarget(agreements, selectedProperty?.id);
+  const agreementSections = clientAgreementSections(agreements);
+  const jumpToAgreements = event => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const section = document.getElementById('client-service-agreement');
+    section?.focus({preventScroll:true});
+    section?.scrollIntoView({behavior:'smooth',block:'start'});
+  };
 
   const dismissReadyDialog = async () => {
     if (readyNotif?.id) {
@@ -183,13 +202,92 @@ export default function ClientHub() {
   const openIssues = maintenance.filter((m) => m.status !== "Completed" && m.status !== "Cancelled");
   const waLink = client.whatsapp ? `https://wa.me/${client.whatsapp.replace(/[^0-9]/g, "")}` : null;
 
+  const renderAgreement = (a, historical = false) => {
+    const pkg = servicePackages[a.service_package_id];
+    const freq = serviceFrequencyText(a, pkg, t);
+    return (
+      <div key={a.id} className={`px-4 py-4 ${a.status === "Active" && a.signing_status === "Signed" ? "border-l-4 border-primary bg-primary/5" : ""}`}>
+        <p className={`mb-2 text-sm font-semibold ${historical ? 'text-muted-foreground' : 'text-primary'}`}>{t(clientAgreementLabel(a, historical))} · {t("Version {version}", {version:a.agreement_version || 1})}</p>
+        <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{pkg ? pkg.name : t("Service package")}</p>
+            <p className="text-xs text-muted-foreground break-words">{propName(a.property_id)} · €{(a.agreed_price || 0).toFixed(2)} · {t(a.billing_type)}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {a.is_test_agreement && (
+              <span className="text-xs px-2 py-0.5 rounded-full border bg-rose-100 text-rose-700 border-rose-300 font-semibold">TEST</span>
+            )}
+            {a.signing_status && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.signing_status)}`}>{t(a.signing_status)}</span>}
+            <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{t(a.status === 'Pending' && a.signing_status === 'Signed' ? 'Activation pending' : a.status)}</span>
+          </div>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+          {freq && <span>{t("Frequency:")} {freq}</span>}
+          {a.start_date && <span>{t("Start:")} {a.start_date}</span>}
+          {a.renewal_date && <span>{t("Renewal:")} {a.renewal_date}</span>}
+        </div>
+        {a.is_test_agreement && (
+          <p className="text-[11px] text-rose-600 font-medium mt-0.5">{t("Test agreement — not for production use")}</p>
+        )}
+        {a.status === 'Pending' && a.signing_status === 'Signed' && <p className="mt-2 text-xs font-medium text-primary">{t("Agreement signed — activation pending")}</p>}
+        {historical && a.signing_status !== 'Signed' && <p className="mt-2 text-xs text-muted-foreground">{t("This version was not signed. No signed PDF is available for it.")}</p>}
+        {isAdmin && <Link to={`/agreements/${a.id}`} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border-2 border-primary/40 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary underline underline-offset-4 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <FileText className="w-4 h-4 shrink-0" />
+          {t(historical ? "Open previous agreement · Version {version}" : a.signing_status === 'Signed' ? "Open signed agreement · Version {version}" : "Open agreement · Version {version}", {version:a.agreement_version || 1})}
+          <ArrowRight className="w-4 h-4 shrink-0" />
+        </Link>}
+        {isAdmin && ["Active", "Paused"].includes(a.status) && a.signing_status === "Signed" && (
+          <div className="mt-3 border-t border-primary/20 pt-3">
+            <AgreementPauseControls
+              agreementId={a.id}
+              status={a.status}
+              pauseUntil={a.pause_until}
+              compact
+              emphasize
+              onChanged={(result) => setAgreements((current) => current.map((item) => item.id === a.id
+                ? { ...item, status: result.status, pause_until: result.pause_until }
+                : item))}
+            />
+          </div>
+        )}
+        {a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" && (a.sent_at || a.viewed_at || a.signed_at || a.declined_at) && (
+          <div className="mt-0.5 text-[11px] text-muted-foreground flex flex-wrap gap-x-2">
+            {a.sent_at && <span>{t("Sent {date}", { date: athensMediumDate(a.sent_at, lang) })}</span>}
+            {a.viewed_at && <span>{t("Viewed {date}", { date: athensMediumDate(a.viewed_at, lang) })}</span>}
+            {a.signed_at && <span>{t("Signed {date}", { date: athensMediumDate(a.signed_at, lang) })}</span>}
+            {a.declined_at && <span>{t("Declined {date}", { date: athensMediumDate(a.declined_at, lang) })}</span>}
+          </div>
+        )}
+        {isAdmin && a.signed_pdf_url && a.public_token && (
+          <button type="button" onClick={() => handleDownloadSigned(a.public_token)} disabled={downloadingPdf === a.public_token} className="mt-3 flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 rounded-lg border-2 border-primary/40 px-3 py-2 text-sm font-semibold text-primary underline underline-offset-4 hover:bg-primary/5 disabled:opacity-50">
+            {downloadingPdf === a.public_token ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />} {t("View / Download Signed PDF")}
+          </button>
+        )}
+        {downloadError && downloadError.token === a.public_token && <p role="alert" className="mt-2 text-sm text-destructive">{downloadError.message}</p>}
+        {a.status === "Active" && a.signing_status === "Signed" && (
+          <p className="mt-1 text-[11px] text-emerald-700 font-medium inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t("Service active")}</p>
+        )}
+        {isAdmin && !historical && a.status === "Pending" && a.signing_status === "Signed" && (
+          <div className="mt-1.5">
+            <ActivateServiceButton
+              agreementId={a.id}
+              isReplacement={!!(a.agreement_group_id && agreements.some((x) => x.id !== a.id && x.status === "Active" && x.agreement_group_id === a.agreement_group_id))}
+              onActivated={() => window.location.reload()}
+              label="Activate Service"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton fallback="/clients" className="mb-1" />
 
         {/* Header */}
-        <div className="rounded-2xl border border-border bg-card p-4 mb-4">
+        <div className="rounded-2xl border-2 border-border bg-card p-4 mb-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -216,7 +314,23 @@ export default function ClientHub() {
           </div>
         </div>
 
+        {agreements.length > 0 && (
+          <div className="mb-4 space-y-2">
+            {agreementTarget && <div className="space-y-1">
+              <Button asChild className="w-full sm:w-auto min-h-12 h-auto py-3 whitespace-normal gap-2"><Link to={`/agreements/${agreementTarget.id}`}><FileText className="w-4 h-4 shrink-0"/>{t(agreementTarget.signing_status === 'Signed' ? 'Open signed agreement' : 'Open latest agreement')}<ArrowRight className="w-4 h-4 shrink-0"/></Link></Button>
+              <p className="text-xs text-muted-foreground">{propName(agreementTarget.property_id)} · {t('Version {version}',{version:agreementTarget.agreement_version || 1})} · {t(agreementTarget.signing_status || 'Draft')}</p>
+            </div>}
+            <a href="#client-service-agreement" onClick={jumpToAgreements} className="inline-flex min-h-11 items-center gap-2 rounded-xl border-2 border-primary/40 bg-primary/5 px-4 py-2 text-sm font-semibold text-primary shadow-sm hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <Package className="w-4 h-4" /> {t("View agreements on this page")} <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        )}
+
         {/* Onboarding progress */}
+        {termsReady === false && !onboarding.stages.find(s => s.key === "agreement")?.complete && <div className="rounded-xl border border-amber-500/30 p-4 mb-4 text-sm space-y-2">
+          <p>{t("Agreement terms setup is incomplete. Assessment and draft preparation can continue, but customer signing requires active, approved terms.")}</p>
+          <Link to="/agreement-terms" target="_blank" className="underline">{t("Open Agreement Terms setup")}</Link>
+        </div>}
         <OnboardingSummary
           properties={properties}
           selectedPropertyId={selectedProperty?.id || null}
@@ -235,9 +349,9 @@ export default function ClientHub() {
         )}
 
         {/* Properties */}
-        <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div className="flex items-center gap-2 font-medium text-sm"><Home className="w-4 h-4 text-muted-foreground" /> {t("Properties")} <span className="text-xs text-muted-foreground">({properties.length})</span></div>
+        <div id="client-properties" className="rounded-2xl border-2 border-border bg-card overflow-hidden mb-4 shadow-sm scroll-mt-4">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b-2 border-border bg-muted/50">
+            <div className="flex items-center gap-3 font-semibold text-base"><span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><Home className="w-5 h-5" /></span> {t("Properties")} <span className="text-xs text-muted-foreground">({properties.length})</span></div>
             <div className="flex gap-2">
               {/* Add Service — schedule a special-purpose one-time / add-on
                   service for this client (property auto-selected when there
@@ -280,12 +394,18 @@ export default function ClientHub() {
         )}
 
         {/* Service agreement */}
-        <div className="rounded-2xl border border-border bg-card overflow-hidden mb-4">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div className="flex items-center gap-2 font-medium text-sm"><Package className="w-4 h-4 text-muted-foreground" /> {t("Service Agreement")}</div>
+        <div id="client-service-agreement" tabIndex={-1} className="rounded-2xl border-2 border-primary/50 bg-card overflow-hidden mb-5 shadow-lg shadow-primary/10 scroll-mt-20">
+          <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-4 border-b-2 border-primary/20 bg-primary/10">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0"><Package className="w-5 h-5" /></span>
+              <div className="min-w-0">
+                <div className="font-bold text-base sm:text-lg leading-tight">{t("Service Agreement")}</div>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{t("Signed service and pause controls")}</p>
+              </div>
+            </div>
             {isAdmin && properties.length > 0 && (
-              <Link to={`/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`}>
-                <Button variant="outline" size="sm" className="gap-1.5"><Package className="w-4 h-4" /> {t("Assign Service Package")}</Button>
+              <Link className="w-full sm:w-auto" to={`/agreements/new?client=${id}${properties.length === 1 ? `&property=${properties[0].id}` : ""}`}>
+                <Button variant="outline" size="sm" className="w-full sm:w-auto min-h-11 h-auto py-2 whitespace-normal gap-1.5"><Package className="w-4 h-4 shrink-0" /> {t("Assign Service Package")}</Button>
               </Link>
             )}
           </div>
@@ -294,71 +414,14 @@ export default function ClientHub() {
               <div className="px-4 py-6">
                 <EmptyState icon={Package} title={properties.length === 0 ? t("Add a property first") : t("No service agreement yet")} description={properties.length === 0 ? t("Add a property, then assign a service package.") : t("Assign a service package to start billing and scheduling.")} />
               </div>
-            ) : [...agreements].sort((a, b) => (a.status === "Active" ? 0 : 1) - (b.status === "Active" ? 0 : 1)).map((a) => {
-              const pkg = servicePackages[a.service_package_id];
-              const freq = serviceFrequencyText(a, pkg, t);
-              return (
-                <div key={a.id} className="px-4 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{pkg ? pkg.name : t("Service package")}</p>
-                      <p className="text-xs text-muted-foreground truncate">{propName(a.property_id)} · €{(a.agreed_price || 0).toFixed(2)} · {t(a.billing_type)}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {a.is_test_agreement && (
-                        <span className="text-xs px-2 py-0.5 rounded-full border bg-rose-100 text-rose-700 border-rose-300 font-semibold">TEST</span>
-                      )}
-                      {a.signing_status && <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.signing_status)}`}>{t(a.signing_status)}</span>}
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeTone(a.status)}`}>{t(a.status)}</span>
-                    </div>
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-                    {freq && <span>{t("Frequency:")} {freq}</span>}
-                    {a.start_date && <span>{t("Start:")} {a.start_date}</span>}
-                    {a.renewal_date && <span>{t("Renewal:")} {a.renewal_date}</span>}
-                  </div>
-                  {a.is_test_agreement && (
-                    <p className="text-[11px] text-rose-600 font-medium mt-0.5">{t("Test agreement — not for production use")}</p>
-                  )}
-                  {isAdmin && a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" ? (
-                    <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">
-                      {a.signing_status === "Sent" && t("Awaiting customer signature")}
-                      {a.signing_status === "Viewed" && t("Customer viewed agreement")}
-                      {a.signing_status === "Signed" && t("Agreement signed — activation pending")}
-                      {a.signing_status === "Declined" && t("Customer requested changes / declined")}
-                    </Link>
-                  ) : isAdmin ? (
-                    <Link to={`/agreements/${a.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">{a.status === "Pending" ? t("Review Agreement") : t("Edit Agreement")}</Link>
-                  ) : null}
-                  {a.status === "Pending" && a.signing_status && a.signing_status !== "Draft" && (a.sent_at || a.viewed_at || a.signed_at || a.declined_at) && (
-                    <div className="mt-0.5 text-[11px] text-muted-foreground flex flex-wrap gap-x-2">
-                      {a.sent_at && <span>{t("Sent {date}", { date: athensMediumDate(a.sent_at, lang) })}</span>}
-                      {a.viewed_at && <span>{t("Viewed {date}", { date: athensMediumDate(a.viewed_at, lang) })}</span>}
-                      {a.signed_at && <span>{t("Signed {date}", { date: athensMediumDate(a.signed_at, lang) })}</span>}
-                      {a.declined_at && <span>{t("Declined {date}", { date: athensMediumDate(a.declined_at, lang) })}</span>}
-                    </div>
-                  )}
-                  {isAdmin && a.signed_pdf_url && a.public_token && (
-                    <button type="button" onClick={() => handleDownloadSigned(a.public_token)} disabled={downloadingPdf === a.public_token} className="mt-0.5 text-[11px] text-primary hover:underline inline-flex items-center gap-1 disabled:opacity-50">
-                      {downloadingPdf === a.public_token ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />} {t("View Signed PDF")}
-                    </button>
-                  )}
-                  {a.status === "Active" && a.signing_status === "Signed" && (
-                    <p className="mt-1 text-[11px] text-emerald-700 font-medium inline-flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> {t("Service active")}</p>
-                  )}
-                  {isAdmin && a.status === "Pending" && a.signing_status === "Signed" && (
-                    <div className="mt-1.5">
-                      <ActivateServiceButton
-                        agreementId={a.id}
-                        isReplacement={!!(a.agreement_group_id && agreements.some((x) => x.id !== a.id && x.status === "Active" && x.agreement_group_id === a.agreement_group_id))}
-                        onActivated={() => window.location.reload()}
-                        label="Activate Service"
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            ) : agreementSections.current.map(a => renderAgreement(a))}
+            {agreementSections.history.length > 0 && (
+              <details className="border-t-2 border-border">
+                <summary className="cursor-pointer min-h-12 px-4 py-3 text-sm font-semibold text-primary underline underline-offset-4">{t("Agreement History")} ({agreementSections.history.length})</summary>
+                <p className="px-4 pb-3 text-xs text-muted-foreground">{t("Earlier versions are retained here. An unsigned version has no signed PDF.")}</p>
+                <div className="divide-y divide-border">{agreementSections.history.map(a => renderAgreement(a, true))}</div>
+              </details>
+            )}
           </div>
         </div>
 
