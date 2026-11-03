@@ -2,9 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import Login from '@/pages/Login';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
+import { lazy, Suspense } from 'react';
 import { ThemeProvider } from 'next-themes';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -14,53 +12,57 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import LoginRedirect from '@/components/LoginRedirect';
 import { LanguageProvider } from '@/lib/i18n/LanguageContext';
-import RootPage from '@/components/RootPage';
-import Clients from '@/pages/Clients';
-import Properties from '@/pages/Properties';
-import PropertyDetail from '@/pages/PropertyDetail';
-import Tasks from '@/pages/Tasks';
-import Inspections from '@/pages/Inspections';
-import Maintenance from '@/pages/Maintenance';
-import MaintenanceIssueDetail from '@/pages/MaintenanceIssueDetail';
-import Contractors from '@/pages/Contractors';
-import Expenses from '@/pages/Expenses';
-import Keys from '@/pages/Keys';
-import Calendar from '@/pages/Calendar';
-import Reports from '@/pages/Reports';
-import Search from '@/pages/Search';
-import Settings from '@/pages/Settings';
-import Profile from '@/pages/Profile';
-import BusinessBilling from '@/pages/BusinessBilling';
-import AutomationLog from '@/pages/AutomationLog';
-import Invoices from '@/pages/Invoices';
-import ServicePackages from '@/pages/ServicePackages';
-import OwnerCommunications from '@/pages/OwnerCommunications';
-import Deliveries from '@/pages/Deliveries';
-import Visits from '@/pages/Visits';
-import VisitDetail from '@/pages/VisitDetail';
-import OwnerRepReports from '@/pages/OwnerRepReports';
-import PropertyDocuments from '@/pages/PropertyDocuments';
-import ChecklistTemplates from '@/pages/ChecklistTemplates';
-import ClientHub from '@/pages/ClientHub';
-import ServiceAgreement from '@/pages/ServiceAgreement';
-import AgreementTerms from '@/pages/AgreementTerms';
-import ServiceSetup from '@/pages/ServiceSetup';
-import IntakeForm from '@/pages/IntakeForm';
-import AgreementPublic from '@/pages/AgreementPublic';
-import IntakeReview from '@/pages/IntakeReview';
-import MonitoringPlanReview from '@/pages/MonitoringPlanReview';
-import PropertyAssistance from '@/pages/PropertyAssistance';
-import OneTimeServices from '@/pages/OneTimeServices';
-import Billing from '@/pages/Billing';
-import AdminUsers from '@/pages/AdminUsers';
-import WebsiteHome from '@/pages/website/WebsiteHome';
-import WebsiteAbout from '@/pages/website/WebsiteAbout';
-import WebsiteContact from '@/pages/website/WebsiteContact';
-import SampleReportPage from '@/pages/website/SampleReportPage';
-import CarePlanDetailsPage from '@/pages/website/CarePlanDetailsPage';
-import OnDemandServiceDetailsPage from '@/pages/website/OnDemandServiceDetailsPage';
-import AssessmentRequests from '@/pages/AssessmentRequests';
-import WebsiteEditor from '@/pages/WebsiteEditor';
+
+const Login = lazy(() => import('@/pages/Login'));
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const RootPage = lazy(() => import('@/components/RootPage'));
+const Clients = lazy(() => import('@/pages/Clients'));
+const Properties = lazy(() => import('@/pages/Properties'));
+const PropertyDetail = lazy(() => import('@/pages/PropertyDetail'));
+const Tasks = lazy(() => import('@/pages/Tasks'));
+const Inspections = lazy(() => import('@/pages/Inspections'));
+const Maintenance = lazy(() => import('@/pages/Maintenance'));
+const MaintenanceIssueDetail = lazy(() => import('@/pages/MaintenanceIssueDetail'));
+const Contractors = lazy(() => import('@/pages/Contractors'));
+const Expenses = lazy(() => import('@/pages/Expenses'));
+const Keys = lazy(() => import('@/pages/Keys'));
+const Calendar = lazy(() => import('@/pages/Calendar'));
+const Reports = lazy(() => import('@/pages/Reports'));
+const Search = lazy(() => import('@/pages/Search'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const Profile = lazy(() => import('@/pages/Profile'));
+const BusinessBilling = lazy(() => import('@/pages/BusinessBilling'));
+const AutomationLog = lazy(() => import('@/pages/AutomationLog'));
+const Invoices = lazy(() => import('@/pages/Invoices'));
+const ServicePackages = lazy(() => import('@/pages/ServicePackages'));
+const OwnerCommunications = lazy(() => import('@/pages/OwnerCommunications'));
+const Deliveries = lazy(() => import('@/pages/Deliveries'));
+const Visits = lazy(() => import('@/pages/Visits'));
+const VisitDetail = lazy(() => import('@/pages/VisitDetail'));
+const OwnerRepReports = lazy(() => import('@/pages/OwnerRepReports'));
+const PropertyDocuments = lazy(() => import('@/pages/PropertyDocuments'));
+const ChecklistTemplates = lazy(() => import('@/pages/ChecklistTemplates'));
+const ClientHub = lazy(() => import('@/pages/ClientHub'));
+const ServiceAgreement = lazy(() => import('@/pages/ServiceAgreement'));
+const AgreementTerms = lazy(() => import('@/pages/AgreementTerms'));
+const ServiceSetup = lazy(() => import('@/pages/ServiceSetup'));
+const IntakeForm = lazy(() => import('@/pages/IntakeForm'));
+const AgreementPublic = lazy(() => import('@/pages/AgreementPublic'));
+const IntakeReview = lazy(() => import('@/pages/IntakeReview'));
+const MonitoringPlanReview = lazy(() => import('@/pages/MonitoringPlanReview'));
+const PropertyAssistance = lazy(() => import('@/pages/PropertyAssistance'));
+const OneTimeServices = lazy(() => import('@/pages/OneTimeServices'));
+const Billing = lazy(() => import('@/pages/Billing'));
+const AdminUsers = lazy(() => import('@/pages/AdminUsers'));
+const WebsiteHome = lazy(() => import('@/pages/website/WebsiteHome'));
+const WebsiteAbout = lazy(() => import('@/pages/website/WebsiteAbout'));
+const WebsiteContact = lazy(() => import('@/pages/website/WebsiteContact'));
+const SampleReportPage = lazy(() => import('@/pages/website/SampleReportPage'));
+const CarePlanDetailsPage = lazy(() => import('@/pages/website/CarePlanDetailsPage'));
+const OnDemandServiceDetailsPage = lazy(() => import('@/pages/website/OnDemandServiceDetailsPage'));
+const AssessmentRequests = lazy(() => import('@/pages/AssessmentRequests'));
+const WebsiteEditor = lazy(() => import('@/pages/WebsiteEditor'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -174,7 +176,9 @@ function App() {
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <ScrollToTop />
-            <AuthenticatedApp />
+            <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center" role="status" aria-label="Loading page"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" /><span className="sr-only">Loading page…</span></div>}>
+              <AuthenticatedApp />
+            </Suspense>
           </Router>
           <Toaster />
         </QueryClientProvider>
