@@ -17,7 +17,7 @@ import {
 } from "@/lib/servicePricing";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { recommendedVisitType } from "@/lib/activeService";
-import { OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE } from "../../server/shared/propertyScope.js";
+import { OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE } from "@/lib/propertyScope.js";
 import {
   Loader2, ClipboardCheck, Repeat, CalendarClock, AlertTriangle, Pencil, Home as HomeIcon,
 } from "lucide-react";
