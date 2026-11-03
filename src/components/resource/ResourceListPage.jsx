@@ -650,7 +650,7 @@ export default function ResourceListPage({
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 lg:pb-6">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
       {showBack && <PageBackButton className="mb-3" />}
 
       <PageHeader
