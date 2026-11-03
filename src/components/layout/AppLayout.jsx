@@ -220,7 +220,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around h-16 bg-background/90 backdrop-blur-md border-t border-border">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-background/90 backdrop-blur-md border-t border-border">
         {MOBILE_NAV.map((item) =>
           item.to === "__more__" ? (
             <button

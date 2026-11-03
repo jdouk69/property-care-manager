@@ -692,7 +692,7 @@ export default function ServiceAgreement() {
 
   return (
     <AppLayout>
-      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-16 lg:pb-6">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
         <PageBackButton fallback={backTo} className="mb-1" />
         <h1 className="text-xl font-semibold">{isEdit ? t("Edit Service Agreement") : t("New Service Agreement")}</h1>
 
