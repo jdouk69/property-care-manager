@@ -49,6 +49,19 @@
       ],
       "default": "Pending"
     },
+    "paused_at": {
+      "type": "string"
+    },
+    "pause_until": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_paused_at": {
+      "type": "string"
+    },
+    "last_resumed_at": {
+      "type": "string"
+    },
     "included_services_override": {
       "type": "string"
     },
