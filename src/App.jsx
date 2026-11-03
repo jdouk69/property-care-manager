@@ -29,6 +29,7 @@ import Calendar from '@/pages/Calendar';
 import Reports from '@/pages/Reports';
 import Search from '@/pages/Search';
 import Settings from '@/pages/Settings';
+import Profile from '@/pages/Profile';
 import BusinessBilling from '@/pages/BusinessBilling';
 import AutomationLog from '@/pages/AutomationLog';
 import Invoices from '@/pages/Invoices';
@@ -120,6 +121,7 @@ const AuthenticatedApp = () => {
           <Route path="/properties/:id/monitoring-plan" element={<MonitoringPlanReview />} />
           <Route path="/properties/:id/service-setup" element={<ServiceSetup />} />
         </Route>
+        <Route path="/profile" element={<Profile />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/inspections" element={<Inspections />} />
         <Route path="/maintenance" element={<Maintenance />} />
