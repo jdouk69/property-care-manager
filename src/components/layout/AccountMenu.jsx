@@ -28,7 +28,7 @@ export default function AccountMenu({ variant = "dropdown" }) {
   const roleLabel = rawRoleLabel ? t(rawRoleLabel) : "";
 
   if (variant === "block") {
-    // Mobile More sheet account row with actions on a separate line.
+    // Flat account row used in the mobile "More" sheet.
     return (
       <div className="space-y-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -74,6 +74,9 @@ export default function AccountMenu({ variant = "dropdown" }) {
           {roleLabel && <div className="mt-1 text-[11px] font-medium uppercase tracking-wide text-primary">{roleLabel}</div>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/profile">{t("Profile")}</Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive">
           <LogOut className="mr-2 h-4 w-4" /> {t("Sign Out")}
         </DropdownMenuItem>
