@@ -12,6 +12,8 @@ import PhotoUpdateCard from "@/components/visits/PhotoUpdateCard";
 import { durationReviewInfo } from "@/lib/durationReview";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useNavigate } from "react-router-dom";
+import { SHORT_TERM_RENTAL_VILLA } from "../../../server/shared/propertyScope.js";
 
 const STATUS_TONE = {
   Draft: "bg-muted text-muted-foreground border-border",
@@ -38,6 +40,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
   const [reviewOpen, setReviewOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [confirmingOccupancy, setConfirmingOccupancy] = useState(false);
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [model, setModel] = useState(null);
@@ -45,6 +48,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   useEffect(() => {
     base44.auth.me().then((u) => setUserName(u?.full_name || u?.email || "")).catch(() => {});
@@ -100,8 +104,44 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
     setApproving(false);
   };
 
+  const confirmOccupancyForReport = async () => {
+    if (!visit || property?.service_scope !== SHORT_TERM_RENTAL_VILLA || visit.occupancy_confirmed_vacant === true) return;
+    if (!window.confirm(t("Confirm that this short-term-rental property was vacant when this completed interior visit took place? Only continue if no owner, guest, tenant, or other person was staying there. If you are unsure, cancel."))) return;
+    setConfirmingOccupancy(true);
+    try {
+      const me = await base44.auth.me().catch(() => null);
+      const patchObj = {
+        occupancy_confirmed_vacant: true,
+        occupancy_confirmed_at: new Date().toISOString(),
+        occupancy_confirmed_by: me?.full_name || me?.email || userName || "",
+      };
+      const updated = await base44.entities.PropertyVisit.update(visit.id, patchObj);
+      onUpdate && onUpdate(updated);
+      setError("");
+    } catch (e) {
+      setError(t("Could not save the vacancy confirmation: {error}", { error: e?.message || e }));
+    } finally {
+      setConfirmingOccupancy(false);
+    }
+  };
+
+  const fixPropertyForReport = (focusField) => {
+    const returnTo = `/visits/${encodeURIComponent(visit.id)}`;
+    if (property?.id) {
+      navigate(`/properties?edit=${encodeURIComponent(property.id)}&focus=${encodeURIComponent(focusField)}&returnTo=${encodeURIComponent(returnTo)}`);
+    } else {
+      navigate(`/properties?add=1&repairVisit=${encodeURIComponent(visit.id)}&focus=owner_id&returnTo=${encodeURIComponent(returnTo)}`);
+    }
+  };
+
   const doSend = async (isResend) => {
     setError("");
+    if (!String(client?.email || "").trim()) {
+      const returnTo = `/visits/${encodeURIComponent(visit.id)}`;
+      if (client?.id) navigate(`/clients?edit=${encodeURIComponent(client.id)}&focus=email&returnTo=${encodeURIComponent(returnTo)}`);
+      else fixPropertyForReport("owner_id");
+      return;
+    }
     if (!reviewState.approved || !reviewState.hashMatches) {
       // Require the report to be approved (and still current) first.
       openReview();
@@ -216,7 +256,7 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCw className="w-4 h-4" />} {t("Resend Report")}
           </Button>
         ) : (
-          <Button onClick={() => doSend(false)} disabled={sending || !sendable} className="rounded-xl gap-1.5">
+          <Button onClick={() => doSend(false)} disabled={sending || (!!String(client?.email || "").trim() && !sendable)} className="rounded-xl gap-1.5">
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("Send to Owner")}
           </Button>
         )}
@@ -236,12 +276,28 @@ export default function ReportDeliveryCard({ visit, property, client, issues, ta
         generating={generating}
         sending={sending}
         approving={approving}
+        confirmingOccupancy={confirmingOccupancy}
+        occupancyIssue={property?.service_scope === SHORT_TERM_RENTAL_VILLA && visit.occupancy_confirmed_vacant !== true}
         reviewState={reviewState}
         error={error}
         photoWarn={photoWarn}
+        propertyMissing={!property?.id}
         onClose={() => setReviewOpen(false)}
         onSend={() => doSend(false)}
         onApprove={approve}
+        onConfirmOccupancy={confirmOccupancyForReport}
+        onFixOwnerDetails={() => {
+          setReviewOpen(false);
+          if (client?.id) {
+            const returnTo = `/visits/${encodeURIComponent(visit.id)}`;
+            navigate(`/clients?edit=${encodeURIComponent(client.id)}&focus=email&returnTo=${encodeURIComponent(returnTo)}`);
+          } else fixPropertyForReport("owner_id");
+        }}
+        onFixProperty={() => {
+          setReviewOpen(false);
+          fixPropertyForReport("service_scope");
+        }}
+        onRetry={openReview}
         onBackToEdit={() => { setReviewOpen(false); onBackToEdit && onBackToEdit(); }}
       />
     </div>
