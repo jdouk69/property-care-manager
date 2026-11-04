@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import EmptyState from "@/components/ui/EmptyState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import AssessmentForm from "@/components/assessment/AssessmentForm";
@@ -17,7 +18,7 @@ import {
 } from "@/lib/servicePricing";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { recommendedVisitType } from "@/lib/activeService";
-import { OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE } from "@/lib/propertyScope.js";
+import { OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE } from "../../server/shared/propertyScope.js";
 import {
   Loader2, ClipboardCheck, Repeat, CalendarClock, AlertTriangle, Pencil, Home as HomeIcon,
 } from "lucide-react";
@@ -62,6 +63,7 @@ export default function ServiceSetup() {
   const [assessmentDone, setAssessmentDone] = useState(false);
   const [purchaseType, setPurchaseType] = useState("Recurring");
   const [tier, setTier] = useState("");
+  const [exteriorOnly, setExteriorOnly] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -78,6 +80,7 @@ export default function ServiceSetup() {
       try {
         const p = await base44.entities.Property.get(id);
         setProp(p);
+        setExteriorOnly(p.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY);
         setAssessment({
           ...EMPTY_ASSESSMENT,
           ...Object.fromEntries(Object.keys(EMPTY_ASSESSMENT).map((k) => [k, p[k] ?? EMPTY_ASSESSMENT[k]])),
@@ -202,6 +205,7 @@ export default function ServiceSetup() {
       if (purchaseType === "Recurring") {
         const ag = await base44.entities.PropertyServiceAgreement.create({
           client_id: prop.owner_id || "", property_id: prop.id, service_package_id: pkg.id,
+          exterior_only: exteriorOnly || prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY,
           agreed_price: finalPrice, billing_type: pkg.billing_type || "Monthly",
           inspection_frequency: pkg.inspection_frequency || "",
           start_date: now.slice(0, 10), status: "Pending", signing_status: "Draft", agreement_version: 1,
@@ -214,6 +218,7 @@ export default function ServiceSetup() {
       } else {
         const snapshot = {
           purchase_type: "One-time", tier, base_price: rec.basePrice,
+          exterior_only: exteriorOnly || prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY,
           recommended_price: rec.recommendedPrice, unit_adjustment_amount: rec.unitAdjustment,
           final_agreed_price: finalPrice, adjustment_reason: reason, pricing_review_status: reviewStatus,
           approved_at: now, approved_by: meName,
@@ -228,9 +233,10 @@ export default function ServiceSetup() {
         };
         const visit = (await base44.functions.invoke("createVisit", {
           property_id: prop.id,
-          visit_type: prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY
+          visit_type: (exteriorOnly || prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY)
             ? EXTERIOR_ONLY_VISIT_TYPE
             : (recommendedVisitType(pkg, prop.service_scope) || "Property Care Inspection"),
+          exterior_only: exteriorOnly || prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY,
           status: "Scheduled", scheduled_time: new Date(`${visitDate}T09:00:00`).toISOString(),
           agreed_price: finalPrice, pricing_snapshot: snapshot,
           ...(seasonalPkg ? {
@@ -368,6 +374,21 @@ export default function ServiceSetup() {
             })}
           </div>
           <p className="text-xs text-muted-foreground mt-3">{t(PRICING_NOTE)}</p>
+          <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3.5">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={exteriorOnly || prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY}
+                disabled={prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY}
+                onCheckedChange={(value) => setExteriorOnly(value === true)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="block text-sm font-medium">{t("Exterior-only service")}</span>
+                <span className="block text-xs text-muted-foreground mt-1">{t("Keep this plan and its price, but use the exterior-only visit checklist. No interior questions or entry are included.")}</span>
+                {prop.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY && <span className="block text-xs text-primary mt-1">{t("Required by this property's service scope.")}</span>}
+              </span>
+            </label>
+          </div>
         </section>
 
         <p className="text-sm text-muted-foreground mt-4">{t("3. Review the price breakdown and approve your price. Recurring service continues to a draft agreement for review and signature.")}</p>
