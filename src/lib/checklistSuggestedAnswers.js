@@ -358,6 +358,26 @@ add(['Confirm no entry into the home or interior areas'],
  [o('No interior entry made','No entry into the home or interior areas was made during this exterior-only visit.')],
  [o('Interior access exception to document','An exception to the exterior-only access boundary occurred. The circumstances and any owner instructions must be recorded and brought to the responsible person’s attention.')],
  [o('Access boundary not confirmed','The no-interior-entry confirmation could not be established from the available visit information. The missing information is recorded in the additional notes.')]);
+add(['Confirm the expected delivery and owner instructions'],
+ [o('Delivery instructions confirmed','The expected delivery and the owner’s instructions were confirmed before access was provided.')],
+ [o('Delivery detail needs owner clarification','A delivery detail or owner instruction could not be confirmed. The unresolved point is recorded in the additional notes before proceeding.')],
+ [o('Instructions unavailable','The expected delivery or owner instructions could not be confirmed, so the delivery could not be completed as planned.')]);
+add(['Provide agreed access within the property service scope'],
+ [o('Agreed access provided','Access was provided as agreed and within the recorded property service scope.')],
+ [o('Access scope needs clarification','The requested access appeared to fall outside the recorded service scope. The owner’s direction is needed before proceeding.')],
+ [o('Access not provided','Agreed access could not be provided because the required authorization or access method was unavailable.')]);
+add(['Photograph the delivery and note visible concerns'],
+ [o('Delivery documented','The delivery was photographed and any visible concerns were noted for the owner.')],
+ [o('Visible delivery concern','A visible concern with the delivery was documented in the additional notes and photos.')],
+ [o('Delivery could not be documented','The delivery could not be photographed or assessed; the reason is recorded in the additional notes.')]);
+add(['Send the owner a brief update'],
+ [o('Owner update prepared','A brief update about the delivery was prepared for the owner.')],
+ [o('Owner update includes an unresolved issue','The owner update identifies an unresolved delivery issue and the next action needed.')],
+ [o('Update not sent','A delivery update could not be sent because the required communication method or owner contact was unavailable.')]);
+add(['Secure the property and record departure time'],
+ [o('Property secured','The property was secured before departure and the departure time was recorded.')],
+ [o('Security concern recorded','A security concern was found before departure and recorded for owner follow-up.')],
+ [o('Unable to confirm security','The property could not be confirmed secure before departure; the reason and follow-up needed are recorded.')]);
 export const CHECKLIST_SUGGESTED_ANSWERS = registry;
 const STATUS_ALIASES = { Pass: 'Normal', 'Needs Attention': 'Important', Critical: 'Emergency' };
 export function hasSuggestedAnswers(visitType, name) {
