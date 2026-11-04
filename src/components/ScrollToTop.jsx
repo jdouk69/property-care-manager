@@ -44,7 +44,8 @@ export default function ScrollToTop() {
       }, 150);
     };
     window.addEventListener("scroll", rememberPosition, { passive: true });
-    saveScrollPosition(key, { x: window.scrollX, y: window.scrollY });
+    const initialPosition = { x: window.scrollX, y: window.scrollY };
+    saveScrollPosition(key, initialPosition);
 
     return () => {
       window.removeEventListener("scroll", rememberPosition);
