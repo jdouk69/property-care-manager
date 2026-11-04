@@ -7,6 +7,7 @@
 //
 // SECURITY: this module NEVER emits property access secrets (gate codes, lockbox
 // codes, alarm PINs, key locations, Wi-Fi passwords, camera/door credentials).
+import { agreementAccessScopeText, OWNER_OCCUPIED_EXTERIOR_ONLY } from './propertyScope.js';
 
 // Access secrets that must never be resolved into the agreement/snapshot, and
 // whose values are scanned for defensively before a snapshot is frozen.
@@ -137,6 +138,7 @@ export function buildSentSnapshot(ctx) {
     template = {},
     vatRate,
   } = ctx || {};
+  const exteriorOnly = agreement.exterior_only === true || property.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY;
 
   const fields = {
     business_name: business.business_name || "",
@@ -150,12 +152,18 @@ export function buildSentSnapshot(ctx) {
     property_name: property.name || "",
     property_address: property.address || "",
     property_type: property.property_type || "",
+    service_scope: property.service_scope || "",
+    access_scope_clause: agreementAccessScopeText(property.service_scope, exteriorOnly),
+    exterior_only: exteriorOnly,
     service_package_name: servicePackage.name || "",
     service_description: servicePackage.description || "",
     // Agreed customer-specific service changes take precedence over the
     // package defaults in NEW agreement snapshots (listed first, with the
     // precedence statement). Historical frozen snapshots are never rebuilt.
     included_services: [
+      exteriorOnly
+        ? "This agreement is exterior-only. Interior checks and services from the standard package are excluded."
+        : "",
       agreement.included_services_override
         ? "The following service changes were agreed with the customer and take precedence over the package's standard services:\n" + agreement.included_services_override
         : "",
@@ -165,7 +173,9 @@ export function buildSentSnapshot(ctx) {
       .join("\n"),
     inspection_frequency: agreement.inspection_frequency || "",
     visit_duration: servicePackage.visit_duration || "",
-    default_visit_type: visitTypeDisplay(servicePackage.default_visit_type),
+    default_visit_type: exteriorOnly
+      ? "Exterior-Only Property Visit"
+      : visitTypeDisplay(servicePackage.default_visit_type),
     agreed_price:
       typeof agreement.agreed_price === "number"
         ? agreement.agreed_price.toFixed(2)
@@ -173,6 +183,7 @@ export function buildSentSnapshot(ctx) {
     billing_frequency: agreement.billing_type || "",
     vat_wording: renderVatWording(servicePackage.vat_setting, vatRate),
     hourly_charge: renderOptionalCharge(servicePackage.hourly_charge, "quoted"),
+    additional_visit_price: renderOptionalCharge(servicePackage.additional_visit_price, "quoted"),
     travel_charge: renderOptionalCharge(servicePackage.travel_charge, "quoted"),
     emergency_surcharge: renderOptionalCharge(
       servicePackage.emergency_surcharge,
@@ -181,6 +192,7 @@ export function buildSentSnapshot(ctx) {
     start_date: agreement.start_date || "",
     renewal_date: agreement.renewal_date || "",
     next_invoice_date: agreement.next_invoice_date || "",
+    next_invoice_notice: agreement.next_invoice_date ? `The next invoice is scheduled for ${agreement.next_invoice_date}.` : "",
     additional_terms: agreement.additional_terms || "",
     emergency_authorization: agreement.emergency_authorization || "",
     emergency_max_amount: renderEmergencyMaxAmount(agreement.emergency_max_amount),
@@ -196,6 +208,21 @@ export function buildSentSnapshot(ctx) {
   }
 
   const resolvedSections = resolveSections(template.body || [], fields);
+  // Include the entered authorization even when a legacy template omitted its placeholder.
+  const authorization = String(fields.emergency_authorization || "").trim();
+  if (authorization && !resolvedSections.some(section => section.paragraphs?.some(text => String(text).includes(authorization)))) {
+    const emergencyIndex = resolvedSections.findIndex(section => section.id === "section-9");
+    resolvedSections.splice(emergencyIndex >= 0 ? emergencyIndex + 1 : resolvedSections.length, 0, {
+      id: "owner-emergency-authorization", heading: "Owner-specific Emergency Authorization", paragraphs: [authorization],
+    });
+  }
+  const scopeSection = {
+    id: "property-service-scope",
+    heading: "Property Service Scope and Access",
+    paragraphs: [fields.access_scope_clause],
+  };
+  const propertySectionIndex = resolvedSections.findIndex((s) => s.id === "section-3");
+  resolvedSections.splice(propertySectionIndex >= 0 ? propertySectionIndex + 1 : Math.min(3, resolvedSections.length), 0, scopeSection);
 
   return {
     agreement_version: agreement.agreement_version ?? 1,
@@ -223,6 +250,7 @@ export function buildSentSnapshot(ctx) {
       name: fields.property_name,
       address: fields.property_address,
       type: fields.property_type,
+      service_scope: fields.service_scope,
     },
     service: {
       package_name: fields.service_package_name,
@@ -231,12 +259,16 @@ export function buildSentSnapshot(ctx) {
       inspection_frequency: fields.inspection_frequency,
       visit_duration: fields.visit_duration,
       default_visit_type: fields.default_visit_type,
+      exterior_only: fields.exterior_only,
     },
     fees: {
       agreed_price: fields.agreed_price,
       billing_frequency: fields.billing_frequency,
       vat_wording: fields.vat_wording,
+      vat_setting: servicePackage.vat_setting || "Standard 24%",
+      vat_rate: typeof vatRate === "number" ? vatRate : 24,
       hourly_charge: fields.hourly_charge,
+      additional_visit_price: fields.additional_visit_price,
       travel_charge: fields.travel_charge,
       emergency_surcharge: fields.emergency_surcharge,
     },
