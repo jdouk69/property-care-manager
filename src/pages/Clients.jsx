@@ -34,6 +34,7 @@ export default function Clients() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const editId = params.get("edit");
+  const returnTo = params.get("returnTo");
   return (
     <AppLayout>
       <ResourceListPage
@@ -53,6 +54,9 @@ export default function Clients() {
         }}
         onOpenItem={(item) => navigate(`/clients/${item.id}`)}
         autoOpenEditId={editId || undefined}
+        focusFieldName={params.get("focus") || undefined}
+        onSaved={() => { if (returnTo) navigate(returnTo); }}
+        onCancel={() => { if (returnTo) navigate(returnTo); }}
       />
     </AppLayout>
   );
