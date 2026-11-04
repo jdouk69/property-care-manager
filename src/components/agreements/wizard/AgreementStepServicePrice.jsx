@@ -4,6 +4,7 @@ import { Package, AlertTriangle, SlidersHorizontal, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
@@ -28,7 +29,7 @@ const FREQUENCY_OPTS = ["Weekly", "Twice Weekly", "Monthly", "As Needed"];
 // the staff decision (package frequency OR documented customer-specific
 // service changes) is enforced before creating a signing link.
 export default function AgreementStepServicePrice({
-  values, set, setEmergency,
+  values, set, setEmergency, selectedProperty,
   packages, selectedPackage, onPackageChange,
   onBillingTypeChange, onStartDateChange,
   isFrozen, isEdit, freqMismatch,
@@ -103,6 +104,20 @@ export default function AgreementStepServicePrice({
           <Input value={values.inspection_frequency || ""} onChange={(e) => set("inspection_frequency", e.target.value)} placeholder={t("e.g. Weekly")} list="freq-opts" disabled={isFrozen} />
           <datalist id="freq-opts">{FREQUENCY_OPTS.map((o) => <option key={o} value={o} />)}</datalist>
         </div>
+
+      <label className={`flex items-start gap-3 rounded-xl border p-4 ${values.exterior_only || selectedProperty?.service_scope === "Owner-occupied home — exterior-only" ? "border-primary/40 bg-primary/5" : "border-border"}`}>
+        <Checkbox
+          checked={values.exterior_only === true || selectedProperty?.service_scope === "Owner-occupied home — exterior-only"}
+          onCheckedChange={(checked) => set("exterior_only", checked === true)}
+          disabled={isFrozen || selectedProperty?.service_scope === "Owner-occupied home — exterior-only"}
+          className="mt-0.5"
+        />
+        <span className="min-w-0">
+          <span className="block text-sm font-medium">{t("Exterior-only service")}</span>
+          <span className="block text-xs text-muted-foreground mt-1">{t("Keep this plan and its price, but use the exterior-only visit checklist. No interior questions or entry are included.")}</span>
+          {selectedProperty?.service_scope === "Owner-occupied home — exterior-only" && <span className="block text-xs text-primary mt-1">{t("Required by this property's service scope.")}</span>}
+        </span>
+      </label>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
