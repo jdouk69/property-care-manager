@@ -36,10 +36,17 @@ export default async function(req) {
 
     const property = await base44.entities.Property.get(visit.property_id).catch(() => null);
     if (!property) return Response.json({ error: 'Property not found.' }, { status: 404 });
-    const scopeError = propertyScopeError(property, visit.visit_type);
+    let agreementExteriorOnly = false;
+    if (visit.property_service_agreement_id) {
+      const agreement = await base44.asServiceRole.entities.PropertyServiceAgreement.get(visit.property_service_agreement_id).catch(() => null);
+      if (agreement?.property_id === property.id) agreementExteriorOnly = agreement.exterior_only === true;
+    }
+    const exteriorOnly = visit.exterior_only === true || agreementExteriorOnly;
+    const scopeError = propertyScopeError(property, visit.visit_type, visit.status || 'In Progress', exteriorOnly);
     if (scopeError) return Response.json({ error: scopeError }, { status: 422 });
 
     const payload = { ...visit };
+    if (exteriorOnly) payload.exterior_only = true;
     if (EXTERIOR_ONLY_VISIT_TYPES.includes(visit.visit_type)) {
       payload.checklist = EXTERIOR_CHECKLIST.map((name) => ({
         name,
