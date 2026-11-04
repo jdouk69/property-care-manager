@@ -136,6 +136,7 @@ export default function ServiceAgreement() {
     client_id: clientId || "",
     property_id: propertyParam || "",
     service_package_id: "",
+    exterior_only: false,
     agreed_price: 0,
     billing_type: "Monthly",
     inspection_frequency: "",
@@ -223,6 +224,7 @@ export default function ServiceAgreement() {
             client_id: loaded.client_id || "",
             property_id: loaded.property_id || "",
             service_package_id: loaded.service_package_id || "",
+            exterior_only: loaded.exterior_only === true,
             agreed_price: loaded.agreed_price ?? 0,
             billing_type: loaded.billing_type || "Monthly",
             inspection_frequency: loaded.inspection_frequency || "",
@@ -423,6 +425,7 @@ export default function ServiceAgreement() {
         client_id: values.client_id || client?.id || "",
         property_id: values.property_id,
         service_package_id: values.service_package_id,
+        exterior_only: values.exterior_only === true || selectedProperty?.service_scope === "Owner-occupied home — exterior-only",
         agreed_price: Number(values.agreed_price) || 0,
         billing_type: values.billing_type,
         inspection_frequency: values.inspection_frequency,
@@ -766,6 +769,7 @@ export default function ServiceAgreement() {
               <AgreementStepServicePrice
                 values={values}
                 set={set}
+                selectedProperty={selectedProperty}
                 setEmergency={setEmergency}
                 emergencyContact={client}
                 packages={packages}
