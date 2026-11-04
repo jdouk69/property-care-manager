@@ -137,6 +137,15 @@
       "type": "boolean",
       "default": false
     },
+    "report_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Hides this completed visit from the customer Reports queue without deleting the visit record."
+    },
+    "report_archived": {
+      "type": "boolean",
+      "default": false
+    },
     "report_status": {
       "type": "string",
       "enum": [
