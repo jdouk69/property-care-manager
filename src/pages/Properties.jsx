@@ -7,13 +7,14 @@ import ResourceListPage from "@/components/resource/ResourceListPage";
 import PropertyLocationFields from "@/components/properties/PropertyLocationFields";
 import { athensMediumDate } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { propertyScopeError } from "../../server/shared/propertyScope.js";
 
 const fields = [
   { name: "name", label: "Property Name", type: "text", required: true, placeholder: "e.g. Villa Sunset" },
-  { name: "owner_id", label: "Owner", type: "entity-select", entity: "Client" },
+  { name: "owner_id", label: "Owner", type: "entity-select", entity: "Client", helpText: "Choose the client who owns this property. This links the property to its owner and enables report delivery." },
   { name: "property_type", label: "Property Type", type: "select", options: ["Villa", "Apartment", "House", "Studio", "Cottage", "Commercial"] },
-  { name: "service_scope", label: "Service Scope", type: "select", required: true, options: ["Short-term rental villa", "Owner-occupied home — exterior-only"] },
-  { name: "status", label: "Occupancy Status", type: "select", enumContext: "property", options: ["Vacant", "Owner Occupied", "Guest Occupied", "Rental Occupied", "Preparing for Arrival", "Preparing for Departure", "Under Maintenance", "Emergency", "Inactive"] },
+  { name: "service_scope", label: "Service Scope", type: "select", required: true, options: ["Short-term rental villa", "Owner-occupied home — exterior-only"], highlightWhen: (values) => values.service_scope === "Owner-occupied home — exterior-only", attentionTextWhen: (values) => values.service_scope === "Owner-occupied home — exterior-only" ? "This setting keeps visits exterior-only, even when Occupancy Status is Owner Occupied. When recording a visit, choose Exterior-Only Property Visit or Exterior-Only Follow-up Visit." : "" },
+  { name: "status", label: "Occupancy Status", type: "select", enumContext: "property", options: ["Vacant", "Owner Occupied", "Guest Occupied", "Rental Occupied", "Preparing for Arrival", "Preparing for Departure", "Under Maintenance", "Emergency", "Inactive"], highlightWhen: (values) => values.service_scope === "Owner-occupied home — exterior-only" && values.status === "Vacant", attentionTextWhen: (values) => values.service_scope === "Owner-occupied home — exterior-only" && values.status === "Vacant" ? "Review occupancy status: this is set to Vacant. If the owner currently lives here, choose Owner Occupied. The exterior-only service scope still applies either way." : "" },
   { name: "condition", label: "Current Condition", type: "select", options: ["Excellent", "Good", "Needs Attention", "Poor"] },
   { name: "location", type: "custom", render: (values, setField) => <PropertyLocationFields values={values} setField={setField} /> },
   { name: "primary_photo", label: "Primary Photo", type: "image" },
@@ -62,6 +63,7 @@ const columns = [
   { key: "address", label: "Address" },
   { key: "owner_id", label: "Owner" },
   { key: "status", label: "Status", badge: true },
+  { key: "service_scope", label: "Service Scope", badge: true },
   { key: "condition", label: "Condition", badge: true },
 ];
 
@@ -119,6 +121,37 @@ export default function Properties() {
 
   const ownerId = params.get("owner");
   const autoOpen = params.get("add") === "1";
+  const repairVisitId = params.get("repairVisit");
+  const returnTo = params.get("returnTo");
+  const [repairVisit, setRepairVisit] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!repairVisitId) { setRepairVisit(null); return () => { cancelled = true; }; }
+    base44.entities.PropertyVisit.get(repairVisitId)
+      .then((visit) => { if (!cancelled) setRepairVisit(visit || null); })
+      .catch(() => { if (!cancelled) setRepairVisit(null); });
+    return () => { cancelled = true; };
+  }, [repairVisitId]);
+
+  const formFields = fields.map((field) => {
+    if (field.name !== "service_scope" || !repairVisit) return field;
+    const repairError = (values) => propertyScopeError(
+      { service_scope: values.service_scope, property_type: values.property_type },
+      repairVisit.visit_type,
+      repairVisit.status,
+    );
+    return {
+      ...field,
+      highlightWhen: (values) => !!repairError(values) || !!field.highlightWhen?.(values),
+      attentionTextWhen: (values) => {
+        const error = repairError(values);
+        return error
+          ? `The report being linked is a ${repairVisit.visit_type}. ${error}`
+          : field.attentionTextWhen?.(values) || "";
+      },
+    };
+  });
 
   const defaultValues = {
     property_type: "Villa",
@@ -136,7 +169,7 @@ export default function Properties() {
         title="Properties"
         subtitle="Homes under your care"
         icon={Home}
-        fields={fields}
+        fields={formFields}
         columns={columns}
         sections={[
           {
@@ -152,11 +185,35 @@ export default function Properties() {
         addItemLabel="Add Property"
         archivable
         defaultValues={defaultValues}
+        validateBeforeCreate={(values) => repairVisit && propertyScopeError(
+          { service_scope: values.service_scope, property_type: values.property_type },
+          repairVisit.visit_type,
+          repairVisit.status,
+        )}
         autoOpen={autoOpen}
         autoOpenEditId={params.get("edit") || undefined}
+        focusFieldName={params.get("focus") || undefined}
+        onSaved={() => { if (returnTo) navigate(returnTo); }}
         saveLabel="Save Property"
-        onCreated={(values) => {
+        onCreated={(_, created) => {
+          if (repairVisitId) {
+            return (async () => {
+              const scopeError = propertyScopeError(created, repairVisit?.visit_type, repairVisit?.status);
+              if (scopeError) throw new Error(t(scopeError));
+              await base44.entities.PropertyVisit.update(repairVisitId, { property_id: created.id });
+              navigate(returnTo || `/visits/${encodeURIComponent(repairVisitId)}`);
+              return false;
+            })();
+          }
           if (autoOpen && ownerId) {
+            navigate(`/clients/${ownerId}`);
+            return false;
+          }
+        }}
+        onCancel={() => {
+          if (returnTo) {
+            navigate(returnTo);
+          } else if (autoOpen && ownerId) {
             navigate(`/clients/${ownerId}`);
           }
         }}
