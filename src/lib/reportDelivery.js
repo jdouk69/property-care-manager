@@ -61,6 +61,8 @@ export async function approveReport(visit, ctx, userName, durationDecision = nul
   const { file_uri, blob, photoFailures } = await generateAndStoreReportPdf(visit, ctx);
   const reviewedAt = new Date().toISOString();
   const patch = {
+    report_deleted: false,
+    report_archived: false,
     report_pdf_url: file_uri,
     report_status: "Ready to Send",
     report_content_hash: reportContentFingerprint(visit, ctx),
