@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export default function EmergencyAuthSection({ values, set, frozen, confirmed, setConfirmed, canConfirm = true, prefilled = {}, emergencyContact }) {
   const { t } = useLanguage();
