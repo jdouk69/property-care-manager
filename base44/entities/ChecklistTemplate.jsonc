@@ -27,6 +27,8 @@
         "Owner Representative Site Visit",
         "Short Delivery Visit",
         "Initial Property Onboarding Inspection",
+        "Exterior-Only Property Visit",
+        "Exterior-Only Follow-up Visit",
         "Grocery Stocking"
       ],
       "default": "Monthly Property Watch"
