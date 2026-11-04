@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
+import AddServiceSheet from "@/components/services/AddServiceSheet";
 import PageBackButton from "@/components/ui/PageBackButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,9 @@ export default function OneTimeServices() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [selectedTier, setSelectedTier] = useState(null);
+  const [selectedSpecialService, setSelectedSpecialService] = useState(null);
+  const [serviceSheetOpen, setServiceSheetOpen] = useState(false);
+  const [selectedSpecialPropertyId, setSelectedSpecialPropertyId] = useState("");
   const [properties, setProperties] = useState([]);
   const [loadingProps, setLoadingProps] = useState(false);
   const [query, setQuery] = useState("");
@@ -55,7 +59,7 @@ export default function OneTimeServices() {
   // Load properties once a tier is chosen — the tier selection then routes
   // into the existing per-property Service Setup (assessment) flow.
   useEffect(() => {
-    if (!selectedTier) return;
+    if (!selectedTier && !selectedSpecialService) return;
     let cancelled = false;
     setLoadingProps(true);
     base44.entities.Property.list("-created_date", 500)
@@ -63,12 +67,19 @@ export default function OneTimeServices() {
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoadingProps(false); });
     return () => { cancelled = true; };
-  }, [selectedTier]);
+  }, [selectedTier, selectedSpecialService]);
 
   const filteredProps = properties.filter((p) =>
     !query.trim() || (p.name || "").toLowerCase().includes(query.trim().toLowerCase()) ||
     (p.address || "").toLowerCase().includes(query.trim().toLowerCase())
   );
+
+  const specialServices = [
+    { visitType: "Short Delivery Visit", label: "Short Delivery Visit", desc: "Meet a delivery provider, provide agreed access, take photos, and send a brief update. Up to 30 minutes.", icon: ClipboardList, color: "bg-amber-500" },
+    { visitType: "Owner Arrival Preparation", label: "Owner Arrival Preparation", desc: "Prepare the property for your arrival with the agreed checks and simple preparation tasks.", icon: HomeIcon, color: "bg-sky-600" },
+    { visitType: "Seasonal Opening", label: "Seasonal Opening", desc: "Open and prepare the property after a period away. Owner approval and instructions are recorded before the visit.", icon: HomeIcon, color: "bg-emerald-600" },
+    { visitType: "Seasonal Closing", label: "Seasonal Closing", desc: "Close and secure the property for a period away. Owner approval and instructions are recorded before the visit.", icon: HomeIcon, color: "bg-indigo-600" },
+  ];
 
   return (
     <AppLayout>
@@ -187,6 +198,32 @@ export default function OneTimeServices() {
             </Link>
           ))}
         </div>
+
+        <div className="mt-5">
+          <h2 className="text-sm font-semibold mb-2">More one-time services</h2>
+          <div className="space-y-2">
+            {specialServices.map((s) => (
+              <button key={s.visitType} type="button" onClick={() => { setSelectedTier(null); setQuery(""); setSelectedSpecialService(s); }}
+                className="w-full text-left flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-primary/30 hover:shadow-md transition">
+                <span className={`w-10 h-10 rounded-xl ${s.color} text-white flex items-center justify-center shrink-0`}><s.icon className="w-5 h-5" /></span>
+                <span className="min-w-0 flex-1"><span className="block font-medium text-foreground">{s.label}</span><span className="block text-xs text-muted-foreground mt-0.5">{s.desc}</span></span>
+                <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {selectedSpecialService && (
+          <div className="mt-3 rounded-2xl border border-border bg-card p-3">
+            <p className="text-xs font-medium mb-2 flex items-center gap-1.5"><HomeIcon className="w-3.5 h-3.5 text-primary" /> Select property for {selectedSpecialService.label}</p>
+            <div className="relative mb-2"><Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search properties…" className="pl-9 rounded-full bg-muted/50 border-0 focus-visible:ring-1" /></div>
+            {loadingProps ? <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> : <div className="max-h-64 overflow-y-auto divide-y divide-border">
+              {filteredProps.map((p) => <button key={p.id} onClick={() => { setSelectedSpecialPropertyId(p.id); setServiceSheetOpen(true); }} className="w-full text-left px-3 py-3 hover:bg-muted/50 flex items-center justify-between gap-2"><span className="min-w-0"><span className="block text-sm font-medium truncate">{p.name}</span><span className="block text-xs text-muted-foreground truncate">{p.address || ""}</span></span><ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" /></button>)}
+              {filteredProps.length === 0 && <p className="px-3 py-3 text-sm text-muted-foreground">No properties found.</p>}
+            </div>}
+          </div>
+        )}
+        <AddServiceSheet open={serviceSheetOpen} onOpenChange={setServiceSheetOpen} propertyId={selectedSpecialPropertyId} initialServiceType={selectedSpecialService?.visitType || ""} />
       </div>
     </AppLayout>
   );
