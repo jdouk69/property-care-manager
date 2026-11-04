@@ -34,7 +34,14 @@ import { athensLocalToIso, athensVisitWhen, athensToday } from "@/lib/timezone";
 import { createNotification } from "@/lib/notifications";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { checklistItemDisplay } from "@/lib/i18n/checklistItemDisplay";
-import { propertyScopeError, SHORT_TERM_RENTAL_VILLA, OWNER_OCCUPIED_EXTERIOR_ONLY, EXTERIOR_ONLY_VISIT_TYPE, EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE } from "@/lib/propertyScope";
+import {
+  EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE,
+  EXTERIOR_ONLY_VISIT_TYPE,
+  EXTERIOR_ONLY_VISIT_TYPES,
+  OWNER_OCCUPIED_EXTERIOR_ONLY,
+  SHORT_TERM_RENTAL_VILLA,
+  propertyScopeError,
+} from "../../../server/shared/propertyScope.js";
 
 // Seasonal Opening / Closing are NOT listed here: they are booked through
 // Add Service, which records the required per-visit owner approval. The
@@ -116,18 +123,28 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const [agreementPackages, setAgreementPackages] = useState({});
   const [properties, setProperties] = useState([]);
   const [propertyId, setPropertyId] = useState(null);
+  const [scopeValidationError, setScopeValidationError] = useState("");
   const selectedProperty = properties.find((p) => p.id === propertyId) || null;
-  const availableVisitTypes = VISIT_TYPES.filter((vt) => {
-    if (selectedProperty?.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY) {
-      return vt === EXTERIOR_ONLY_VISIT_TYPE || vt === EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE;
-    }
-    if (selectedProperty?.service_scope === SHORT_TERM_RENTAL_VILLA) {
-      return vt !== EXTERIOR_ONLY_VISIT_TYPE && vt !== EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE;
-    }
-    return false;
-  });
+  const serviceScope = selectedProperty?.service_scope || "";
+  const exteriorOnlyService = serviceScope === OWNER_OCCUPIED_EXTERIOR_ONLY || agreement?.exterior_only === true;
+  const effectiveServiceScope = exteriorOnlyService ? OWNER_OCCUPIED_EXTERIOR_ONLY : serviceScope;
+  const availableVisitTypes = !serviceScope ? [] : exteriorOnlyService
+    ? EXTERIOR_ONLY_VISIT_TYPES
+    : VISIT_TYPES;
   // Phase 1: preselect a visit type passed via /visits?visit_type=... (Prep Arrival, One-Time services).
   const [visitType, setVisitType] = useState(VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : VISIT_TYPES[0]);
+  const chooseVisitType = (value) => { setVisitType(value); setScopeValidationError(""); };
+  const showScopeValidationError = (message) => setScopeValidationError(message || "Choose a visit type allowed for this property's Service Scope.");
+  useEffect(() => {
+    if (!scopeValidationError) return;
+    const timer = setTimeout(() => {
+      const target = Array.from(document.querySelectorAll("[data-visit-type-field]"))
+        .find((node) => node.dataset.visitTypeField === "true");
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.querySelector("[role='combobox'],button")?.focus({ preventScroll: true });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [scopeValidationError, step]);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
   const [gps, setGps] = useState("");
@@ -169,6 +186,8 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // Staff-confirmed charge amount for an ADDITIONAL — BILLABLE visit, captured
   // on the Finish screen before completion (null = not entered/confirmed).
   const [additionalAmount, setAdditionalAmount] = useState(null);
+  const [vacancyConfirmed, setVacancyConfirmed] = useState(false);
+  const [vacancyGateComplete, setVacancyGateComplete] = useState(false);
   const [resumable, setResumable] = useState(null);
   const [contractors, setContractors] = useState([]);
   const [expensesCreated, setExpensesCreated] = useState([]);
@@ -270,8 +289,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           const a = await base44.entities.PropertyServiceAgreement.get(ctxAgreement);
           setAgreement(a);
           setAgreementId(a.id);
-          if (ctxProperty) setPropertyId(ctxProperty);
-          else if (a.property_id) setPropertyId(a.property_id);
+          const linkedPropertyId = ctxProperty || a.property_id;
+          if (linkedPropertyId) setPropertyId(linkedPropertyId);
+          let linkedScope = properties.find((p) => p.id === linkedPropertyId)?.service_scope || "";
+          if (!linkedScope && linkedPropertyId) {
+            try { linkedScope = (await base44.entities.Property.get(linkedPropertyId))?.service_scope || ""; } catch (e) {}
+          }
           // The onboarding flow passes the intended visit type explicitly
           // (ctxVisitType). The package still provides context (name,
           // frequency, duration) but must NOT override the onboarding visit
@@ -284,12 +307,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               resolvedType = ctxVisitType || p?.default_visit_type || "";
             } catch (e) {}
           }
-          setVisitType(resolvedType);
+          setVisitType(linkedScope === OWNER_OCCUPIED_EXTERIOR_ONLY ? EXTERIOR_ONLY_VISIT_TYPE : resolvedType);
           // Agreement/package provides no visit type: keep the existing Choose
           // Visit Type screen (agreement context stays loaded so the visit is
           // still linked). If an unfinished visit draft exists, stay on the
           // guarded first-visit screen instead.
-          if (!resolvedType && !(d && d.propertyId && d.checklist && d.checklist.length > 0)) setStep("type");
+          if (!resolvedType && linkedScope !== OWNER_OCCUPIED_EXTERIOR_ONLY && !(d && d.propertyId && d.checklist && d.checklist.length > 0)) setStep("type");
           if (ctxClient) { try { setClientObj(await base44.entities.Client.get(ctxClient)); } catch (e) {} }
         } catch (e) {}
       })();
@@ -308,6 +331,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         try {
           const v = await base44.entities.PropertyVisit.get(resumeVisitId);
           setResumeVisit(v);
+          const confirmationAt = Date.parse(v.occupancy_confirmed_at || "");
+          const confirmedJustNow = v.occupancy_confirmed_vacant === true
+            && Number.isFinite(confirmationAt)
+            && Date.now() - confirmationAt >= 0
+            && Date.now() - confirmationAt < 2 * 60 * 1000;
+          setVacancyConfirmed(confirmedJustNow);
+          setVacancyGateComplete(confirmedJustNow);
           setPropertyId(v.property_id);
           setVisitType(v.visit_type || VISIT_TYPES[0]);
           setStartTime(v.start_time || null);
@@ -403,7 +433,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         // CANONICAL classification of this started visit — established once at
         // start (or via the legacy fallback), restored verbatim on resume and
         // never re-derived afterward.
-        billingClassification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }) });
+        billingClassification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType, serviceScope }) });
     }
   }, [step, propertyId, visitType, startTime, gps, checklist, meters, summary, issueIds, taskIds, createdIssues, createdTasks, expensesCreated, commSent, answered, skipped, agreementId, additionalService, billable, additionalAmount, agreement, pkg]);
 
@@ -446,7 +476,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       maintenance_issue_ids: issueIds,
       follow_up_task_ids: taskIds,
       is_additional_service: additionalService,
-      billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }),
+      billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType, serviceScope }),
       // Staff-confirmed additional charge amount persists across mid-visit
       // resume of the same record; absent when not confirmed (field untouched).
       ...(additionalService && billable && additionalAmount > 0 ? { agreed_price: additionalAmount } : {}),
@@ -495,7 +525,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         const p = await loadChecklistItems(propertyId, visitType);
         if (cancelled) return;
         setTypePreview(p);
-        const rec = recommendedVisitType(pkg);
+        const rec = recommendedVisitType(pkg, effectiveServiceScope);
         if (rec && rec !== visitType) {
           const rp = await loadChecklistItems(propertyId, rec);
           if (!cancelled) setRecPreview(rp);
@@ -640,10 +670,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   const discardDraft = () => { clearDraft(); setResumable(null); };
 
   const loadChecklistItems = async (pid, vtype) => {
-    if (vtype === EXTERIOR_ONLY_VISIT_TYPE || vtype === EXTERIOR_ONLY_FOLLOWUP_VISIT_TYPE) {
-      const seed = SEED[vtype] || [];
-      const items = seed.map((name) => ({ name, status: "Not Checked", notes: "", photos: [], owner_visible: false }));
-      return { items, source: "Default", found: true, templateName: "Exterior-only checklist", count: items.length };
+    if (EXTERIOR_ONLY_VISIT_TYPES.includes(vtype)) {
+      const items = (SEED[vtype] || []).map((name) => ({ name, status: "Not Checked", notes: "", photos: [], owner_visible: false }));
+      return { items, source: "Built-in exterior-only checklist", found: items.length > 0, templateName: "", count: items.length };
     }
     const all = await base44.entities.ChecklistTemplate.list("-created_date", 500);
     const live = (all || []).filter((t) => !t.archived);
@@ -667,7 +696,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // resolved (explicit ctxVisitType or the package's valid default_visit_type).
   // Callers use the flag to route to the EXISTING Choose Visit Type screen
   // instead of silently defaulting to "Monthly Property Watch".
-  const loadAgreementContext = async (ag, cid) => {
+  const loadAgreementContext = async (ag, cid, selectedScope = "") => {
     setAgreement(ag); setAgreementId(ag.id);
     let resolvedType = VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : "";
     if (ag.service_package_id) {
@@ -677,12 +706,12 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         resolvedType = VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : (VISIT_TYPES.includes(p?.default_visit_type) ? p.default_visit_type : "");
       } catch (e) {}
     }
-    setVisitType(resolvedType);
+    setVisitType(selectedScope === OWNER_OCCUPIED_EXTERIOR_ONLY || ag.exterior_only === true ? EXTERIOR_ONLY_VISIT_TYPE : resolvedType);
     // Client context for the First Visit screen: explicit id first, else the
     // agreement's own client. Display-only.
     if (cid) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
     else if (ag.client_id) { try { setClientObj(await base44.entities.Client.get(ag.client_id)); } catch (e) {} }
-    return !!resolvedType;
+    return selectedScope === OWNER_OCCUPIED_EXTERIOR_ONLY || ag.exterior_only === true || !!resolvedType;
   };
 
   const goNextAfterProperty = (hasType = true) => {
@@ -694,13 +723,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   const handleSelectProperty = async (pid, cidOverride) => {
     setPropertyId(pid);
+    const scope = properties.find((p) => p.id === pid)?.service_scope || "";
     const cid = cidOverride || ctxClient || selectedClient;
     try {
       const all = await base44.entities.PropertyServiceAgreement.list("-created_date", 500);
       // Operational agreement = status Active AND signing_status Signed — same rule as Property Detail.
       const propAgs = (all || []).filter((a) => !a.archived && a.status === "Active" && a.signing_status === "Signed" && a.property_id === pid);
       if (propAgs.length === 1) {
-        const hasType = await loadAgreementContext(propAgs[0], cid);
+        const hasType = await loadAgreementContext(propAgs[0], cid, scope);
         goNextAfterProperty(hasType);
       } else if (propAgs.length > 1) {
         const pkgs = await Promise.all(propAgs.map(async (a) => { try { return a.service_package_id ? await base44.entities.ServicePackage.get(a.service_package_id) : null; } catch (e) { return null; } }));
@@ -711,7 +741,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         setStep("select-agreement");
       } else {
         setAgreement(null); setPkg(null); setAgreementId("");
-        const vt0 = VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : "";
+        const vt0 = scope === OWNER_OCCUPIED_EXTERIOR_ONLY
+          ? EXTERIOR_ONLY_VISIT_TYPE
+          : (VISIT_TYPES.includes(ctxVisitType) && !EXTERIOR_ONLY_VISIT_TYPES.includes(ctxVisitType) ? ctxVisitType : "");
         setVisitType(vt0);
         if (cid && !clientObj) { try { setClientObj(await base44.entities.Client.get(cid)); } catch (e) {} }
         goNextAfterProperty(!!vt0);
@@ -733,16 +765,16 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     const pk = ctx.pkg !== undefined ? ctx.pkg : pkg;
     const vis = ctx.visits !== undefined ? ctx.visits : visits;
     if (!ag || !isRecurringAgreement(ag)) return false;
-    const rec = recommendedVisitType(pk);
+    const rec = recommendedVisitType(pk, exteriorOnlyService ? OWNER_OCCUPIED_EXTERIOR_ONLY : serviceScope);
     if (!rec) return false;
-    const fu = followUpTypeFor(rec);
+    const fu = followUpTypeFor(rec, exteriorOnlyService ? OWNER_OCCUPIED_EXTERIOR_ONLY : serviceScope, pk);
     // Package slot of the requested type: the full visit OR (for packages
     // with a companion, currently Complete Care) its brief follow-up. Each
     // slot is judged independently — one full + one follow-up, never two of
     // either kind.
     const slot = vt === rec ? "full" : fu && vt === fu ? "followUp" : null;
     if (!slot) return false;
-    const ent = entitlementStatus({ visits: vis, agreement: ag, pkg: pk, recType: rec, todayStr: athensToday() });
+    const ent = entitlementStatus({ visits: vis, agreement: ag, pkg: pk, recType: rec, todayStr: athensToday(), serviceScope });
     if (!ent || !ent[slot]) return false;
     return ent[slot].remaining === 0 && !ent[slot].unfinished;
   };
@@ -792,22 +824,25 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // the existing billing classification + Billable checkbox state are
   // preserved (only progress fields are reset).
   const restartExistingVisit = async (record) => {
+    const isShortTermRental = selectedProperty?.service_scope === SHORT_TERM_RENTAL_VILLA;
+    if (isShortTermRental && !window.confirm(t("Before restarting, confirm that no owner, guest, tenant, or other person is staying at the property now. If anyone is there or occupancy is uncertain, do not enter."))) return;
     try {
-      const property = await base44.entities.Property.get(record.property_id);
-      const scopeError = propertyScopeError(property, record.visit_type);
-      if (scopeError) {
-        alert(t(scopeError));
-        return;
-      }
       const { items } = await loadChecklistItems(record.property_id, record.visit_type);
+      const now = new Date().toISOString();
+      const me = isShortTermRental ? await base44.auth.me().catch(() => null) : null;
       await base44.entities.PropertyVisit.update(record.id, {
         checklist: items,
         meter_readings: [],
         summary: "",
         internal_notes: "",
         gps_location: "",
-        start_time: new Date().toISOString(),
+        start_time: now,
         status: "In Progress",
+        ...(isShortTermRental ? {
+          occupancy_confirmed_vacant: true,
+          occupancy_confirmed_at: now,
+          occupancy_confirmed_by: me?.full_name || me?.email || "",
+        } : {}),
       });
       navigate(`/visits?resume=${record.id}`);
     } catch (e) { alert(t("Could not restart visit: {message}", { message: e?.message || e })); }
@@ -815,6 +850,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   const saveScheduled = async () => {
     if (!scheduleDate || !scheduleTime || !propertyId) return;
+    const isExteriorOnlyVisit = exteriorOnlyService || EXTERIOR_ONLY_VISIT_TYPES.includes(visitType);
+    const scopeError = propertyScopeError(selectedProperty, visitType, "Scheduled", isExteriorOnlyVisit);
+    if (scopeError) { showScopeValidationError(scopeError); return; }
     setSaving(true);
     try {
       // Interpret the entered date/time as Athens wall-clock → store a tz-correct UTC instant.
@@ -823,6 +861,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         property_id: propertyId,
         property_service_agreement_id: agreementId || "",
         visit_type: visitType,
+        exterior_only: isExteriorOnlyVisit,
         status: "Scheduled",
         start_time: iso,
         scheduled_time: iso,
@@ -850,20 +889,29 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       if (scheduleMode) {
         const pname = properties.find((p) => p.id === propertyId)?.name || t("Property");
         toast({ title: t("Visit scheduled"), description: `${clientObj?.name || ""} · ${pname} · ${whenLabel(iso)}` });
-        navigate("/");
+        navigate("/dashboard");
       } else {
         navigate(`/clients/${ctxClient || agreement?.client_id || ""}`);
       }
-    } catch (e) { setSaving(false); alert(t("Could not schedule visit: {message}", { message: e?.message || e })); }
+    } catch (e) {
+      setSaving(false);
+      const message = e?.message || String(e);
+      if (message.includes("exterior-only") || message.includes("Service Scope") || message.includes("valid Service Scope")) showScopeValidationError(message);
+      else alert(t("Could not schedule visit: {message}", { message }));
+    }
   };
 
   const startVisit = async (overrideType, opts = {}) => {
     const vt = overrideType || visitType;
-    const scopeError = propertyScopeError(selectedProperty, vt);
+    const isExteriorOnlyVisit = exteriorOnlyService || EXTERIOR_ONLY_VISIT_TYPES.includes(vt);
+    const scopeError = propertyScopeError(selectedProperty, vt, "In Progress", isExteriorOnlyVisit);
     if (scopeError) {
-      alert(t(scopeError));
+      showScopeValidationError(scopeError);
+      if (step !== "schedule" && step !== "type") setStep("type");
       return;
     }
+    setVacancyConfirmed(false);
+    setVacancyGateComplete(false);
     // Additional billable service: explicit launch ({ additional: true }) or
     // the package's own visit type with the included allowance consumed.
     const additional = opts && typeof opts.additional === "boolean" ? opts.additional : resolveAdditional(vt);
@@ -1065,12 +1113,14 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
       report_sent_at: "", report_sent_to: "", report_sent_by: "",
       report_delivery_method: "", report_pdf_url: "",
       property_service_agreement_id: agreementId || "",
+      exterior_only: exteriorOnlyService || EXTERIOR_ONLY_VISIT_TYPES.includes(visitType),
       is_additional_service: !!additionalService,
-      billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType }),
+      billing_classification: billingClassificationFor({ additionalService, billable, agreement, pkg, visitType, serviceScope }),
       // Staff-confirmed additional charge amount (Finish screen) is stored on
       // the completed record — AdditionalChargeCard prefills from it. Never
       // invented: absent when no amount was entered (staff confirm there).
       ...(additionalService && billable && additionalAmount > 0 ? { agreed_price: additionalAmount } : {}),
+      ...(serviceScope === SHORT_TERM_RENTAL_VILLA ? { occupancy_confirmed_vacant: vacancyConfirmed } : {}),
       ...(visitType === "Grocery Stocking" ? { shopping_list: groceryList.trim(), grocery_cost: parseFloat(groceryCost) || 0 } : {}),
     };
     try {
@@ -1124,7 +1174,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     return (
       <div>
         <div className="flex items-center gap-2 mb-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}><ChevronLeft className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}><ChevronLeft className="w-5 h-5" /></Button>
           <h2 className="font-semibold text-lg">{t("Schedule Visit")}</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-3 px-1">{t("Select the client.")}</p>
@@ -1165,7 +1215,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         <p className="text-sm text-muted-foreground mb-3 px-1">{t("This property has multiple active service agreements. Which is this visit for?")}</p>
         <div className="space-y-2">
           {(propertyAgreements || []).map((a) => (
-            <button key={a.id} onClick={async () => { const hasType = await loadAgreementContext(a, ctxClient || selectedClient); goNextAfterProperty(hasType); }}
+            <button key={a.id} onClick={async () => { const hasType = await loadAgreementContext(a, ctxClient || selectedClient, properties.find((p) => p.id === a.property_id)?.service_scope || ""); goNextAfterProperty(hasType); }}
               className="w-full text-left rounded-2xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition">
               <p className="font-medium text-foreground">{agreementPackages[a.id]?.name || t("Service agreement")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -1189,9 +1239,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // exact same source of truth that decides whether Start Visit Now is
     // Included in Package vs Additional - Billable (resolveAdditional /
     // PackageServiceCard). Informational display only.
-    const recType0 = recommendedVisitType(pkg);
+    const recType0 = recommendedVisitType(pkg, effectiveServiceScope);
     const ent = agreement && isRecurringAgreement(agreement) && recType0
-      ? entitlementStatus({ visits, agreement, pkg, recType: recType0, todayStr: athensToday() })
+      ? entitlementStatus({ visits, agreement, pkg, recType: recType0, todayStr: athensToday(), serviceScope: effectiveServiceScope })
       : null;
     return (
       <div>
@@ -1248,6 +1298,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <h2 className="font-semibold text-lg">{t("Schedule Visit")}</h2>
         </div>
 
+        {!serviceScope && <p className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700 mb-4">{t("No Service Scope is set for this property. Open Properties and choose a service scope before scheduling or starting a visit.")}</p>}
+        {exteriorOnlyService && <p className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm mb-4">{t("This service is exterior-only. Only exterior visit types and the exterior checklist are available.")}</p>}
+
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">
           <div className="space-y-1.5 text-sm">
             <div className="flex items-center gap-2"><User className="w-4 h-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">{t("Client:")}</span> <span className="font-medium truncate">{clientObj?.name || "—"}</span></div>
@@ -1265,12 +1318,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
         </div>
 
         <div className="space-y-4">
-          <div>
+          <div data-visit-type-field="true" className={scopeValidationError ? "rounded-xl border-2 border-destructive bg-destructive/5 p-3" : ""}>
             <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">{t("Visit Type")}</Label>
-            <Select value={visitType} onValueChange={setVisitType}>
-              <SelectTrigger className={FIELD}><SelectValue placeholder={t("Select visit type")} /></SelectTrigger>
+            <Select value={visitType} onValueChange={chooseVisitType}>
+              <SelectTrigger className={`${FIELD} ${scopeValidationError ? "border-destructive ring-2 ring-destructive/30" : ""}`} aria-invalid={!!scopeValidationError}><SelectValue placeholder={t("Select visit type")} /></SelectTrigger>
               <SelectContent>{availableVisitTypes.map((vt) => <SelectItem key={vt} value={vt}>{t(visitTypeLabel(vt))}</SelectItem>)}</SelectContent>
             </Select>
+            {scopeValidationError && <p role="alert" className="mt-2 text-sm font-medium text-destructive">{t(scopeValidationError)}</p>}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -1282,7 +1336,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className={FIELD} />
             </div>
           </div>
-          <Button onClick={saveScheduled} disabled={saving || !scheduleDate || !scheduleTime || !visitType} className="w-full h-12 rounded-2xl text-base gap-2">
+          <Button onClick={saveScheduled} disabled={saving || !scheduleDate || !scheduleTime || !availableVisitTypes.includes(visitType)} className="w-full h-12 rounded-2xl text-base gap-2">
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CalendarClock className="w-5 h-5" />} {t("Save Scheduled Visit")}
           </Button>
         </div>
@@ -1342,7 +1396,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
   // then marks the package's normal scheduled visit as RECOMMENDED — while all
   // visit types remain selectable for special/add-on situations.
   if (step === "type") {
-    const recType = recommendedVisitType(pkg);
+    const recType = recommendedVisitType(pkg, effectiveServiceScope);
     const activeServiceName = pkg?.name || agreement?.included_services_override || t("Service agreement");
     return (
       <div>
@@ -1353,6 +1407,9 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             <p className="text-xs text-muted-foreground">{t("Choose visit type")}</p>
           </div>
         </div>
+
+        {!serviceScope && <p className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-700 mb-4">{t("No Service Scope is set for this property. Open Properties and choose a service scope before scheduling or starting a visit.")}</p>}
+        {serviceScope === OWNER_OCCUPIED_EXTERIOR_ONLY && <p className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm mb-4">{t("This property is exterior-only. Only exterior visit types and the exterior checklist are available.")}</p>}
 
         {/* Package Service Card — the property's ACTIVE recurring service with
             its real entitlement status for the current service period, from
@@ -1365,6 +1422,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             pkg={pkg}
             recType={recType}
             recPreview={recPreview}
+            serviceScope={serviceScope}
             activeServiceName={activeServiceName}
             visits={visits}
             propertyId={propertyId}
@@ -1378,7 +1436,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
             // Additional classification is unchanged — Start Visit Now derives
             // it from the same entitlement resolver (resolveAdditional).
             onStartIncluded={() => { setVisitType(recType); setStep("first-visit"); }}
-            onStartFollowUp={() => { setVisitType(followUpTypeFor(recType)); setStep("first-visit"); }}
+            onStartFollowUp={() => { setVisitType(followUpTypeFor(recType, effectiveServiceScope, pkg)); setStep("first-visit"); }}
             onStartAdditional={() => { setVisitType(recType); setStep("first-visit"); }}
             onResumeDraft={resume}
             onRestartDraft={restartDraftVisit}
@@ -1409,11 +1467,13 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div data-visit-type-field="true" className={scopeValidationError ? "rounded-xl border-2 border-destructive bg-destructive/5 p-3" : ""}>
+          {scopeValidationError && <p role="alert" className="mb-3 text-sm font-medium text-destructive">{t(scopeValidationError)}</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {availableVisitTypes.map((vt) => {
             const isRec = vt === recType;
             return (
-              <button key={vt} onClick={() => setVisitType(vt)}
+              <button key={vt} onClick={() => chooseVisitType(vt)}
                 className={`text-left rounded-2xl border p-4 transition ${visitType === vt ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/40"}`}>
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-medium text-sm text-foreground">{t(visitTypeLabel(vt))}</p>
@@ -1425,6 +1485,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
               </button>
             );
           })}
+          </div>
         </div>
 
         {/* Live preview: the checklist this visit type will actually load */}
@@ -1440,7 +1501,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
           <p className="text-xs text-destructive mt-3 text-center">{t("No checklist is configured for this visit type.")}</p>
         )}
 
-        <Button onClick={() => startVisit(visitType)} className="w-full mt-5 h-12 rounded-2xl text-base">
+        <Button onClick={() => startVisit(visitType)} disabled={!availableVisitTypes.includes(visitType)} className="w-full mt-5 h-12 rounded-2xl text-base">
           <Navigation className="w-5 h-5 mr-2" /> {t("Start Visit & Record Arrival")}
         </Button>
       </div>
@@ -1449,6 +1510,48 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
 
   // ---- STEP: active visit ----
   if (step === "active") {
+    if (serviceScope === SHORT_TERM_RENTAL_VILLA && !vacancyGateComplete) {
+      return (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-5 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">{t("Confirm the property is vacant")}</h2>
+            <p className="text-sm text-muted-foreground mt-2">{t("Before entering a short-term rental, confirm that no owner, guest, tenant, or other person is staying at the property. If anyone is there or you are unsure, do not enter; contact the owner to reschedule.")}</p>
+          </div>
+          <label className="flex items-start gap-3 text-sm leading-5 cursor-pointer">
+            <Checkbox checked={vacancyConfirmed} onCheckedChange={(value) => setVacancyConfirmed(value === true)} className="mt-0.5" />
+            <span>{t("I checked, and no one is staying at the property now.")}</span>
+          </label>
+          <Button
+            className="w-full h-12 rounded-2xl"
+            disabled={!vacancyConfirmed || saving}
+            onClick={async () => {
+              if (resumeVisitId) {
+                setSaving(true);
+                try {
+                  const now = new Date().toISOString();
+                  const me = await base44.auth.me().catch(() => null);
+                  const updated = await base44.entities.PropertyVisit.update(resumeVisitId, {
+                    status: "In Progress", start_time: now,
+                    occupancy_confirmed_vacant: true,
+                    occupancy_confirmed_at: now,
+                    occupancy_confirmed_by: me?.full_name || me?.email || "",
+                  });
+                  setResumeVisit(updated);
+                  setStartTime(now);
+                } catch (e) {
+                  setVacancyConfirmed(false);
+                  alert(t("Could not record the vacancy confirmation: {message}", { message: e?.message || e }));
+                  setSaving(false);
+                  return;
+                }
+                setSaving(false);
+              }
+              setVacancyGateComplete(true);
+            }}
+          >{t("Confirm and continue")}</Button>
+        </div>
+      );
+    }
     const flaggedCount = checklist.filter((i) => i.status === "Important" || i.status === "Emergency").length;
     // Both new statuses are deliberate answers; only "Not Checked" (untouched) is unanswered.
     const isAnswered = (it, idx) => itemAnswered(it, idx, answered);
@@ -1507,7 +1610,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
     // shows its persisted classification; a fresh local draft derives it from
     // the same wizard state the completion flow already stores.
     const activeClassification = resumeVisit?.billing_classification ||
-      billingClassificationFor({ additionalService, billable, agreement, pkg, visitType });
+      billingClassificationFor({ additionalService, billable, agreement, pkg, visitType, serviceScope });
 
     return (
       <div className="pb-40 pb-[calc(10rem+env(safe-area-inset-bottom))]">
@@ -1814,7 +1917,7 @@ export default function VisitWizard({ onDone, autoResume, ctxProperty, ctxAgreem
                 <AdditionalAmountSection pkg={pkg} value={additionalAmount} onChange={setAdditionalAmount} />
               )}
             </div>
-          ) : visitType === recommendedVisitType(pkg) ? (
+          ) : visitType === recommendedVisitType(pkg, serviceScope) || visitType === followUpTypeFor(recommendedVisitType(pkg, serviceScope), serviceScope, pkg) ? (
             <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <p className="text-xs text-emerald-700 dark:text-emerald-500">
