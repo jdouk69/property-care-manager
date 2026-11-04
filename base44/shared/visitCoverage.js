@@ -33,6 +33,7 @@ import {
   includedVisitsInPeriod,
   followUpTypeFor,
 } from './packageEntitlement.js';
+import { EXTERIOR_ONLY_VISIT_TYPE, OWNER_OCCUPIED_EXTERIOR_ONLY } from './propertyScope.js';
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
@@ -85,8 +86,10 @@ export function buildCoverageAlerts({ agreements, visits, packages, properties, 
     if (!coverageQualifies(a)) continue;
 
     const pkg = (packages || []).find((p) => p && p.id === a.service_package_id);
-    const recType = pkg && pkg.default_visit_type;
     const property = (properties || []).find((p) => p && p.id === a.property_id);
+    const recType = property?.service_scope === OWNER_OCCUPIED_EXTERIOR_ONLY || a.exterior_only === true
+      ? EXTERIOR_ONLY_VISIT_TYPE
+      : pkg && pkg.default_visit_type;
     if (!pkg || !recType || !property) continue; // invalid service linkage — never guessed
     const client = (clients || []).find((c) => c && c.id === property.owner_id);
 
@@ -94,7 +97,7 @@ export function buildCoverageAlerts({ agreements, visits, packages, properties, 
     // Coverage spans BOTH package slots for packages with a follow-up
     // companion (currently Complete Care: one full visit + one follow-up).
     let coverage = includedVisitsInPeriod(visits, a, recType, today).length;
-    const fuType = followUpTypeFor(recType);
+    const fuType = followUpTypeFor(recType, a.exterior_only === true ? OWNER_OCCUPIED_EXTERIOR_ONLY : property.service_scope, pkg);
     if (fuType) coverage += includedVisitsInPeriod(visits, a, fuType, today).length;
     const period = billingPeriodFor(a, today);
     if (!period.start || !period.end) continue; // no usable period — never guessed
