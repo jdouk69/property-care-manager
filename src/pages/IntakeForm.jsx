@@ -139,6 +139,11 @@ export default function IntakeForm() {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+    if (!values.property_use) {
+      setError("Please tell us how the property is used before submitting.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -238,6 +243,16 @@ export default function IntakeForm() {
                           )
                           : <Input value={fieldVal(f.name)} onChange={(e) => setField(f.name, e.target.value)} className="bg-white" />
                       }
+                      {f.name === "property_use" && fieldVal(f.name) === "Short-term rental / guest accommodation" && (
+                        <p className="mt-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-slate-700">
+                          Interior visits must be agreed in advance and are carried out only when the property is confirmed vacant and no one is staying there.
+                        </p>
+                      )}
+                      {f.name === "property_use" && fieldVal(f.name) === "Private home with the owner's personal belongings" && (
+                        <p className="mt-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-relaxed text-slate-700">
+                          Visits to these private homes are exterior-only. We do not enter the home.
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
