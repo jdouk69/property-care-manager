@@ -15,6 +15,7 @@ import { SPECIAL_VISIT_TYPES, specialServicePrice } from "@/lib/specialServices"
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import SeasonalApprovalFields from "@/components/visits/SeasonalApprovalFields";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { SHORT_TERM_RENTAL_VILLA } from "../../../server/shared/propertyScope.js";
 
 /**
  * Add Service — schedule a special-purpose one-time / add-on service for an
@@ -36,7 +37,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
  *   - NO charge is created at scheduling or start — the service charge is
  *     staff-confirmed after completion (SpecialServiceChargeCard).
  */
-export default function AddServiceSheet({ open, onOpenChange, clientId, propertyId }) {
+export default function AddServiceSheet({ open, onOpenChange, clientId, propertyId, initialServiceType = "" }) {
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -59,12 +60,14 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
   // approval record; the general property agreement alone is not enough).
   const [approval, setApproval] = useState({ via: "", reference: "", tasks: "", keys: "", extraTime: false });
   const [recordedBy, setRecordedBy] = useState("");
+  const [vacancyConfirmedKey, setVacancyConfirmedKey] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return;
-    setServiceType(""); setDate(""); setTime(""); setError("");
+    setServiceType(initialServiceType || ""); setDate(""); setTime(""); setError("");
     setScheduleLater(false); setStarting(false);
+    setVacancyConfirmedKey("");
     setApproval({ via: "", reference: "", tasks: "", keys: "", extraTime: false });
     setRecordedBy("");
     setPid(propertyId || "");
@@ -93,6 +96,8 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
   // Seasonal services require the per-visit owner approval before work.
   const isSeasonal = serviceType === "Seasonal Opening" || serviceType === "Seasonal Closing";
   const approvalValid = !isSeasonal || (!!approval.via && !!approval.tasks.trim());
+  const vacancyKey = `${pid}:${serviceType}`;
+  const vacancyConfirmed = vacancyConfirmedKey === vacancyKey;
   const hourly = chosen?.pkg?.hourly_charge != null ? Number(chosen.pkg.hourly_charge) : null;
   const buildOwnerApproval = () => ({
     approved_via: approval.via,
@@ -172,7 +177,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
   // and nothing is charged at start (charges stay staff-confirmed after
   // completion, exactly as with a scheduled visit that is started).
   const startNow = async () => {
-    if (!pid || !serviceType || !approvalValid) return;
+    if (!pid || !serviceType || !approvalValid || (prop?.service_scope === SHORT_TERM_RENTAL_VILLA && !vacancyConfirmed)) return;
     setStarting(true);
     setError("");
     try {
@@ -183,6 +188,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
         visit_type: serviceType,
         status: "In Progress",
         start_time: nowIso,
+        ...(prop?.service_scope === SHORT_TERM_RENTAL_VILLA ? { occupancy_confirmed_vacant: true } : {}),
         // Same price snapshot as the scheduling flow (price safety): only
         // stored when a price is actually configured.
         ...(price != null ? { agreed_price: price } : {}),
@@ -223,7 +229,7 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
               <p className="text-sm text-muted-foreground">{t("Select property")}</p>
               <div className="space-y-2">
                 {properties.map((p) => (
-                  <button key={p.id} onClick={() => setPid(p.id)}
+                  <button key={p.id} onClick={() => { setPid(p.id); setVacancyConfirmedKey(""); }}
                     className="w-full text-left rounded-2xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition flex items-center gap-3">
                     <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><HomeIcon className="w-4 h-4" /></span>
                     <div className="min-w-0">
@@ -278,10 +284,17 @@ export default function AddServiceSheet({ open, onOpenChange, clientId, property
                 />
               )}
 
+              {serviceType && prop?.service_scope === SHORT_TERM_RENTAL_VILLA && !scheduleLater && (
+                <label className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm leading-5 cursor-pointer">
+                  <Checkbox checked={vacancyConfirmed} onCheckedChange={(value) => setVacancyConfirmedKey(value === true ? vacancyKey : "")} className="mt-0.5" />
+                  <span>{t("I checked, and no owner, guest, tenant, or other person is staying at the property now. If anyone is there or occupancy is uncertain, do not enter.")}</span>
+                </label>
+              )}
+
               {/* Start Now / Schedule for Later — the two ways to proceed */}
               {serviceType && !scheduleLater && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <Button onClick={startNow} disabled={starting || !approvalValid} className="h-14 rounded-2xl text-base gap-2">
+                  <Button onClick={startNow} disabled={starting || !approvalValid || (prop?.service_scope === SHORT_TERM_RENTAL_VILLA && !vacancyConfirmed)} className="h-14 rounded-2xl text-base gap-2">
                     {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Navigation className="w-5 h-5" />} {t("Start Now")}
                   </Button>
                   <Button variant="outline" onClick={() => setScheduleLater(true)} disabled={starting || !approvalValid} className="h-14 rounded-2xl text-base gap-2">
