@@ -10,8 +10,7 @@ import {
 } from "lucide-react";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { useAuth } from "@/lib/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import NotificationBell from "@/components/layout/NotificationBell";
 import AccountMenu from "@/components/layout/AccountMenu";
@@ -20,7 +19,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import useNewAssessmentCount from "@/hooks/useNewAssessmentCount";
 
 export const NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/clients", label: "Clients", icon: Users },
   { to: "/properties", label: "Properties", icon: Home },
   { to: "/tasks", label: "Tasks", icon: ListChecks },
@@ -48,7 +47,7 @@ export const NAV_ITEMS = [
 const ADMIN_ONLY_NAV = new Set(["/services", "/checklist-templates", "/billing", "/invoices", "/automation", "/assessment-requests"]);
 
 const MOBILE_NAV = [
-  { key: "home", to: "/", label: "Home", icon: LayoutDashboard, end: true },
+  { key: "home", to: "/dashboard", label: "Home", icon: LayoutDashboard, end: true },
   { key: "tasks", to: "/tasks", label: "Tasks", icon: ListChecks },
   { key: "calendar", to: "/calendar", label: "Calendar", icon: CalendarDays },
   { key: "search", to: "/search", label: "Search", icon: Search },
@@ -57,16 +56,14 @@ const MOBILE_NAV = [
 
 const MOBILE_TAB_STORAGE_KEY = "pcc-mobile-tab-routes-v1";
 const MOBILE_TAB_ROOTS = {
-  home: "/",
+  home: "/dashboard",
   tasks: "/tasks",
   calendar: "/calendar",
   search: "/search",
 };
 
 function mobileTabForPath(pathname) {
-  if (pathname === "/") return "home";
-  return Object.entries(MOBILE_TAB_ROOTS).filter(([key]) => key !== "home")
-    .find(([, root]) => pathname === root || pathname.startsWith(`${root}/`))?.[0] || null;
+  return Object.entries(MOBILE_TAB_ROOTS).find(([, root]) => pathname === root || pathname.startsWith(`${root}/`))?.[0] || null;
 }
 
 function readMobileTabRoutes() {
@@ -77,8 +74,9 @@ function readMobileTabRoutes() {
     for (const [key, root] of Object.entries(MOBILE_TAB_ROOTS)) {
       const candidate = stored[key];
       const pathname = typeof candidate?.path === "string" ? candidate.path.split(/[?#]/, 1)[0] : "";
-      const valid = key === "home" ? pathname === "/" : pathname === root || pathname.startsWith(`${root}/`);
-      if (valid) defaults[key] = { path: candidate.path, scrollY: Math.max(0, Number(candidate.scrollY) || 0) };
+      if (pathname === root || pathname.startsWith(`${root}/`)) {
+        defaults[key] = { path: candidate.path, scrollY: Math.max(0, Number(candidate.scrollY) || 0) };
+      }
     }
   } catch {}
   return defaults;
@@ -201,7 +199,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
     if (currentTab) {
       saveTabRoute(currentTab, resetSelectedTab ? item.to : currentPath, resetSelectedTab ? 0 : window.scrollY);
     }
-    const target = resetSelectedTab
+    const target = currentTab === item.key
       ? { path: item.to, scrollY: 0 }
       : mobileTabRoutes[item.key] || { path: item.to, scrollY: 0 };
     navigate(target.path, {
@@ -220,7 +218,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
       {/* Desktop sidebar */}
       <aside className={`hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out ${collapsed ? "-translate-x-full" : ""}`}>
         <div className="flex items-center h-16 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-2.5 flex-1 min-w-0 px-5">
+          <Link to="/dashboard" className="flex items-center gap-2.5 flex-1 min-w-0 px-5">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Home className="w-4 h-4 text-primary-foreground" />
             </div>
@@ -237,12 +235,9 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
       </aside>
 
       {/* Top bar (mobile) */}
-      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between h-14 px-4 bg-background/80 backdrop-blur-md border-b border-border">
+      <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] px-4 bg-background/80 backdrop-blur-md border-b border-border">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon"><Menu className="w-5 h-5" /></Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-0 flex flex-col">
+          <SheetContent side="left" className="w-72 p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] flex flex-col">
             <div className="flex items-center gap-2.5 px-5 h-16 border-b border-sidebar-border">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Home className="w-4 h-4 text-primary-foreground" />
@@ -257,13 +252,14 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
             </div>
           </SheetContent>
         </Sheet>
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/dashboard" className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
             <Home className="w-3.5 h-3.5 text-primary-foreground" />
           </div>
           <span className="font-semibold text-sm">Property Care</span>
         </Link>
         <div className="flex items-center gap-1">
+          
           <NotificationBell />
           <ThemeToggle />
           <LanguageToggle />
@@ -281,8 +277,9 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
       <main className={`min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] transition-[padding] duration-300 ease-in-out lg:pb-0 ${collapsed ? "lg:pl-0" : "lg:pl-64"}`}>
         <div className="hidden lg:flex items-center justify-end h-14 px-6 border-b border-border">
           <div className="flex items-center gap-1">
+            
             <NotificationBell />
-            <ThemeToggle />
+          <ThemeToggle />
             <LanguageToggle />
             <AccountMenu />
           </div>
