@@ -257,6 +257,6 @@ export function buildTodayAgenda(data = {}) {
 export function unsentReports(visits = []) {
   const statusOf = (v) => v.report_status || (v.report_sent ? "Sent" : "Draft");
   return visits
-    .filter((v) => v.status === "Completed" && !v.archived && !isReportExcludedVisit(v) && statusOf(v) !== "Sent")
+    .filter((v) => v.status === "Completed" && !v.archived && !v.report_deleted && !isReportExcludedVisit(v) && statusOf(v) !== "Sent")
     .sort((a, b) => (b.start_time || "").localeCompare(a.start_time || ""));
 }
