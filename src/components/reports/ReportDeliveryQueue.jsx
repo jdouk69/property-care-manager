@@ -292,7 +292,8 @@ export default function ReportDeliveryQueue() {
     setDeletingId(v.id);
     setError("");
     try {
-      await base44.reports.delete(v.id);
+      // Base44 stores customer reports on PropertyVisit; soft-delete only the report queue entry.
+      await base44.entities.PropertyVisit.update(v.id, { report_deleted: true });
       setVisits((items) => items.filter((item) => item.id !== v.id));
       if (reviewVisit?.id === v.id) setReviewVisit(null);
       setDeleteConfirmFor(null);
