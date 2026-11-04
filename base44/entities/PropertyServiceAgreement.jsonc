@@ -11,6 +11,10 @@
     "service_package_id": {
       "type": "string"
     },
+    "exterior_only": {
+      "type": "boolean",
+      "default": false
+    },
     "agreed_price": {
       "type": "number"
     },
