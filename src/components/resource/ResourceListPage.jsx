@@ -31,6 +31,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import EmptyState from "@/components/ui/EmptyState";
 import DictateButton from "@/components/dictation/DictateButton";
 import DictateFormDialog from "@/components/dictation/DictateFormDialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 const ENTITY_LABEL = { Client: "name", Property: "name", Contractor: "company", MaintenanceIssue: "title" };
 
@@ -72,11 +76,11 @@ function badgeTone(value) {
 export default function ResourceListPage({
   entityName, title, subtitle, icon: Icon, fields, columns, searchKeys = [],
   addItemLabel = "Add", renderSummary, defaultValues = {}, cardExtra,
-  onCreated, onUpdated, extraDrawerContent, archivable = false,
-  onOpenItem, autoOpen = false, autoOpenEditId, saveLabel = "Save",
+  onCreated, onUpdated, onSaved, extraDrawerContent, archivable = false,
+  onOpenItem, autoOpen = false, autoOpenEditId, focusFieldName, saveLabel = "Save", validateBeforeCreate,
   showBack = true, sections = [],
   onAdd, reloadSignal,
-  renderCard, filterFn, dictation, emptyTitle, canEditItem,
+  renderCard, filterFn, dictation, emptyTitle, canEditItem, onCancel,
 }) {
   const { user } = useAuth();
   const { t, tEnum, lang } = useLanguage();
@@ -90,6 +94,8 @@ export default function ResourceListPage({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [lookups, setLookups] = useState({});
@@ -170,12 +176,34 @@ export default function ResourceListPage({
   }, []);
 
   const autoEditDone = useRef(false);
+  const autoEditLookupStarted = useRef(false);
   useEffect(() => {
-    if (autoOpenEditId && !autoEditDone.current && items.length) {
+    if (!autoOpenEditId || autoEditDone.current || loading) return;
+    if (items.length) {
       const it = items.find((x) => x.id === autoOpenEditId);
       if (it) { autoEditDone.current = true; openEdit(it); }
     }
-  }, [items, autoOpenEditId]);
+    if (!autoEditDone.current && !autoEditLookupStarted.current) {
+      autoEditLookupStarted.current = true;
+      base44.entities[entityName].get(autoOpenEditId).then((it) => {
+        if (it && mountedRef.current && !autoEditDone.current) {
+          autoEditDone.current = true;
+          openEdit(it);
+        }
+      }).catch(() => {});
+    }
+  }, [items, autoOpenEditId, loading, entityName]);
+
+  useEffect(() => {
+    if (!drawerOpen || !focusFieldName) return;
+    const timer = setTimeout(() => {
+      const field = Array.from(document.querySelectorAll("[data-resource-field]"))
+        .find((node) => node.dataset.resourceField === focusFieldName);
+      field?.scrollIntoView({ behavior: "smooth", block: "center" });
+      field?.querySelector("button, input, textarea")?.focus({ preventScroll: true });
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [drawerOpen, editing, focusFieldName]);
 
   useEffect(() => {
     if (!editing || !dirty) return;
@@ -196,13 +224,36 @@ export default function ResourceListPage({
     // (0 counts as filled) before a new record can be created.
     const missing = fields.filter((f) => f.required && values[f.name] !== 0 && !values[f.name]);
     if (missing.length) { setFormError(t("Please fill in: {fields}", { fields: missing.map((f) => f.label || f.name).join(", ") })); return; }
+    const validationError = validateBeforeCreate?.(values);
+    if (validationError) { setFormError(t(validationError)); return; }
     setFormError("");
     setSaving(true);
     try {
       const created = await base44.entities[entityName].create(values);
       let next = created;
       if (onCreated) {
-        const patch = await onCreated(values, created);
+        let patch;
+        try {
+          patch = await onCreated(values, created);
+        } catch (e) {
+          // The record itself is already persisted. Keep it open as an edit
+          // record if a follow-up action (for example, linking a report visit)
+          // fails, so retrying cannot silently create duplicates.
+          setItems((arr) => [created, ...arr.filter((item) => item.id !== created.id)]);
+          setEditing(created);
+          setValues(created);
+          setSaving(false);
+          setSaved(true);
+          setDirty(false);
+          setFormError(t("{entity} was saved, but the next step failed: {message}", {
+            entity: t(entityName),
+            message: e?.message || t("Unable to complete the follow-up action."),
+          }));
+          return;
+        }
+        // Returning false means the callback has taken over the post-create
+        // flow (for example, navigating to the next onboarding step).
+        if (patch === false) return;
         if (patch) next = { ...created, ...patch };
       }
       setItems((arr) => [next, ...arr]);
@@ -212,7 +263,9 @@ export default function ResourceListPage({
   };
 
   const remove = async (it) => {
-    if (!confirm(t("Delete this record? This cannot be undone. Consider archiving instead."))) return;
+    if (deleting) return;
+    setDeleting(true);
+    setFormError("");
     destructiveRef.current = true;
     clearTimeout(debounceRef.current);
     setDirty(false);
@@ -220,8 +273,14 @@ export default function ResourceListPage({
     try {
       await base44.entities[entityName].delete(it.id);
       setItems((arr) => arr.filter((x) => x.id !== it.id));
+      setDeleteDialogOpen(false);
       setDrawerOpen(false);
-    } catch (e) { alert(e.message || "Unable to update record."); }
+    } catch (e) {
+      destructiveRef.current = false;
+      setFormError(e.message || t("Unable to delete record."));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const archive = async (it) => {
@@ -246,13 +305,14 @@ export default function ResourceListPage({
 
   const renderField = (f) => {
     const val = values[f.name];
+    const attention = !!f.highlightWhen?.(values, formError);
     switch (f.type) {
       case "textarea":
         return <Textarea className="sm:text-base" value={val || ""} onChange={(e) => setField(f.name, e.target.value)} placeholder={f.placeholder && t(f.placeholder)} rows={3} />;
       case "select":
         return (
           <Select value={val || ""} onValueChange={(v) => setField(f.name, v)}>
-            <SelectTrigger className="sm:h-12 sm:text-base"><SelectValue placeholder={f.placeholder || t("Select…")} /></SelectTrigger>
+            <SelectTrigger className={`sm:h-12 sm:text-base ${attention ? "border-amber-500 ring-2 ring-amber-500/20" : ""}`}><SelectValue placeholder={f.placeholder || t("Select…")} /></SelectTrigger>
             <SelectContent>
               {(f.options || []).map((o) => <SelectItem key={o} value={o}>{tEnum(o, f.enumContext)}</SelectItem>)}
             </SelectContent>
@@ -518,7 +578,10 @@ export default function ResourceListPage({
   };
 
   const closeForm = async () => {
-    if (await flushPendingEdit()) setDrawerOpen(false);
+    if (await flushPendingEdit()) {
+      setDrawerOpen(false);
+      onCancel?.();
+    }
   };
 
   const flushSave = async () => {
@@ -526,16 +589,20 @@ export default function ResourceListPage({
     try {
       if (await flushPendingEdit()) {
         if (mountedRef.current) setDrawerOpen(false);
+        onSaved?.(editing, values);
       }
     } finally { if (mountedRef.current) setSaving(false); }
   };
 
   const renderFieldRow = (f) => {
     if (f.showIf && !f.showIf(values)) return null;
+    const attention = !!f.highlightWhen?.(values, formError);
+    const attentionText = f.attentionTextWhen?.(values, formError);
     return (
-      <div key={f.name}>
-        {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 block">{t(f.label)}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>}
+      <div key={f.name} data-resource-field={f.name} className={attention ? "rounded-xl border border-amber-500/50 bg-amber-500/5 p-3 -mx-3" : ""}>
+        {f.label && <Label className="text-xs sm:text-base font-medium text-muted-foreground mb-1.5 sm:mb-2 flex items-center gap-1.5">{t(f.label)}{f.required && <span className="text-destructive ml-0.5">*</span>}{attention && <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500/15 text-amber-700 text-xs font-bold">!</span>}</Label>}
         {renderField(f)}
+        {attentionText && <p className="mt-2 text-xs leading-relaxed text-amber-800 dark:text-amber-300">{t(attentionText)}</p>}
         {f.helpText && (
           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
             {typeof f.helpText === "string" ? t(f.helpText) : f.helpText[lang] || f.helpText.en}
@@ -579,7 +646,7 @@ export default function ResourceListPage({
             <Button variant="ghost" className="sm:h-11" onClick={() => archive(editing)}><Archive className="w-4 h-4 mr-1" /> {t("Archive")}</Button>
           )}
           {isAdmin && (
-            <Button variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => remove(editing)}>
+            <Button type="button" variant="ghost" className="text-destructive hover:text-destructive sm:h-11" onClick={() => setDeleteDialogOpen(true)}>
               <Trash2 className="w-4 h-4 mr-1" /> {t("Delete")}
             </Button>
           )}
@@ -594,6 +661,27 @@ export default function ResourceListPage({
         )}
       </div>
     </>
+  );
+
+  const deleteConfirmation = (
+    <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => !deleting && setDeleteDialogOpen(open)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("Delete this {entity} permanently?", { entity: t(entityName) })}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("This cannot be undone. If this record is linked to other records, deletion may be blocked. Archive it instead when you want to keep its history.")}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>{t("Cancel")}</AlertDialogCancel>
+          <Button type="button" variant="destructive" disabled={deleting} onClick={() => remove(editing)}>
+            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {deleting ? t("Deleting…") : t("Delete permanently")}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 
   // Tablet / desktop: open as a true full page (no modal/sheet/backdrop).
@@ -645,6 +733,7 @@ export default function ResourceListPage({
             {actionButtons}
           </div>
         </div>
+        {deleteConfirmation}
       </div>
     );
   }
@@ -744,6 +833,8 @@ export default function ResourceListPage({
           </SheetContent>
         </Sheet>
       )}
+
+      {deleteConfirmation}
 
       {dictation && (
         <DictateFormDialog
