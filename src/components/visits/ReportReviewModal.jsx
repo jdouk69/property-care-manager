@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { migratedFileUrl } from "@/lib/migratedFile";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X, ShieldCheck, CheckCircle2, AlertTriangle, AlertCircle, AlertOctagon,
   ListChecks, MapPin, Camera, Eye, Minus, Languages, Loader2,
@@ -56,13 +57,14 @@ function SectionHeading({ children }) {
   );
 }
 
-export default function ReportReviewModal({ open, model, generating, sending, approving, reviewState, error, photoWarn, onClose, onSend, onApprove, onBackToEdit }) {
+export default function ReportReviewModal({ open, model, generating, sending, approving, confirmingOccupancy, occupancyIssue, reviewState, error, photoWarn, propertyMissing = false, onClose, onSend, onApprove, onBackToEdit, onConfirmOccupancy, onFixOwnerDetails, onFixProperty, onRetry }) {
   const { t } = useLanguage();
 
   // Duration-review decision (multi-day visits). Pre-filled from any stored
   // decision; required before the report can be approved.
   const flag = open ? model?.durationFlag || null : null;
   const [durDecision, setDurDecision] = useState(null);
+  const durationSectionRef = useRef(null);
   useEffect(() => {
     if (!open) return;
     setDurDecision(model?.durationFlag?.review ? { ...model.durationFlag.review } : null);
@@ -77,13 +79,28 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
   );
 
   if (!open) return null;
-  if (generating || !model) {
+  if (generating) {
     return (
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
         <div className="bg-card rounded-2xl border border-border max-w-md w-full p-8 text-center shadow-xl">
           <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">{t("Generating customer report…")}</p>
           <div className="flex justify-end mt-4"><Button variant="ghost" onClick={onClose}>{t("Cancel")}</Button></div>
+        </div>
+      </div>
+    );
+  }
+  if (!model) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="bg-card rounded-2xl border border-border max-w-md w-full p-5 shadow-xl space-y-4">
+          <h3 className="font-semibold">{t("Report Review")}</h3>
+          {error && <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-500">{error}</div>}
+          <p className="text-sm text-muted-foreground">{t("The report could not be opened. You can try again or close this review.")}</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onClose}>{t("Close")}</Button>
+            {onRetry && <Button onClick={onRetry}>{t("Try Again")}</Button>}
+          </div>
         </div>
       </div>
     );
@@ -107,6 +124,8 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
   // Sending requires an approved PDF whose fingerprint still matches the
   // current data (reportDelivery.js reviewStateFor).
   const canSend = !!reviewState?.approved && !!reviewState?.hashMatches;
+  const ownerEmailMissing = !String(client?.email || "").trim();
+  const sendAction = ownerEmailMissing && onFixOwnerDetails ? onFixOwnerDetails : onSend;
   // Staff-authored notes written in the other script are shown exactly as
   // recorded — flagged here so a translation can be added before sending.
   const languageMismatchList = [
@@ -143,7 +162,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700 dark:text-amber-500">
                   {reviewState.approved
-                    ? t("Data changed since approval — approve again before sending.")
+                    ? t("Data changed since approval. Tap Approve & Save PDF below to refresh the report before sending.")
                     : t("Not yet approved — approve to generate the PDF and enable sending.")}
                 </p>
               </div>
@@ -155,10 +174,50 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
               <p className="text-xs text-amber-700 dark:text-amber-500">{error}</p>
             </div>
           )}
+          {flag && !durValid && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-2.5">
+              <p className="text-xs text-amber-700 dark:text-amber-500">{t("Review the visit duration before approving this report.")}</p>
+              <Button onClick={() => durationSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })} variant="outline" size="sm" className="rounded-xl">{t("Review duration")}</Button>
+            </div>
+          )}
+          {occupancyIssue && onConfirmOccupancy && (
+            <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
+              <p className="text-xs text-foreground">{t("This completed interior visit is missing its vacancy confirmation. If you confirmed before entering that no owner, guest, tenant, or other person was staying there, record that now. If you are unsure, do not confirm.")}</p>
+              <Button onClick={onConfirmOccupancy} disabled={confirmingOccupancy} variant="outline" size="sm" className="rounded-xl gap-1.5">
+                {confirmingOccupancy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                {confirmingOccupancy ? t("Saving confirmation…") : t("Record vacancy confirmation")}
+              </Button>
+            </div>
+          )}
+
+          {propertyMissing && onFixProperty && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+              <p className="text-xs text-amber-700 dark:text-amber-500">{t("This visit points to a property record that could not be found. Create the correct property with its name, owner, and Service Scope; saving it will link this visit to that property and return you to the report.")}</p>
+              <Button onClick={onFixProperty} variant="outline" size="sm" className="rounded-xl">{t("Create and link property")}</Button>
+            </div>
+          )}
+
+          {!propertyMissing && !String(property?.service_scope || "").trim() && onFixProperty && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+              <p className="text-xs text-amber-700 dark:text-amber-500">{t("This property is missing Service Scope, which is required to create a visit report. Set it on the property record, then return here to review the report again.")}</p>
+              <Button onClick={onFixProperty} variant="outline" size="sm" className="rounded-xl">{t("Fix Service Scope")}</Button>
+            </div>
+          )}
+
+          {!propertyMissing && !String(model?.client?.email || "").trim() && onFixOwnerDetails && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+              <p className="text-xs text-amber-700 dark:text-amber-500">{t(client?.id ? "This report has no owner email address, so it cannot be emailed yet. Add the address to the client record, then return to this report." : "This property has no linked owner. Open its property record, choose the correct person in the Owner field, and save. The report will reopen when you return.")}</p>
+              <Button onClick={onFixOwnerDetails} variant="outline" size="sm" className="rounded-xl">{t(client?.id ? "Fix owner email" : "Choose owner for this property")}</Button>
+            </div>
+          )}
 
           {/* Duration safeguard — decision required before approval. Not part
               of the customer-facing report content itself. */}
-          {flag && <DurationReviewCard flag={flag} decision={durDecision} onChange={setDurDecision} />}
+          {flag && (
+            <div ref={durationSectionRef}>
+              <DurationReviewCard flag={flag} decision={durDecision} onChange={setDurDecision} />
+            </div>
+          )}
 
           {/* Masthead — navy band like the PDF */}
           <div className="rounded-xl bg-report-navy text-report-cream px-4 py-3">
@@ -247,7 +306,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {findingPhotos.map((dp, i) => (
                 <div key={i}>
-                  <a href={dp.url} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-lg overflow-hidden">
+                  <a href={migratedFileUrl(dp.url)} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-lg overflow-hidden">
                     <UIImage src={dp.url} className="w-full h-full" fittingType="fill" />
                   </a>
                   <p className="text-[11px] text-muted-foreground mt-1">{dp.caption}</p>
@@ -337,7 +396,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {docPhotos.map((dp, i) => (
                   <div key={i}>
-                    <a href={dp.url} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-lg overflow-hidden">
+                    <a href={migratedFileUrl(dp.url)} target="_blank" rel="noreferrer" className="block aspect-[4/3] rounded-lg overflow-hidden">
                       <UIImage src={dp.url} className="w-full h-full" fittingType="fill" />
                     </a>
                     <p className="text-[11px] text-muted-foreground mt-1">{dp.caption}</p>
@@ -364,7 +423,7 @@ export default function ReportReviewModal({ open, model, generating, sending, ap
               {approving ? t("Approving…") : t("Approve & Save PDF")}
             </Button>
           )}
-          <Button onClick={onSend} disabled={!canSend || sending} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
+          <Button onClick={sendAction} disabled={sending || (ownerEmailMissing ? !onFixOwnerDetails : !canSend)} className="rounded-xl flex-1 sm:flex-none h-9 gap-1.5">
             {sending ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {sending ? t("Sending…") : t("Send to Owner")}
           </Button>
