@@ -11,6 +11,8 @@ import { Image as UIImage } from "@/components/ui/image";
 import { badgeTone } from "@/components/resource/ResourceListPage";
 import ResolveIssueDialog from "@/components/maintenance/ResolveIssueDialog";
 import AddFollowUpDialog from "@/components/maintenance/AddFollowUpDialog";
+import IssueNextStepCard from "@/components/maintenance/IssueNextStepCard";
+import { getIssueEmailDeliveries } from "@/lib/issueEmailDelivery";
 import { visitTypeLabel } from "@/lib/visitTypeLabels";
 import { athensMediumDateTime } from "@/lib/timezone";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -47,6 +49,8 @@ export default function MaintenanceIssueDetail() {
   const { t, tEnum, lang } = useLanguage();
   const [issue, setIssue] = useState(null);
   const [property, setProperty] = useState({});
+  const [client, setClient] = useState(null);
+  const [emailDeliveries, setEmailDeliveries] = useState([]);
   const [contractor, setContractor] = useState(null);
   const [sourceVisit, setSourceVisit] = useState(null);
   const [staff, setStaff] = useState("Staff");
@@ -60,7 +64,8 @@ export default function MaintenanceIssueDetail() {
         const m = await base44.entities.MaintenanceIssue.get(id);
         setIssue(m);
         const loads = [];
-        if (m.property_id) loads.push(base44.entities.Property.get(m.property_id).then(setProperty).catch(() => {}));
+        loads.push(getIssueEmailDeliveries(base44, m.id).then(setEmailDeliveries).catch(() => setEmailDeliveries([])));
+        if (m.property_id) loads.push(base44.entities.Property.get(m.property_id).then(async (p) => { setProperty(p); if (p?.owner_id) setClient(await base44.entities.Client.get(p.owner_id)); }).catch(() => {}));
         if (m.contractor_id) loads.push(base44.entities.Contractor.get(m.contractor_id).then(setContractor).catch(() => {}));
         if (m.source_visit_id) loads.push(base44.entities.PropertyVisit.get(m.source_visit_id).then(setSourceVisit).catch(() => {}));
         await Promise.all(loads);
@@ -160,6 +165,18 @@ export default function MaintenanceIssueDetail() {
             </Button>
           </div>
         )}
+
+        <IssueNextStepCard
+          issue={issue}
+          property={property}
+          client={client}
+          contractor={contractor}
+          staff={staff}
+          onIssueUpdated={setIssue}
+          emailDeliveries={emailDeliveries}
+          onEmailDeliveriesUpdated={setEmailDeliveries}
+          returnPath="/maintenance"
+        />
 
         {/* Issue details — only what was actually recorded */}
         <div className="rounded-2xl border border-border bg-card p-4 mb-4">

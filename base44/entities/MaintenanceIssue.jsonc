@@ -166,6 +166,134 @@
     "archived": {
       "type": "boolean",
       "default": false
+    },
+    "coordination_fee": {
+      "type": "number"
+    },
+    "coordination_fee_offer_sent_at": {
+      "type": "string"
+    },
+    "coordination_fee_offer_amount": {
+      "type": "number"
+    },
+    "coordination_fee_offer_sent_to": {
+      "type": "string"
+    },
+    "coordination_fee_offer_message_id": {
+      "type": "string"
+    },
+    "coordination_fee_approved": {
+      "type": "boolean"
+    },
+    "coordination_fee_decision": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Declined"
+      ]
+    },
+    "coordination_fee_approved_amount": {
+      "type": "number"
+    },
+    "coordination_fee_approval_channel": {
+      "type": "string",
+      "enum": [
+        "Email",
+        "WhatsApp",
+        "SMS"
+      ]
+    },
+    "coordination_fee_approval_note": {
+      "type": "string"
+    },
+    "owner_report_sent_at": {
+      "type": "string"
+    },
+    "owner_report_sent_to": {
+      "type": "string"
+    },
+    "owner_report_message_id": {
+      "type": "string"
+    },
+    "owner_action": {
+      "type": "string",
+      "enum": [
+        "Owner will handle it",
+        "Please coordinate",
+        "Declined"
+      ]
+    },
+    "owner_action_at": {
+      "type": "string"
+    },
+    "owner_action_by": {
+      "type": "string"
+    },
+    "owner_action_channel": {
+      "type": "string",
+      "enum": [
+        "Email",
+        "WhatsApp",
+        "SMS",
+        "Phone",
+        "In-person"
+      ]
+    },
+    "owner_action_note": {
+      "type": "string"
+    },
+    "contractor_quote_file": {
+      "type": "string"
+    },
+    "contractor_quote_file_name": {
+      "type": "string"
+    },
+    "contractor_quote_file_size": {
+      "type": "number"
+    },
+    "contractor_quote_file_type": {
+      "type": "string"
+    },
+    "approved_max_spend": {
+      "type": "number"
+    },
+    "repair_approval_channel": {
+      "type": "string",
+      "enum": [
+        "Email",
+        "WhatsApp",
+        "SMS",
+        "Phone",
+        "In-person"
+      ]
+    },
+    "repair_approval_note": {
+      "type": "string"
+    },
+    "repair_approval_request_sent_at": {
+      "type": "string"
+    },
+    "repair_approval_request_sent_to": {
+      "type": "string"
+    },
+    "repair_approval_request_message_id": {
+      "type": "string"
+    },
+    "repair_work_description": {
+      "type": "string"
+    },
+    "linked_contractor_visit_id": {
+      "type": "string"
+    },
+    "receipt_file": {
+      "type": "string"
+    },
+    "receipt_file_name": {
+      "type": "string"
+    },
+    "proposed_max_spend": {
+      "type": "number"
     }
   },
   "required": [

@@ -1,0 +1,133 @@
+{
+  "name": "IssueEmailDelivery",
+  "type": "object",
+  "properties": {
+    "maintenance_issue_id": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "property_id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "Issue report",
+        "Coordination fee",
+        "Repair approval"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Sending",
+        "Accepted by email service",
+        "Failed",
+        "Delivery uncertain"
+      ]
+    },
+    "attempt_number": {
+      "type": "number"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "retry_of_id": {
+      "type": "string"
+    },
+    "recipient": {
+      "type": "string"
+    },
+    "sender": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file_url": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "provider_message_id": {
+      "type": "string"
+    },
+    "error": {
+      "type": "string"
+    },
+    "sent_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "maintenance_issue_id",
+    "kind",
+    "status",
+    "recipient",
+    "subject",
+    "body"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "staff"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "staff"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "staff"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
