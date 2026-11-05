@@ -35,7 +35,7 @@ export const NAV_ITEMS = [
   { to: "/invoices", label: "Invoices", icon: Receipt },
   { to: "/keys", label: "Keys", icon: KeyRound },
   { to: "/maintenance", label: "Maintenance", icon: Wrench },
-  { to: "/maintenance?openOnly=1", label: "Open Issues", icon: CircleAlert },
+  { to: "/open-issues", label: "Open Issues", icon: CircleAlert },
   { to: "/rep-reports", label: "Owner-Rep Reports", icon: ClipboardList },
   { to: "/properties", label: "Properties", icon: Home },
   { to: "/visits", label: "Property Visits", icon: MapPin },
@@ -113,7 +113,7 @@ function SidebarContent({ onNavigate, isAdmin = false, canReadIssues = false, mo
               {newRequests}
             </span>
           )}
-          {item.to === "/maintenance?openOnly=1" && openIssues > 0 && (
+          {item.to === "/open-issues" && openIssues > 0 && (
             <span aria-label={`${openIssues} open issues`} title={`${openIssues} open issues`} className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">
               {openIssues}
             </span>
@@ -123,14 +123,6 @@ function SidebarContent({ onNavigate, isAdmin = false, canReadIssues = false, mo
       {isAdmin && (
         <>
           <div className="px-3 pt-4 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground/70">{t("Admin")}</div>
-          <NavLink
-            to="/admin/users"
-            onClick={onNavigate}
-            className={({ isActive }) => itemClass(isActive)}
-          >
-            <UserCog className={`${iconSizing} shrink-0`} />
-            {t("Users & Staff")}
-          </NavLink>
           <NavLink
             to="/business-billing"
             onClick={onNavigate}
@@ -146,6 +138,14 @@ function SidebarContent({ onNavigate, isAdmin = false, canReadIssues = false, mo
           >
             <Globe className={`${iconSizing} shrink-0`} />
             {t("Edit Website")}
+          </NavLink>
+          <NavLink
+            to="/admin/users"
+            onClick={onNavigate}
+            className={({ isActive }) => itemClass(isActive)}
+          >
+            <UserCog className={`${iconSizing} shrink-0`} />
+            {t("Users & Staff")}
           </NavLink>
         </>
       )}
