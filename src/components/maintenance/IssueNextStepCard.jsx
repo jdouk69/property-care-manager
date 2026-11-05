@@ -458,7 +458,8 @@ export default function IssueNextStepCard({ issue, property, client, contractor,
     }
   };
 
-  const card = "rounded-2xl border-2 border-slate-300 bg-slate-50 p-4 mb-4 shadow-sm";
+  // Keep dark text on this pale workflow card in both light and dark themes.
+  const card = "rounded-2xl border-2 border-slate-300 bg-slate-50 p-4 mb-4 text-slate-900 shadow-sm";
 
   if (resolved) return null;
   if (ownerAction === "Owner will handle it" || ownerAction === "Declined") {
@@ -524,7 +525,7 @@ export default function IssueNextStepCard({ issue, property, client, contractor,
     </div> : <div className="mt-3 space-y-3 rounded-xl border-2 border-slate-300 bg-white p-3">
       <p className="text-sm font-bold text-slate-900">{t("The owner must approve the coordination fee itself. “Please coordinate” was only permission to send this proposal.")}</p>
       <div><Label className="text-sm font-semibold text-slate-900">{t("Paste or summarize the owner’s written fee response")}</Label><Textarea value={feeReply} onChange={(e) => setFeeReply(e.target.value)} rows={3} className="mt-1" placeholder={t("Example: I approve the €{amount} coordination fee.", {amount: euro(issue.coordination_fee)})} /></div>
-      <div><Label className="text-sm font-semibold text-slate-900">{t("How did the owner reply?")}</Label><Select value={feeReplyChannel} onValueChange={setFeeReplyChannel}><SelectTrigger className="mt-1"><SelectValue/></SelectTrigger><SelectContent>{["Email","WhatsApp","SMS"].map((v) => <SelectItem key={v} value={v}>{t(v)}</SelectItem>)}</SelectContent></Select></div>
+      <div><Label className="text-sm font-semibold text-slate-900">{t("How did the owner reply?")}</Label><Select value={feeReplyChannel} onValueChange={setFeeReplyChannel}><SelectTrigger className="mt-1 bg-white text-slate-900"><SelectValue/></SelectTrigger><SelectContent>{["Email","WhatsApp","SMS"].map((v) => <SelectItem key={v} value={v}>{t(v)}</SelectItem>)}</SelectContent></Select></div>
       <label className="flex items-start gap-3 text-sm font-semibold text-slate-900">
         <Checkbox checked={feeApprovalConfirmed} onCheckedChange={(checked) => setFeeApprovalConfirmed(checked === true)} />
         <span>{t("I verified that the owner’s written message explicitly approves this fee of {amount}.", {amount: euro(issue.coordination_fee)})}</span>
@@ -538,34 +539,34 @@ export default function IssueNextStepCard({ issue, property, client, contractor,
     <div className="flex items-start gap-2"><ArrowRight className="w-5 h-5 text-primary shrink-0 mt-0.5" /><div>
       <p className="text-xs font-semibold uppercase tracking-wide text-primary">{t("Next step")}</p>
       <h2 className="font-semibold mt-0.5">{t(issue.repair_approval_request_sent_at ? "Wait for written repair approval" : "Send quote and get repair approval")}</h2>
-      <p className="text-sm text-muted-foreground mt-1">{t(issue.repair_approval_request_sent_at ? "The quote and spending limit were emailed to {email}. Record the owner’s exact written reply here. Do not schedule work until approved." : "Add the quote and exact work details, then send the owner the quote, your fee, and requested maximum. Nothing is booked until they approve in writing.", {email:issue.repair_approval_request_sent_to || client?.email || "the owner"})}</p>
+      <p className="text-sm text-slate-600 mt-1">{t(issue.repair_approval_request_sent_at ? "The quote and spending limit were emailed to {email}. Record the owner’s exact written reply here. Do not schedule work until approved." : "Add the quote and exact work details, then send the owner the quote, your fee, and requested maximum. Nothing is booked until they approve in writing.", {email:issue.repair_approval_request_sent_to || client?.email || "the owner"})}</p>
       <p className="text-xs mt-2">{t("Coordination fee")}: {euro(issue.coordination_fee)} · {t("Contractor quote")}: {euro(issue.contractor_quotation)}</p>
     </div></div>
     {!issue.repair_approval_request_sent_at ? <div className="mt-3 space-y-3">
       <div className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3 text-sm font-semibold text-slate-900">{t("Your coordination fee is approved. Contact the contractor only to obtain a written quote. Do not authorize or schedule paid repair work yet. After you enter the quote below, this form emails the exact work and total limit to the owner for separate approval.")}</div>
-      <div><Label className="text-xs">{t("Exact work proposed")}</Label><Textarea value={workDescription} onChange={e=>setWorkDescription(e.target.value)} rows={3} className="mt-1" placeholder={t("Describe the repair from the contractor’s quote")}/></div>
+      <div><Label className="text-xs text-slate-900">{t("Exact work proposed")}</Label><Textarea value={workDescription} onChange={e=>setWorkDescription(e.target.value)} rows={3} className="mt-1 bg-white text-slate-900 placeholder:text-slate-500" placeholder={t("Describe the repair from the contractor’s quote")}/></div>
       <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
         <div>
-          <Label className="text-sm font-semibold">{t("Contractor (optional)")}</Label>
+          <Label className="text-sm font-semibold text-slate-900">{t("Contractor (optional)")}</Label>
           <Select value={issue.contractor_id || ""} onValueChange={(value) => saveSelectedContractor(value === NO_CONTRACTOR_VALUE ? "" : value)}>
             <SelectTrigger className="mt-1"><SelectValue placeholder={t("Select a contractor (optional)")} /></SelectTrigger>
             <SelectContent><SelectItem value={NO_CONTRACTOR_VALUE}>{t("No contractor selected")}</SelectItem>{contractors.map((row) => <SelectItem key={row.id} value={row.id}>{row.company || row.contact_person || t("Contractor")}</SelectItem>)}</SelectContent>
           </Select>
-          {savingContractor && <p className="text-xs text-muted-foreground mt-1">{t("Saving contractor…")}</p>}
+          {savingContractor && <p className="text-xs text-slate-600 mt-1">{t("Saving contractor…")}</p>}
         </div>
         <div>
-          <Label className="text-sm font-semibold">{t("Contractor quote attachment (optional)")}</Label>
+          <Label className="text-sm font-semibold text-slate-900">{t("Contractor quote attachment (optional)")}</Label>
           {issue.contractor_quote_file_name && <div className="flex items-center justify-between gap-2 mt-2 rounded-lg border bg-slate-50 p-2"><span className="min-w-0 truncate text-sm">{issue.contractor_quote_file_name}</span><Button type="button" variant="ghost" size="icon" aria-label={t("Remove quote")} onClick={removeContractorQuote} disabled={uploadingQuote}><X className="h-4 w-4" /></Button></div>}
           <label className="mt-2 flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-sky-700 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-900 hover:bg-sky-100">
             {uploadingQuote ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             <span>{uploadingQuote ? t("Uploading and saving…") : issue.contractor_quote_file ? t("Replace contractor quote") : t("Attach or upload contractor quote")}</span>
             <input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" className="sr-only" disabled={uploadingQuote} onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadContractorQuote(file); event.target.value = ""; }} />
           </label>
-          <p className="mt-1 text-xs text-muted-foreground">{t("Your upload is saved to this issue as soon as it finishes.")}</p>
+          <p className="mt-1 text-xs text-slate-600">{t("Your upload is saved to this issue as soon as it finishes.")}</p>
         </div>
       </div>
-      <div className="max-w-sm"><Label className="text-xs">{t("Contractor quote (€)")}</Label><Input type="number" min="0.01" step="0.01" value={quote} onChange={e=>{const value=e.target.value;setQuote(value);setQuoteSaveMessage("");if(!capEdited){const next=Number(value)+Number(issue.coordination_fee||0);setProposedMax(value&&Number.isFinite(next)?next.toFixed(2):"");}}} className="mt-1" placeholder="e.g. 250"/><p className="text-xs text-muted-foreground mt-1">{t("Enter the contractor’s written quote amount. The uploaded quote is attached to the owner’s approval email.")}</p></div>
-      <div className="max-w-sm"><Label className="text-xs">{t("Maximum total spending requested (€)")}</Label><Input type="number" min="0.01" step="0.01" value={proposedMax} onChange={e=>{setCapEdited(true);setProposedMax(e.target.value);}} className="mt-1" placeholder={quote ? (Number(quote)+Number(issue.coordination_fee||0)).toFixed(2) : ""}/><p className="text-xs text-muted-foreground mt-1">{t("Include the contractor quote and coordination fee. This is the most the owner would authorize if they approve.")}</p></div>
+      <div className="max-w-sm"><Label className="text-xs text-slate-900">{t("Contractor quote (€)")}</Label><Input type="number" min="0.01" step="0.01" value={quote} onChange={e=>{const value=e.target.value;setQuote(value);setQuoteSaveMessage("");if(!capEdited){const next=Number(value)+Number(issue.coordination_fee||0);setProposedMax(value&&Number.isFinite(next)?next.toFixed(2):"");}}} className="mt-1 bg-white text-slate-900 placeholder:text-slate-500" placeholder="e.g. 250"/><p className="text-xs text-slate-600 mt-1">{t("Enter the contractor’s written quote amount. The uploaded quote is attached to the owner’s approval email.")}</p></div>
+      <div className="max-w-sm"><Label className="text-xs text-slate-900">{t("Maximum total spending requested (€)")}</Label><Input type="number" min="0.01" step="0.01" value={proposedMax} onChange={e=>{setCapEdited(true);setProposedMax(e.target.value);}} className="mt-1 bg-white text-slate-900 placeholder:text-slate-500" placeholder={quote ? (Number(quote)+Number(issue.coordination_fee||0)).toFixed(2) : ""}/><p className="text-xs text-slate-600 mt-1">{t("Include the contractor quote and coordination fee. This is the most the owner would authorize if they approve.")}</p></div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {quoteSaveMessage && <p role="status" className="text-sm font-semibold text-emerald-700">{quoteSaveMessage}</p>}
       <Button type="button" variant="outline" className="w-full" onClick={saveQuoteDetails} disabled={saving || uploadingQuote || savingContractor}>{saving ? t("Saving…") : t("Save quote details")}</Button>
