@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import {
-  LayoutDashboard, Users, Home, ListChecks, Wrench, HardHat,
+  LayoutDashboard, Users, Home, ListChecks, Wrench, HardHat, CircleAlert,
   Wallet, KeyRound, CalendarDays, FileText, Search, Settings as SettingsIcon,
   Menu, X, Bell, History, Receipt, Package, MessageSquare, Truck, Sun, Moon,
   MapPin, FolderOpen, ClipboardList, ScrollText, Euro, ChevronLeft, UserCog,
@@ -17,29 +17,31 @@ import AccountMenu from "@/components/layout/AccountMenu";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import useNewAssessmentCount from "@/hooks/useNewAssessmentCount";
+import useOpenIssueCount from "@/hooks/useOpenIssueCount";
 
 export const NAV_ITEMS = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/clients", label: "Clients", icon: Users },
-  { to: "/properties", label: "Properties", icon: Home },
-  { to: "/tasks", label: "Tasks", icon: ListChecks },
-  { to: "/visits", label: "Property Visits", icon: MapPin },
-  { to: "/checklist-templates", label: "Checklist Templates", icon: ScrollText },
-  { to: "/maintenance", label: "Maintenance", icon: Wrench },
-  { to: "/contractors", label: "Contractors", icon: HardHat },
-  { to: "/expenses", label: "Expenses", icon: Wallet },
-  { to: "/keys", label: "Keys", icon: KeyRound },
-  { to: "/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/reports", label: "Reports", icon: FileText },
-  { to: "/invoices", label: "Invoices", icon: Receipt },
-  { to: "/billing", label: "Billing", icon: Euro },
-  { to: "/services", label: "Service Packages", icon: Package },
-  { to: "/communications", label: "Communications", icon: MessageSquare },
-  { to: "/documents", label: "Documents", icon: FolderOpen },
-  { to: "/rep-reports", label: "Owner-Rep Reports", icon: ClipboardList },
-  { to: "/deliveries", label: "Deliveries", icon: Truck },
-  { to: "/automation", label: "Automation Log", icon: History },
   { to: "/assessment-requests", label: "Assessment Requests", icon: Inbox },
+  { to: "/automation", label: "Automation Log", icon: History },
+  { to: "/billing", label: "Billing", icon: Euro },
+  { to: "/calendar", label: "Calendar", icon: CalendarDays },
+  { to: "/checklist-templates", label: "Checklist Templates", icon: ScrollText },
+  { to: "/clients", label: "Clients", icon: Users },
+  { to: "/communications", label: "Communications", icon: MessageSquare },
+  { to: "/contractors", label: "Contractors", icon: HardHat },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/deliveries", label: "Deliveries", icon: Truck },
+  { to: "/documents", label: "Documents", icon: FolderOpen },
+  { to: "/expenses", label: "Expenses", icon: Wallet },
+  { to: "/invoices", label: "Invoices", icon: Receipt },
+  { to: "/keys", label: "Keys", icon: KeyRound },
+  { to: "/maintenance", label: "Maintenance", icon: Wrench },
+  { to: "/maintenance?openOnly=1", label: "Open Issues", icon: CircleAlert },
+  { to: "/rep-reports", label: "Owner-Rep Reports", icon: ClipboardList },
+  { to: "/properties", label: "Properties", icon: Home },
+  { to: "/visits", label: "Property Visits", icon: MapPin },
+  { to: "/reports", label: "Reports", icon: FileText },
+  { to: "/services", label: "Service Packages", icon: Package },
+  { to: "/tasks", label: "Tasks", icon: ListChecks },
 ];
 
 // Owner/Admin-only navigation entries. Hidden for staff, and also while the
@@ -82,9 +84,10 @@ function readMobileTabRoutes() {
   return defaults;
 }
 
-function SidebarContent({ onNavigate, isAdmin = false, mobile = false }) {
+function SidebarContent({ onNavigate, isAdmin = false, canReadIssues = false, mobile = false }) {
   const { t } = useLanguage();
   const newRequests = useNewAssessmentCount(isAdmin);
+  const openIssues = useOpenIssueCount(canReadIssues);
   const itemSizing = mobile
     ? "px-4 py-4 rounded-2xl text-base"
     : "px-3 py-2.5 rounded-xl text-sm";
@@ -108,6 +111,11 @@ function SidebarContent({ onNavigate, isAdmin = false, mobile = false }) {
           {item.to === "/assessment-requests" && newRequests > 0 && (
             <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">
               {newRequests}
+            </span>
+          )}
+          {item.to === "/maintenance?openOnly=1" && openIssues > 0 && (
+            <span aria-label={`${openIssues} open issues`} title={`${openIssues} open issues`} className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground">
+              {openIssues}
             </span>
           )}
         </NavLink>
@@ -162,6 +170,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
   const { user } = useAuth();
   const { t } = useLanguage();
   const isAdmin = user?.role === "admin";
+  const canReadIssues = isAdmin || user?.role === "staff";
   // Session-level sidebar collapse (lg+ only — below lg the sidebar never shows
   // and mobile sheet navigation is untouched).
   const [collapsed, setCollapsed] = useState(false);
@@ -230,7 +239,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <SidebarContent isAdmin={isAdmin} />
+          <SidebarContent isAdmin={isAdmin} canReadIssues={canReadIssues} />
         </div>
       </aside>
 
@@ -245,7 +254,7 @@ export default function AppLayout({ businessName = "Property Care Manager", chil
               <span className="font-semibold text-sm">{businessName}</span>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              <SidebarContent mobile isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} />
+              <SidebarContent mobile isAdmin={isAdmin} canReadIssues={canReadIssues} onNavigate={() => setMobileOpen(false)} />
             </div>
             <div className="border-t border-sidebar-border p-4">
               <AccountMenu variant="block" />
