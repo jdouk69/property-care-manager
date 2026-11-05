@@ -39,7 +39,7 @@ const columns = [
   { key: "status", label: "Status", badge: true, enumContext: "issue" },
 ];
 
-export default function Maintenance() {
+export default function Maintenance({ openOnly: openOnlyProp = false }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const openId = searchParams.get("open") || undefined;
@@ -48,7 +48,7 @@ export default function Maintenance() {
   // /maintenance?property=<id> (Dashboard "View Issues") filters the list to
   // that property's open/unresolved issues.
   const propertyFilter = searchParams.get("property");
-  const openOnly = searchParams.get("openOnly") === "1";
+  const openOnly = openOnlyProp || searchParams.get("openOnly") === "1";
   // Legacy /maintenance?open=<id> links (Dashboard "View Issue" etc.) now open
   // the Issue Detail screen. Append &edit=1 to open the administrative Edit
   // Maintenance form directly (used by "Edit Details").
