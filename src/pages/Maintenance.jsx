@@ -48,6 +48,7 @@ export default function Maintenance() {
   // /maintenance?property=<id> (Dashboard "View Issues") filters the list to
   // that property's open/unresolved issues.
   const propertyFilter = searchParams.get("property");
+  const openOnly = searchParams.get("openOnly") === "1";
   // Legacy /maintenance?open=<id> links (Dashboard "View Issue" etc.) now open
   // the Issue Detail screen. Append &edit=1 to open the administrative Edit
   // Maintenance form directly (used by "Edit Details").
@@ -59,9 +60,9 @@ export default function Maintenance() {
     <AppLayout>
       <ResourceListPage
         entityName="MaintenanceIssue"
-        title="Maintenance"
-        subtitle="Track and resolve property issues"
-        emptyTitle="No maintenance yet"
+        title={openOnly ? "Open Issues" : "Maintenance"}
+        subtitle={openOnly ? "Issues that still need follow-up" : "Track and resolve property issues"}
+        emptyTitle={openOnly ? "No open issues" : "No maintenance yet"}
         icon={Wrench}
         fields={fields}
         columns={columns}
@@ -71,7 +72,7 @@ export default function Maintenance() {
         autoOpenEditId={editMode ? openId : undefined}
         onOpenItem={(it) => navigate(`/maintenance/${it.id}`)}
         archivable
-        filterFn={propertyFilter ? (it) => it.property_id === propertyFilter && it.status !== "Completed" && it.status !== "Cancelled" : undefined}
+        filterFn={propertyFilter || openOnly ? (it) => (!propertyFilter || it.property_id === propertyFilter) && (!openOnly || (it.status !== "Completed" && it.status !== "Cancelled")) : undefined}
         defaultValues={{ status: "Reported", priority: "Medium", category: "Other", reported_by: "Jim", owner_approval_status: "Pending", payment_status: "Unpaid" }}
         dictation={{ label: "Dictate", fields: ["title", "category", "priority", "status", "description", "reported_by", "cost_estimate", "final_cost", "completion_notes", "warranty_info"] }}
       />
